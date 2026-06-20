@@ -75,6 +75,7 @@ class QuizGradingTest extends TestCase
             'email_verified_at' => now(),
             'is_active' => true,
         ]);
+        $this->assignVolunteerRole($this->studentUser);
 
         // 4. Create course & quiz
         $this->course = Course::create([

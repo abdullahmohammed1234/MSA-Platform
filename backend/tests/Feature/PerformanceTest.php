@@ -49,7 +49,7 @@ class PerformanceTest extends TestCase
         ]);
         $this->admin->roles()->sync([$adminRole->id]);
 
-        $this->user = User::factory()->create([
+        $this->user = $this->createVolunteerUser([
             'is_active' => true,
             'email_verified_at' => now(),
         ]);
@@ -100,6 +100,8 @@ class PerformanceTest extends TestCase
      */
     public function test_performance_middleware_records_metric(): void
     {
+        config(['app.performance_monitoring' => true]);
+
         // Initial database count
         $initialCount = PerformanceMetric::count();
 

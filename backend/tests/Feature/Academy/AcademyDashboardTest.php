@@ -2,9 +2,6 @@
 
 namespace Tests\Feature\Academy;
 
-use App\Models\Permission;
-use App\Models\Role;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -14,7 +11,7 @@ class AcademyDashboardTest extends TestCase
 
     public function test_authenticated_user_can_fetch_academy_dashboard(): void
     {
-        $user = User::factory()->create();
+        $user = $this->createVolunteerUser();
 
         $this->actingAs($user)
             ->getJson('/api/v1/academy/dashboard')

@@ -21,8 +21,12 @@ class PerformanceMonitoringMiddleware
             return $next($request);
         }
 
-        // Avoid adding DB overhead to every local request
-        if (app()->environment('local', 'testing')) {
+        $monitoringEnabled = config('app.performance_monitoring');
+        if ($monitoringEnabled === null) {
+            $monitoringEnabled = ! app()->environment('local', 'testing');
+        }
+
+        if (! $monitoringEnabled) {
             return $next($request);
         }
 

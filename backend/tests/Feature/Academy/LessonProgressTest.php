@@ -39,6 +39,7 @@ class LessonProgressTest extends TestCase
             'email_verified_at' => now(),
             'is_active' => true,
         ]);
+        $this->assignVolunteerRole($this->student);
 
         // 2. Create course
         $this->course = Course::create([

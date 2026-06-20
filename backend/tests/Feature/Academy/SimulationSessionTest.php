@@ -3,7 +3,6 @@
 namespace Tests\Feature\Academy;
 
 use App\Models\SimulationSession;
-use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -18,7 +17,7 @@ class SimulationSessionTest extends TestCase
 
     public function test_user_can_store_and_fetch_simulation_history(): void
     {
-        $user = User::factory()->create();
+        $user = $this->createVolunteerUser();
 
         $this->actingAs($user)
             ->postJson('/api/v1/simulations/sessions', [
@@ -56,7 +55,7 @@ class SimulationSessionTest extends TestCase
 
     public function test_user_can_toggle_session_bookmark(): void
     {
-        $user = User::factory()->create();
+        $user = $this->createVolunteerUser();
         $session = SimulationSession::create([
             'user_id' => $user->id,
             'scenario_id' => 'booth-suffering',
@@ -81,8 +80,8 @@ class SimulationSessionTest extends TestCase
 
     public function test_user_cannot_bookmark_another_users_session(): void
     {
-        $owner = User::factory()->create();
-        $intruder = User::factory()->create();
+        $owner = $this->createVolunteerUser();
+        $intruder = $this->createVolunteerUser();
 
         $session = SimulationSession::create([
             'user_id' => $owner->id,

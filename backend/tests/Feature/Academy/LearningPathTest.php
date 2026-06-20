@@ -68,6 +68,7 @@ class LearningPathTest extends TestCase
             'email_verified_at' => now(),
             'is_active' => true,
         ]);
+        $this->assignVolunteerRole($this->studentUser);
 
         // 4. Create courses
         $this->course1 = Course::create([
