@@ -7,16 +7,14 @@ vi.mock('@/stores/auth', () => ({
 }));
 
 describe('roleGuard Router Guard', () => {
-  let nextMock: any;
-
   beforeEach(() => {
     vi.clearAllMocks();
-    nextMock = vi.fn();
   });
 
   it('should allow any route if the user is authenticated and is admin', () => {
     (useAuthStore as any).mockReturnValue({
       isAuthenticated: true,
+      isPrivilegedAdmin: true,
       isAdmin: true,
       isMentor: false,
       isVolunteer: false,
@@ -28,16 +26,14 @@ describe('roleGuard Router Guard', () => {
         { meta: { requiresAdmin: true } }
       ]
     } as any;
-    const from = {} as any;
 
-    roleGuard(to, from, nextMock);
-
-    expect(nextMock).toHaveBeenCalledWith();
+    expect(roleGuard(to)).toBe(true);
   });
 
   it('should redirect unauthorized users to the academy dashboard for requiresAdmin routes', () => {
     (useAuthStore as any).mockReturnValue({
       isAuthenticated: true,
+      isPrivilegedAdmin: false,
       isAdmin: false,
       isMentor: true,
       isVolunteer: false,
@@ -49,16 +45,14 @@ describe('roleGuard Router Guard', () => {
         { meta: { requiresAdmin: true } }
       ]
     } as any;
-    const from = {} as any;
 
-    roleGuard(to, from, nextMock);
-
-    expect(nextMock).toHaveBeenCalledWith({ name: 'academy-dashboard' });
+    expect(roleGuard(to)).toEqual({ name: 'academy-dashboard' });
   });
 
   it('should allow mentor users for requiresMentor routes', () => {
     (useAuthStore as any).mockReturnValue({
       isAuthenticated: true,
+      isPrivilegedAdmin: false,
       isAdmin: false,
       isMentor: true,
       isVolunteer: false,
@@ -70,16 +64,14 @@ describe('roleGuard Router Guard', () => {
         { meta: { requiresMentor: true } }
       ]
     } as any;
-    const from = {} as any;
 
-    roleGuard(to, from, nextMock);
-
-    expect(nextMock).toHaveBeenCalledWith();
+    expect(roleGuard(to)).toBe(true);
   });
 
   it('should redirect non-mentor users to the academy dashboard for requiresMentor routes', () => {
     (useAuthStore as any).mockReturnValue({
       isAuthenticated: true,
+      isPrivilegedAdmin: false,
       isAdmin: false,
       isMentor: false,
       isVolunteer: true,
@@ -91,17 +83,14 @@ describe('roleGuard Router Guard', () => {
         { meta: { requiresMentor: true } }
       ]
     } as any;
-    const from = {} as any;
 
-    roleGuard(to, from, nextMock);
-
-    expect(nextMock).toHaveBeenCalledWith({ name: 'academy-dashboard' });
+    expect(roleGuard(to)).toEqual({ name: 'academy-dashboard' });
   });
 
   it('should allow student (volunteer or mentor) users for requiresStudent routes', () => {
-    // Check volunteer
     (useAuthStore as any).mockReturnValue({
       isAuthenticated: true,
+      isPrivilegedAdmin: false,
       isAdmin: false,
       isMentor: false,
       isVolunteer: true,
@@ -113,27 +102,25 @@ describe('roleGuard Router Guard', () => {
         { meta: { requiresStudent: true } }
       ]
     } as any;
-    const from = {} as any;
 
-    roleGuard(to, from, nextMock);
-    expect(nextMock).toHaveBeenLastCalledWith();
+    expect(roleGuard(to)).toBe(true);
 
-    // Check mentor
     (useAuthStore as any).mockReturnValue({
       isAuthenticated: true,
+      isPrivilegedAdmin: false,
       isAdmin: false,
       isMentor: true,
       isVolunteer: false,
       roles: ['mentor'],
     });
 
-    roleGuard(to, from, nextMock);
-    expect(nextMock).toHaveBeenLastCalledWith();
+    expect(roleGuard(to)).toBe(true);
   });
 
   it('should redirect unauthenticated users to home for requiresStudent routes', () => {
     (useAuthStore as any).mockReturnValue({
       isAuthenticated: false,
+      isPrivilegedAdmin: false,
       isAdmin: false,
       isMentor: false,
       isVolunteer: false,
@@ -145,16 +132,14 @@ describe('roleGuard Router Guard', () => {
         { meta: { requiresStudent: true } }
       ]
     } as any;
-    const from = {} as any;
 
-    roleGuard(to, from, nextMock);
-
-    expect(nextMock).toHaveBeenCalledWith({ name: 'home' });
+    expect(roleGuard(to)).toEqual({ name: 'home' });
   });
 
   it('should redirect members to home for requiresStudent routes', () => {
     (useAuthStore as any).mockReturnValue({
       isAuthenticated: true,
+      isPrivilegedAdmin: false,
       isAdmin: false,
       isMentor: false,
       isVolunteer: false,
@@ -166,16 +151,14 @@ describe('roleGuard Router Guard', () => {
         { meta: { requiresStudent: true } }
       ]
     } as any;
-    const from = {} as any;
 
-    roleGuard(to, from, nextMock);
-
-    expect(nextMock).toHaveBeenCalledWith({ name: 'home' });
+    expect(roleGuard(to)).toEqual({ name: 'home' });
   });
 
   it('should evaluate legacy roles array from route metadata', () => {
     (useAuthStore as any).mockReturnValue({
       isAuthenticated: true,
+      isPrivilegedAdmin: false,
       isAdmin: false,
       isMentor: false,
       isVolunteer: false,
@@ -187,21 +170,18 @@ describe('roleGuard Router Guard', () => {
         { meta: { roles: ['member'] } }
       ]
     } as any;
-    const from = {} as any;
 
-    roleGuard(to, from, nextMock);
-    expect(nextMock).toHaveBeenLastCalledWith();
+    expect(roleGuard(to)).toBe(true);
 
-    // With a role mismatch
     (useAuthStore as any).mockReturnValue({
       isAuthenticated: true,
+      isPrivilegedAdmin: false,
       isAdmin: false,
       isMentor: false,
       isVolunteer: false,
       roles: ['guest'],
     });
 
-    roleGuard(to, from, nextMock);
-    expect(nextMock).toHaveBeenLastCalledWith({ name: 'home' });
+    expect(roleGuard(to)).toEqual({ name: 'home' });
   });
 });

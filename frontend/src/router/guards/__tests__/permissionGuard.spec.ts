@@ -7,11 +7,8 @@ vi.mock('@/stores/auth', () => ({
 }));
 
 describe('permissionGuard Router Guard', () => {
-  let nextMock: any;
-
   beforeEach(() => {
     vi.clearAllMocks();
-    nextMock = vi.fn();
   });
 
   it('should allow routes without metadata permissions', () => {
@@ -22,11 +19,8 @@ describe('permissionGuard Router Guard', () => {
     });
 
     const to = { matched: [] } as any;
-    const from = {} as any;
 
-    permissionGuard(to, from, nextMock);
-
-    expect(nextMock).toHaveBeenCalledWith();
+    expect(permissionGuard(to)).toBe(true);
   });
 
   it('should redirect unauthorized users to the academy dashboard', () => {
@@ -41,11 +35,8 @@ describe('permissionGuard Router Guard', () => {
         { meta: { permissions: ['manage_courses'] } }
       ]
     } as any;
-    const from = {} as any;
 
-    permissionGuard(to, from, nextMock);
-
-    expect(nextMock).toHaveBeenCalledWith({ name: 'academy-dashboard' });
+    expect(permissionGuard(to)).toEqual({ name: 'academy-dashboard' });
   });
 
   it('should allow users with the required permissions', () => {
@@ -60,11 +51,8 @@ describe('permissionGuard Router Guard', () => {
         { meta: { permissions: ['manage_courses'] } }
       ]
     } as any;
-    const from = {} as any;
 
-    permissionGuard(to, from, nextMock);
-
-    expect(nextMock).toHaveBeenCalledWith();
+    expect(permissionGuard(to)).toBe(true);
   });
 
   it('should allow super-admin users regardless of permission listings', () => {
@@ -72,6 +60,7 @@ describe('permissionGuard Router Guard', () => {
       isAuthenticated: true,
       roles: ['super-admin'],
       permissions: [],
+      isPrivilegedAdmin: true,
     });
 
     const to = {
@@ -79,10 +68,7 @@ describe('permissionGuard Router Guard', () => {
         { meta: { permissions: ['manage_users', 'manage_settings'] } }
       ]
     } as any;
-    const from = {} as any;
 
-    permissionGuard(to, from, nextMock);
-
-    expect(nextMock).toHaveBeenCalledWith();
+    expect(permissionGuard(to)).toBe(true);
   });
 });

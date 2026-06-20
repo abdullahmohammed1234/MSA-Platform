@@ -5,7 +5,6 @@ import { guestGuard } from '../router/guards/guestGuard';
 import { setActivePinia, createPinia } from 'pinia';
 import { useAuthStore } from '../stores/auth';
 
-// Mock router imports
 vi.mock('@/services/auth/auth.service', () => ({
   authService: {}
 }));
@@ -25,11 +24,8 @@ describe('Vue Router Navigation Guards', () => {
       const to: any = {
         matched: [{ meta: { requiresAdmin: true } }]
       };
-      const next = vi.fn();
 
-      roleGuard(to, {} as any, next);
-
-      expect(next).toHaveBeenCalledWith({ name: 'academy-dashboard' });
+      expect(roleGuard(to)).toEqual({ name: 'academy-dashboard' });
     });
 
     it('should permit admin users to access admin-only routes', () => {
@@ -40,11 +36,8 @@ describe('Vue Router Navigation Guards', () => {
       const to: any = {
         matched: [{ meta: { requiresAdmin: true } }]
       };
-      const next = vi.fn();
 
-      roleGuard(to, {} as any, next);
-
-      expect(next).toHaveBeenCalledWith();
+      expect(roleGuard(to)).toBe(true);
     });
 
     it('should redirect if user lacks required role', () => {
@@ -55,11 +48,8 @@ describe('Vue Router Navigation Guards', () => {
       const to: any = {
         matched: [{ meta: { roles: ['director'] } }]
       };
-      const next = vi.fn();
 
-      roleGuard(to, {} as any, next);
-
-      expect(next).toHaveBeenCalledWith({ name: 'home' });
+      expect(roleGuard(to)).toEqual({ name: 'home' });
     });
   });
 
@@ -70,13 +60,11 @@ describe('Vue Router Navigation Guards', () => {
       authStore.user = null;
 
       const to: any = {
-        matched: [{ meta: { requiresAuth: true } }]
+        matched: [{ meta: { requiresAuth: true } }],
+        fullPath: '/dashboard',
       };
-      const next = vi.fn();
 
-      authGuard(to, {} as any, next);
-
-      expect(next).toHaveBeenCalledWith({ name: 'login', query: { redirect: undefined } });
+      expect(authGuard(to)).toEqual({ name: 'login', query: { redirect: '/dashboard' } });
     });
   });
 
@@ -89,13 +77,11 @@ describe('Vue Router Navigation Guards', () => {
       const to: any = {
         matched: [{ meta: { guestOnly: true } }]
       };
-      const next = vi.fn();
 
-      guestGuard(to, {} as any, next);
-
-      expect(next).toHaveBeenCalledWith({ name: 'academy-dashboard' });
+      expect(guestGuard(to)).toEqual({ name: 'academy-dashboard' });
     });
-  it('should redirect authenticated members to home on guest-only routes', () => {
+
+    it('should redirect authenticated members to home on guest-only routes', () => {
       const authStore = useAuthStore();
       authStore.token = 'valid-token';
       authStore.user = { id: 1, name: 'Member', email: 'mem@sfu.ca', roles: ['member'], permissions: [], is_verified: true } as any;
@@ -103,11 +89,8 @@ describe('Vue Router Navigation Guards', () => {
       const to: any = {
         matched: [{ meta: { guestOnly: true } }]
       };
-      const next = vi.fn();
 
-      guestGuard(to, {} as any, next);
-
-      expect(next).toHaveBeenCalledWith({ name: 'home' });
+      expect(guestGuard(to)).toEqual({ name: 'home' });
     });
   });
 });
