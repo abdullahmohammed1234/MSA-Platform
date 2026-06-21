@@ -228,120 +228,97 @@ onUnmounted(() => {
 
       <div class="container-custom relative z-10 w-full">
         <template v-if="heroEvent">
-          <div class="grid lg:grid-cols-2 gap-8 lg:gap-x-16 lg:gap-y-12 items-start">
-          <div class="space-y-6 text-center sm:text-left min-w-0 order-1">
-            <ScrollReveal direction="right">
-              <div class="inline-flex items-center gap-2.5 px-4.5 py-2 bg-white/10 backdrop-blur border border-white/15 rounded-full text-accent-gold text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.2em] mb-2 mx-auto sm:mx-0">
-                <Bell :size="14" class="animate-bounce" /> Next Upcoming Event
-              </div>
-            </ScrollReveal>
-            
-            <ScrollReveal :delay="0.2" width="100%">
-              <h1 class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-black text-white leading-[1.05] tracking-tight break-words">
-                {{ heroEvent.title }}
-              </h1>
-            </ScrollReveal>
+          <div class="flex flex-col gap-12 xl:flex-row xl:items-start xl:justify-between xl:gap-20">
+            <div class="flex-1 min-w-0 space-y-6 text-center sm:text-left max-w-3xl relative z-10">
+              <ScrollReveal direction="up">
+                <div class="inline-flex items-center gap-2.5 px-4.5 py-2 bg-white/10 backdrop-blur border border-white/15 rounded-full text-accent-gold text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.2em] mb-2 mx-auto sm:mx-0">
+                  <Bell :size="14" class="animate-bounce" /> Next Upcoming Event
+                </div>
+              </ScrollReveal>
 
-            <ScrollReveal :delay="0.3">
-              <p class="text-base sm:text-lg text-white/70 max-w-lg leading-relaxed mx-auto sm:mx-0 font-light">
-                {{ heroEvent.description }}
-              </p>
-            </ScrollReveal>
+              <ScrollReveal :delay="0.15" width="100%">
+                <h1 class="hero-event-title text-3xl sm:text-4xl md:text-5xl xl:text-6xl font-display font-black text-white leading-tight tracking-tight break-words">
+                  {{ heroEvent.title }}
+                </h1>
+              </ScrollReveal>
 
-            <ScrollReveal :delay="0.4" class="flex flex-wrap justify-center sm:justify-start gap-6 items-center pt-4">
-              <div class="flex items-center gap-3.5 text-white text-left">
-                <div class="p-3 bg-white/10 rounded-[1.25rem] border border-white/10 shrink-0">
-                  <CalendarDays :size="18" class="text-accent-gold" />
-                </div>
-                <div>
-                  <div class="text-[9px] uppercase tracking-widest text-white/45 font-bold">Date</div>
-                  <div class="text-sm sm:text-base font-extrabold">{{ heroEvent.date }}</div>
-                </div>
-              </div>
-              <div class="flex items-center gap-3.5 text-white text-left">
-                <div class="p-3 bg-white/10 rounded-[1.25rem] border border-white/10 shrink-0">
-                  <Clock :size="18" class="text-accent-gold" />
-                </div>
-                <div>
-                  <div class="text-[9px] uppercase tracking-widest text-white/45 font-bold">Time</div>
-                  <div class="text-sm sm:text-base font-extrabold">{{ heroEvent.time }}</div>
-                </div>
-              </div>
-              <div class="flex items-center gap-3.5 text-white text-left">
-                <div class="p-3 bg-white/10 rounded-[1.25rem] border border-white/10 shrink-0">
-                  <MapPin :size="18" class="text-accent-gold" />
-                </div>
-                <div>
-                  <div class="text-[9px] uppercase tracking-widest text-white/45 font-bold">Location</div>
-                  <div class="text-sm sm:text-base font-extrabold">{{ heroEvent.location }}</div>
-                </div>
-              </div>
-            </ScrollReveal>
+              <ScrollReveal :delay="0.25">
+                <p class="text-base sm:text-lg text-white/70 max-w-lg leading-relaxed mx-auto sm:mx-0 font-light">
+                  {{ heroEvent.description }}
+                </p>
+              </ScrollReveal>
 
-            <ScrollReveal :delay="0.5" class="pt-6">
-              <PublicButton 
-                variant="gold"
-                size="lg"
-                @click="openRegistration(heroEvent)"
-                class="w-full sm:w-auto shadow-2xl shadow-primary-dark/45"
-              >
-                Secure Your Spot <ArrowRight :size="18" class="ml-2" />
-              </PublicButton>
-            </ScrollReveal>
-          </div>
+              <ScrollReveal :delay="0.35" width="100%">
+                <div class="flex flex-wrap justify-center sm:justify-start gap-6 items-center pt-2">
+                  <div class="flex items-center gap-3.5 text-white text-left">
+                    <div class="p-3 bg-white/10 rounded-[1.25rem] border border-white/10 shrink-0">
+                      <CalendarDays :size="18" class="text-accent-gold" />
+                    </div>
+                    <div>
+                      <div class="text-[9px] uppercase tracking-widest text-white/45 font-bold">Date</div>
+                      <div class="text-sm sm:text-base font-extrabold">{{ heroEvent.date }}</div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-3.5 text-white text-left">
+                    <div class="p-3 bg-white/10 rounded-[1.25rem] border border-white/10 shrink-0">
+                      <Clock :size="18" class="text-accent-gold" />
+                    </div>
+                    <div>
+                      <div class="text-[9px] uppercase tracking-widest text-white/45 font-bold">Time</div>
+                      <div class="text-sm sm:text-base font-extrabold">{{ heroEvent.time }}</div>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-3.5 text-white text-left">
+                    <div class="p-3 bg-white/10 rounded-[1.25rem] border border-white/10 shrink-0">
+                      <MapPin :size="18" class="text-accent-gold" />
+                    </div>
+                    <div>
+                      <div class="text-[9px] uppercase tracking-widest text-white/45 font-bold">Location</div>
+                      <div class="text-sm sm:text-base font-extrabold">{{ heroEvent.location }}</div>
+                    </div>
+                  </div>
+                </div>
+              </ScrollReveal>
 
-          <div class="hidden lg:block order-2 w-full max-w-md lg:ml-auto lg:pt-4">
-            <ScrollReveal :delay="0.6" direction="up" width="100%">
-            <div class="bg-white/5 backdrop-blur-md border border-white/15 p-8 xl:p-10 rounded-[2.5rem] text-center space-y-8 shadow-2xl">
-              <h3 class="text-white text-[10px] uppercase tracking-[0.25em] font-extrabold font-sans">Starting In</h3>
-              
-              <!-- Countdown Grid -->
-              <div class="grid grid-cols-4 gap-3 sm:gap-4">
-                <div v-for="[unit, val] in Object.entries(timeLeft)" :key="unit" class="flex flex-col items-center">
-                  <span class="text-2xl xl:text-3xl font-display font-extrabold text-accent-gold tabular-nums">{{ val.toString().padStart(2, '0') }}</span>
-                  <span class="text-[9px] uppercase tracking-[0.2em] text-white/55 mt-1 font-bold">{{ unit }}</span>
+              <ScrollReveal :delay="0.45" width="100%">
+                <div class="pt-4">
+                  <PublicButton
+                    variant="gold"
+                    size="lg"
+                    @click="openRegistration(heroEvent)"
+                    class="w-full sm:w-auto shadow-2xl shadow-primary-dark/45"
+                  >
+                    Secure Your Spot <ArrowRight :size="18" class="ml-2" />
+                  </PublicButton>
                 </div>
-              </div>
-
-              <div class="pt-6 border-t border-white/10">
-                <div class="flex justify-between items-center text-xs text-white/60 mb-2">
-                  <span class="font-bold uppercase tracking-widest text-[9px]">Availability</span>
-                  <span class="text-[10px] tracking-wider">{{ heroEvent.spotsLeft }} <b class="text-accent-gold">Spots Left</b></span>
-                </div>
-                <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                  <div 
-                    class="h-full bg-accent-gold shadow-glow transition-all duration-1000"
-                    :style="{ width: `${Math.min(100, (heroEvent.spotsLeft / 200) * 100)}%` }"
-                  />
-                </div>
-              </div>
+              </ScrollReveal>
             </div>
-            </ScrollReveal>
-          </div>
 
-          <div class="order-3 lg:hidden w-full max-w-md mx-auto mt-2">
-            <div class="bg-white/5 backdrop-blur-md border border-white/15 p-8 rounded-[2rem] text-center space-y-6 shadow-2xl">
-              <h3 class="text-white text-[10px] uppercase tracking-[0.25em] font-extrabold font-sans">Starting In</h3>
-              <div class="grid grid-cols-4 gap-3">
-                <div v-for="[unit, val] in Object.entries(timeLeft)" :key="`mobile-${unit}`" class="flex flex-col items-center">
-                  <span class="text-2xl font-display font-extrabold text-accent-gold tabular-nums">{{ val.toString().padStart(2, '0') }}</span>
-                  <span class="text-[9px] uppercase tracking-[0.2em] text-white/55 mt-1 font-bold">{{ unit }}</span>
+            <aside class="w-full max-w-sm mx-auto sm:max-w-md xl:mx-0 xl:w-80 xl:flex-shrink-0 xl:pt-2">
+              <div class="bg-white/5 backdrop-blur-md border border-white/15 p-8 xl:p-10 rounded-[2rem] xl:rounded-[2.5rem] text-center space-y-8 shadow-2xl">
+                <h3 class="text-white text-[10px] uppercase tracking-[0.25em] font-extrabold font-sans">Starting In</h3>
+
+                <div class="grid grid-cols-4 gap-3">
+                  <div v-for="[unit, val] in Object.entries(timeLeft)" :key="unit" class="flex flex-col items-center min-w-0">
+                    <span class="text-2xl xl:text-3xl font-display font-extrabold text-accent-gold tabular-nums">{{ val.toString().padStart(2, '0') }}</span>
+                    <span class="text-[9px] uppercase tracking-[0.2em] text-white/55 mt-1 font-bold">{{ unit }}</span>
+                  </div>
+                </div>
+
+                <div class="pt-6 border-t border-white/10">
+                  <div class="flex justify-between items-center text-xs text-white/60 mb-2">
+                    <span class="font-bold uppercase tracking-widest text-[9px]">Availability</span>
+                    <span class="text-[10px] tracking-wider">{{ heroEvent.spotsLeft }} <b class="text-accent-gold">Spots Left</b></span>
+                  </div>
+                  <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      class="h-full bg-accent-gold shadow-glow transition-all duration-1000"
+                      :style="{ width: `${Math.min(100, (heroEvent.spotsLeft / 200) * 100)}%` }"
+                    />
+                  </div>
                 </div>
               </div>
-              <div class="pt-4 border-t border-white/10">
-                <div class="flex justify-between items-center text-xs text-white/60 mb-2">
-                  <span class="font-bold uppercase tracking-widest text-[9px]">Availability</span>
-                  <span class="text-[10px] tracking-wider">{{ heroEvent.spotsLeft }} <b class="text-accent-gold">Spots Left</b></span>
-                </div>
-                <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
-                  <div 
-                    class="h-full bg-accent-gold shadow-glow transition-all duration-1000"
-                    :style="{ width: `${Math.min(100, (heroEvent.spotsLeft / 200) * 100)}%` }"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
+            </aside>
           </div>
         </template>
 
@@ -592,3 +569,30 @@ onUnmounted(() => {
     </Presence>
   </div>
 </template>
+
+<style scoped>
+.hero-event-title {
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 1.875rem;
+  line-height: 1.15;
+}
+
+@media (min-width: 640px) {
+  .hero-event-title {
+    font-size: 2.25rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .hero-event-title {
+    font-size: 3rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .hero-event-title {
+    font-size: 3.75rem;
+  }
+}
+</style>
