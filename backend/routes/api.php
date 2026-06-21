@@ -100,7 +100,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/homepage', [WebsiteController::class, 'homepage'])->name('api.website.homepage');
         Route::get('/announcements', [WebsiteController::class, 'announcements'])->name('api.website.announcements');
         Route::get('/events', [WebsiteController::class, 'events'])->name('api.website.events');
+        Route::get('/events/registrations', [WebsiteController::class, 'myEventRegistrations'])->name('api.website.events.registrations');
         Route::post('/events/{eventId}/rsvp', [WebsiteController::class, 'submitEventRsvp'])->middleware('throttle:public_forms')->name('api.website.events.rsvp');
+        Route::delete('/events/{eventId}/rsvp', [WebsiteController::class, 'cancelEventRsvp'])->middleware('throttle:public_forms')->name('api.website.events.rsvp.cancel');
         Route::get('/team', [WebsiteController::class, 'team'])->name('api.website.team');
         Route::get('/resources', [WebsiteController::class, 'resources'])->name('api.website.resources');
         Route::get('/media', [WebsiteController::class, 'media'])->name('api.website.media');

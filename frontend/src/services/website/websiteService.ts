@@ -106,6 +106,27 @@ export interface EventRsvpResponse {
   registrationId?: string;
 }
 
+export interface EventRegistrationStatus {
+  eventId: string;
+  registrationId: string;
+  registeredAt?: string;
+}
+
+const LOCAL_REGISTRATIONS_KEY = 'msa_event_registrations';
+
+function readLocalEventRegistrations(): EventRegistrationStatus[] {
+  try {
+    const raw = localStorage.getItem(LOCAL_REGISTRATIONS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeLocalEventRegistrations(registrations: EventRegistrationStatus[]): void {
+  localStorage.setItem(LOCAL_REGISTRATIONS_KEY, JSON.stringify(registrations));
+}
+
 export const websiteService = {
   async getHomepageData(): Promise<any> {
     const response = await api.get('/website/homepage');
@@ -206,6 +227,37 @@ export const websiteService = {
       spotsLeft: response.data?.spotsLeft,
       registrationId: response.data?.registrationId,
     };
+  },
+
+  async getMyEventRegistrations(): Promise<EventRegistrationStatus[]> {
+    const response = await api.get('/website/events/registrations');
+    return response.data?.registrations ?? [];
+  },
+
+  async cancelEventRsvp(eventId: string, registrationId?: string): Promise<EventRsvpResponse> {
+    const response = await api.delete(`/website/events/${eventId}/rsvp`, {
+      data: registrationId ? { registrationId } : undefined,
+    });
+    return {
+      success: response.data?.success ?? true,
+      message: response.data?.message || 'Your registration has been cancelled.',
+      spotsLeft: response.data?.spotsLeft,
+    };
+  },
+
+  saveLocalEventRegistration(registration: EventRegistrationStatus): void {
+    const existing = readLocalEventRegistrations().filter((item) => item.eventId !== registration.eventId);
+    writeLocalEventRegistrations([...existing, registration]);
+  },
+
+  removeLocalEventRegistration(eventId: string): void {
+    writeLocalEventRegistrations(
+      readLocalEventRegistrations().filter((item) => item.eventId !== eventId),
+    );
+  },
+
+  getLocalEventRegistrations(): EventRegistrationStatus[] {
+    return readLocalEventRegistrations();
   },
 };
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { 
   Calendar, 
   MapPin, 
@@ -12,7 +12,8 @@ import {
   Ticket,
   CalendarDays,
   LayoutGrid,
-  List
+  List,
+  CheckCircle2
 } from 'lucide-vue-next';
 import { Motion, Presence } from '@motionone/vue';
 import ScrollReveal from '@/components/shared/ScrollReveal.vue';
@@ -39,8 +40,10 @@ const isModalOpen = ref(false);
 const selectedEvent = ref<EventItem | null>(null);
 const now = ref(Date.now());
 const isSubmittingRsvp = ref(false);
+const isSubmittingUnregister = ref(false);
 const rsvpError = ref('');
 const rsvpSuccess = ref('');
+const registeredEvents = ref<Map<string, string>>(new Map());
 
 // Form Fields
 const rsvpForm = ref({
@@ -50,13 +53,63 @@ const rsvpForm = ref({
   studentId: ''
 });
 
+const isRegistered = (eventId: string) => registeredEvents.value.has(eventId);
+
+const getRegistrationId = (eventId: string) => registeredEvents.value.get(eventId);
+
+const mergeRegistrations = (items: Array<{ eventId: string; registrationId: string }>) => {
+  const next = new Map(registeredEvents.value);
+  for (const item of items) {
+    next.set(item.eventId, item.registrationId);
+  }
+  registeredEvents.value = next;
+};
+
+const markEventRegistered = (eventId: string, registrationId: string) => {
+  mergeRegistrations([{ eventId, registrationId }]);
+  websiteService.saveLocalEventRegistration({ eventId, registrationId });
+};
+
+const unmarkEventRegistered = (eventId: string) => {
+  const next = new Map(registeredEvents.value);
+  next.delete(eventId);
+  registeredEvents.value = next;
+  websiteService.removeLocalEventRegistration(eventId);
+};
+
+const loadRegistrations = async () => {
+  mergeRegistrations(
+    websiteService.getLocalEventRegistrations().map((item) => ({
+      eventId: item.eventId,
+      registrationId: item.registrationId,
+    })),
+  );
+
+  try {
+    const apiRegistrations = await websiteService.getMyEventRegistrations();
+    mergeRegistrations(apiRegistrations);
+  } catch {
+    // Keep local registrations when the API is unavailable.
+  }
+};
+
 onMounted(async () => {
   try {
     eventsData.value = await websiteService.getEvents();
+    await loadRegistrations();
   } catch (err) {
     console.error('Failed to load events:', err);
   }
 });
+
+watch(
+  () => authStore.user?.id,
+  async (userId) => {
+    if (userId) {
+      await loadRegistrations();
+    }
+  },
+);
 
 function getEventStart(event: EventItem): Date {
   if (event.startDate) return new Date(event.startDate);
@@ -120,6 +173,11 @@ const openRegistration = (event: EventItem) => {
   rsvpError.value = '';
   rsvpSuccess.value = '';
 
+  if (isRegistered(event.id)) {
+    isModalOpen.value = true;
+    return;
+  }
+
   const user = authStore.user;
   if (user) {
     const [firstName = '', ...rest] = user.name.trim().split(/\s+/);
@@ -156,6 +214,10 @@ const handleRsvpSubmit = async () => {
       updateEventSpotsLeft(selectedEvent.value.id, result.spotsLeft);
     }
 
+    if (result.registrationId) {
+      markEventRegistered(selectedEvent.value.id, result.registrationId);
+    }
+
     rsvpSuccess.value = result.message;
     rsvpForm.value = { firstName: '', lastName: '', email: '', studentId: '' };
 
@@ -164,9 +226,45 @@ const handleRsvpSubmit = async () => {
       rsvpSuccess.value = '';
     }, 1800);
   } catch (err: any) {
-    rsvpError.value = err.response?.data?.message || err.message || 'RSVP failed. Please try again.';
+    const message = err.response?.data?.message || err.message || 'RSVP failed. Please try again.';
+    if (message.toLowerCase().includes('already registered')) {
+      await loadRegistrations();
+      if (selectedEvent.value && isRegistered(selectedEvent.value.id)) {
+        rsvpError.value = '';
+        return;
+      }
+    }
+    rsvpError.value = message;
   } finally {
     isSubmittingRsvp.value = false;
+  }
+};
+
+const handleUnregister = async (event: EventItem) => {
+  if (isSubmittingUnregister.value) return;
+
+  isSubmittingUnregister.value = true;
+  rsvpError.value = '';
+  rsvpSuccess.value = '';
+
+  try {
+    const result = await websiteService.cancelEventRsvp(event.id, getRegistrationId(event.id));
+
+    if (typeof result.spotsLeft === 'number') {
+      updateEventSpotsLeft(event.id, result.spotsLeft);
+    }
+
+    unmarkEventRegistered(event.id);
+    rsvpSuccess.value = result.message;
+
+    window.setTimeout(() => {
+      isModalOpen.value = false;
+      rsvpSuccess.value = '';
+    }, 1500);
+  } catch (err: any) {
+    rsvpError.value = err.response?.data?.message || err.message || 'Unable to cancel registration. Please try again.';
+  } finally {
+    isSubmittingUnregister.value = false;
   }
 };
 
@@ -282,7 +380,22 @@ onUnmounted(() => {
 
               <ScrollReveal :delay="0.45" width="100%">
                 <div class="pt-4">
+                  <div v-if="isRegistered(heroEvent.id)" class="flex flex-col sm:flex-row items-center sm:items-start gap-3">
+                    <div class="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-500/15 border border-emerald-400/30 rounded-full text-emerald-100 text-sm font-semibold">
+                      <CheckCircle2 :size="16" /> You're registered for this event
+                    </div>
+                    <PublicButton
+                      variant="outline"
+                      size="lg"
+                      :disabled="isSubmittingUnregister"
+                      @click="handleUnregister(heroEvent)"
+                      class="w-full sm:w-auto border-white/40 text-white hover:bg-white/10"
+                    >
+                      {{ isSubmittingUnregister ? 'Cancelling...' : 'Cancel Registration' }}
+                    </PublicButton>
+                  </div>
                   <PublicButton
+                    v-else
                     variant="gold"
                     size="lg"
                     @click="openRegistration(heroEvent)"
@@ -418,8 +531,16 @@ onUnmounted(() => {
         >
           <div :class="[viewMode === 'grid' ? 'aspect-[16/10] w-full' : 'w-full md:w-64 h-48 rounded-[2rem]', 'relative overflow-hidden flex-shrink-0 bg-primary/5']">
             <img :src="event.image" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" :alt="event.title" />
-            <div class="absolute top-5 left-5 px-3.5 py-1.5 glass rounded-full text-[9px] font-extrabold uppercase tracking-widest text-primary border border-white/40">
-              {{ event.category }}
+            <div class="absolute top-5 left-5 flex flex-wrap gap-2">
+              <div class="px-3.5 py-1.5 glass rounded-full text-[9px] font-extrabold uppercase tracking-widest text-primary border border-white/40">
+                {{ event.category }}
+              </div>
+              <div
+                v-if="isRegistered(event.id)"
+                class="px-3.5 py-1.5 rounded-full text-[9px] font-extrabold uppercase tracking-widest bg-emerald-600 text-white border border-emerald-500/40"
+              >
+                Registered
+              </div>
             </div>
           </div>
 
@@ -450,7 +571,16 @@ onUnmounted(() => {
                   <MapPin :size="12" class="text-secondary" /> {{ event.location }}
                 </div>
               </div>
+              <button
+                v-if="isRegistered(event.id)"
+                @click="handleUnregister(event)"
+                :disabled="isSubmittingUnregister"
+                class="px-5.5 py-3 rounded-xl text-[9px] font-extrabold uppercase tracking-widest transition-all shadow-md cursor-pointer border border-secondary text-secondary hover:bg-secondary hover:text-white disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {{ isSubmittingUnregister ? 'Cancelling...' : 'Unregister' }}
+              </button>
               <button 
+                v-else
                 @click="openRegistration(event)"
                 :disabled="event.spotsLeft <= 0"
                 :class="[
@@ -524,7 +654,42 @@ onUnmounted(() => {
               <X :size="20" />
             </button>
 
-            <form class="space-y-5" @submit.prevent="handleRsvpSubmit">
+            <div
+              v-if="isRegistered(selectedEvent.id)"
+              class="space-y-6 text-center py-6"
+            >
+              <div class="mx-auto w-16 h-16 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center">
+                <CheckCircle2 :size="32" class="text-emerald-600" />
+              </div>
+              <div class="space-y-2">
+                <h3 class="text-xl font-display font-extrabold text-primary">You're registered</h3>
+                <p class="text-sm text-neutral-black/60 leading-relaxed">
+                  Your spot is confirmed for <span class="font-semibold text-neutral-black">{{ selectedEvent.title }}</span>.
+                  We'll send reminders before the event.
+                </p>
+              </div>
+              <p v-if="rsvpError" class="text-[11px] font-semibold text-red-600">{{ rsvpError }}</p>
+              <p v-if="rsvpSuccess" class="text-[11px] font-semibold text-emerald-700">{{ rsvpSuccess }}</p>
+              <div class="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+                <button
+                  type="button"
+                  @click="isModalOpen = false"
+                  class="px-6 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-widest border border-neutral-ivory text-neutral-black hover:bg-neutral-background transition-all cursor-pointer"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  @click="handleUnregister(selectedEvent)"
+                  :disabled="isSubmittingUnregister"
+                  class="px-6 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-widest bg-secondary text-white hover:bg-secondary/90 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {{ isSubmittingUnregister ? 'Cancelling...' : 'Cancel Registration' }}
+                </button>
+              </div>
+            </div>
+
+            <form v-else class="space-y-5" @submit.prevent="handleRsvpSubmit">
               <div class="grid grid-cols-2 gap-4">
                 <div class="space-y-1.5">
                    <label class="text-[9px] uppercase tracking-widest font-extrabold text-primary/60 px-1">First Name</label>

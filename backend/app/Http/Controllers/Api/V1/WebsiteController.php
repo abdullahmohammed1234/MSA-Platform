@@ -522,4 +522,109 @@ class WebsiteController extends Controller
             'registrationId' => $registration->uuid,
         ]);
     }
+
+    public function myEventRegistrations(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            return response()->json([
+                'registrations' => [],
+            ]);
+        }
+
+        $email = strtolower($user->email);
+
+        $registrations = EventRegistration::query()
+            ->with('event:id,uuid')
+            ->where('status', 'confirmed')
+            ->where(function ($query) use ($user, $email) {
+                $query->where('user_id', $user->id)
+                    ->orWhere('email', $email);
+            })
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function (EventRegistration $registration) {
+                return [
+                    'eventId' => $registration->event?->uuid ?? (string) $registration->event_id,
+                    'registrationId' => $registration->uuid,
+                    'registeredAt' => $registration->created_at?->toIso8601String(),
+                ];
+            })
+            ->values()
+            ->all();
+
+        return response()->json([
+            'registrations' => $registrations,
+        ]);
+    }
+
+    public function cancelEventRsvp(Request $request, string $eventId): JsonResponse
+    {
+        $validated = $request->validate([
+            'registrationId' => 'nullable|uuid',
+        ]);
+
+        $event = Event::query()
+            ->where('status', 'published')
+            ->where(function ($query) use ($eventId) {
+                $query->where('uuid', $eventId);
+
+                if (is_numeric($eventId)) {
+                    $query->orWhere('id', (int) $eventId);
+                }
+            })
+            ->first();
+
+        if (! $event) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This event is not available.',
+            ], 404);
+        }
+
+        $registrationQuery = EventRegistration::query()
+            ->where('event_id', $event->id)
+            ->where('status', 'confirmed');
+
+        if ($request->user()) {
+            $email = strtolower($request->user()->email);
+            $registrationQuery->where(function ($query) use ($request, $email) {
+                $query->where('user_id', $request->user()->id)
+                    ->orWhere('email', $email);
+            });
+        } elseif (! empty($validated['registrationId'])) {
+            $registrationQuery->where('uuid', $validated['registrationId']);
+        } else {
+            return response()->json([
+                'success' => false,
+                'message' => 'Sign in or provide a valid registration reference to cancel.',
+            ], 422);
+        }
+
+        $registration = $registrationQuery->first();
+
+        if (! $registration) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No registration was found for this event.',
+            ], 404);
+        }
+
+        DB::transaction(function () use ($registration, $event) {
+            $registration->delete();
+
+            Event::query()
+                ->whereKey($event->id)
+                ->increment('spots_left');
+        });
+
+        Cache::forget('website_events');
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Your registration has been cancelled.',
+            'spotsLeft' => $event->fresh()->spots_left,
+        ]);
+    }
 }
