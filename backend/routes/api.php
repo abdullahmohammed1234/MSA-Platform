@@ -105,6 +105,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/resources', [WebsiteController::class, 'resources'])->name('api.website.resources');
         Route::get('/media', [WebsiteController::class, 'media'])->name('api.website.media');
         Route::get('/sponsors', [WebsiteController::class, 'sponsors'])->name('api.website.sponsors');
+        Route::get('/prayer-times', [WebsiteController::class, 'prayerTimes'])->name('api.website.prayer-times');
         Route::post('/contact', [WebsiteController::class, 'submitContact'])->middleware('throttle:public_forms')->name('api.website.contact');
         Route::post('/newsletter/subscribe', [WebsiteController::class, 'subscribeNewsletter'])->middleware('throttle:public_forms')->name('api.website.newsletter.subscribe');
         Route::post('/sponsors', [WebsiteController::class, 'submitSponsor'])->middleware('throttle:public_forms')->name('api.website.sponsors.submit');

@@ -14,6 +14,7 @@ use App\Models\CMS\Resource;
 use App\Services\CMS\HomepageService;
 use App\Services\Analytics\AnalyticsService;
 use App\Services\NewsletterService;
+use App\Services\PrayerTimesService;
 use App\Support\CmsAssetUrl;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -31,14 +32,18 @@ class WebsiteController extends Controller
 
     protected $newsletterService;
 
+    protected $prayerTimesService;
+
     public function __construct(
         HomepageService $homepageService,
         AnalyticsService $analyticsService,
         NewsletterService $newsletterService,
+        PrayerTimesService $prayerTimesService,
     ) {
         $this->homepageService = $homepageService;
         $this->analyticsService = $analyticsService;
         $this->newsletterService = $newsletterService;
+        $this->prayerTimesService = $prayerTimesService;
     }
 
     public function homepage(): JsonResponse
@@ -261,6 +266,21 @@ class WebsiteController extends Controller
 
         return response()->json([
             'resources' => $resources,
+        ]);
+    }
+
+    public function prayerTimes(): JsonResponse
+    {
+        $times = $this->prayerTimesService->getPrayerTimesByCampus();
+
+        if (empty($times)) {
+            return response()->json([
+                'message' => 'Prayer times are temporarily unavailable.',
+            ], 503);
+        }
+
+        return response()->json([
+            'times' => $times,
         ]);
     }
 

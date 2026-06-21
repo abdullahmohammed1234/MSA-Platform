@@ -6,6 +6,7 @@ $extraOrigins = array_filter(array_map('trim', explode(',', (string) env('CORS_A
 $allowedOrigins = array_values(array_unique(array_filter([
     $frontendUrl,
     ...$extraOrigins,
+    
 ])));
 
 return [
