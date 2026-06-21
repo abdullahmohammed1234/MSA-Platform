@@ -1,0 +1,1 @@
+var e={premium:[.16,1,.3,1],natural:[.4,0,.2,1],sharp:[.4,0,.6,1],soft:[.25,.1,.25,1]},t={subtle:{stiffness:150,damping:25,mass:.8},gentle:{stiffness:220,damping:28,mass:1},snappy:{stiffness:380,damping:35,mass:.9},bouncy:{stiffness:450,damping:22,mass:.95}},n={fast:.2,normal:.35,slow:.6};n.slow,e.premium,n.normal,e.premium;export{e as n,t as r,n as t};
