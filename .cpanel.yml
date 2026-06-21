@@ -11,5 +11,5 @@ deployment:
     # 3. Build the Vue.js frontend 
     - cd frontend && npm install && npm run build
 
-    # 4. Deploy the compiled Vue build directly to public_html
-    - /bin/rsync -avz dist/ /home2/sfums1d5/public_html/
+    # 4. Deploy the compiled Vue build directly to public_html from frontend/dist
+    - /bin/rsync -avz frontend/dist/ /home2/sfums1d5/public_html/
