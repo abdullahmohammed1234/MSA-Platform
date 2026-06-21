@@ -1,4 +1,4 @@
-import client from '@/services/api/client';
+import client from '@/services/api';
 
 export interface SecurityDashboardData {
   metrics: {

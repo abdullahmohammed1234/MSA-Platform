@@ -52,7 +52,7 @@ const handleLogin = async () => {
     if (error.response?.data?.errors?.email) {
       formError.value = error.response.data.errors.email[0];
     } else if (error.code === 'ECONNABORTED' || !error.response) {
-      formError.value = error.message || 'Unable to reach the server. Start the backend with: php artisan serve';
+      formError.value = error.message || 'Unable to reach the server. Please try again later.';
     } else {
       formError.value = error.response?.data?.message || 'Invalid credentials. Please try again.';
     }

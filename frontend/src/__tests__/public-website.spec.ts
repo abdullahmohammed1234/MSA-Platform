@@ -8,7 +8,7 @@ const mockFetch = vi.fn();
 vi.stubGlobal('fetch', mockFetch);
 
 // Mock api client to force offline fallbacks
-vi.mock('@/services/api/client', () => ({
+vi.mock('@/services/api', () => ({
   default: {
     get: vi.fn().mockRejectedValue(new Error('Network Error')),
     post: vi.fn().mockRejectedValue(new Error('Network Error'))

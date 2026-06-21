@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
-import client from '@/services/api/client';
+import client from '@/services/api';
 import { useCoursesStore } from '@/stores/academy/courses';
 import { useToastStore } from '@/components/feedback/toast';
 

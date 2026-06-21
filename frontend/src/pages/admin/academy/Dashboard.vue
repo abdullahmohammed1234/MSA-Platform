@@ -175,7 +175,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import client from '@/services/api/client';
+import client from '@/services/api';
 
 const loading = ref(false);
 const loaded = ref(false);

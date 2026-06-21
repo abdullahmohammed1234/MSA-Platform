@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue';
 import { MessageSquare, Plus, Search, Send, Users, X, Bookmark, Flag, ThumbsUp, Heart } from 'lucide-vue-next';
-import client from '@/services/api/client';
+import client from '@/services/api';
 import { discussionsService, type ReactionType } from '@/services/academy/discussionsService';
 import { useAuthStore } from '@/stores/auth';
 import { useToastStore } from '@/components/feedback/toast';

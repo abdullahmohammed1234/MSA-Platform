@@ -70,10 +70,11 @@ export function mediaImage(category: string, filename: string): string {
   return `/Media/${categoryPath}/${filePath}`;
 }
 
-/** Map legacy root-level public paths to Hero/ or Team/ folders. */
+import { getApiOrigin as resolveApiOrigin } from '@/config/api.js';
+
+/** Re-export for callers that resolve CMS/storage URLs against the API host. */
 export function getApiOrigin(): string {
-  const apiUrl = (import.meta.env.VITE_API_URL as string) || 'http://localhost:8000/api/v1';
-  return apiUrl.replace(/\/api\/v1\/?$/, '');
+  return resolveApiOrigin();
 }
 
 /** Resolve CMS uploads and storage paths to a loadable URL (API origin in dev). */
@@ -83,8 +84,9 @@ export function resolveCmsMediaUrl(path: string | null | undefined): string {
   }
 
   if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
+    const apiOrigin = getApiOrigin();
     if (path.startsWith('http://localhost/storage') && !path.startsWith('http://localhost:')) {
-      return path.replace('http://localhost', getApiOrigin());
+      return path.replace('http://localhost', apiOrigin);
     }
     return path;
   }

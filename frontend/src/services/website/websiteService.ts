@@ -1,4 +1,4 @@
-import client from '@/services/api/client';
+import api from '@/services/api';
 import { resolveTeamMembers } from '@/utils/teamMembers';
 import { resolvePublicImagePath } from '@/constants/publicAssets';
 
@@ -108,7 +108,7 @@ export interface EventRsvpResponse {
 
 export const websiteService = {
   async getHomepageData(): Promise<any> {
-    const response = await client.get('/website/homepage');
+    const response = await api.get('/website/homepage');
     const homepage = response.data?.homepage ?? null;
     if (homepage?.hero?.background_image) {
       homepage.hero.background_image = resolvePublicImagePath(homepage.hero.background_image);
@@ -117,7 +117,7 @@ export const websiteService = {
   },
 
   async getAnnouncements(): Promise<AnnouncementItem[]> {
-    const response = await client.get('/website/announcements');
+    const response = await api.get('/website/announcements');
     return (response.data?.announcements ?? []).map((item: AnnouncementItem) => ({
       ...item,
       featured_image: item.featured_image ? resolvePublicImagePath(item.featured_image) : null,
@@ -125,7 +125,7 @@ export const websiteService = {
   },
 
   async getEvents(): Promise<EventItem[]> {
-    const response = await client.get('/website/events');
+    const response = await api.get('/website/events');
     return (response.data?.events ?? []).map((event: EventItem) => ({
       ...event,
       image: resolvePublicImagePath(event.image),
@@ -134,7 +134,7 @@ export const websiteService = {
 
   async getTeamMembers(): Promise<TeamMember[]> {
     try {
-      const response = await client.get('/website/team');
+      const response = await api.get('/website/team');
       return resolveTeamMembers(response.data);
     } catch {
       return resolveTeamMembers(null);
@@ -142,7 +142,7 @@ export const websiteService = {
   },
 
   async getResources(): Promise<ResourceItem[]> {
-    const response = await client.get('/website/resources');
+    const response = await api.get('/website/resources');
     return (response.data?.resources ?? []).map((resource: ResourceItem) => ({
       ...resource,
       link: resource.link?.startsWith('/storage/') || resource.link?.startsWith('/uploads/')
@@ -154,7 +154,7 @@ export const websiteService = {
   },
 
   async getMediaGallery(): Promise<MediaGalleryItem[]> {
-    const response = await client.get('/website/media');
+    const response = await api.get('/website/media');
     return (response.data?.media ?? []).map((item: MediaGalleryItem) => ({
       ...item,
       url: resolvePublicImagePath(item.url),
@@ -162,12 +162,12 @@ export const websiteService = {
   },
 
   async getSponsors(): Promise<SponsorItem[]> {
-    const response = await client.get('/website/sponsors');
+    const response = await api.get('/website/sponsors');
     return response.data?.sponsors ?? [];
   },
 
   async submitContact(data: ContactSubmission): Promise<{ success: boolean; message: string }> {
-    const response = await client.post('/website/contact', data);
+    const response = await api.post('/website/contact', data);
     return {
       success: true,
       message: response.data?.message || 'Your message has been sent successfully.',
@@ -175,7 +175,7 @@ export const websiteService = {
   },
 
   async submitSponsorApplication(data: SponsorSubmission): Promise<{ success: boolean; message: string }> {
-    const response = await client.post('/website/sponsors', data);
+    const response = await api.post('/website/sponsors', data);
     return {
       success: true,
       message: response.data?.message || 'Your sponsorship request has been received.',
@@ -183,7 +183,7 @@ export const websiteService = {
   },
 
   async submitVolunteerApplication(data: VolunteerSubmission): Promise<{ success: boolean; message: string }> {
-    const response = await client.post('/website/volunteer', data);
+    const response = await api.post('/website/volunteer', data);
     return {
       success: true,
       message: response.data?.message || 'Your application has been submitted successfully.',
@@ -191,7 +191,7 @@ export const websiteService = {
   },
 
   async subscribeNewsletter(email: string): Promise<{ success: boolean; message: string }> {
-    const response = await client.post('/website/newsletter/subscribe', { email });
+    const response = await api.post('/website/newsletter/subscribe', { email });
     return {
       success: response.data?.success ?? true,
       message: response.data?.message || 'Thank you for subscribing to our newsletter!',
@@ -199,7 +199,7 @@ export const websiteService = {
   },
 
   async submitEventRsvp(eventId: string, data: EventRsvpSubmission): Promise<EventRsvpResponse> {
-    const response = await client.post(`/website/events/${eventId}/rsvp`, data);
+    const response = await api.post(`/website/events/${eventId}/rsvp`, data);
     return {
       success: response.data?.success ?? true,
       message: response.data?.message || 'Registration successful! Check your email for confirmation.',

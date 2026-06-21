@@ -150,7 +150,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useAdminProgressStore } from '@/stores/admin/academy/progress';
-import client from '@/services/api/client';
+import client from '@/services/api';
 
 const store = useAdminProgressStore();
 

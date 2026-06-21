@@ -9,7 +9,7 @@ import PublicFooter from '@/components/navigation/footer/PublicFooter.vue';
     <PublicNavbar />
     
     <!-- Main page wrapper (no constraints, page containers handle max-width) -->
-    <main class="flex-grow overflow-visible">
+    <main class="flex-grow overflow-x-hidden">
       <router-view />
     </main>
     

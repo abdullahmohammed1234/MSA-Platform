@@ -1,15 +1,20 @@
+<script setup lang="ts">
+import { PUBLIC_LOGO } from '@/constants/publicAssets';
+</script>
+
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-neutral-background p-6">
-    <div class="w-full max-w-md bg-white border border-neutral-ivory rounded-2xl shadow-premium p-8 relative overflow-hidden">
-      <!-- Top aesthetic banner border -->
-      <div class="absolute top-0 inset-x-0 h-1.5 bg-primary"></div>
-      
-      <div class="text-center mb-8">
-        <router-link to="/" class="text-3xl font-display font-bold text-primary mb-2 inline-block">SFU MSA</router-link>
-        <p class="text-[10px] tracking-[0.15em] font-bold text-neutral-muted uppercase">Platform Access</p>
+  <div class="min-h-screen bg-neutral-background flex flex-col items-center justify-center px-4 py-10 selection:bg-secondary selection:text-white">
+    <div class="w-full max-w-md space-y-8">
+      <div class="text-center space-y-3">
+        <router-link to="/" class="inline-flex items-center justify-center">
+          <img :src="PUBLIC_LOGO" alt="SFU MSA" class="h-14 w-14 object-contain" />
+        </router-link>
+        <p class="text-xs uppercase tracking-[0.25em] text-neutral-muted font-bold">SFU Muslim Students Association</p>
       </div>
 
-      <router-view />
+      <div class="rounded-[2rem] border border-neutral-ivory bg-white p-8 shadow-premium">
+        <router-view />
+      </div>
     </div>
   </div>
 </template>

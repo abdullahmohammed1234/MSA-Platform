@@ -52,7 +52,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useAdminCoursesStore } from '@/stores/admin/academy/courses';
-import client from '@/services/api/client';
+import client from '@/services/api';
 
 const coursesStore = useAdminCoursesStore();
 const loading = ref(false);

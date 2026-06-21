@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import client from '@/services/api/client';
+import client from '@/services/api';
 
 export interface Student {
   id: number;

@@ -1,4 +1,4 @@
-import client from '@/services/api/client';
+import client from '@/services/api';
 import type { QuizAttempt } from '@/types/academy';
 
 interface SubmittedAnswer {

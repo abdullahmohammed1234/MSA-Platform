@@ -1,4 +1,5 @@
 import { ref, onMounted } from 'vue';
+import api from '@/services/api';
 
 export type Campus = 'Burnaby' | 'Surrey' | 'Vancouver';
 export type PrayerTab = Campus | "Jumu'ah";
@@ -157,13 +158,8 @@ async function fetchCampusPrayerTimes(campus: Campus): Promise<[Campus, PrayerTi
 }
 
 async function fetchAllPrayerTimes(): Promise<PrayerTimesByCampus> {
-  const response = await fetch('/api/v1/website/prayer-times');
-  if (!response.ok) {
-    throw new Error('Unable to fetch prayer times');
-  }
-
-  const payload = await response.json();
-  return payload.times ?? {};
+  const response = await api.get<{ times?: PrayerTimesByCampus }>('/website/prayer-times');
+  return response.data.times ?? {};
 }
 
 export function usePrayerTimes() {

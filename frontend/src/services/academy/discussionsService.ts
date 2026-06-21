@@ -1,4 +1,4 @@
-import client from '@/services/api/client';
+import client from '@/services/api';
 
 export type ReactionType = 'THUMBS_UP' | 'HEART' | 'CLAP' | 'INSIGHTFUL' | 'LAUGH' | 'SAD';
 export type ReportReason = 'SPAM' | 'HARASSMENT' | 'INAPPROPRIATE_CONTENT' | 'MISINFORMATION' | 'OTHER';

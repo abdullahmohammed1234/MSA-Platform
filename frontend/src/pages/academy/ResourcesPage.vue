@@ -14,7 +14,7 @@ import {
   Trash2,
   HardDrive
 } from 'lucide-vue-next';
-import client from '@/services/api/client';
+import client from '@/services/api';
 import { academyResourcesService } from '@/services/academy/academyResourcesService';
 import { useAuthStore } from '@/stores/auth';
 import { useToastStore } from '@/components/feedback/toast';

@@ -1,4 +1,4 @@
-import client from '../api/client';
+import api from '@/services/api';
 import type { 
   LoginPayload, 
   RegisterPayload, 
@@ -12,7 +12,7 @@ export const authService = {
    * Log user in and return user details and token.
    */
   async login(payload: LoginPayload): Promise<AuthResponse> {
-    const response = await client.post<AuthResponse>('/auth/login', payload);
+    const response = await api.post<AuthResponse>('/auth/login', payload);
     return response.data;
   },
 
@@ -20,7 +20,7 @@ export const authService = {
    * Register a new user account.
    */
   async register(payload: RegisterPayload): Promise<AuthResponse> {
-    const response = await client.post<AuthResponse>('/auth/register', payload);
+    const response = await api.post<AuthResponse>('/auth/register', payload);
     return response.data;
   },
 
@@ -28,7 +28,7 @@ export const authService = {
    * Log the active user out.
    */
   async logout(): Promise<{ message: string }> {
-    const response = await client.post<{ message: string }>('/auth/logout');
+    const response = await api.post<{ message: string }>('/auth/logout');
     return response.data;
   },
 
@@ -36,7 +36,7 @@ export const authService = {
    * Fetch current logged in user details.
    */
   async getMe(): Promise<{ user: User }> {
-    const response = await client.get<{ user: User }>('/auth/me');
+    const response = await api.get<{ user: User }>('/auth/me');
     return response.data;
   },
 
@@ -44,7 +44,7 @@ export const authService = {
    * Send a password reset email request.
    */
   async forgotPassword(email: string): Promise<{ message: string }> {
-    const response = await client.post<{ message: string }>('/auth/forgot-password', { email });
+    const response = await api.post<{ message: string }>('/auth/forgot-password', { email });
     return response.data;
   },
 
@@ -52,7 +52,7 @@ export const authService = {
    * Reset the user password using a token.
    */
   async resetPassword(payload: ResetPasswordPayload): Promise<{ message: string }> {
-    const response = await client.post<{ message: string }>('/auth/reset-password', payload);
+    const response = await api.post<{ message: string }>('/auth/reset-password', payload);
     return response.data;
   },
 
@@ -60,7 +60,7 @@ export const authService = {
    * Verify email address using a token.
    */
   async verifyEmail(token: string): Promise<{ message: string }> {
-    const response = await client.post<{ message: string }>('/auth/verify-email', { token });
+    const response = await api.post<{ message: string }>('/auth/verify-email', { token });
     return response.data;
   },
 
@@ -68,7 +68,7 @@ export const authService = {
    * Resend verification email.
    */
   async resendVerification(): Promise<{ message: string }> {
-    const response = await client.post<{ message: string }>('/auth/resend-verification');
+    const response = await api.post<{ message: string }>('/auth/resend-verification');
     return response.data;
   }
 };

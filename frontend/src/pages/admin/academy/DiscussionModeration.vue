@@ -14,7 +14,7 @@ import {
   AlertTriangle,
   Loader2
 } from 'lucide-vue-next';
-import client from '@/services/api/client';
+import client from '@/services/api';
 import {
   adminDiscussionsService,
   type ModerationThread,

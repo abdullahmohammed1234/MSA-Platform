@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
-import client from '@/services/api/client';
+import client from '@/services/api';
 
 export const useAnalyticsStore = defineStore('analytics', () => {
   const startDate = ref<string>(

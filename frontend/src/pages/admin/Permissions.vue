@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { rolePermissionService } from '@/services/admin/rolePermission.service';
-import client from '@/services/api/client';
+import client from '@/services/api';
 import type { Permission, AuditLog, Role } from '@/types/auth';
 import { useToastStore } from '@/components/feedback/toast';
 import { Button } from '@/components/ui/button';

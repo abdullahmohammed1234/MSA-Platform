@@ -1,4 +1,4 @@
-import client from '@/services/api/client';
+import client from '@/services/api';
 import type { Role, Permission, AuditLog } from '@/types/auth';
 
 export interface PaginatedAuditLogs {

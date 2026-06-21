@@ -1,4 +1,4 @@
-import client from '@/services/api/client';
+import client from '@/services/api';
 import { parseApiResponse } from '@/services/api/parseResponse';
 import type { Course, Enrollment, Progress, LearningPath } from '@/types/academy';
 

@@ -1,4 +1,4 @@
-import client from '@/services/api/client';
+import client from '@/services/api';
 import type { Achievement, Badge, Milestone } from '@/types/certification';
 
 /** Gamification API client (achievements, badges, milestones). */

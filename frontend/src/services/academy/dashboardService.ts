@@ -1,4 +1,4 @@
-import client from '@/services/api/client';
+import client from '@/services/api';
 import type { Course } from '@/types/academy';
 import type { ActivityLog, DashboardStats } from '@/stores/academy/dashboard';
 

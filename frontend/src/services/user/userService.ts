@@ -1,4 +1,4 @@
-import client from '@/services/api/client';
+import client from '@/services/api';
 import type { User } from '@/types/auth';
 
 export const userService = {

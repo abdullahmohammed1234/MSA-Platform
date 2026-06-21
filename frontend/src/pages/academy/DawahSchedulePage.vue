@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { CalendarDays, Lock, Plus, Save, Trash2 } from 'lucide-vue-next';
-import client from '@/services/api/client';
+import client from '@/services/api';
 import { useAuthStore } from '@/stores/auth';
 import { useToastStore } from '@/components/feedback/toast';
 

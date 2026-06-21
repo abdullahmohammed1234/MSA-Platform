@@ -124,7 +124,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useAdminAssignmentsStore } from '@/stores/admin/academy/assignments';
-import client from '@/services/api/client';
+import client from '@/services/api';
 
 const store = useAdminAssignmentsStore();
 

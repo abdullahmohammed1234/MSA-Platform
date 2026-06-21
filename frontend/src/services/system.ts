@@ -1,4 +1,5 @@
-import client from './api/client';
+import client from '@/services/api';
+import { getApiBaseUrl } from '@/config/api.js';
 
 export interface QueueStatus {
   name: string;
@@ -135,8 +136,7 @@ export const systemService = {
   },
 
   getDownloadUrl(uuid: string) {
-    const baseURL = (import.meta.env.VITE_API_URL as string) || 'http://localhost:8000/api/v1';
     const token = localStorage.getItem('auth_token');
-    return `${baseURL}/admin/system/reports/${uuid}/download?token=${token}`;
+    return `${getApiBaseUrl()}/admin/system/reports/${uuid}/download?token=${token}`;
   }
 };

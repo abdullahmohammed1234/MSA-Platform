@@ -1,4 +1,4 @@
-import client from './api/client';
+import client from '@/services/api';
 
 export interface Notification {
   id: number;
