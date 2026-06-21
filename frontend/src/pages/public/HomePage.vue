@@ -195,15 +195,15 @@ const ctaBtnUrl = computed(() => homepageData.value?.cta?.button_url ?? '/member
 
             <!-- Campus Selector -->
             <ScrollReveal :delay="0.25">
-              <div class="flex p-1.5 bg-white/70 backdrop-blur border border-neutral-ivory rounded-3xl overflow-x-auto no-scrollbar shadow-soft">
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1.5 bg-white/70 backdrop-blur border border-neutral-ivory rounded-3xl shadow-soft w-full">
                 <button
                   v-for="tab in prayerTabs"
                   :key="tab"
                   @click="activeTab = tab"
                   :class="[
-                    'flex-1 min-w-[90px] px-4 py-4 rounded-2xl text-[10px] font-extrabold uppercase tracking-widest transition-all cursor-pointer',
+                    'w-full px-2 py-3 sm:px-3 sm:py-3.5 rounded-2xl text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider sm:tracking-widest transition-all cursor-pointer text-center leading-tight',
                     activeTab === tab 
-                      ? 'bg-primary text-white shadow-brand scale-[1.02]' 
+                      ? 'bg-primary text-white shadow-brand' 
                       : 'text-neutral-black/55 hover:text-primary hover:bg-primary/5'
                   ]"
                 >
