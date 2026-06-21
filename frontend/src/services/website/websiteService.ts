@@ -88,6 +88,10 @@ export interface VolunteerSubmission {
   experience?: string;
 }
 
+export interface NewsletterSubscription {
+  email: string;
+}
+
 export interface EventRsvpSubmission {
   firstName: string;
   lastName: string;
@@ -183,6 +187,14 @@ export const websiteService = {
     return {
       success: true,
       message: response.data?.message || 'Your application has been submitted successfully.',
+    };
+  },
+
+  async subscribeNewsletter(email: string): Promise<{ success: boolean; message: string }> {
+    const response = await client.post('/website/newsletter/subscribe', { email });
+    return {
+      success: response.data?.success ?? true,
+      message: response.data?.message || 'Thank you for subscribing to our newsletter!',
     };
   },
 

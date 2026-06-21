@@ -49,6 +49,8 @@ class RegistrationTest extends TestCase
         $user = User::where('email', 'student@sfu.ca')->first();
         $this->assertTrue($user->hasRole('volunteer'));
         $this->assertFalse($user->hasRole('member'));
+        $this->assertFalse($user->hasVerifiedEmail());
+        $this->assertFalse($response->json('user.is_verified'));
     }
 
     public function test_member_can_register_successfully(): void

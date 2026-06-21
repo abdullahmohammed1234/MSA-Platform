@@ -27,12 +27,15 @@ const verifyToken = async (tokenValue: string) => {
     status.value = 'verified';
     successMsg.value = data.message || 'Email verified successfully!';
     
-    // Redirect to dashboard after 3 seconds
+    // Redirect to main website after verification
     setTimeout(() => {
-      if (authStore.roles.includes('admin')) {
+      const redirectPath = route.query.redirect as string;
+      if (redirectPath) {
+        router.push(redirectPath);
+      } else if (authStore.roles.includes('admin') || authStore.roles.includes('super-admin')) {
         router.push({ name: 'admin-dashboard' });
       } else {
-        router.push({ name: 'academy-dashboard' });
+        router.push({ name: 'home' });
       }
     }, 3000);
   } catch (error: any) {
@@ -147,7 +150,7 @@ onMounted(() => {
           </svg>
         </div>
         <p class="text-sm font-semibold text-neutral-black">Email Confirmed!</p>
-        <p class="text-xs text-neutral-muted">Redirecting you to the platform dashboard...</p>
+        <p class="text-xs text-neutral-muted">Redirecting you to the SFU MSA website...</p>
       </div>
 
       <!-- Awaiting / Expired State Form -->

@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { roleGuard } from '../router/guards/roleGuard';
 import { authGuard } from '../router/guards/authGuard';
 import { guestGuard } from '../router/guards/guestGuard';
+import { verificationGuard } from '../router/guards/verificationGuard';
 import { setActivePinia, createPinia } from 'pinia';
 import { useAuthStore } from '../stores/auth';
 
@@ -69,6 +70,18 @@ describe('Vue Router Navigation Guards', () => {
   });
 
   describe('guestGuard', () => {
+    it('should redirect unverified authenticated users to verify-email on guest-only routes', () => {
+      const authStore = useAuthStore();
+      authStore.token = 'valid-token';
+      authStore.user = { id: 1, name: 'Student', email: 'stu@sfu.ca', roles: ['volunteer'], permissions: [], is_verified: false } as any;
+
+      const to: any = {
+        matched: [{ meta: { guestOnly: true } }]
+      };
+
+      expect(guestGuard(to)).toEqual({ name: 'verify-email' });
+    });
+
     it('should redirect authenticated users to dashboard if hitting guest-only routes', () => {
       const authStore = useAuthStore();
       authStore.token = 'valid-token';
@@ -91,6 +104,38 @@ describe('Vue Router Navigation Guards', () => {
       };
 
       expect(guestGuard(to)).toEqual({ name: 'home' });
+    });
+  });
+
+  describe('verificationGuard', () => {
+    it('should redirect unverified users away from routes that require verification', () => {
+      const authStore = useAuthStore();
+      authStore.token = 'valid-token';
+      authStore.user = { id: 1, name: 'Student', email: 'stu@sfu.ca', roles: ['volunteer'], permissions: [], is_verified: false } as any;
+
+      const to: any = {
+        name: 'academy-dashboard',
+        fullPath: '/academy/dashboard',
+        matched: [{ meta: { requiresVerification: true } }]
+      };
+
+      expect(verificationGuard(to)).toEqual({
+        name: 'verify-email',
+        query: { redirect: '/academy/dashboard' }
+      });
+    });
+
+    it('should allow unverified users to access the verify-email page', () => {
+      const authStore = useAuthStore();
+      authStore.token = 'valid-token';
+      authStore.user = { id: 1, name: 'Student', email: 'stu@sfu.ca', roles: ['volunteer'], permissions: [], is_verified: false } as any;
+
+      const to: any = {
+        name: 'verify-email',
+        matched: [{ meta: { requiresAuth: true } }]
+      };
+
+      expect(verificationGuard(to)).toBe(true);
     });
   });
 });

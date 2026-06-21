@@ -32,7 +32,6 @@ class RegistrationService
             'password' => Hash::make($data['password']),
             'uuid' => (string) Str::uuid(),
             'is_active' => true,
-            'email_verified_at' => now(),
         ];
 
         $user = $this->userRepository->create($userData);

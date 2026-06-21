@@ -8,6 +8,10 @@ export const guestGuard = (
   const guestOnly = to.matched.some(record => record.meta.guestOnly);
 
   if (guestOnly && authStore.isAuthenticated) {
+    if (!authStore.isVerified) {
+      return { name: 'verify-email' };
+    }
+
     if (authStore.roles.includes('admin') || authStore.roles.includes('super-admin')) {
       return { name: 'admin-dashboard' };
     }

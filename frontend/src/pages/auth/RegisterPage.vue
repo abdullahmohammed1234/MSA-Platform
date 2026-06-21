@@ -73,11 +73,7 @@ const handleRegister = async () => {
       role: selectedRole.value,
     });
 
-    if (authStore.canAccessAcademy) {
-      router.push({ name: 'academy-dashboard' });
-    } else {
-      router.push({ name: 'home' });
-    }
+    router.push({ name: 'verify-email' });
   } catch (error: any) {
     console.error('Registration failed', error);
     if (error.response?.data?.errors) {

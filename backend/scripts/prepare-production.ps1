@@ -25,6 +25,8 @@ if ($envContent -match "(?m)^APP_KEY=\s*$" -or $envContent -notmatch "(?m)^APP_K
 
 composer install --optimize-autoloader --no-dev --no-ansi --no-interaction
 
+php artisan migrate --force --no-interaction
+php artisan route:clear
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache

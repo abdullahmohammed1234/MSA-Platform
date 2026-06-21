@@ -4,7 +4,7 @@ const academyRoutes: Array<RouteRecordRaw> = [
   {
     path: '/academy',
     component: () => import('@/layouts/AcademyLayout.vue'),
-    meta: { requiresAuth: true, requiresStudent: true },
+    meta: { requiresAuth: true, requiresStudent: true, requiresVerification: true },
     children: [
       {
         path: '',

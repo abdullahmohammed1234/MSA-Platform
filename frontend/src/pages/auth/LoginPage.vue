@@ -34,6 +34,11 @@ const handleLogin = async () => {
     });
 
     // Handle Redirect after login
+    if (!authStore.isVerified) {
+      router.push({ name: 'verify-email' });
+      return;
+    }
+
     const redirectPath = route.query.redirect as string;
     if (redirectPath) {
       router.push(redirectPath);

@@ -13,6 +13,7 @@ use App\Models\CMS\TeamMember;
 use App\Models\CMS\Resource;
 use App\Services\CMS\HomepageService;
 use App\Services\Analytics\AnalyticsService;
+use App\Services\NewsletterService;
 use App\Support\CmsAssetUrl;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,10 +29,16 @@ class WebsiteController extends Controller
 
     protected $analyticsService;
 
-    public function __construct(HomepageService $homepageService, AnalyticsService $analyticsService)
-    {
+    protected $newsletterService;
+
+    public function __construct(
+        HomepageService $homepageService,
+        AnalyticsService $analyticsService,
+        NewsletterService $newsletterService,
+    ) {
         $this->homepageService = $homepageService;
         $this->analyticsService = $analyticsService;
+        $this->newsletterService = $newsletterService;
     }
 
     public function homepage(): JsonResponse
@@ -280,6 +287,32 @@ class WebsiteController extends Controller
         }
 
         return $data;
+    }
+
+    public function subscribeNewsletter(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email' => 'required|email|max:255',
+        ]);
+
+        try {
+            $result = $this->newsletterService->subscribe($validated['email']);
+        } catch (Throwable $exception) {
+            Log::error('Newsletter subscription failed', [
+                'email' => $validated['email'],
+                'error' => $exception->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'We could not process your subscription right now. Please try again later.',
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $result['message'],
+        ]);
     }
 
     public function submitContact(Request $request): JsonResponse

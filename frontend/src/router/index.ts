@@ -8,6 +8,7 @@ import { authGuard } from './guards/authGuard';
 import { guestGuard } from './guards/guestGuard';
 import { roleGuard } from './guards/roleGuard';
 import { permissionGuard } from './guards/permissionGuard';
+import { verificationGuard } from './guards/verificationGuard';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -68,6 +69,9 @@ router.beforeEach(async (to) => {
 
   const authResult = authGuard(to);
   if (authResult !== true) return authResult;
+
+  const verificationResult = verificationGuard(to);
+  if (verificationResult !== true) return verificationResult;
 
   const roleResult = roleGuard(to);
   if (roleResult !== true) return roleResult;

@@ -2,6 +2,7 @@
 
 namespace App\Services\CMS;
 
+use App\Events\AnnouncementPublishedEvent;
 use App\Models\CMS\Announcement;
 use App\Repositories\CMS\AnnouncementRepository;
 use Illuminate\Support\Str;
@@ -50,11 +51,17 @@ class AnnouncementService
         // Audit Log
         $this->revisionService->logAction($userId, 'create_announcement', $announcement, "Created announcement: {$announcement->title}");
 
+        if ($announcement->status === 'published') {
+            $this->dispatchPublishedEvent($announcement);
+        }
+
         return $announcement;
     }
 
     public function update(Announcement $announcement, array $data, ?int $userId): Announcement
     {
+        $wasPublished = $announcement->status === 'published';
+
         if (isset($data['title'])) {
             $data['slug'] = Str::slug($data['title']);
         }
@@ -68,12 +75,17 @@ class AnnouncementService
         }
 
         $this->repository->update($announcement, $data);
+        $announcement->refresh();
 
         // Save revision
         $this->revisionService->createRevision($announcement, $userId);
 
         // Audit Log
         $this->revisionService->logAction($userId, 'update_announcement', $announcement, "Updated announcement: {$announcement->title}");
+
+        if (!$wasPublished && $announcement->status === 'published') {
+            $this->dispatchPublishedEvent($announcement);
+        }
 
         return $announcement;
     }
@@ -98,5 +110,18 @@ class AnnouncementService
     public function getRevisions(Announcement $announcement)
     {
         return $this->revisionService->getRevisions($announcement);
+    }
+
+    protected function dispatchPublishedEvent(Announcement $announcement): void
+    {
+        $excerpt = $announcement->summary
+            ?: Str::limit(strip_tags($announcement->content), 150);
+
+        event(new AnnouncementPublishedEvent(
+            $announcement->title,
+            $excerpt,
+            $announcement->slug,
+            'All'
+        ));
     }
 }

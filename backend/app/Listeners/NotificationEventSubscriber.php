@@ -12,6 +12,7 @@ use App\Notifications\CertificateEarnedNotification;
 use App\Notifications\CourseCompletedNotification;
 use App\Notifications\NewAnnouncementNotification;
 use App\Notifications\UpcomingTrainingNotification;
+use App\Services\NewsletterService;
 use Illuminate\Notifications\Events\NotificationFailed;
 use Illuminate\Notifications\Events\NotificationSent;
 
@@ -84,6 +85,12 @@ class NotificationEventSubscriber
                 $event->audience
             ));
         }
+
+        app(NewsletterService::class)->sendAnnouncementToSubscribers(
+            $event->announcementTitle,
+            $event->announcementExcerpt,
+            $event->announcementSlug
+        );
     }
 
     /**
