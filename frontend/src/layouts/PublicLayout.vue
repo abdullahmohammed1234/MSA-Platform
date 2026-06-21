@@ -4,7 +4,7 @@ import PublicFooter from '@/components/navigation/footer/PublicFooter.vue';
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col bg-neutral-background selection:bg-secondary selection:text-white overflow-visible">
+  <div class="min-h-screen flex flex-col bg-neutral-background selection:bg-secondary selection:text-white overflow-x-hidden">
     <!-- Floating header navigation bar -->
     <PublicNavbar />
     

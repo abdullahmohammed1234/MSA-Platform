@@ -58,31 +58,31 @@ const handleLogout = async () => {
 </script>
 
 <template>
-  <div class="fixed top-4 left-0 right-0 z-50 flex justify-center px-[3%] pointer-events-none">
+  <div class="fixed top-4 left-0 right-0 z-50 flex justify-center px-3 sm:px-[3%] pointer-events-none max-w-[100vw]">
     <Motion
       tag="div"
       :initial="{ y: -50, opacity: 0 }"
       :animate="{ y: 0, opacity: 1 }"
       :transition="{ duration: 0.6 }"
       :class="[
-        'pointer-events-auto w-full max-w-7xl rounded-full border transition-all duration-500',
+        'pointer-events-auto w-full max-w-7xl min-w-0 overflow-hidden rounded-full border transition-all duration-500',
         scrolled
-          ? 'bg-white/90 backdrop-blur-xl border-neutral-ivory/80 shadow-premium py-2.5 px-4'
-          : 'bg-neutral-background/75 backdrop-blur-lg border-neutral-ivory/30 shadow-soft py-4 px-6'
+          ? 'bg-white/90 backdrop-blur-xl border-neutral-ivory/80 shadow-premium py-2 px-3 sm:py-2.5 sm:px-4'
+          : 'bg-neutral-background/75 backdrop-blur-lg border-neutral-ivory/30 shadow-soft py-3 px-3 sm:py-4 sm:px-6'
       ]"
     >
-    <div class="flex items-center justify-between">
-      <router-link to="/" class="flex items-center gap-3 group pl-2">
-        <div class="h-10 w-10 sm:h-11 sm:w-11 shrink-0 flex items-center justify-center">
+    <div class="flex items-center justify-between gap-2 min-w-0">
+      <router-link to="/" class="flex items-center gap-2 sm:gap-3 group min-w-0 shrink pl-1 sm:pl-2">
+        <div class="h-9 w-9 sm:h-11 sm:w-11 shrink-0 flex items-center justify-center">
           <img
             src="/logo.webp"
             alt="SFU MSA logo"
             class="h-full w-full object-contain transition-transform group-hover:scale-105"
           />
         </div>
-        <div class="flex flex-col">
-          <span class="text-base sm:text-lg font-display font-extrabold text-primary leading-none tracking-tight uppercase">SFU MSA</span>
-          <span class="text-[8px] uppercase tracking-[0.2em] text-neutral-black/40 font-bold mt-0.5">Muslim Students Association</span>
+        <div class="flex flex-col min-w-0">
+          <span class="text-sm sm:text-lg font-display font-extrabold text-primary leading-none tracking-tight uppercase truncate">SFU MSA</span>
+          <span class="hidden sm:block text-[8px] uppercase tracking-[0.2em] text-neutral-black/40 font-bold mt-0.5">Muslim Students Association</span>
         </div>
       </router-link>
 
@@ -152,33 +152,37 @@ const handleLogout = async () => {
       </nav>
 
       <!-- Mobile & Tablet Toggle -->
-      <div class="flex xl:hidden items-center gap-2 pr-2">
+      <div class="flex xl:hidden items-center gap-1 sm:gap-2 shrink-0 pr-0.5 sm:pr-2">
         <router-link
           v-if="!isLoading && isAuthenticated && canAccessAcademy"
           to="/academy"
-          class="inline-flex items-center gap-1.5 bg-primary text-white px-4 py-2.5 rounded-full text-[9px] font-bold uppercase tracking-widest active:scale-95 transition-transform"
+          class="inline-flex items-center gap-1.5 bg-primary text-white p-2.5 sm:px-4 sm:py-2.5 rounded-full text-[9px] font-bold uppercase tracking-widest active:scale-95 transition-transform"
           aria-label="Open Dawah Academy"
         >
-          <BookOpen class="h-3.5 w-3.5" />
-          Academy
+          <BookOpen class="h-3.5 w-3.5 shrink-0" />
+          <span class="hidden sm:inline">Academy</span>
         </router-link>
         <router-link
           v-else-if="!isLoading && !isAuthenticated"
           to="/login"
-          class="bg-primary text-white px-5 py-2.5 rounded-full text-[10px] font-bold uppercase tracking-widest active:scale-95 transition-transform"
+          class="inline-flex items-center justify-center bg-primary text-white p-2.5 sm:px-5 sm:py-2.5 rounded-full text-[10px] font-bold uppercase tracking-widest active:scale-95 transition-transform"
+          aria-label="Login"
         >
-          Login
+          <LogIn class="h-3.5 w-3.5 sm:hidden shrink-0" />
+          <span class="hidden sm:inline">Login</span>
         </router-link>
         <button
           v-else-if="!isLoading && isAuthenticated"
           type="button"
-          class="bg-primary text-white px-4 py-2.5 rounded-full text-[9px] font-bold uppercase tracking-widest active:scale-95 transition-transform cursor-pointer"
+          class="inline-flex items-center justify-center bg-primary text-white p-2.5 sm:px-4 sm:py-2.5 rounded-full text-[9px] font-bold uppercase tracking-widest active:scale-95 transition-transform cursor-pointer"
+          aria-label="Logout"
           @click="handleLogout"
         >
-          Logout
+          <LogOut class="h-3.5 w-3.5 sm:hidden shrink-0" />
+          <span class="hidden sm:inline">Logout</span>
         </button>
         <button
-          class="p-3 text-primary hover:bg-primary/5 rounded-xl transition-all cursor-pointer"
+          class="p-2 sm:p-3 text-primary hover:bg-primary/5 rounded-xl transition-all cursor-pointer shrink-0"
           @click="isOpen = !isOpen"
           :aria-label="isOpen ? 'Close menu' : 'Open menu'"
         >
