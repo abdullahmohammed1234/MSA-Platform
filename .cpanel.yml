@@ -1,12 +1,15 @@
 ---
 deployment:
   tasks:
-    # 1. Sync the Laravel backend to a secure folder outside public_html
+    # 1. Provide the absolute path to cPanel's Node.js binary system folder
+    - export PATH=/opt/cpanel/ea-nodejs16/bin/:$PATH
+
+    # 2. Sync the Laravel backend
     - /bin/mkdir -p /home2/sfums1d5/msa-backend
     - /bin/rsync -avz --exclude='node_modules' --exclude='.git' backend/ /home2/sfums1d5/msa-backend/
 
-    # 2. Build the Vue.js frontend (Requires Nodejs/NPM enabled in cPanel)
+    # 3. Build the Vue.js frontend 
     - cd frontend && npm install && npm run build
 
-    # 3. Deploy the compiled Vue build directly to public_html
-    - /bin/rsync -avz dist/ /home2/sfums1d5/
+    # 4. Deploy the compiled Vue build directly to public_html
+    - /bin/rsync -avz dist/ /home2/sfums1d5/public_html/
