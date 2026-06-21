@@ -49,11 +49,6 @@ const steps = [
   },
   {
     number: '03',
-    title: 'Join Channels',
-    description: 'Gain access to our private WhatsApp announcement community and Discord study groups.'
-  },
-  {
-    number: '04',
     title: 'Attend Socials',
     description: 'Come out to our start-of-semester orientations and welcome lunches to meet the team.'
   }
