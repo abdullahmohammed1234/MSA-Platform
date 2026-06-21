@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -73,6 +74,9 @@ class EmailVerificationTest extends TestCase
 
     public function test_authenticated_user_can_resend_verification_email(): void
     {
+        Role::create(['name' => 'Volunteer', 'slug' => 'volunteer']);
+        $this->user->assignRole('volunteer');
+
         $token = $this->user->createToken('auth_token')->plainTextToken;
 
         $response = $this->withHeader('Authorization', "Bearer {$token}")
@@ -88,8 +92,25 @@ class EmailVerificationTest extends TestCase
         ]);
     }
 
+    public function test_staff_user_cannot_resend_verification(): void
+    {
+        Role::create(['name' => 'Admin', 'slug' => 'admin']);
+        $this->user->assignRole('admin');
+
+        $token = $this->user->createToken('auth_token')->plainTextToken;
+
+        $response = $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson(route('api.auth.resend-verification'));
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['email']);
+    }
+
     public function test_already_verified_user_cannot_resend_verification(): void
     {
+        Role::create(['name' => 'Volunteer', 'slug' => 'volunteer']);
+        $this->user->assignRole('volunteer');
+
         $this->user->email_verified_at = now();
         $this->user->save();
 

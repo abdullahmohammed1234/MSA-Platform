@@ -31,6 +31,11 @@ const redirectAfterVerification = () => {
 };
 
 onMounted(async () => {
+  if (!authStore.requiresEmailVerification) {
+    redirectAfterVerification();
+    return;
+  }
+
   const token = route.query.token as string | undefined;
 
   if (!token) {

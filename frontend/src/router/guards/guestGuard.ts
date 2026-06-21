@@ -8,7 +8,7 @@ export const guestGuard = (
   const guestOnly = to.matched.some(record => record.meta.guestOnly);
 
   if (guestOnly && authStore.isAuthenticated) {
-    if (!authStore.isVerified) {
+    if (authStore.needsEmailVerification) {
       return { name: 'verify-email' };
     }
 

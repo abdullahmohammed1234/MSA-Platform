@@ -23,6 +23,14 @@ export const useAuthStore = defineStore('auth', () => {
   const roles = computed(() => user.value?.roles || []);
   const permissions = computed(() => user.value?.permissions || []);
   const isVerified = computed(() => user.value?.is_verified || false);
+  const requiresEmailVerification = computed(
+    () => user.value?.requires_email_verification ?? (
+      roles.value.includes('member') || roles.value.includes('volunteer')
+    )
+  );
+  const needsEmailVerification = computed(
+    () => requiresEmailVerification.value && !isVerified.value
+  );
 
   const isPrivilegedAdmin = computed(() => roles.value.includes('admin') || roles.value.includes('super-admin'));
   const isAdmin = isPrivilegedAdmin;
@@ -227,6 +235,8 @@ export const useAuthStore = defineStore('auth', () => {
     roles,
     permissions,
     isVerified,
+    requiresEmailVerification,
+    needsEmailVerification,
     isPrivilegedAdmin,
     isAdmin,
     isDirector,

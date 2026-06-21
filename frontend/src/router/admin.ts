@@ -4,7 +4,7 @@ const adminRoutes: Array<RouteRecordRaw> = [
   {
     path: '/admin',
     component: () => import('@/layouts/AdminLayout.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true, requiresVerification: true },
+    meta: { requiresAuth: true, requiresAdmin: true },
     children: [
       {
         path: '',

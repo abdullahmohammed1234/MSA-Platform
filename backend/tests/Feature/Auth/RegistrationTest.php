@@ -41,6 +41,7 @@ class RegistrationTest extends TestCase
                     'avatar',
                     'is_active',
                     'is_verified',
+                    'requires_email_verification',
                     'roles',
                     'created_at',
                 ],
@@ -51,6 +52,8 @@ class RegistrationTest extends TestCase
         $this->assertFalse($user->hasRole('member'));
         $this->assertFalse($user->hasVerifiedEmail());
         $this->assertFalse($response->json('user.is_verified'));
+        $this->assertTrue($response->json('user.requires_email_verification'));
+        $this->assertTrue($user->requiresEmailVerification());
     }
 
     public function test_member_can_register_successfully(): void
@@ -69,6 +72,7 @@ class RegistrationTest extends TestCase
         $user = User::where('email', 'member@sfu.ca')->first();
         $this->assertTrue($user->hasRole('member'));
         $this->assertFalse($user->hasRole('volunteer'));
+        $this->assertTrue($response->json('user.requires_email_verification'));
     }
 
     public function test_user_cannot_register_without_accepting_terms(): void

@@ -34,7 +34,7 @@ const handleLogin = async () => {
     });
 
     // Handle Redirect after login
-    if (!authStore.isVerified) {
+    if (authStore.needsEmailVerification) {
       router.push({ name: 'verify-email' });
       return;
     }

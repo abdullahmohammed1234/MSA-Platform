@@ -75,6 +75,12 @@ class EmailVerificationService
      */
     public function resend(User $user): void
     {
+        if (!$user->requiresEmailVerification()) {
+            throw ValidationException::withMessages([
+                'email' => ['Email verification is not required for your account type.'],
+            ]);
+        }
+
         if ($user->hasVerifiedEmail()) {
             throw ValidationException::withMessages([
                 'email' => ['Your email is already verified.'],

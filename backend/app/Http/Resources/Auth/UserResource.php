@@ -22,6 +22,7 @@ class UserResource extends JsonResource
             'avatar' => $this->avatar,
             'is_active' => (bool) $this->is_active,
             'is_verified' => !is_null($this->email_verified_at),
+            'requires_email_verification' => $this->requiresEmailVerification(),
             'email_verified_at' => $this->email_verified_at?->toIso8601String(),
             'roles' => $this->roles->pluck('slug')->toArray(),
             'permissions' => $this->permissions->pluck('slug')->merge(

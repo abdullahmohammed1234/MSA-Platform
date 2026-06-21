@@ -12,7 +12,7 @@ export const verificationGuard = (
 ): boolean | RouteLocationRaw => {
   const authStore = useAuthStore();
 
-  if (!authStore.isAuthenticated || authStore.isVerified) {
+  if (!authStore.isAuthenticated || !authStore.needsEmailVerification) {
     return true;
   }
 

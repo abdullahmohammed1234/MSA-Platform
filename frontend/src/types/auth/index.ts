@@ -6,6 +6,7 @@ export interface User {
   avatar: string | null;
   is_active: boolean;
   is_verified: boolean;
+  requires_email_verification: boolean;
   email_verified_at: string | null;
   roles: string[];
   permissions: string[];

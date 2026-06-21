@@ -85,6 +85,14 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Whether this account must verify its email (members and volunteers only).
+     */
+    public function requiresEmailVerification(): bool
+    {
+        return $this->hasAnyRole(['member', 'volunteer']);
+    }
+
+    /**
      * Get the enrollments for the user.
      */
     public function enrollments()
