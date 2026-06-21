@@ -26,7 +26,7 @@ class CertificateGenerationService
         $code = $award->code;
 
         // Build public verification URL (frontend verification page)
-        $verifyUrl = env('FRONTEND_URL', 'http://localhost:5173') . '/certificates/verify/' . $award->verification_token;
+        $verifyUrl = rtrim(config('app.frontend_url'), '/') . '/certificates/verify/' . $award->verification_token;
 
         // Visual styles fallback
         $primaryColor = $template->branding['primary_color'] ?? '#0F172A';

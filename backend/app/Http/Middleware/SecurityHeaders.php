@@ -33,12 +33,27 @@ class SecurityHeaders
 
         // Content Security Policy (CSP)
         // Allow scripts and styles from self, google fonts, and required resources.
+        $apiUrl = rtrim((string) config('app.url'), '/');
+        $frontendUrl = rtrim((string) config('app.frontend_url'), '/');
+        $connectSources = array_filter([
+            "'self'",
+            'ws:',
+            'wss:',
+            $apiUrl,
+            $frontendUrl,
+        ]);
+
+        if (! app()->environment('production')) {
+            $connectSources[] = 'http://localhost:8000';
+            $connectSources[] = 'http://127.0.0.1:8000';
+        }
+
         $csp = "default-src 'self'; " .
                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com; " .
                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " .
                "img-src 'self' data: https:; " .
                "font-src 'self' https://fonts.gstatic.com; " .
-               "connect-src 'self' ws: wss: http://localhost:8000 http://127.0.0.1:8000 " . env('APP_URL') . "; " .
+               "connect-src " . implode(' ', $connectSources) . "; " .
                "frame-ancestors 'none'; " .
                "base-uri 'self'; " .
                "form-action 'self';";
@@ -46,7 +61,7 @@ class SecurityHeaders
         $response->headers->set('Content-Security-Policy', $csp);
 
         // Enforce HSTS if secure (HTTPS) or explicitly forced via configuration
-        if ($request->secure() || env('FORCE_HTTPS', false)) {
+        if ($request->secure() || config('app.force_https', false)) {
             $response->headers->set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
         }
 

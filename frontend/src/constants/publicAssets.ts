@@ -70,7 +70,7 @@ export function mediaImage(category: string, filename: string): string {
   return `/Media/${categoryPath}/${filePath}`;
 }
 
-import { getApiOrigin as resolveApiOrigin } from '@/config/api.js';
+import { getApiOrigin as resolveApiOrigin, rewriteLocalhostUrl } from '@/config/api.js';
 
 /** Re-export for callers that resolve CMS/storage URLs against the API host. */
 export function getApiOrigin(): string {
@@ -84,9 +84,8 @@ export function resolveCmsMediaUrl(path: string | null | undefined): string {
   }
 
   if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
-    const apiOrigin = getApiOrigin();
-    if (path.startsWith('http://localhost/storage') && !path.startsWith('http://localhost:')) {
-      return path.replace('http://localhost', apiOrigin);
+    if (/^https?:\/\/localhost(?::\d+)?/i.test(path)) {
+      return rewriteLocalhostUrl(path);
     }
     return path;
   }

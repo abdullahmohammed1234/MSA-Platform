@@ -5,6 +5,21 @@ use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Laravel\Sanctum\Http\Middleware\AuthenticateSession;
 use Laravel\Sanctum\Sanctum;
 
+$statefulHosts = 'localhost,localhost:5173,127.0.0.1,127.0.0.1:8000,::1';
+$appHost = Sanctum::currentApplicationUrlWithPort();
+
+if ($appHost) {
+    $statefulHosts .= ','.$appHost;
+}
+
+$frontendUrl = (string) env('FRONTEND_URL', '');
+$frontendHost = parse_url($frontendUrl, PHP_URL_HOST);
+
+if ($frontendHost) {
+    $frontendPort = parse_url($frontendUrl, PHP_URL_PORT);
+    $statefulHosts .= ','.$frontendHost.($frontendPort ? ':'.$frontendPort : '');
+}
+
 return [
 
     /*
@@ -18,12 +33,7 @@ return [
     |
     */
 
-    'stateful' => explode(',', env('SANCTUM_STATEFUL_DOMAINS', sprintf(
-        '%s%s',
-        'localhost,localhost:3000,127.0.0.1,127.0.0.1:8000,::1',
-        Sanctum::currentApplicationUrlWithPort(),
-        // Sanctum::currentRequestHost(),
-    ))),
+    'stateful' => explode(',', env('SANCTUM_STATEFUL_DOMAINS', $statefulHosts)),
 
     /*
     |--------------------------------------------------------------------------

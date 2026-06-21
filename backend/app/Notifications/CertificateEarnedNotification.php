@@ -30,7 +30,7 @@ class CertificateEarnedNotification extends BaseNotification
      */
     public function toMail($notifiable): MailMessage
     {
-        $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
+        $frontendUrl = rtrim(config('app.frontend_url'), '/');
         $verifyUrl = $frontendUrl . '/certificates/verify/' . $this->award->verification_token;
         
         $issueDate = now()->format('F j, Y');
@@ -56,7 +56,7 @@ class CertificateEarnedNotification extends BaseNotification
      */
     public function toArray($notifiable): array
     {
-        $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
+        $frontendUrl = rtrim(config('app.frontend_url'), '/');
         $verifyUrl = $frontendUrl . '/certificates/verify/' . $this->award->verification_token;
 
         return [

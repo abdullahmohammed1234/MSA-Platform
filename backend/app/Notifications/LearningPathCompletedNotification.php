@@ -26,7 +26,7 @@ class LearningPathCompletedNotification extends Notification implements ShouldQu
 
     public function toMail($notifiable): MailMessage
     {
-        $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
+        $frontendUrl = rtrim(config('app.frontend_url'), '/');
 
         return (new MailMessage)
             ->subject("Learning Path Completed: {$this->learningPath->title}!")

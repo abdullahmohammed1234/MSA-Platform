@@ -37,7 +37,7 @@ class UpcomingTrainingNotification extends BaseNotification
      */
     public function toMail($notifiable): MailMessage
     {
-        $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
+        $frontendUrl = rtrim(config('app.frontend_url'), '/');
         $trainingUrl = $frontendUrl . '/training/' . $this->trainingSlug;
 
         return (new MailMessage)

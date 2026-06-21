@@ -31,7 +31,7 @@ class CourseCompletedNotification extends BaseNotification
      */
     public function toMail($notifiable): MailMessage
     {
-        $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
+        $frontendUrl = rtrim(config('app.frontend_url'), '/');
         $dashboardUrl = $frontendUrl . '/academy/dashboard';
 
         return (new MailMessage)

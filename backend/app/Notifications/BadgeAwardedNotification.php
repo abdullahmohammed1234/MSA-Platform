@@ -27,7 +27,7 @@ class BadgeAwardedNotification extends Notification implements ShouldQueue
     public function toMail($notifiable): MailMessage
     {
         $badge = $this->award->badge;
-        $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
+        $frontendUrl = rtrim(config('app.frontend_url'), '/');
 
         return (new MailMessage)
             ->subject("New Badge Earned: {$badge->name}!")

@@ -35,12 +35,6 @@ class CmsAssetUrl
 
     private static function fixLocalhostPort(string $url): string
     {
-        $appUrl = rtrim((string) config('app.url'), '/');
-
-        if (str_starts_with($url, 'http://localhost/') && !str_contains($url, 'localhost:')) {
-            return preg_replace('#^http://localhost#', $appUrl, $url) ?? $url;
-        }
-
-        return $url;
+        return AppUrls::resolveStorageUrl($url) ?? $url;
     }
 }

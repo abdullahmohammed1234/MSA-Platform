@@ -32,7 +32,7 @@ class VerifyEmailNotification extends Notification
      */
     public function toMail(object $notifiable): MailMessage
     {
-        $frontendUrl = env('FRONTEND_URL', 'http://localhost:5173');
+        $frontendUrl = rtrim(config('app.frontend_url'), '/');
         $verificationUrl = "{$frontendUrl}/verify-email?token={$this->token}";
 
         return (new MailMessage)
