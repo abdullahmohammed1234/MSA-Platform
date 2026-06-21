@@ -73,7 +73,12 @@ const handleRegister = async () => {
       role: selectedRole.value,
     });
 
-    router.push({ name: 'verify-email' });
+    if (authStore.needsEmailVerification) {
+      router.push({ name: 'verify-email' });
+      return;
+    }
+
+    router.push({ path: '/' });
   } catch (error: any) {
     console.error('Registration failed', error);
     if (error.response?.data?.errors) {

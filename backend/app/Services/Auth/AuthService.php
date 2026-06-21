@@ -9,15 +9,6 @@ use Illuminate\Validation\ValidationException;
 
 class AuthService
 {
-    /** Roles that may sign in with a non-@sfu.ca email address. */
-    private const STAFF_ROLES = [
-        'super-admin',
-        'admin',
-        'director',
-        'dawah-coordinator',
-        'mentor',
-    ];
-
     protected $userRepository;
 
     public function __construct(UserRepository $userRepository)
@@ -54,9 +45,14 @@ class AuthService
             ]);
         }
 
+        // Staff accounts never go through public email verification.
+        $user->markEmailVerifiedIfStaff();
+
         // Update last login timestamp
         $user->last_login_at = now();
         $user->save();
+
+        $user->load(['roles.permissions', 'permissions']);
 
         // Generate Sanctum token
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -86,6 +82,6 @@ class AuthService
 
     private function canUseNonSfuEmail(User $user): bool
     {
-        return $user->hasAnyRole(self::STAFF_ROLES);
+        return $user->hasAnyRole(User::STAFF_ROLES);
     }
 }

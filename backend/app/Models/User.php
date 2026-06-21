@@ -14,6 +14,15 @@ use Illuminate\Support\Str;
 
 class User extends Authenticatable implements MustVerifyEmail
 {
+    /** Roles that are never required to verify their email address. */
+    public const STAFF_ROLES = [
+        'super-admin',
+        'admin',
+        'director',
+        'dawah-coordinator',
+        'mentor',
+    ];
+
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, HasRolesAndPermissions, Notifiable, SoftDeletes;
 
@@ -89,7 +98,23 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function requiresEmailVerification(): bool
     {
+        if ($this->hasAnyRole(self::STAFF_ROLES)) {
+            return false;
+        }
+
         return $this->hasAnyRole(['member', 'volunteer']);
+    }
+
+    /**
+     * Staff accounts skip email verification; mark them verified when needed.
+     */
+    public function markEmailVerifiedIfStaff(): void
+    {
+        if ($this->requiresEmailVerification() || $this->hasVerifiedEmail()) {
+            return;
+        }
+
+        $this->forceFill(['email_verified_at' => now()])->save();
     }
 
     /**

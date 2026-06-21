@@ -22,12 +22,20 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => !!token.value && !!user.value);
   const roles = computed(() => user.value?.roles || []);
   const permissions = computed(() => user.value?.permissions || []);
+  const STAFF_ROLES = ['super-admin', 'admin', 'director', 'dawah-coordinator', 'mentor'] as const;
+
   const isVerified = computed(() => user.value?.is_verified || false);
-  const requiresEmailVerification = computed(
-    () => user.value?.requires_email_verification ?? (
-      roles.value.includes('member') || roles.value.includes('volunteer')
-    )
-  );
+  const requiresEmailVerification = computed(() => {
+    if (user.value?.requires_email_verification !== undefined) {
+      return user.value.requires_email_verification;
+    }
+
+    if (roles.value.some((role) => STAFF_ROLES.includes(role as typeof STAFF_ROLES[number]))) {
+      return false;
+    }
+
+    return roles.value.includes('member') || roles.value.includes('volunteer');
+  });
   const needsEmailVerification = computed(
     () => requiresEmailVerification.value && !isVerified.value
   );

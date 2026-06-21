@@ -126,6 +126,33 @@ class LoginTest extends TestCase
         ]);
 
         $response->assertStatus(200)->assertJsonStructure(['token', 'user']);
+        $this->assertFalse($response->json('user.requires_email_verification'));
+        $this->assertTrue($response->json('user.is_verified'));
+    }
+
+    public function test_super_admin_login_does_not_require_email_verification(): void
+    {
+        Role::create(['name' => 'Super Admin', 'slug' => 'super-admin']);
+
+        $superAdmin = User::create([
+            'name' => 'Super Admin User',
+            'email' => 'super@example.com',
+            'password' => Hash::make('password123'),
+            'is_active' => true,
+            'email_verified_at' => null,
+        ]);
+        $superAdmin->roles()->sync(Role::where('slug', 'super-admin')->pluck('id'));
+
+        $response = $this->postJson(route('api.auth.login'), [
+            'email' => 'super@example.com',
+            'password' => 'password123',
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJsonPath('user.requires_email_verification', false)
+            ->assertJsonPath('user.is_verified', true);
+
+        $this->assertNotNull($superAdmin->fresh()->email_verified_at);
     }
 
     public function test_volunteer_cannot_login_with_non_sfu_email(): void
