@@ -226,17 +226,18 @@ onUnmounted(() => {
         <div class="absolute inset-0 bg-gradient-to-b from-primary/95 via-primary/30 to-primary/95" />
       </div>
 
-      <div class="container-custom relative z-10 grid lg:grid-cols-2 gap-12 items-center w-full">
+      <div class="container-custom relative z-10 w-full">
         <template v-if="heroEvent">
-          <div class="space-y-6 text-center sm:text-left">
+          <div class="grid lg:grid-cols-2 gap-8 lg:gap-x-16 lg:gap-y-12 items-start">
+          <div class="space-y-6 text-center sm:text-left min-w-0 order-1">
             <ScrollReveal direction="right">
               <div class="inline-flex items-center gap-2.5 px-4.5 py-2 bg-white/10 backdrop-blur border border-white/15 rounded-full text-accent-gold text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.2em] mb-2 mx-auto sm:mx-0">
                 <Bell :size="14" class="animate-bounce" /> Next Upcoming Event
               </div>
             </ScrollReveal>
             
-            <ScrollReveal :delay="0.2">
-              <h1 class="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-display font-black text-white leading-[0.95] tracking-tight">
+            <ScrollReveal :delay="0.2" width="100%">
+              <h1 class="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-black text-white leading-[1.05] tracking-tight break-words">
                 {{ heroEvent.title }}
               </h1>
             </ScrollReveal>
@@ -289,14 +290,15 @@ onUnmounted(() => {
             </ScrollReveal>
           </div>
 
-          <ScrollReveal :delay="0.6" direction="left">
-            <div class="hidden lg:block bg-white/5 backdrop-blur-md border border-white/15 p-12 rounded-[2.5rem] text-center space-y-8 shadow-2xl">
+          <div class="hidden lg:block order-2 w-full max-w-md lg:ml-auto lg:pt-4">
+            <ScrollReveal :delay="0.6" direction="up" width="100%">
+            <div class="bg-white/5 backdrop-blur-md border border-white/15 p-8 xl:p-10 rounded-[2.5rem] text-center space-y-8 shadow-2xl">
               <h3 class="text-white text-[10px] uppercase tracking-[0.25em] font-extrabold font-sans">Starting In</h3>
               
               <!-- Countdown Grid -->
-              <div class="flex gap-4 justify-center">
+              <div class="grid grid-cols-4 gap-3 sm:gap-4">
                 <div v-for="[unit, val] in Object.entries(timeLeft)" :key="unit" class="flex flex-col items-center">
-                  <span class="text-3xl font-display font-extrabold text-accent-gold">{{ val.toString().padStart(2, '0') }}</span>
+                  <span class="text-2xl xl:text-3xl font-display font-extrabold text-accent-gold tabular-nums">{{ val.toString().padStart(2, '0') }}</span>
                   <span class="text-[9px] uppercase tracking-[0.2em] text-white/55 mt-1 font-bold">{{ unit }}</span>
                 </div>
               </div>
@@ -314,7 +316,33 @@ onUnmounted(() => {
                 </div>
               </div>
             </div>
-          </ScrollReveal>
+            </ScrollReveal>
+          </div>
+
+          <div class="order-3 lg:hidden w-full max-w-md mx-auto mt-2">
+            <div class="bg-white/5 backdrop-blur-md border border-white/15 p-8 rounded-[2rem] text-center space-y-6 shadow-2xl">
+              <h3 class="text-white text-[10px] uppercase tracking-[0.25em] font-extrabold font-sans">Starting In</h3>
+              <div class="grid grid-cols-4 gap-3">
+                <div v-for="[unit, val] in Object.entries(timeLeft)" :key="`mobile-${unit}`" class="flex flex-col items-center">
+                  <span class="text-2xl font-display font-extrabold text-accent-gold tabular-nums">{{ val.toString().padStart(2, '0') }}</span>
+                  <span class="text-[9px] uppercase tracking-[0.2em] text-white/55 mt-1 font-bold">{{ unit }}</span>
+                </div>
+              </div>
+              <div class="pt-4 border-t border-white/10">
+                <div class="flex justify-between items-center text-xs text-white/60 mb-2">
+                  <span class="font-bold uppercase tracking-widest text-[9px]">Availability</span>
+                  <span class="text-[10px] tracking-wider">{{ heroEvent.spotsLeft }} <b class="text-accent-gold">Spots Left</b></span>
+                </div>
+                <div class="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <div 
+                    class="h-full bg-accent-gold shadow-glow transition-all duration-1000"
+                    :style="{ width: `${Math.min(100, (heroEvent.spotsLeft / 200) * 100)}%` }"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          </div>
         </template>
 
         <div v-else class="lg:col-span-2 space-y-6 text-center sm:text-left">
