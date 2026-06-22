@@ -183,9 +183,9 @@ const handleSubmit = async () => {
                 <MapPin :size="14" class="text-accent-gold" />
               </div>
               <span class="text-white/40 text-sm leading-relaxed">
-                Simon Fraser University <br />
+                Multifaith Centre, Simon Fraser University <br />
                 8888 University Dr, Burnaby <br />
-                MBC 2200
+                AQ 3200
               </span>
             </li>
             <li class="flex items-center gap-4">

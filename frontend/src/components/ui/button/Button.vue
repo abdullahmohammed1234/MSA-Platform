@@ -19,17 +19,17 @@ const emit = defineEmits<{
 }>();
 
 const buttonClasses = computed(() => {
-  const base = 'inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer relative overflow-hidden';
+  const base = 'inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors outline-none focus:outline-none focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer relative overflow-hidden';
   
   const variants = {
-    primary: 'bg-primary text-white hover:bg-primary/95 focus-visible:ring-primary',
-    secondary: 'bg-neutral-ivory text-primary hover:bg-neutral-ivory/80 focus-visible:ring-primary',
-    outline: 'border border-neutral-ivory bg-white text-primary hover:bg-neutral-background/60 focus-visible:ring-primary',
-    ghost: 'text-primary hover:bg-neutral-background focus-visible:ring-primary',
-    destructive: 'bg-secondary text-white hover:bg-secondary/95 focus-visible:ring-secondary',
-    gold: 'bg-accent-gold text-primary hover:bg-accent-gold/90 font-bold border border-accent-gold/30 focus-visible:ring-primary',
-    success: 'bg-success text-white hover:bg-success/90 focus-visible:ring-success',
-    link: 'text-primary hover:underline bg-transparent p-0 h-auto focus-visible:ring-primary border-none shadow-none hover:bg-transparent'
+    primary: 'bg-primary text-white hover:bg-primary/95',
+    secondary: 'bg-neutral-ivory text-primary hover:bg-neutral-ivory/80',
+    outline: 'border border-neutral-ivory bg-white text-primary hover:bg-neutral-background/60',
+    ghost: 'text-primary hover:bg-neutral-background',
+    destructive: 'bg-secondary text-white hover:bg-secondary/95',
+    gold: 'bg-accent-gold text-primary hover:bg-accent-gold/90 font-bold border border-accent-gold/30',
+    success: 'bg-success text-white hover:bg-success/90',
+    link: 'text-primary hover:underline bg-transparent p-0 h-auto border-none shadow-none hover:bg-transparent'
   };
 
   const sizes = {
@@ -51,6 +51,21 @@ const buttonClasses = computed(() => {
   ].join(' ');
 });
 
+const motionClasses = computed(() => {
+  const roundedClass = {
+    sm: 'rounded-md',
+    md: 'rounded-md',
+    lg: 'rounded-lg',
+    icon: 'rounded-md',
+  }[props.size];
+
+  return [
+    props.isFullWidth ? 'w-full block' : 'inline-block',
+    roundedClass,
+    'overflow-hidden',
+  ].join(' ');
+});
+
 const handleClick = (e: MouseEvent) => {
   if (!props.isLoading && !props.disabled) {
     emit('click', e);
@@ -64,7 +79,7 @@ const handleClick = (e: MouseEvent) => {
     :press="disabled || isLoading ? {} : buttonHover.tap"
     :transition="buttonHover.transition"
     as="div"
-    :class="[isFullWidth ? 'w-full block' : 'inline-block']"
+    :class="motionClasses"
   >
     <button
       :type="type"

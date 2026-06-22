@@ -27,8 +27,17 @@
     @apply leading-relaxed text-neutral-black/75 text-base sm:text-lg font-light;
   }
 
-  button, a {
-    @apply active:scale-[0.98] transition-all duration-300 touch-manipulation;
+  button,
+  a {
+    @apply touch-manipulation outline-none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button:focus,
+  button:focus-visible,
+  a:focus,
+  a:focus-visible {
+    @apply outline-none shadow-none;
   }
 }
 
