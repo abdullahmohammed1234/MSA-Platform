@@ -22,6 +22,7 @@ import PublicButton from '@/components/shared/PublicButton.vue';
 import { useSeo } from '@/composables/useSeo';
 import websiteService, { type EventItem } from '@/services/website/websiteService';
 import { useAuthStore } from '@/stores/auth';
+import { stripHtml, textPreview } from '@/utils/html';
 
 const authStore = useAuthStore();
 
@@ -128,42 +129,32 @@ function getEventEnd(event: EventItem): Date {
   return end;
 }
 
-function isEventInCurrentMonth(event: EventItem, reference = new Date()): boolean {
-  const start = getEventStart(event);
-  if (Number.isNaN(start.getTime()) || start.getTime() === 8640000000000000) {
-    return true;
-  }
-  return (
-    start.getFullYear() === reference.getFullYear() &&
-    start.getMonth() === reference.getMonth()
-  );
+function isUpcomingEvent(event: EventItem, referenceTime = now.value): boolean {
+  return getEventEnd(event).getTime() > referenceTime;
 }
 
-const currentMonthLabel = computed(() =>
-  new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-);
-
-const monthEvents = computed(() =>
+const upcomingEvents = computed(() =>
   eventsData.value
-    .filter((event) => isEventInCurrentMonth(event))
+    .filter((event) => isUpcomingEvent(event))
     .sort((a, b) => getEventStart(a).getTime() - getEventStart(b).getTime())
 );
 
-/** Next event whose end time has not passed — advances automatically when an event is over */
+/** Featured upcoming event takes hero priority; otherwise the next event by start time. */
 const heroEvent = computed(() => {
-  const currentTime = now.value;
-  return (
-    eventsData.value
-      .filter((event) => getEventEnd(event).getTime() > currentTime)
-      .sort((a, b) => getEventStart(a).getTime() - getEventStart(b).getTime())[0] ?? null
-  );
+  const upcoming = upcomingEvents.value;
+  if (upcoming.length === 0) return null;
+
+  return upcoming.find((event) => event.featured) ?? upcoming[0];
 });
 
 const filteredEvents = computed(() => {
-  return monthEvents.value.filter(event => {
+  const query = searchQuery.value.toLowerCase();
+
+  return upcomingEvents.value.filter(event => {
     const matchesCategory = selectedCategory.value === 'All' || event.category === selectedCategory.value;
-    const matchesSearch = event.title.toLowerCase().includes(searchQuery.value.toLowerCase()) || 
-                          event.description.toLowerCase().includes(searchQuery.value.toLowerCase());
+    const plainDescription = stripHtml(event.description).toLowerCase();
+    const matchesSearch = event.title.toLowerCase().includes(query) ||
+                          plainDescription.includes(query);
     return matchesCategory && matchesSearch;
   });
 });
@@ -342,7 +333,7 @@ onUnmounted(() => {
 
               <ScrollReveal :delay="0.25">
                 <p class="text-base sm:text-lg text-white/70 max-w-lg leading-relaxed mx-auto sm:mx-0 font-light">
-                  {{ heroEvent.description }}
+                  {{ textPreview(heroEvent.description, 280) }}
                 </p>
               </ScrollReveal>
 
@@ -512,10 +503,10 @@ onUnmounted(() => {
     <section class="container-custom py-16">
       <div class="mb-10">
         <h2 class="text-2xl sm:text-3xl font-display font-extrabold text-primary">
-          {{ currentMonthLabel }}
+          Upcoming Events
         </h2>
         <p class="text-neutral-black/50 text-sm mt-2 font-light">
-          All events scheduled for this month
+          All published events that haven't ended yet
         </p>
       </div>
       <div :class="viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8' : 'space-y-6'">
@@ -558,7 +549,7 @@ onUnmounted(() => {
                 {{ event.title }}
               </h3>
               <p class="text-neutral-black/55 text-sm leading-relaxed line-clamp-3 font-light font-sans">
-                {{ event.description }}
+                {{ textPreview(event.description, 220) }}
               </p>
             </div>
 
