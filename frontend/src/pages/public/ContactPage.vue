@@ -2,8 +2,7 @@
 import { ref } from 'vue';
 import { 
   AlertCircle, Mail, Phone, MapPin, Send, MessageSquare, 
-  CheckCircle2, ChevronDown, Instagram, Twitter, Facebook, 
-  Linkedin, Plus 
+  CheckCircle2, ChevronDown, Instagram, Facebook, Plus 
 } from 'lucide-vue-next';
 import { Presence } from '@motionone/vue';
 import ScrollReveal from '@/components/shared/ScrollReveal.vue';
@@ -41,6 +40,11 @@ const departments = [
   { name: 'Media & Comms', email: 'media@sfumsa.ca' },
   { name: 'Sisters\' Affairs', email: 'sisters@sfumsa.ca' },
   { name: 'Education & Outreach', email: 'education@sfumsa.ca' },
+];
+
+const socialLinks = [
+  { icon: Instagram, name: 'Instagram', href: 'https://www.instagram.com/sfu_msa/' },
+  { icon: Facebook, name: 'Facebook', href: 'https://www.facebook.com/sfumsa/' },
 ];
 
 const formState = ref({ name: '', email: '', subject: '', message: '' });
@@ -245,14 +249,12 @@ const toggleFaq = (index: number) => {
             <!-- Social Links -->
             <div class="flex gap-4">
               <a 
-                v-for="social in [
-                  { icon: Instagram, name: 'Instagram', href: '#' },
-                  { icon: Twitter, name: 'Twitter', href: '#' },
-                  { icon: Facebook, name: 'Facebook', href: '#' },
-                  { icon: Linkedin, name: 'LinkedIn', href: '#' }
-                ]"
+                v-for="social in socialLinks"
                 :key="social.name"
                 :href="social.href"
+                target="_blank"
+                rel="noopener noreferrer"
+                :aria-label="social.name"
                 class="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-neutral-black/40 hover:text-primary hover:shadow-soft transition-all border border-neutral-gray/20"
               >
                 <component :is="social.icon" :size="20" />

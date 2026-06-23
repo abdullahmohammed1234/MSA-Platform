@@ -42,7 +42,8 @@ class PerformanceMonitoringMiddleware
 
         $response = $next($request);
 
-        $durationMs = round((microtime(true) - $startTime) * 1000);
+        // Sub-millisecond requests round to 0; keep at least 1ms for meaningful metrics.
+        $durationMs = max(1, (int) round((microtime(true) - $startTime) * 1000));
         $memoryMb = round(memory_get_peak_usage(true) / (1024 * 1024), 2);
         
         try {
