@@ -27,7 +27,7 @@ const publicRoutes: Array<RouteRecordRaw> = [
         path: 'events', 
         name: 'events', 
         component: () => import('@/pages/public/EventsPage.vue'), 
-        meta: { title: 'Events | SFU MSA', desc: 'Stay updated and RSVP for upcoming seminars, congregations, and socials.' } 
+        meta: { title: 'Events | SFU MSA', desc: 'Stay updated on upcoming seminars, congregations, and socials.' } 
       },
       { 
         path: 'resources', 

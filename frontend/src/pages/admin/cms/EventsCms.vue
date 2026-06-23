@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import cmsService from '@/services/cms/cmsService';
-import type { Event, CmsRevision, EventRegistration } from '@/types/cms';
+import type { Event, CmsRevision } from '@/types/cms';
 import { resolvePublicImagePath } from '@/constants/publicAssets';
 import { lazyLoadComponent } from '@/utils/LazyLoad';
 const RichEditor = lazyLoadComponent(() => import('@/components/admin/RichEditor.vue'));
@@ -17,9 +17,7 @@ import {
   Calendar,
   MapPin,
   Clock,
-  Star,
-  Users,
-  Download
+  Star
 } from 'lucide-vue-next';
 
 // State variables
@@ -34,12 +32,8 @@ const error = ref<string | null>(null);
 // Modal state
 const isFormOpen = ref(false);
 const isRevisionsOpen = ref(false);
-const isRegistrationsOpen = ref(false);
 const activeEvent = ref<Event | null>(null);
 const revisionsList = ref<CmsRevision[]>([]);
-const registrationsList = ref<EventRegistration[]>([]);
-const registrationsMeta = ref({ page: 1, lastPage: 1, total: 0, spotsLeft: 0 });
-const isLoadingRegistrations = ref(false);
 
 // Form state
 const form = ref({
@@ -50,13 +44,10 @@ const form = ref({
   time: '', // Display time string
   start_date: '', // Datetime local
   end_date: '', // Datetime local
-  registration_url: '',
   image: '',
   category: 'Social',
   status: 'draft' as 'draft' | 'published' | 'archived',
-  spots_left: 50,
   featured: false,
-  registration_deadline: '', // Date string
 });
 
 const CATEGORIES = ['Jummah', 'Social', 'Lecture', 'Workshop', 'Charity', 'Dinner'];
@@ -98,13 +89,10 @@ const openCreateForm = () => {
     time: '',
     start_date: '',
     end_date: '',
-    registration_url: '',
     image: '',
     category: 'Social',
     status: 'draft',
-    spots_left: 50,
     featured: false,
-    registration_deadline: '',
   };
   isFormOpen.value = true;
 };
@@ -120,15 +108,6 @@ const formatDatetimeLocal = (dateStr?: string | null) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
-const formatDateLocal = (dateStr?: string | null) => {
-  if (!dateStr) return '';
-  const d = new Date(dateStr);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-};
-
 const openEditForm = (ev: Event) => {
   activeEvent.value = ev;
   form.value = {
@@ -139,13 +118,10 @@ const openEditForm = (ev: Event) => {
     time: ev.time,
     start_date: formatDatetimeLocal(ev.start_date),
     end_date: formatDatetimeLocal(ev.end_date),
-    registration_url: ev.registration_url || '',
     image: ev.image || '',
     category: ev.category,
     status: ev.status,
-    spots_left: ev.spots_left,
     featured: ev.featured,
-    registration_deadline: formatDateLocal(ev.registration_deadline),
   };
   isFormOpen.value = true;
 };
@@ -154,7 +130,12 @@ const handleSubmit = async () => {
   isLoading.value = true;
   error.value = null;
   try {
-    const payload = { ...form.value };
+    const payload = {
+      ...form.value,
+      spots_left: 0,
+      registration_url: null,
+      registration_deadline: null,
+    };
     // Format timezone offsets nicely for PHP backend
     payload.start_date = payload.start_date.replace('T', ' ');
     if (payload.end_date) {
@@ -216,58 +197,6 @@ const handleRollback = async (version: number) => {
   }
 };
 
-const fetchRegistrations = async (page = 1) => {
-  if (!activeEvent.value) return;
-
-  isLoadingRegistrations.value = true;
-  try {
-    const res = await cmsService.getEventRegistrations(activeEvent.value.uuid, { page, per_page: 25 });
-    registrationsList.value = res.data;
-    registrationsMeta.value = {
-      page: res.current_page,
-      lastPage: res.last_page,
-      total: res.total,
-      spotsLeft: res.event.spots_left,
-    };
-  } catch (err: any) {
-    alert(err.response?.data?.message || 'Failed to load registrations.');
-  } finally {
-    isLoadingRegistrations.value = false;
-  }
-};
-
-const openRegistrations = async (ev: Event) => {
-  activeEvent.value = ev;
-  isRegistrationsOpen.value = true;
-  registrationsList.value = [];
-  registrationsMeta.value = { page: 1, lastPage: 1, total: 0, spotsLeft: ev.spots_left };
-  await fetchRegistrations(1);
-};
-
-const exportRegistrationsCsv = () => {
-  if (!activeEvent.value || registrationsList.value.length === 0) return;
-
-  const headers = ['Name', 'Email', 'Student ID', 'Status', 'Registered At'];
-  const rows = registrationsList.value.map((registration) => [
-    registration.full_name,
-    registration.email,
-    registration.student_id,
-    registration.status,
-    new Date(registration.registered_at).toLocaleString(),
-  ]);
-
-  const csv = [headers, ...rows]
-    .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-    .join('\n');
-
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `${activeEvent.value.title.replace(/[^\w\-]+/g, '_')}_registrations.csv`;
-  link.click();
-  URL.revokeObjectURL(url);
-};
 </script>
 
 <template>
@@ -338,7 +267,6 @@ const exportRegistrationsCsv = () => {
               <th class="p-6">Event Details</th>
               <th class="p-6">Logistics</th>
               <th class="p-6">Category</th>
-              <th class="p-6">RSVPs</th>
               <th class="p-6">Status</th>
               <th class="p-6">Featured</th>
               <th class="p-6 text-right">Actions</th>
@@ -346,7 +274,7 @@ const exportRegistrationsCsv = () => {
           </thead>
           <tbody class="divide-y divide-neutral-gray/10">
             <tr v-if="events.length === 0">
-              <td colspan="7" class="p-12 text-center text-neutral-black/30">
+              <td colspan="6" class="p-12 text-center text-neutral-black/30">
                 No events scheduled. Click "Add Event" to insert one.
               </td>
             </tr>
@@ -371,17 +299,6 @@ const exportRegistrationsCsv = () => {
                 {{ ev.category }}
               </td>
               <td class="p-6">
-                <button
-                  type="button"
-                  @click="openRegistrations(ev)"
-                  class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-primary/5 text-primary text-[10px] font-black uppercase tracking-wider hover:bg-primary hover:text-white transition-all cursor-pointer"
-                  :title="`${ev.registrations_count ?? 0} registrations`"
-                >
-                  <Users :size="12" />
-                  {{ ev.registrations_count ?? 0 }}
-                </button>
-              </td>
-              <td class="p-6">
                 <span 
                   :class="[
                     'px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-wider',
@@ -398,9 +315,6 @@ const exportRegistrationsCsv = () => {
                 <span v-else class="text-neutral-black/30 font-medium">—</span>
               </td>
               <td class="p-6 text-right space-x-2">
-                <button @click="openRegistrations(ev)" class="p-2.5 bg-secondary/5 hover:bg-secondary hover:text-white rounded-xl text-secondary transition-all duration-300 cursor-pointer" title="View RSVPs">
-                  <Users :size="14" />
-                </button>
                 <button @click="openEditForm(ev)" class="p-2.5 bg-primary/5 hover:bg-primary hover:text-white rounded-xl text-primary transition-all duration-300 cursor-pointer" title="Edit">
                   <Edit :size="14" />
                 </button>
@@ -487,25 +401,10 @@ const exportRegistrationsCsv = () => {
             </div>
           </div>
 
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="space-y-2 md:col-span-2">
               <label class="text-[10px] font-black uppercase tracking-widest text-primary/70">Physical / Online Location</label>
               <input type="text" required v-model="form.location" class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl py-4 px-5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 text-neutral-black" placeholder="SFU Burnaby, WMC 3260" />
-            </div>
-            <div class="space-y-2">
-              <label class="text-[10px] font-black uppercase tracking-widest text-primary/70">Spots Capacity limit</label>
-              <input type="number" required v-model="form.spots_left" class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl py-4 px-5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 text-neutral-black font-medium" />
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="space-y-2">
-              <label class="text-[10px] font-black uppercase tracking-widest text-primary/70">Registration URL (External / RSVP)</label>
-              <input type="text" v-model="form.registration_url" class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl py-4 px-5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 text-neutral-black" placeholder="/events (defaults to RSVP modal)" />
-            </div>
-            <div class="space-y-2">
-              <label class="text-[10px] font-black uppercase tracking-widest text-primary/70">Registration Deadline</label>
-              <input type="date" v-model="form.registration_deadline" class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl py-4 px-5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 text-neutral-black font-medium" />
             </div>
           </div>
 
@@ -525,7 +424,7 @@ const exportRegistrationsCsv = () => {
           <RichEditor 
             v-model="form.description"
             label="Event Details & Description"
-            placeholder="Write information about topics, speakers, registration requirements, catering details, etc."
+            placeholder="Write information about topics, speakers, catering details, etc."
           />
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-neutral-gray/10">
@@ -613,94 +512,6 @@ const exportRegistrationsCsv = () => {
               class="px-4 py-2.5 bg-accent-gold/5 border border-accent-gold/10 text-accent-gold rounded-xl text-[9px] font-black uppercase tracking-wider hover:bg-accent-gold hover:text-white transition-all duration-300 flex items-center gap-1.5 cursor-pointer shadow-sm"
             >
               <RotateCcw :size="10" /> Rollback
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-    <!-- REGISTRATIONS MODAL -->
-    <div v-if="isRegistrationsOpen" class="fixed inset-0 z-50 flex items-center justify-center p-5">
-      <div class="absolute inset-0 bg-primary/20 backdrop-blur-md" @click="isRegistrationsOpen = false"></div>
-      <div class="bg-white rounded-[2.5rem] border border-neutral-gray/20 p-8 sm:p-10 shadow-premium max-w-4xl w-full relative z-10 max-h-[85vh] overflow-y-auto">
-        <button @click="isRegistrationsOpen = false" class="absolute top-6 right-6 p-2 text-neutral-black/35 hover:text-primary transition-colors cursor-pointer">
-          <X :size="20" />
-        </button>
-
-        <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
-          <div>
-            <h3 class="text-2xl font-display font-extrabold text-primary uppercase flex items-center gap-2">
-              <Users :size="24" /> Event RSVPs
-            </h3>
-            <p class="text-neutral-black/40 text-xs mt-2" v-if="activeEvent">
-              Attendees registered for <b>{{ activeEvent.title }}</b>
-            </p>
-          </div>
-          <button
-            v-if="registrationsList.length > 0"
-            type="button"
-            @click="exportRegistrationsCsv"
-            class="inline-flex items-center gap-2 px-4 py-2.5 bg-primary/5 text-primary rounded-xl text-[10px] font-black uppercase tracking-wider hover:bg-primary hover:text-white transition-all cursor-pointer"
-          >
-            <Download :size="12" /> Export CSV
-          </button>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-          <div class="rounded-2xl border border-neutral-gray/10 bg-neutral-background/40 p-4">
-            <p class="text-[10px] font-black uppercase tracking-widest text-neutral-black/40">Total Registered</p>
-            <p class="text-2xl font-display font-extrabold text-primary mt-1">{{ registrationsMeta.total }}</p>
-          </div>
-          <div class="rounded-2xl border border-neutral-gray/10 bg-neutral-background/40 p-4">
-            <p class="text-[10px] font-black uppercase tracking-widest text-neutral-black/40">Spots Remaining</p>
-            <p class="text-2xl font-display font-extrabold text-secondary mt-1">{{ registrationsMeta.spotsLeft }}</p>
-          </div>
-        </div>
-
-        <div v-if="isLoadingRegistrations" class="py-16 text-center text-neutral-black/40 text-sm">
-          Loading registrations...
-        </div>
-
-        <div v-else-if="registrationsList.length === 0" class="py-12 text-center text-neutral-black/30 text-xs border border-dashed border-neutral-gray/20 rounded-3xl">
-          No one has registered for this event yet.
-        </div>
-
-        <div v-else class="overflow-x-auto border border-neutral-gray/10 rounded-3xl">
-          <table class="w-full border-collapse text-left text-xs text-neutral-black">
-            <thead class="bg-neutral-background/50 border-b border-neutral-gray/10 uppercase font-black text-neutral-black/40 tracking-wider">
-              <tr>
-                <th class="p-4">Name</th>
-                <th class="p-4">Email</th>
-                <th class="p-4">Student ID</th>
-                <th class="p-4">Registered</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-neutral-gray/10">
-              <tr v-for="registration in registrationsList" :key="registration.uuid" class="hover:bg-neutral-background/20">
-                <td class="p-4 font-bold text-primary">{{ registration.full_name }}</td>
-                <td class="p-4 text-neutral-black/70">{{ registration.email }}</td>
-                <td class="p-4 font-mono text-neutral-black/60">{{ registration.student_id }}</td>
-                <td class="p-4 text-neutral-black/50">{{ new Date(registration.registered_at).toLocaleString() }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div v-if="registrationsMeta.lastPage > 1" class="pt-6 flex justify-between items-center">
-          <span class="text-[10px] text-neutral-black/40 font-bold uppercase">Page {{ registrationsMeta.page }} of {{ registrationsMeta.lastPage }}</span>
-          <div class="flex gap-2">
-            <button
-              :disabled="registrationsMeta.page === 1 || isLoadingRegistrations"
-              @click="fetchRegistrations(registrationsMeta.page - 1)"
-              class="px-4 py-2 border border-neutral-gray/20 rounded-xl text-[10px] font-bold uppercase cursor-pointer disabled:opacity-40"
-            >
-              Prev
-            </button>
-            <button
-              :disabled="registrationsMeta.page === registrationsMeta.lastPage || isLoadingRegistrations"
-              @click="fetchRegistrations(registrationsMeta.page + 1)"
-              class="px-4 py-2 border border-neutral-gray/20 rounded-xl text-[10px] font-bold uppercase cursor-pointer disabled:opacity-40"
-            >
-              Next
             </button>
           </div>
         </div>
