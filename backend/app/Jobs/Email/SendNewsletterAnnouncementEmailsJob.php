@@ -5,7 +5,6 @@ namespace App\Jobs\Email;
 use App\Mail\NewsletterAnnouncement;
 use App\Models\NewsletterSubscriber;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
@@ -13,7 +12,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
 
-class SendNewsletterAnnouncementEmailsJob implements ShouldQueue
+class SendNewsletterAnnouncementEmailsJob
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
@@ -25,7 +24,6 @@ class SendNewsletterAnnouncementEmailsJob implements ShouldQueue
         protected string $announcementExcerpt,
         protected string $announcementSlug,
     ) {
-        $this->queue = 'default';
     }
 
     public function handle(): void
@@ -39,14 +37,14 @@ class SendNewsletterAnnouncementEmailsJob implements ShouldQueue
             ->chunkById(100, function ($subscribers) use ($announcementUrl) {
                 foreach ($subscribers as $subscriber) {
                     try {
-                        Mail::to($subscriber->email)->queue(new NewsletterAnnouncement(
+                        Mail::to($subscriber->email)->send(new NewsletterAnnouncement(
                             $subscriber->email,
                             $this->announcementTitle,
                             $this->announcementExcerpt,
                             $announcementUrl,
                         ));
                     } catch (Throwable $exception) {
-                        Log::error('Failed to queue newsletter announcement email', [
+                        Log::error('Failed to send newsletter announcement email', [
                             'email' => $subscriber->email,
                             'error' => $exception->getMessage(),
                         ]);

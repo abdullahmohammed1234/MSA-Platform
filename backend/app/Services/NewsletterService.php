@@ -62,13 +62,13 @@ class NewsletterService
             return;
         }
 
-        SendNewsletterAnnouncementEmailsJob::dispatch($title, $excerpt, $slug);
+        SendNewsletterAnnouncementEmailsJob::dispatchSync($title, $excerpt, $slug);
     }
 
     protected function sendWelcomeEmail(string $email): void
     {
         try {
-            Mail::to($email)->queue(new NewsletterWelcome($email));
+            Mail::to($email)->send(new NewsletterWelcome($email));
         } catch (Throwable $exception) {
             Log::error('Newsletter welcome email failed', [
                 'email' => $email,
