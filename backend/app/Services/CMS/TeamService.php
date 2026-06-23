@@ -55,6 +55,7 @@ class TeamService
     public function update(TeamMember $member, array $data, ?int $userId): TeamMember
     {
         $this->repository->update($member, $data);
+        $member->refresh();
 
         // Save revision
         $this->revisionService->createRevision($member, $userId);

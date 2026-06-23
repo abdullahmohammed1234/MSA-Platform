@@ -136,3 +136,27 @@ export function resolvePublicImagePath(path: string): string {
 
   return normalized;
 }
+
+/** Normalize a CMS image value for database storage (strip API origin from storage URLs). */
+export function toStorableImagePath(path: string | null | undefined): string | null {
+  if (!path) {
+    return null;
+  }
+
+  const trimmed = path.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+    const apiOrigin = getApiOrigin();
+    if (trimmed.startsWith(apiOrigin)) {
+      const relative = trimmed.slice(apiOrigin.length);
+      return relative.startsWith('/') ? relative : `/${relative}`;
+    }
+
+    return rewriteLocalhostUrl(trimmed).replace(apiOrigin, '') || trimmed;
+  }
+
+  return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+}

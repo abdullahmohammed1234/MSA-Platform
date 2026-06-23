@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { resolveTeamMembers, normalizeTeamMembers, normalizeCmsTeamMember } from '@/utils/teamMembers';
+import { toStorableImagePath } from '@/constants/publicAssets';
 import { DEFAULT_TEAM_MEMBERS } from '@/data/teamMembers';
 
 describe('resolveTeamMembers', () => {
@@ -37,5 +38,12 @@ describe('resolveTeamMembers', () => {
     });
 
     expect(result.img).toBe('/Team/hamza.webp');
+  });
+
+  it('stores uploaded media paths without the API origin', () => {
+    expect(toStorableImagePath('http://localhost:8000/storage/uploads/team-photo.webp'))
+      .toBe('/storage/uploads/team-photo.webp');
+    expect(toStorableImagePath('/Team/hamza.webp')).toBe('/Team/hamza.webp');
+    expect(toStorableImagePath('')).toBeNull();
   });
 });

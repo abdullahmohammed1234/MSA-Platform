@@ -323,6 +323,9 @@ Route::prefix('v1')->group(function () {
         Route::post('/cms/team', [\App\Http\Controllers\Admin\CMS\TeamController::class, 'store'])
             ->middleware('permission:manage_team')
             ->name('api.admin.cms.team.store');
+        Route::post('/cms/team/reorder', [\App\Http\Controllers\Admin\CMS\TeamController::class, 'reorder'])
+            ->middleware('permission:manage_team')
+            ->name('api.admin.cms.team.reorder');
         Route::get('/cms/team/{uuid}', [\App\Http\Controllers\Admin\CMS\TeamController::class, 'show'])
             ->middleware('permission:manage_team')
             ->name('api.admin.cms.team.show');
@@ -332,9 +335,6 @@ Route::prefix('v1')->group(function () {
         Route::delete('/cms/team/{uuid}', [\App\Http\Controllers\Admin\CMS\TeamController::class, 'destroy'])
             ->middleware('permission:manage_team')
             ->name('api.admin.cms.team.destroy');
-        Route::post('/cms/team/reorder', [\App\Http\Controllers\Admin\CMS\TeamController::class, 'reorder'])
-            ->middleware('permission:manage_team')
-            ->name('api.admin.cms.team.reorder');
         Route::get('/cms/team/{uuid}/revisions', [\App\Http\Controllers\Admin\CMS\TeamController::class, 'revisions'])
             ->middleware('permission:manage_team')
             ->name('api.admin.cms.team.revisions');
@@ -370,7 +370,7 @@ Route::prefix('v1')->group(function () {
             ->middleware('permission:manage_media')
             ->name('api.admin.cms.media.index');
         Route::post('/cms/media', [\App\Http\Controllers\Admin\CMS\MediaController::class, 'store'])
-            ->middleware('permission:manage_media')
+            ->middleware('permission:manage_media|manage_team|manage_announcements|manage_events|manage_resources|manage_homepage')
             ->name('api.admin.cms.media.store');
         Route::delete('/cms/media/{uuid}', [\App\Http\Controllers\Admin\CMS\MediaController::class, 'destroy'])
             ->middleware('permission:manage_media')

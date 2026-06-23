@@ -14,9 +14,11 @@ import {
   ArrowUp,
   ArrowDown,
   Mail,
-  Linkedin
+  Linkedin,
+  UploadCloud,
+  Image as ImageIcon
 } from 'lucide-vue-next';
-import { TEAM_FALLBACK_IMAGE, resolvePublicImagePath } from '@/constants/publicAssets';
+import { TEAM_FALLBACK_IMAGE, resolvePublicImagePath, toStorableImagePath } from '@/constants/publicAssets';
 
 const resolveTeamImage = (img?: string | null) => resolvePublicImagePath(img || TEAM_FALLBACK_IMAGE);
 
@@ -27,6 +29,9 @@ const searchQuery = ref('');
 const deptFilter = ref('');
 const isLoading = ref(false);
 const error = ref<string | null>(null);
+const formError = ref<string | null>(null);
+const isUploadingPhoto = ref(false);
+const photoInput = ref<HTMLInputElement | null>(null);
 
 // Modal state
 const isFormOpen = ref(false);
@@ -82,6 +87,7 @@ const fetchMembers = async (page = 1) => {
 
 const openCreateForm = () => {
   activeMember.value = null;
+  formError.value = null;
   form.value = {
     name: '',
     role: '',
@@ -97,6 +103,7 @@ const openCreateForm = () => {
 
 const openEditForm = (m: TeamMember) => {
   activeMember.value = m;
+  formError.value = null;
   form.value = {
     name: m.name,
     role: m.role,
@@ -110,19 +117,80 @@ const openEditForm = (m: TeamMember) => {
   isFormOpen.value = true;
 };
 
+const formatValidationError = (err: any, fallback: string) => {
+  const data = err?.response?.data;
+  if (!data) {
+    return err?.message || fallback;
+  }
+
+  if (data.errors && typeof data.errors === 'object') {
+    const firstError = Object.values(data.errors).flat()[0];
+    if (typeof firstError === 'string') {
+      return firstError;
+    }
+  }
+
+  return data.message || fallback;
+};
+
+const buildPayload = () => ({
+  name: form.value.name.trim(),
+  role: form.value.role.trim(),
+  dept: form.value.dept,
+  img: toStorableImagePath(form.value.img),
+  bio: form.value.bio.trim() || null,
+  email: form.value.email.trim() || null,
+  linkedin: form.value.linkedin.trim() || null,
+  status: form.value.status,
+});
+
+const triggerPhotoUpload = () => {
+  photoInput.value?.click();
+};
+
+const handlePhotoChange = async (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0];
+  target.value = '';
+
+  if (!file) {
+    return;
+  }
+
+  if (!file.type.startsWith('image/')) {
+    formError.value = 'Please choose an image file (JPEG, PNG, or WEBP).';
+    return;
+  }
+
+  isUploadingPhoto.value = true;
+  formError.value = null;
+
+  try {
+    const media = await cmsService.uploadMedia(file);
+    form.value.img = toStorableImagePath(media.url) || media.url;
+  } catch (err: any) {
+    formError.value = formatValidationError(err, 'Failed to upload photo.');
+  } finally {
+    isUploadingPhoto.value = false;
+  }
+};
+
 const handleSubmit = async () => {
   isLoading.value = true;
   error.value = null;
+  formError.value = null;
   try {
+    const payload = buildPayload();
+
     if (activeMember.value) {
-      await cmsService.updateTeamMember(activeMember.value.uuid, form.value);
+      await cmsService.updateTeamMember(activeMember.value.uuid, payload);
     } else {
-      await cmsService.createTeamMember(form.value);
+      await cmsService.createTeamMember(payload);
     }
     isFormOpen.value = false;
     fetchMembers(pagination.value.page);
   } catch (err: any) {
-    error.value = err.response?.data?.message || 'Failed to save team member details.';
+    formError.value = formatValidationError(err, 'Failed to save team member details.');
   } finally {
     isLoading.value = false;
   }
@@ -365,7 +433,11 @@ const handleRollback = async (version: number) => {
           {{ activeMember ? 'Edit Representative' : 'Add Team Representative' }}
         </h3>
 
-        <form @submit.prevent="handleSubmit" class="space-y-5">
+        <div v-if="formError" class="mb-5 p-4 bg-secondary/10 border border-secondary/20 text-secondary rounded-2xl text-xs font-bold uppercase tracking-wider">
+          {{ formError }}
+        </div>
+
+        <form @submit.prevent="handleSubmit" class="space-y-5" novalidate>
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="space-y-2">
               <label class="text-[10px] font-black uppercase tracking-widest text-primary/70">Full Name</label>
@@ -386,8 +458,31 @@ const handleRollback = async (version: number) => {
               <input type="text" required v-model="form.role" class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl py-4 px-5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 text-neutral-black" placeholder="Lead IT Developer" />
             </div>
             <div class="space-y-2">
-              <label class="text-[10px] font-black uppercase tracking-widest text-primary/70">Photo Image URL</label>
-              <input type="text" v-model="form.img" class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl py-4 px-5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 text-neutral-black" placeholder="e.g. /Team/hamza.webp or library URL" />
+              <label class="text-[10px] font-black uppercase tracking-widest text-primary/70">Profile Photo</label>
+              <input
+                type="file"
+                ref="photoInput"
+                class="hidden"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                @change="handlePhotoChange"
+              />
+              <div class="flex flex-col gap-3">
+                <button
+                  type="button"
+                  @click="triggerPhotoUpload"
+                  :disabled="isUploadingPhoto || isLoading"
+                  class="flex items-center justify-center gap-2 w-full bg-neutral-background border border-dashed border-neutral-gray/30 rounded-2xl py-4 px-5 text-xs font-bold uppercase tracking-wider text-primary hover:border-primary/40 hover:bg-primary/5 transition-all cursor-pointer disabled:opacity-50"
+                >
+                  <UploadCloud :size="16" />
+                  {{ isUploadingPhoto ? 'Uploading photo...' : 'Upload photo' }}
+                </button>
+                <input
+                  type="text"
+                  v-model="form.img"
+                  class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl py-4 px-5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 text-neutral-black"
+                  placeholder="Or paste image URL / path (e.g. /Team/hamza.webp)"
+                />
+              </div>
               <div v-if="form.img" class="flex items-center gap-4 pt-2">
                 <img
                   :src="resolveTeamImage(form.img)"
@@ -395,8 +490,8 @@ const handleRollback = async (version: number) => {
                   class="w-16 h-16 object-cover rounded-2xl border border-neutral-gray/20 bg-neutral-background"
                   @error="($event.target as HTMLImageElement).src = TEAM_FALLBACK_IMAGE"
                 />
-                <p class="text-[10px] text-neutral-black/40 leading-relaxed">
-                  Preview uses <code>/Team/</code> paths from <code>public/Team/</code>.
+                <p class="text-[10px] text-neutral-black/40 leading-relaxed flex items-center gap-1.5">
+                  <ImageIcon :size="12" /> Upload a new photo or use a path from <code>public/Team/</code> or the Media Library.
                 </p>
               </div>
             </div>
@@ -405,7 +500,7 @@ const handleRollback = async (version: number) => {
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="space-y-2">
               <label class="text-[10px] font-black uppercase tracking-widest text-primary/70">Email Address (Optional)</label>
-              <input type="email" v-model="form.email" class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl py-4 px-5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 text-neutral-black" />
+              <input type="text" v-model="form.email" class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl py-4 px-5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 text-neutral-black" placeholder="name@sfu.ca" />
             </div>
             <div class="space-y-2">
               <label class="text-[10px] font-black uppercase tracking-widest text-primary/70">LinkedIn Profile URL</label>
@@ -439,7 +534,7 @@ const handleRollback = async (version: number) => {
             <button type="button" @click="isFormOpen = false" class="px-6 py-4 border border-neutral-gray/20 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-neutral-background cursor-pointer">
               Cancel
             </button>
-            <button type="submit" :disabled="isLoading" class="flex items-center gap-2 px-8 py-4 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-secondary hover:shadow-brand transition-all cursor-pointer">
+            <button type="submit" :disabled="isLoading || isUploadingPhoto" class="flex items-center gap-2 px-8 py-4 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-secondary hover:shadow-brand transition-all cursor-pointer disabled:opacity-50">
               <Save :size="14" /> {{ isLoading ? 'Saving...' : 'Save Representative' }}
             </button>
           </div>

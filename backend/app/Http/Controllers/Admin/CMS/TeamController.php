@@ -57,13 +57,13 @@ class TeamController extends Controller
             return response()->json(['message' => 'Team member not found.'], 404);
         }
 
-        $this->service->update($member, $request->validated(), Auth::id());
+        $updated = $this->service->update($member, $request->validated(), Auth::id());
         Cache::forget('website_team');
 
         return response()->json([
             'success' => true,
             'message' => 'Team member updated successfully.',
-            'member' => $member
+            'member' => $updated->fresh()
         ]);
     }
 

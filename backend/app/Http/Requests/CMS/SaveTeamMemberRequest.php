@@ -11,6 +11,19 @@ class SaveTeamMemberRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $nullableFields = ['img', 'bio', 'email', 'linkedin'];
+
+        foreach ($nullableFields as $field) {
+            $value = $this->input($field);
+
+            if ($value === null || $value === '') {
+                $this->merge([$field => null]);
+            }
+        }
+    }
+
     public function rules(): array
     {
         return [

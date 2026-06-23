@@ -119,10 +119,7 @@ export const cmsService = {
   // 5. Team Members
   async getTeamMembers(params: any = {}): Promise<PaginatedResponse<TeamMember>> {
     const response = await client.get('/admin/cms/team', { params });
-    return {
-      ...response.data,
-      data: response.data.data.map(normalizeCmsTeamMember),
-    };
+    return response.data;
   },
 
   async getTeamMember(uuid: string): Promise<TeamMember> {
@@ -132,12 +129,14 @@ export const cmsService = {
 
   async createTeamMember(data: Partial<TeamMember>): Promise<TeamMember> {
     const response = await client.post('/admin/cms/team', data);
-    return normalizeCmsTeamMember(response.data.member);
+    const member = response.data?.member;
+    return member ? normalizeCmsTeamMember(member) : (data as TeamMember);
   },
 
   async updateTeamMember(uuid: string, data: Partial<TeamMember>): Promise<TeamMember> {
     const response = await client.put(`/admin/cms/team/${uuid}`, data);
-    return normalizeCmsTeamMember(response.data.member);
+    const member = response.data?.member;
+    return member ? normalizeCmsTeamMember(member) : (data as TeamMember);
   },
 
   async deleteTeamMember(uuid: string): Promise<void> {
