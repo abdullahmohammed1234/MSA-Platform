@@ -19,6 +19,7 @@ const navLinks = [
   { name: 'Team', href: '/team' },
   { name: 'Media', href: '/media' },
   { name: 'Resources', href: '/resources' },
+  { name: 'Store', href: 'https://sfu-msa-store.square.site/', external: true },
   { name: 'Contact', href: '/contact' },
 ];
 
@@ -91,23 +92,37 @@ const handleLogout = async () => {
         <!-- Desktop Nav -->
         <nav class="hidden xl:flex items-center gap-8 shrink-0">
         <div class="flex items-center gap-6">
-          <router-link
-            v-for="link in navLinks"
-            :key="link.name"
-            :to="link.href"
-            :class="[
-              'text-[10px] font-extrabold uppercase tracking-[0.2em] transition-all relative py-2 group',
-              route.path === link.href ? 'text-primary' : 'text-neutral-black/55 hover:text-primary'
-            ]"
-          >
-            {{ link.name }}
-            <span 
+          <template v-for="link in navLinks" :key="link.name">
+            <a
+              v-if="link.external"
+              :href="link.href"
+              target="_blank"
+              rel="noopener noreferrer"
               :class="[
-                'absolute bottom-0 left-0 h-[2px] bg-primary rounded-full transition-all duration-300',
-                route.path === link.href ? 'w-full' : 'w-0 group-hover:w-full'
+                'text-[10px] font-extrabold uppercase tracking-[0.2em] transition-all relative py-2 group',
+                'text-neutral-black/55 hover:text-primary'
               ]"
-            />
-          </router-link>
+            >
+              {{ link.name }}
+              <span class="absolute bottom-0 left-0 h-[2px] bg-primary rounded-full transition-all duration-300 w-0 group-hover:w-full" />
+            </a>
+            <router-link
+              v-else
+              :to="link.href"
+              :class="[
+                'text-[10px] font-extrabold uppercase tracking-[0.2em] transition-all relative py-2 group',
+                route.path === link.href ? 'text-primary' : 'text-neutral-black/55 hover:text-primary'
+              ]"
+            >
+              {{ link.name }}
+              <span 
+                :class="[
+                  'absolute bottom-0 left-0 h-[2px] bg-primary rounded-full transition-all duration-300',
+                  route.path === link.href ? 'w-full' : 'w-0 group-hover:w-full'
+                ]"
+              />
+            </router-link>
+          </template>
         </div>
         
         <div class="flex items-center gap-3 pr-2">
@@ -229,7 +244,22 @@ const handleLogout = async () => {
                   v-for="(link, i) in navLinks"
                   :key="link.name"
                 >
+                  <a
+                    v-if="link.external"
+                    :href="link.href"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-2xl font-serif py-3 flex items-center justify-between group transition-colors text-neutral-black hover:text-primary"
+                    @click="closeMenu"
+                  >
+                    <div class="flex items-center gap-4">
+                      <span class="text-[10px] font-mono text-neutral-black/20 mt-1">{{ (i + 1).toString().padStart(2, '0') }}</span>
+                      {{ link.name }}
+                    </div>
+                    <ChevronRight class="w-5 h-5 transition-transform group-hover:translate-x-1 opacity-0 group-hover:opacity-100" />
+                  </a>
                   <router-link
+                    v-else
                     :to="link.href"
                     :class="[
                       'text-2xl font-serif py-3 flex items-center justify-between group transition-colors',
