@@ -373,14 +373,11 @@ const impactLightboxImages = computed(() =>
             Whether you have a few hours a month or want to lead a committee, there is a place for you in our mission. Join hundreds of students building a better tomorrow.
           </p>
           <div class="flex flex-col sm:flex-row justify-center items-center gap-4 pt-4">
-             <router-link to="/membership">
+             <router-link to="/contact">
                <button class="px-8 py-5 bg-secondary text-white rounded-full font-bold uppercase text-[10px] tracking-widest hover:bg-secondary-light hover:shadow-glow hover:shadow-secondary-light/30 transition-all flex items-center gap-3 group cursor-pointer">
                  Apply to Volunteer <MessageSquare :size="16" />
                </button>
              </router-link>
-             <a href="https://chat.whatsapp.com/mock-invite" target="_blank" class="px-8 py-5 bg-white/10 border border-white/15 text-white rounded-full font-bold uppercase text-[10px] tracking-widest hover:bg-white/20 transition-all backdrop-blur-sm cursor-pointer">
-               Join WhatsApp Community
-             </a>
           </div>
         </div>
       </div>

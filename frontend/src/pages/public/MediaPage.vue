@@ -3,12 +3,9 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import websiteService from '@/services/website/websiteService';
 import { 
   Camera, 
-  Play, 
-  Instagram, 
   Maximize2,
   Filter,
   Users,
-  Sparkles,
   Heart,
   Share2
 } from 'lucide-vue-next';
@@ -244,62 +241,6 @@ const openLightbox = (item: MediaGalleryItem) => {
           />
         </div>
         <span class="text-[10px] uppercase tracking-[0.3em] font-black text-neutral-black/20">Curating Moments...</span>
-      </div>
-    </section>
-
-    <!-- Video Highlight Section -->
-    <section class="bg-primary py-32 overflow-hidden relative border-y border-primary/10">
-      <div class="absolute inset-0 opacity-5 pattern-islamic pointer-events-none scale-150" />
-      
-      <div class="container-custom relative z-10">
-        <div class="grid lg:grid-cols-2 gap-20 items-center">
-          <div class="space-y-8 text-neutral-white">
-            <div class="text-accent-gold flex items-center gap-3">
-              <div class="w-12 h-[1px] bg-accent-gold" />
-              <span class="text-[10px] font-black uppercase tracking-widest font-sans">Cinema & Motion</span>
-            </div>
-            
-            <h2 class="text-5xl md:text-7xl font-display font-medium text-neutral-white leading-tight">
-              A Community <br />
-              <span class="text-accent-gold italic">In Motion.</span>
-            </h2>
-            
-            <p class="text-neutral-white/70 text-lg font-light leading-relaxed max-md">
-              Experience our events through dynamic storytelling. Our film team captures the atmosphere, the people, and the purpose behind everything we do.
-            </p>
-            
-            <button class="flex items-center gap-4 px-8 py-4 bg-neutral-white/10 border border-neutral-white/20 rounded-2xl text-neutral-white hover:bg-secondary-light hover:border-secondary-light transition-all duration-300 shadow-soft group">
-              <Instagram class="w-6 h-6 group-hover:text-neutral-white transition-colors" />
-              <span class="text-xs font-bold uppercase tracking-widest">Watch on Instagram</span>
-            </button>
-          </div>
-          
-          <div class="relative group aspect-video rounded-[3rem] overflow-hidden shadow-premium border border-neutral-white/10">
-            <img 
-              src="https://images.unsplash.com/photo-1590073844006-3a44a7f46df6?auto=format&fit=crop&q=80" 
-              class="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110 opacity-70" 
-              alt="Video thumbnail"
-              referrerpolicy="no-referrer"
-            />
-            <div class="absolute inset-0 bg-primary/20 transition-all duration-500 group-hover:bg-primary/0" />
-            
-            <div class="absolute inset-0 flex items-center justify-center">
-              <button class="w-20 h-20 rounded-full bg-secondary-light text-neutral-white flex items-center justify-center shadow-2xl transition-transform hover:scale-110 cursor-pointer">
-                <Play class="w-10 h-10 fill-neutral-white ml-1" />
-              </button>
-            </div>
-            
-            <div class="absolute bottom-8 left-8 flex items-center gap-4">
-               <div class="w-12 h-12 rounded-full border border-neutral-white/20 flex items-center justify-center bg-primary/40 backdrop-blur-sm shadow-soft">
-                  <Sparkles class="text-accent-gold w-5 h-5" />
-               </div>
-               <div class="text-neutral-white">
-                  <div class="text-[9px] uppercase tracking-widest font-black opacity-60">Featured Short</div>
-                  <div class="text-lg font-display">Spirit of the Campus - Recap</div>
-               </div>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
 

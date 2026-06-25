@@ -30,7 +30,6 @@ describe('SFU MSA Public Routes Configuration', () => {
     expect(paths).toContain('resources');
     expect(paths).toContain('contact');
     expect(paths).toContain('sponsors');
-    expect(paths).toContain('membership');
     expect(paths).toContain('donations');
     expect(paths).toContain('prayer');
     expect(paths).toContain('media');

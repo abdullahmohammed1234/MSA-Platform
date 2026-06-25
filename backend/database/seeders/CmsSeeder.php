@@ -30,7 +30,7 @@ class CmsSeeder extends Seeder
             ['key' => 'subtitle', 'value' => 'Nurturing student success, religious scholarship, and active community outreach at Simon Fraser University since 1977.', 'type' => 'textarea', 'display_order' => 3],
             ['key' => 'background_image', 'value' => '/FOTO2.webp', 'type' => 'image', 'display_order' => 4],
             ['key' => 'cta_primary_text', 'value' => 'Join the Community', 'type' => 'text', 'display_order' => 5],
-            ['key' => 'cta_primary_url', 'value' => '/membership', 'type' => 'url', 'display_order' => 6],
+            ['key' => 'cta_primary_url', 'value' => '/contact', 'type' => 'url', 'display_order' => 6],
             ['key' => 'cta_secondary_text', 'value' => 'Explore Events', 'type' => 'text', 'display_order' => 7],
             ['key' => 'cta_secondary_url', 'value' => '/events', 'type' => 'url', 'display_order' => 8],
         ];
@@ -80,7 +80,7 @@ class CmsSeeder extends Seeder
             ['key' => 'title', 'value' => 'Be part of something Meaningful', 'type' => 'text', 'display_order' => 1],
             ['key' => 'subtitle', 'value' => "Join a thriving support structure dedicated to representing Muslim students, facilitating Jumu'ah services, and fostering a community of growth.", 'type' => 'textarea', 'display_order' => 2],
             ['key' => 'button_text', 'value' => 'Join the MSA Family', 'type' => 'text', 'display_order' => 3],
-            ['key' => 'button_url', 'value' => '/membership', 'type' => 'url', 'display_order' => 4],
+            ['key' => 'button_url', 'value' => '/contact', 'type' => 'url', 'display_order' => 4],
         ];
 
         foreach ($ctaBlocks as $block) {

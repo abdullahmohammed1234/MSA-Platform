@@ -64,7 +64,7 @@ const heroImg = computed(() =>
   resolvePublicImagePath(homepageData.value?.hero?.background_image ?? HERO_IMAGES.foto2),
 );
 const heroCta1Text = computed(() => homepageData.value?.hero?.cta_primary_text ?? 'Join the Community');
-const heroCta1Url = computed(() => homepageData.value?.hero?.cta_primary_url ?? '/membership');
+const heroCta1Url = computed(() => homepageData.value?.hero?.cta_primary_url ?? '/contact');
 const heroCta2Text = computed(() => homepageData.value?.hero?.cta_secondary_text ?? 'Explore Events');
 const heroCta2Url = computed(() => homepageData.value?.hero?.cta_secondary_url ?? '/events');
 
@@ -115,7 +115,7 @@ const dynamicOfferings = computed(() => {
 const ctaTitle = computed(() => homepageData.value?.cta?.title ?? 'Be part of something Meaningful');
 const ctaSubtitle = computed(() => homepageData.value?.cta?.subtitle ?? "Join a thriving support structure dedicated to representing Muslim students, facilitating Jumu'ah services, and fostering a community of growth.");
 const ctaBtnText = computed(() => homepageData.value?.cta?.button_text ?? 'Join the MSA Family');
-const ctaBtnUrl = computed(() => homepageData.value?.cta?.button_url ?? '/membership');
+const ctaBtnUrl = computed(() => homepageData.value?.cta?.button_url ?? '/contact');
 </script>
 
 <template>

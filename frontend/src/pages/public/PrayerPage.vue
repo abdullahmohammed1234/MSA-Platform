@@ -12,7 +12,6 @@ import {
 import ScrollReveal from '@/components/shared/ScrollReveal.vue';
 import FloatingElement from '@/components/shared/FloatingElement.vue';
 import ParallaxSection from '@/components/shared/ParallaxSection.vue';
-import PublicButton from '@/components/shared/PublicButton.vue';
 import PublicCard from '@/components/shared/PublicCard.vue';
 import { usePrayerTimes, campusPrayerInfo, fallbackPrayerTimes, jumuahSessions } from '@/composables/usePrayerTimes';
 import type { Campus } from '@/composables/usePrayerTimes';
@@ -275,10 +274,6 @@ const etiquette = [
                     </p>
                   </div>
                 </div>
-
-                <PublicButton variant="gold" size="lg" class="bg-accent-gold hover:bg-accent-gold text-primary">
-                  Stay Updated for 2026
-                </PublicButton>
               </div>
 
               <div class="relative">

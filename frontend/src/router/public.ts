@@ -48,12 +48,6 @@ const publicRoutes: Array<RouteRecordRaw> = [
         meta: { title: 'Sponsors | SFU MSA', desc: 'Partner with SFU MSA and support campus community programs.' } 
       },
       { 
-        path: 'membership', 
-        name: 'membership', 
-        component: () => import('@/pages/public/MembershipPage.vue'), 
-        meta: { title: 'Membership | SFU MSA', desc: 'Join the SFU MSA and connect with the student community.' } 
-      },
-      { 
         path: 'donations', 
         name: 'donations', 
         component: () => import('@/pages/public/DonationsPage.vue'), 
@@ -73,7 +67,7 @@ const publicRoutes: Array<RouteRecordRaw> = [
       },
       {
         path: 'volunteer',
-        redirect: '/membership'
+        redirect: '/contact'
       }
     ]
   },

@@ -163,12 +163,12 @@ const handleSubmit = async () => {
           <h5 class="text-accent-gold text-[10px] uppercase tracking-[0.3em] font-black">Volunteer</h5>
           <ul class="space-y-3">
             <li v-for="item in [
-              { name: 'Become a Member', link: '/membership' },
-              { name: 'Join Committees', link: '/membership' },
-              { name: 'Event Logistics', link: '/membership' },
-              { name: 'Graphic Design', link: '/membership' },
-              { name: 'Content Creation', link: '/membership' },
-              { name: 'Mentorship', link: '/membership' }
+              { name: 'Become a Member', link: '/contact' },
+              { name: 'Join Committees', link: '/contact' },
+              { name: 'Event Logistics', link: '/contact' },
+              { name: 'Graphic Design', link: '/contact' },
+              { name: 'Content Creation', link: '/contact' },
+              { name: 'Mentorship', link: '/contact' }
             ]" :key="item.name">
               <router-link :to="item.link" class="text-white/40 text-sm hover:text-white transition-colors">{{ item.name }}</router-link>
             </li>

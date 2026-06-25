@@ -269,7 +269,7 @@ const values = [
             </p>
             
             <div class="flex flex-wrap justify-center gap-6 pt-6">
-              <router-link to="/membership">
+              <router-link to="/contact">
                 <PublicButton variant="secondary" size="lg" class="shadow-premium bg-secondary hover:bg-secondary-light text-white">
                   Apply for 2026 Board <ArrowRight :size="20" class="ml-2" />
                 </PublicButton>
