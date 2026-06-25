@@ -40,6 +40,27 @@ class TeamController extends Controller
         ], 201);
     }
 
+    public function uploadPhoto(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => 'required|image|mimes:jpeg,png,jpg,gif,svg,webp|max:5120', // max 5MB
+        ]);
+
+        $file = $request->file('file');
+        $extension = $file->getClientOriginalExtension();
+        $safeName = \Illuminate\Support\Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME));
+        $filename = $safeName . '-' . time() . '.' . $extension;
+
+        $filepath = $file->storeAs('team', $filename, 'public');
+        $url = \Illuminate\Support\Facades\Storage::disk('public')->url($filepath);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Team photo uploaded successfully.',
+            'url' => $url,
+        ]);
+    }
+
     public function show(string $uuid): JsonResponse
     {
         $member = $this->service->findByUuid($uuid);

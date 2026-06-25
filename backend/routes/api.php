@@ -323,6 +323,9 @@ Route::prefix('v1')->group(function () {
         Route::post('/cms/team', [\App\Http\Controllers\Admin\CMS\TeamController::class, 'store'])
             ->middleware('permission:manage_team')
             ->name('api.admin.cms.team.store');
+        Route::post('/cms/team/upload', [\App\Http\Controllers\Admin\CMS\TeamController::class, 'uploadPhoto'])
+            ->middleware('permission:manage_team')
+            ->name('api.admin.cms.team.upload');
         Route::post('/cms/team/reorder', [\App\Http\Controllers\Admin\CMS\TeamController::class, 'reorder'])
             ->middleware('permission:manage_team')
             ->name('api.admin.cms.team.reorder');

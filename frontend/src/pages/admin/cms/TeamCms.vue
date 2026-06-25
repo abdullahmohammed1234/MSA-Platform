@@ -166,8 +166,8 @@ const handlePhotoChange = async (event: Event) => {
   formError.value = null;
 
   try {
-    const media = await cmsService.uploadMedia(file);
-    form.value.img = toStorableImagePath(media.url) || media.url;
+    const res = await cmsService.uploadTeamPhoto(file);
+    form.value.img = toStorableImagePath(res.url) || res.url;
   } catch (err: any) {
     formError.value = formatValidationError(err, 'Failed to upload photo.');
   } finally {

@@ -41,14 +41,22 @@ onMounted(async () => {
   }
 });
 
+function parseDatetimeLocal(dateStr?: string | null): Date {
+  if (!dateStr) return new Date(8640000000000000);
+  // Strip timezone suffix (Z, +HH:MM, or -HH:MM) to force parsing in local browser time
+  const localStr = dateStr.replace(/(Z|([+-]\d{2}:\d{2}))$/, '');
+  const parsed = new Date(localStr);
+  return Number.isNaN(parsed.getTime()) ? new Date(8640000000000000) : parsed;
+}
+
 function getEventStart(event: EventItem): Date {
-  if (event.startDate) return new Date(event.startDate);
+  if (event.startDate) return parseDatetimeLocal(event.startDate);
   const parsed = new Date(event.date);
   return Number.isNaN(parsed.getTime()) ? new Date(8640000000000000) : parsed;
 }
 
 function getEventEnd(event: EventItem): Date {
-  if (event.endDate) return new Date(event.endDate);
+  if (event.endDate) return parseDatetimeLocal(event.endDate);
   const start = getEventStart(event);
   if (Number.isNaN(start.getTime()) || start.getTime() === 8640000000000000) {
     return new Date(0);

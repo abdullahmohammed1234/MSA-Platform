@@ -251,4 +251,45 @@ class CmsEngineTest extends TestCase
 
         Storage::disk('public')->assertMissing($filepath);
     }
+
+    /** @test */
+    public function admin_can_upload_team_photo_without_creating_media_record()
+    {
+        Storage::fake('public');
+
+        $file = UploadedFile::fake()->create('team-member.jpg', 100, 'image/jpeg');
+
+        // 1. Unauthorized user cannot upload
+        $this->postJson(route('api.admin.cms.team.upload'), [
+            'file' => $file
+        ])->assertStatus(401);
+
+        $this->actingAs($this->normalUser)
+            ->postJson(route('api.admin.cms.team.upload'), [
+                'file' => $file
+            ])->assertStatus(403);
+
+        // 2. Admin with manage_team permission can upload
+        $response = $this->actingAs($this->adminUser)
+            ->postJson(route('api.admin.cms.team.upload'), [
+                'file' => $file
+            ])
+            ->assertStatus(200)
+            ->assertJsonPath('success', true);
+
+        $url = $response->json('url');
+        $this->assertNotNull($url);
+
+        // Extract filepath relative to storage/app/public
+        // e.g. URL is like http://localhost/storage/team/team-member-12345.jpg
+        $pathParts = explode('/storage/', $url);
+        $filepath = end($pathParts);
+
+        Storage::disk('public')->assertExists($filepath);
+
+        // 3. Verify NO database record is created in the media table
+        $this->assertDatabaseMissing('media', [
+            'filename' => 'team-member.jpg',
+        ]);
+    }
 }

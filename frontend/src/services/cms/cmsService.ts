@@ -209,6 +209,17 @@ export const cmsService = {
     return response.data.media;
   },
 
+  async uploadTeamPhoto(file: File): Promise<{ success: boolean; message: string; url: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await client.post('/admin/cms/team/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
   async deleteMedia(uuid: string): Promise<void> {
     await client.delete(`/admin/cms/media/${uuid}`);
   },
