@@ -238,14 +238,14 @@ const filteredResources = computed(() => {
             <p class="text-white/60 max-w-xl mx-auto text-lg font-light">
               Our library grows through community knowledge. If you've found a guide, a halal gem, or a student tip, share it with the brotherhood and sisterhood.
             </p>
-            <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-              <router-link to="/contact">
-                <PublicButton variant="secondary" size="lg" class="bg-secondary hover:bg-secondary-light text-white shadow-premium">
+            <div class="flex flex-row justify-center gap-4 w-full max-w-lg mx-auto pt-4">
+              <router-link to="/contact" class="flex-1 min-w-0">
+                <PublicButton variant="secondary" size="lg" class="bg-secondary hover:bg-secondary-light text-white shadow-premium w-full" style="font-size: clamp(10px, 2.2vw, 16px); padding-left: clamp(8px, 1.8vw, 32px); padding-right: clamp(8px, 1.8vw, 32px);">
                   Submit Resource
                 </PublicButton>
               </router-link>
-              <router-link to="/contact">
-                <PublicButton variant="outline" size="lg" class="border-white/20 text-white hover:bg-white/10">
+              <router-link to="/contact" class="flex-1 min-w-0">
+                <PublicButton variant="outline" size="lg" class="border-white/20 text-white hover:bg-white/10 w-full" style="font-size: clamp(10px, 2.2vw, 16px); padding-left: clamp(8px, 1.8vw, 32px); padding-right: clamp(8px, 1.8vw, 32px);">
                   Contact Chaplain
                 </PublicButton>
               </router-link>

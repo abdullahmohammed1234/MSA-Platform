@@ -158,14 +158,14 @@ const ctaBtnUrl = computed(() => homepageData.value?.cta?.button_url ?? '/contac
         </ScrollReveal>
 
         <ScrollReveal :delay="0.3" direction="up" width="100%">
-          <div class="flex flex-col sm:flex-row justify-center gap-5 sm:gap-6">
-            <router-link :to="heroCta1Url">
-              <PublicButton variant="gold" size="lg" class="shadow-2xl shadow-primary-dark/45 font-bold w-full sm:w-auto">
+          <div class="flex flex-row justify-center gap-4 w-full max-w-lg mx-auto">
+            <router-link :to="heroCta1Url" class="flex-1 min-w-0">
+              <PublicButton variant="gold" size="lg" class="shadow-2xl shadow-primary-dark/45 font-bold w-full" style="font-size: clamp(10px, 2.2vw, 16px); padding-left: clamp(8px, 1.8vw, 32px); padding-right: clamp(8px, 1.8vw, 32px);">
                 {{ heroCta1Text }}
               </PublicButton>
             </router-link>
-            <router-link :to="heroCta2Url">
-              <PublicButton variant="white" size="lg" class="shadow-2xl bg-white/10 backdrop-blur-md text-white border-white/10 hover:bg-white/20 w-full sm:w-auto">
+            <router-link :to="heroCta2Url" class="flex-1 min-w-0">
+              <PublicButton variant="white" size="lg" class="shadow-2xl bg-white/10 backdrop-blur-md text-white border-white/10 hover:bg-white/20 w-full" style="font-size: clamp(10px, 2.2vw, 16px); padding-left: clamp(8px, 1.8vw, 32px); padding-right: clamp(8px, 1.8vw, 32px);">
                 {{ heroCta2Text }}
               </PublicButton>
             </router-link>
