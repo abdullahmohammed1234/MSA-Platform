@@ -19,7 +19,7 @@ const emit = defineEmits<{
 }>();
 
 const buttonClasses = computed(() => {
-  const base = 'inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium transition-colors outline-none focus:outline-none focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer relative overflow-hidden';
+  const base = 'inline-flex items-center justify-center gap-2 whitespace-nowrap font-bold transition-colors outline-none focus:outline-none focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer relative overflow-hidden shadow-none hover:shadow-none focus:shadow-none active:shadow-none';
   
   const variants = {
     primary: 'bg-primary text-white hover:bg-primary/95',
@@ -63,6 +63,7 @@ const motionClasses = computed(() => {
     props.isFullWidth ? 'w-full block' : 'inline-block',
     roundedClass,
     'overflow-hidden',
+    'shadow-none',
   ].join(' ');
 });
 

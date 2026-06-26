@@ -162,7 +162,7 @@ const impacts = [
                     :key="freq"
                     @click="selectedFrequency = freq"
                     class="py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all"
-                    :class="selectedFrequency === freq ? 'bg-primary text-neutral-white shadow-sm' : 'text-neutral-black/40 hover:text-primary'"
+                    :class="selectedFrequency === freq ? 'bg-primary text-neutral-white' : 'text-neutral-black/40 hover:text-primary'"
                   >
                     {{ freq }}
                   </button>
@@ -179,7 +179,7 @@ const impacts = [
                     @click="selectedAmount = amt"
                     class="py-3 rounded-xl border font-display text-lg transition-all"
                     :class="selectedAmount === amt 
-                      ? 'bg-primary border-primary text-neutral-white font-bold shadow-sm' 
+                      ? 'bg-primary border-primary text-neutral-white font-bold' 
                       : 'bg-neutral-white border-neutral-gray/20 text-neutral-black hover:border-primary/50'"
                   >
                     ${{ amt }}
@@ -188,7 +188,7 @@ const impacts = [
                     @click="selectedAmount = 'custom'"
                     class="py-3 rounded-xl border text-xs font-bold uppercase tracking-widest transition-all col-span-1 sm:col-span-1"
                     :class="selectedAmount === 'custom'
-                      ? 'bg-primary border-primary text-neutral-white font-bold shadow-sm' 
+                      ? 'bg-primary border-primary text-neutral-white font-bold' 
                       : 'bg-neutral-white border-neutral-gray/20 text-neutral-black hover:border-primary/50'"
                   >
                     Custom
@@ -225,7 +225,7 @@ const impacts = [
               <PublicButton 
                 variant="primary" 
                 size="lg" 
-                class="w-full justify-center shadow-lg shadow-primary/10"
+                class="w-full justify-center font-bold"
                 @click="handleDonate"
                 :disabled="isSimulating || finalAmount <= 0"
               >

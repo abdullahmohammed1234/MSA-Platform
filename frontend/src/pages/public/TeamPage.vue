@@ -268,14 +268,14 @@ const values = [
               bring fresh perspectives to the community.
             </p>
             
-            <div class="flex flex-row justify-center gap-4 w-full max-w-xl mx-auto pt-6">
-              <router-link to="/contact" class="flex-1 min-w-0">
-                <PublicButton variant="secondary" size="lg" class="shadow-premium bg-secondary hover:bg-secondary-light text-white w-full" style="font-size: clamp(10px, 2.2vw, 16px); padding-left: clamp(8px, 1.8vw, 32px); padding-right: clamp(8px, 1.8vw, 32px);">
+            <div class="flex flex-col sm:flex-row justify-center gap-4 w-full max-w-md sm:max-w-xl mx-auto pt-6 px-4">
+              <router-link to="/contact" class="w-full sm:flex-1">
+                <PublicButton variant="secondary" size="lg" class="bg-secondary hover:bg-secondary-light text-white w-full font-bold">
                   Apply for 2026 Board <ArrowRight :size="16" class="ml-2 inline-block shrink-0" />
                 </PublicButton>
               </router-link>
-              <router-link to="/contact" class="flex-1 min-w-0">
-                <PublicButton variant="outline" size="lg" class="border-white/20 text-white hover:bg-white/10 w-full" style="font-size: clamp(10px, 2.2vw, 16px); padding-left: clamp(8px, 1.8vw, 32px); padding-right: clamp(8px, 1.8vw, 32px);">
+              <router-link to="/contact" class="w-full sm:flex-1">
+                <PublicButton variant="outline" size="lg" class="border-white/20 text-white hover:bg-white/10 w-full font-bold">
                   View Open Positions
                 </PublicButton>
               </router-link>

@@ -374,7 +374,7 @@ const impactLightboxImages = computed(() =>
           </p>
           <div class="flex flex-col sm:flex-row justify-center items-center gap-4 pt-4">
              <router-link to="/contact">
-               <button class="px-8 py-5 bg-secondary text-white rounded-full font-bold uppercase text-[10px] tracking-widest hover:bg-secondary-light hover:shadow-glow hover:shadow-secondary-light/30 transition-all flex items-center gap-3 group cursor-pointer">
+               <button class="px-8 py-5 bg-secondary text-white rounded-full font-bold uppercase text-[10px] tracking-widest hover:bg-secondary-light transition-all flex items-center gap-3 group cursor-pointer">
                  Apply to Volunteer <MessageSquare :size="16" />
                </button>
              </router-link>

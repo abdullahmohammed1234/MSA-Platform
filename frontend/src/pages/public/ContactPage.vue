@@ -18,7 +18,7 @@ useSeo({
 const faqs = [
   {
     question: 'Where is the MSA room located?',
-    answer: 'The SFU MSA Prayer Room (Musalla) is located at the Burnaby Campus in the Student Union Building (SUB), room 3210. It is open to all students for prayer and contemplation.'
+    answer: 'The SFU MSA Prayer Room (Musalla) is located at the Burnaby Campus in the Multifaith Centre in the Academic Quadrangle, room 3200. It is open to all students for prayer and contemplation.'
   },
   {
     question: 'How can I join the SFU MSA?',
@@ -166,7 +166,7 @@ const toggleFaq = (index: number) => {
               <button 
                 type="submit"
                 :disabled="isSubmitting || isSuccess"
-                class="w-full bg-primary text-white py-5 rounded-2xl font-bold uppercase tracking-[0.2em] text-xs hover:bg-secondary transition-all flex items-center justify-center gap-3 shadow-xl shadow-primary/20 disabled:opacity-50 cursor-pointer"
+                class="w-full bg-primary text-white py-5 rounded-2xl font-bold uppercase tracking-[0.2em] text-xs hover:bg-secondary transition-all flex items-center justify-center gap-3 disabled:opacity-50 cursor-pointer"
               >
                 <div v-if="isSubmitting" class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 <template v-else-if="isSuccess">Sent Successfully</template>
@@ -255,7 +255,7 @@ const toggleFaq = (index: number) => {
                 target="_blank"
                 rel="noopener noreferrer"
                 :aria-label="social.name"
-                class="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-neutral-black/40 hover:text-primary hover:shadow-soft transition-all border border-neutral-gray/20"
+                class="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-neutral-black/40 hover:text-primary transition-all border border-neutral-gray/20"
               >
                 <component :is="social.icon" :size="20" />
               </a>

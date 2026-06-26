@@ -158,14 +158,14 @@ const ctaBtnUrl = computed(() => homepageData.value?.cta?.button_url ?? '/contac
         </ScrollReveal>
 
         <ScrollReveal :delay="0.3" direction="up" width="100%">
-          <div class="flex flex-row justify-center gap-4 w-full max-w-lg mx-auto">
-            <router-link :to="heroCta1Url" class="flex-1 min-w-0">
-              <PublicButton variant="gold" size="lg" class="shadow-2xl shadow-primary-dark/45 font-bold w-full" style="font-size: clamp(10px, 2.2vw, 16px); padding-left: clamp(8px, 1.8vw, 32px); padding-right: clamp(8px, 1.8vw, 32px);">
+          <div class="flex flex-col sm:flex-row justify-center gap-4 w-full max-w-md sm:max-w-lg mx-auto px-4">
+            <router-link :to="heroCta1Url" class="w-full sm:flex-1">
+              <PublicButton variant="gold" size="lg" class="w-full font-bold">
                 {{ heroCta1Text }}
               </PublicButton>
             </router-link>
-            <router-link :to="heroCta2Url" class="flex-1 min-w-0">
-              <PublicButton variant="white" size="lg" class="shadow-2xl bg-white/10 backdrop-blur-md text-white border-white/10 hover:bg-white/20 w-full" style="font-size: clamp(10px, 2.2vw, 16px); padding-left: clamp(8px, 1.8vw, 32px); padding-right: clamp(8px, 1.8vw, 32px);">
+            <router-link :to="heroCta2Url" class="w-full sm:flex-1">
+              <PublicButton variant="white" size="lg" class="bg-white/10 backdrop-blur-md text-white border-white/10 hover:bg-white/20 w-full font-bold">
                 {{ heroCta2Text }}
               </PublicButton>
             </router-link>
@@ -203,7 +203,7 @@ const ctaBtnUrl = computed(() => homepageData.value?.cta?.button_url ?? '/contac
                   :class="[
                     'w-full px-2 py-3 sm:px-3 sm:py-3.5 rounded-2xl text-[9px] sm:text-[10px] font-extrabold uppercase tracking-wider sm:tracking-widest transition-all cursor-pointer text-center leading-tight',
                     activeTab === tab 
-                      ? 'bg-primary text-white shadow-brand' 
+                      ? 'bg-primary text-white shadow-none' 
                       : 'text-neutral-black/55 hover:text-primary hover:bg-primary/5'
                   ]"
                 >
@@ -372,7 +372,7 @@ const ctaBtnUrl = computed(() => homepageData.value?.cta?.button_url ?? '/contac
              </p>
              <div class="relative z-10">
                <router-link :to="ctaBtnUrl">
-                 <PublicButton variant="gold" size="lg" class="shadow-2xl shadow-primary-dark/30 font-bold">
+                 <PublicButton variant="gold" size="lg" class="font-bold">
                    {{ ctaBtnText }}
                  </PublicButton>
                </router-link>

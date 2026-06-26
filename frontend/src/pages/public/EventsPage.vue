@@ -262,7 +262,7 @@ onUnmounted(() => {
             :class="[
               'flex-shrink-0 px-5.5 py-3 rounded-full text-[10px] font-extrabold uppercase tracking-widest transition-all cursor-pointer',
               selectedCategory === cat 
-                ? 'bg-primary text-white shadow-brand' 
+                ? 'bg-primary text-white' 
                 : 'bg-white text-neutral-black/55 hover:bg-primary/5 border border-neutral-ivory'
             ]"
           >
@@ -285,7 +285,7 @@ onUnmounted(() => {
               @click="viewMode = 'grid'"
               :class="[
                 'p-2 rounded-xl transition-all cursor-pointer',
-                viewMode === 'grid' ? 'bg-primary text-white shadow-soft' : 'text-neutral-black/40 hover:text-primary'
+                viewMode === 'grid' ? 'bg-primary text-white' : 'text-neutral-black/40 hover:text-primary'
               ]"
             >
               <LayoutGrid :size="16" />
@@ -294,7 +294,7 @@ onUnmounted(() => {
               @click="viewMode = 'list'"
               :class="[
                 'p-2 rounded-xl transition-all cursor-pointer',
-                viewMode === 'list' ? 'bg-primary text-white shadow-soft' : 'text-neutral-black/40 hover:text-primary'
+                viewMode === 'list' ? 'bg-primary text-white' : 'text-neutral-black/40 hover:text-primary'
               ]"
             >
               <List :size="16" />

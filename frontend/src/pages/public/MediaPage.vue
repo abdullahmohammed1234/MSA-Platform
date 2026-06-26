@@ -157,7 +157,7 @@ const openLightbox = (item: MediaGalleryItem) => {
             @click="handleCategoryChange(cat)"
             class="px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-300"
             :class="activeCategory === cat 
-              ? 'bg-primary text-neutral-white shadow-soft shadow-primary/20' 
+              ? 'bg-primary text-neutral-white' 
               : 'bg-neutral-background text-neutral-black/40 hover:bg-neutral-gray/10 border border-neutral-gray/20'"
           >
             {{ cat }}
