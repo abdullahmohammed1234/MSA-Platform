@@ -293,9 +293,9 @@ const ctaBtnUrl = computed(() => homepageData.value?.cta?.button_url ?? '/contac
             <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-secondary">{{ offeringsSubtitle }}</span>
             <h2 class="text-3xl sm:text-5xl font-display font-extrabold text-primary" v-html="offeringsTitle"></h2>
           </div>
-          <router-link to="/resources" class="text-primary font-extrabold text-[11px] uppercase tracking-widest flex items-center gap-2 group border-b-2 border-primary/10 pb-1 h-fit">
+          <!-- <router-link to="/resources" class="text-primary font-extrabold text-[11px] uppercase tracking-widest flex items-center gap-2 group border-b-2 border-primary/10 pb-1 h-fit">
             View All Services <ArrowRight :size="16" class="group-hover:translate-x-1 transition-transform" />
-          </router-link>
+          </router-link> -->
         </div>
         
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 items-stretch">

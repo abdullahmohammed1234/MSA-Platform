@@ -18,7 +18,7 @@ const navLinks = [
   { name: 'Prayer', href: '/prayer' },
   { name: 'Team', href: '/team' },
   { name: 'Media', href: '/media' },
-  { name: 'Resources', href: '/resources' },
+  // { name: 'Resources', href: '/resources' },
   { name: 'Store', href: 'https://sfu-msa-store.square.site/', external: true },
   { name: 'Contact', href: '/contact' },
 ];

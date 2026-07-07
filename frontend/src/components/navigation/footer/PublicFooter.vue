@@ -135,8 +135,7 @@ const handleSubmit = async () => {
               { name: 'About Us', link: '/about' },
               { name: 'Events', link: '/events' },
               { name: 'Team', link: '/team' },
-              { name: 'Media Gallery', link: '/media' },
-              { name: 'Resources', link: '/resources' }
+              { name: 'Media Gallery', link: '/media' }
             ]" :key="item.name">
               <router-link :to="item.link" class="text-white/40 text-sm hover:text-white transition-colors">{{ item.name }}</router-link>
             </li>
@@ -150,9 +149,7 @@ const handleSubmit = async () => {
               { name: 'Daily Prayer Times', link: '/prayer' },
               { name: 'Jummah Schedule', link: '/prayer' },
               { name: 'Wudu Facilities', link: '/prayer' },
-              { name: 'Sisters Space', link: '/prayer' },
-              { name: 'Halal Food Options', link: '/resources' },
-              { name: 'Chaplaincy Services', link: '/resources' }
+              { name: 'Sisters Space', link: '/prayer' }
             ]" :key="item.name">
               <router-link :to="item.link" class="text-white/40 text-sm hover:text-white transition-colors">{{ item.name }}</router-link>
             </li>

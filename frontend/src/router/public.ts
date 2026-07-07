@@ -29,12 +29,12 @@ const publicRoutes: Array<RouteRecordRaw> = [
         component: () => import('@/pages/public/EventsPage.vue'), 
         meta: { title: 'Events | SFU MSA', desc: 'Stay updated on upcoming seminars, congregations, and socials.' } 
       },
-      { 
-        path: 'resources', 
-        name: 'resources', 
-        component: () => import('@/pages/public/ResourcesPage.vue'), 
-        meta: { title: 'Resources | SFU MSA', desc: 'Student accommodation guides, halal food maps, and mental health directories.' } 
-      },
+      // { 
+      //   path: 'resources', 
+      //   name: 'resources', 
+      //   component: () => import('@/pages/public/ResourcesPage.vue'), 
+      //   meta: { title: 'Resources | SFU MSA', desc: 'Student accommodation guides, halal food maps, and mental health directories.' } 
+      // },
       { 
         path: 'contact', 
         name: 'contact', 
