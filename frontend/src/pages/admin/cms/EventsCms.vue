@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue';
 import cmsService from '@/services/cms/cmsService';
 import type { Event, CmsRevision } from '@/types/cms';
-import { resolvePublicImagePath } from '@/constants/publicAssets';
+import ImageInput from '@/components/admin/ImageInput.vue';
 import { lazyLoadComponent } from '@/utils/LazyLoad';
 const RichEditor = lazyLoadComponent(() => import('@/components/admin/RichEditor.vue'));
 import { 
@@ -416,17 +416,11 @@ const handleRollback = async (version: number) => {
             </div>
           </div>
 
-          <div class="space-y-2">
-            <label class="text-[10px] font-black uppercase tracking-widest text-primary/70">Banner Image URL</label>
-            <input type="text" v-model="form.image" class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl py-4 px-5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 text-neutral-black" placeholder="Paste URL from Media Library or /Hero/..." />
-            <div v-if="form.image" class="pt-2">
-              <img
-                :src="resolvePublicImagePath(form.image)"
-                alt="Event banner preview"
-                class="w-full max-h-40 object-cover rounded-2xl border border-neutral-gray/20"
-              />
-            </div>
-          </div>
+          <ImageInput
+            v-model="form.image"
+            label="Banner Image"
+            hint="Upload an image from your device or paste a link. You can also use a path like /Hero/photo.webp."
+          />
 
           <!-- Rich Text Description Editor -->
           <RichEditor 

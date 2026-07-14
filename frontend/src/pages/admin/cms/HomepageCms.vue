@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue';
 import { useCmsStore } from '@/stores/cms';
 import { Save, Sparkles, Eye } from 'lucide-vue-next';
-import { resolvePublicImagePath } from '@/constants/publicAssets';
+import ImageInput from '@/components/admin/ImageInput.vue';
 
 const cmsStore = useCmsStore();
 const activeTab = ref('hero');
@@ -155,18 +155,12 @@ const tabs = [
           <textarea v-model="heroForm.subtitle" rows="3" class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl py-4 px-5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 text-neutral-black font-medium leading-relaxed"></textarea>
         </div>
 
-        <div class="space-y-2">
-          <label class="text-[10px] font-black uppercase tracking-widest text-primary/70">Hero Image URL</label>
-          <input type="text" v-model="heroForm.background_image" class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl py-4 px-5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 text-neutral-black font-medium" />
-          <p class="text-[10px] text-neutral-black/30">Use a high resolution landscape image. (e.g. <code>/Hero/FOTO2.webp</code> or copy URL from Media Library)</p>
-          <div v-if="heroForm.background_image" class="pt-2">
-            <img
-              :src="resolvePublicImagePath(heroForm.background_image)"
-              alt="Hero preview"
-              class="w-full max-h-48 object-cover rounded-2xl border border-neutral-gray/20"
-            />
-          </div>
-        </div>
+        <ImageInput
+          v-model="heroForm.background_image"
+          label="Hero Image"
+          hint="Use a high resolution landscape image. Upload from your device or paste a link (e.g. /Hero/FOTO2.webp)."
+          preview-class="w-full max-h-48 object-cover"
+        />
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-neutral-gray/10 pt-6">
           <div class="space-y-4">

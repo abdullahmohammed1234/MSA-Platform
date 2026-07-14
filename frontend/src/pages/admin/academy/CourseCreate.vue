@@ -96,20 +96,14 @@
         </div>
       </div>
 
-      <!-- Thumbnail URL -->
+      <!-- Thumbnail -->
       <div class="space-y-2">
-        <label for="thumbnail" class="text-sm font-bold text-neutral-muted">Thumbnail URL</label>
-        <input 
+        <label class="text-sm font-bold text-neutral-muted">Thumbnail</label>
+        <ImageInput
           v-model="form.thumbnail"
-          id="thumbnail"
-          type="text"
-          placeholder="https://images.unsplash.com/... or relative path"
-          class="w-full bg-neutral-background border border-neutral-ivory/60 rounded-lg p-2.5 text-neutral-black placeholder-neutral-gray text-sm focus:outline-none focus:border-primary transition"
+          hint="Upload an image from your device or paste a link."
+          preview-class="max-h-40 max-w-xs object-cover"
         />
-        <!-- Mini Preview -->
-        <div v-if="form.thumbnail" class="mt-2 aspect-video rounded-xl bg-neutral-background overflow-hidden border border-neutral-ivory max-h-40 max-w-xs">
-          <img :src="resolvePublicImagePath(form.thumbnail)" alt="Preview" class="h-full w-full object-cover" />
-        </div>
       </div>
 
       <!-- Submit & Cancel -->
@@ -136,7 +130,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAdminCoursesStore } from '@/stores/admin/academy/courses';
-import { resolvePublicImagePath } from '@/constants/publicAssets';
+import ImageInput from '@/components/admin/ImageInput.vue';
 
 const router = useRouter();
 const store = useAdminCoursesStore();

@@ -117,11 +117,11 @@
           </div>
 
           <div class="space-y-2">
-            <label class="text-sm font-bold text-neutral-muted">Thumbnail URL</label>
-            <input 
+            <label class="text-sm font-bold text-neutral-muted">Thumbnail</label>
+            <ImageInput
               v-model="settingsForm.thumbnail"
-              type="text"
-              class="w-full bg-neutral-background border border-neutral-ivory/60 rounded-lg p-2.5 text-neutral-black text-sm focus:outline-none focus:border-primary transition"
+              hint="Upload an image from your device or paste a link."
+              preview-class="max-h-40 max-w-xs object-cover"
             />
           </div>
 
@@ -320,6 +320,7 @@ import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { useAdminCoursesStore } from '@/stores/admin/academy/courses';
 import { useAdminLessonsStore } from '@/stores/admin/academy/lessons';
+import ImageInput from '@/components/admin/ImageInput.vue';
 
 const route = useRoute();
 const store = useAdminCoursesStore();
