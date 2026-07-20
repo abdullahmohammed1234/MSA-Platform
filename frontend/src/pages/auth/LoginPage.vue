@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth';
+import { isPublicAuthEnabled } from '@/config/features';
 import Button from '@/components/ui/button/Button.vue';
 import Input from '@/components/ui/input/Input.vue';
 import Checkbox from '@/components/ui/checkbox/Checkbox.vue';
@@ -11,6 +12,11 @@ import { Motion, Presence } from '@motionone/vue';
 const router = useRouter();
 const route = useRoute();
 const authStore = useAuthStore();
+
+const isAdminLogin = computed(
+  () => route.path.startsWith('/admin') || route.matched.some(record => record.meta.adminLogin === true)
+);
+const showRegisterLink = computed(() => isPublicAuthEnabled && !isAdminLogin.value);
 
 const email = ref('');
 const password = ref('');
@@ -33,6 +39,12 @@ const handleLogin = async () => {
       remember: rememberMe.value
     });
 
+    if (isAdminLogin.value && !authStore.isPrivilegedAdmin) {
+      await authStore.logout();
+      formError.value = 'This login is for administrators only.';
+      return;
+    }
+
     // Handle Redirect after login
     if (authStore.needsEmailVerification) {
       router.push({ name: 'verify-email' });
@@ -42,8 +54,10 @@ const handleLogin = async () => {
     const redirectPath = route.query.redirect as string;
     if (redirectPath) {
       router.push(redirectPath);
-    } else if (authStore.roles.includes('admin') || authStore.roles.includes('super-admin')) {
+    } else if (isAdminLogin.value || authStore.isPrivilegedAdmin) {
       router.push({ name: 'admin-dashboard' });
+    } else if (authStore.canAccessAcademy) {
+      router.push({ name: 'academy-dashboard' });
     } else {
       router.push({ path: '/' });
     }
@@ -69,7 +83,9 @@ const handleLogin = async () => {
     <div class="space-y-6">
       <div class="text-left mb-6">
         <h2 class="text-2xl font-display font-bold text-primary">Assalamu Alaikum</h2>
-        <p class="text-xs text-neutral-muted mt-1">Welcome back. Enter your credentials to access your account.</p>
+        <p class="text-xs text-neutral-muted mt-1">
+          {{ isAdminLogin ? 'Administrator sign in to access the admin portal.' : 'Welcome back. Enter your credentials to access your account.' }}
+        </p>
       </div>
 
       <!-- General Form Error Alert -->
@@ -160,7 +176,7 @@ const handleLogin = async () => {
           Sign In
         </Button>
 
-        <p class="text-xs text-center text-neutral-muted mt-6">
+        <p v-if="showRegisterLink" class="text-xs text-center text-neutral-muted mt-6">
           Don't have an account? 
           <router-link to="/register" class="text-secondary hover:underline font-semibold hover:text-primary transition-colors">Create Account</router-link>
         </p>

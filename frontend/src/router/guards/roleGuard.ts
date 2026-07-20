@@ -1,4 +1,5 @@
 import type { RouteLocationNormalized, RouteLocationRaw } from 'vue-router';
+import { isAcademyEnabled } from '@/config/features';
 import { useAuthStore } from '@/stores/auth';
 
 export const roleGuard = (
@@ -27,12 +28,12 @@ export const roleGuard = (
   }
 
   if (requiresAdmin) {
-    return { name: 'academy-dashboard' };
+    return isAcademyEnabled ? { name: 'academy-dashboard' } : { name: 'home' };
   }
 
   if (requiresMentor) {
     if (!authStore.isAuthenticated || (!authStore.isMentor && !authStore.isAdmin)) {
-      return { name: 'academy-dashboard' };
+      return isAcademyEnabled ? { name: 'academy-dashboard' } : { name: 'home' };
     }
   }
 

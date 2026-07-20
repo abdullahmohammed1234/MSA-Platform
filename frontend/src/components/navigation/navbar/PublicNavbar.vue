@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { Motion, Presence } from '@motionone/vue';
 import { useAuthStore } from '@/stores/auth';
+import { isPublicAuthEnabled } from '@/config/features';
 import { 
   BookOpen, 
   ChevronRight, 
@@ -32,6 +33,7 @@ const scrolled = ref(false);
 
 const isAuthenticated = computed(() => authStore.isAuthenticated);
 const canAccessAcademy = computed(() => authStore.canAccessAcademy);
+const showPublicAuth = computed(() => isPublicAuthEnabled);
 const isLoading = ref(false);
 
 const handleScroll = () => {
@@ -141,7 +143,7 @@ const handleLogout = async () => {
           </router-link>
 
           <router-link
-            v-else-if="!isLoading && !isAuthenticated"
+            v-else-if="!isLoading && !isAuthenticated && showPublicAuth"
             to="/login"
             class="inline-flex items-center gap-2 border border-primary/20 text-primary px-5 py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest hover:bg-primary/5 transition-all"
           >
@@ -150,14 +152,14 @@ const handleLogout = async () => {
           </router-link>
 
           <router-link
-            v-if="!isAuthenticated"
+            v-if="!isAuthenticated && showPublicAuth"
             to="/register"
             class="bg-primary text-white px-6 py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest hover:bg-secondary hover:shadow-premium transition-all hover:-translate-y-0.5 active:scale-95"
           >
             Register
           </router-link>
           <button
-            v-else-if="!isLoading"
+            v-else-if="!isLoading && showPublicAuth && isAuthenticated"
             type="button"
             class="inline-flex items-center gap-2 bg-primary text-white px-6 py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest hover:bg-secondary hover:shadow-premium transition-all hover:-translate-y-0.5 active:scale-95 cursor-pointer"
             @click="handleLogout"
@@ -228,7 +230,7 @@ const handleLogout = async () => {
                 </router-link>
               </div>
 
-              <div v-else-if="!isLoading && !isAuthenticated" class="mb-4">
+              <div v-else-if="!isLoading && !isAuthenticated && showPublicAuth" class="mb-4">
                 <router-link
                   to="/login"
                   class="inline-flex items-center gap-2 border border-primary/20 text-primary px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest"
@@ -277,7 +279,7 @@ const handleLogout = async () => {
               </nav>
 
               <div class="mt-auto pt-12 space-y-8">
-                <div class="space-y-3">
+                <div v-if="showPublicAuth" class="space-y-3">
                   <router-link
                     v-if="!isAuthenticated"
                     to="/register"

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import { authService } from '@/services/auth/auth.service';
 import { userService } from '@/services/user/userService';
+import { isAcademyEnabled } from '@/config/features';
 import type { 
   User, 
   LoginPayload, 
@@ -46,7 +47,9 @@ export const useAuthStore = defineStore('auth', () => {
   const isMentor = computed(() => roles.value.includes('mentor') || isPrivilegedAdmin.value);
   const isVolunteer = computed(() => roles.value.includes('volunteer') || isPrivilegedAdmin.value);
   const isMember = computed(() => roles.value.includes('member'));
-  const canAccessAcademy = computed(() => isVolunteer.value || isMentor.value);
+  const canAccessAcademy = computed(
+    () => isAcademyEnabled && (isVolunteer.value || isMentor.value)
+  );
 
   const canManageCourses = computed(() => permissions.value.includes('manage_courses') || isPrivilegedAdmin.value);
   const canManageUsers = computed(() => permissions.value.includes('manage_users') || isPrivilegedAdmin.value);

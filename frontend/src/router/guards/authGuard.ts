@@ -8,6 +8,12 @@ export const authGuard = (
   const requiresAuth = to.matched.some(record => record.meta.requiresAuth);
   
   if (requiresAuth && !authStore.isAuthenticated) {
+    const requiresAdmin = to.matched.some(record => record.meta.requiresAdmin);
+
+    if (requiresAdmin) {
+      return { name: 'admin-dashboard', query: { redirect: to.fullPath } };
+    }
+
     return { name: 'login', query: { redirect: to.fullPath } };
   }
 

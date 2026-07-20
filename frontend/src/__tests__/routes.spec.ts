@@ -10,6 +10,11 @@ vi.mock('@/services/auth/auth.service', () => ({
   authService: {}
 }));
 
+vi.mock('@/config/features', () => ({
+  isAcademyEnabled: false,
+  isPublicAuthEnabled: false,
+}));
+
 describe('Vue Router Navigation Guards', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
@@ -17,7 +22,7 @@ describe('Vue Router Navigation Guards', () => {
   });
 
   describe('roleGuard', () => {
-    it('should redirect non-admin to academy dashboard if route requiresAdmin', () => {
+    it('should redirect non-admin to home if route requiresAdmin while academy is disabled', () => {
       const authStore = useAuthStore();
       authStore.token = 'valid-token';
       authStore.user = { id: 1, name: 'Student', email: 'stu@sfu.ca', roles: ['volunteer'], permissions: [], is_verified: true } as any;
@@ -26,7 +31,7 @@ describe('Vue Router Navigation Guards', () => {
         matched: [{ meta: { requiresAdmin: true } }]
       };
 
-      expect(roleGuard(to)).toEqual({ name: 'academy-dashboard' });
+      expect(roleGuard(to)).toEqual({ name: 'home' });
     });
 
     it('should permit admin users to access admin-only routes', () => {
@@ -94,7 +99,7 @@ describe('Vue Router Navigation Guards', () => {
       expect(guestGuard(to)).toEqual({ name: 'verify-email' });
     });
 
-    it('should redirect authenticated users to dashboard if hitting guest-only routes', () => {
+    it('should redirect authenticated volunteers to home on guest-only routes while academy is disabled', () => {
       const authStore = useAuthStore();
       authStore.token = 'valid-token';
       authStore.user = { id: 1, name: 'Student', email: 'stu@sfu.ca', roles: ['volunteer'], permissions: [], is_verified: true } as any;
@@ -103,7 +108,7 @@ describe('Vue Router Navigation Guards', () => {
         matched: [{ meta: { guestOnly: true } }]
       };
 
-      expect(guestGuard(to)).toEqual({ name: 'academy-dashboard' });
+      expect(guestGuard(to)).toEqual({ name: 'home' });
     });
 
     it('should redirect authenticated members to home on guest-only routes', () => {

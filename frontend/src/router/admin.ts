@@ -2,14 +2,18 @@ import type { RouteRecordRaw } from 'vue-router'
 
 const adminRoutes: Array<RouteRecordRaw> = [
   {
+    path: '/admin/login',
+    redirect: '/admin'
+  },
+  {
     path: '/admin',
-    component: () => import('@/layouts/AdminLayout.vue'),
-    meta: { requiresAuth: true, requiresAdmin: true },
+    component: () => import('@/layouts/AdminGateLayout.vue'),
     children: [
       {
         path: '',
         name: 'admin-dashboard',
-        component: () => import('@/pages/admin/Dashboard.vue')
+        component: () => import('@/pages/admin/AdminRootPage.vue'),
+        meta: { adminLogin: true }
       },
       {
         path: 'roles',

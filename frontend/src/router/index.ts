@@ -9,6 +9,8 @@ import { guestGuard } from './guards/guestGuard';
 import { roleGuard } from './guards/roleGuard';
 import { permissionGuard } from './guards/permissionGuard';
 import { verificationGuard } from './guards/verificationGuard';
+import { academyGuard } from './guards/academyGuard';
+import { publicAuthGuard } from './guards/publicAuthGuard';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -64,6 +66,12 @@ router.beforeEach(async (to) => {
   }
 
   // 2. Sequential guard pipeline
+  const academyResult = academyGuard(to);
+  if (academyResult !== true) return academyResult;
+
+  const publicAuthResult = publicAuthGuard(to);
+  if (publicAuthResult !== true) return publicAuthResult;
+
   const guestResult = guestGuard(to);
   if (guestResult !== true) return guestResult;
 

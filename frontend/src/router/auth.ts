@@ -9,13 +9,13 @@ const authRoutes: Array<RouteRecordRaw> = [
         path: 'login',
         name: 'login',
         component: () => import('@/pages/auth/LoginPage.vue'),
-        meta: { guestOnly: true }
+        meta: { guestOnly: true, publicAuth: true }
       },
       {
         path: 'register',
         name: 'register',
         component: () => import('@/pages/auth/RegisterPage.vue'),
-        meta: { guestOnly: true }
+        meta: { guestOnly: true, publicAuth: true }
       },
       {
         path: 'forgot-password',
