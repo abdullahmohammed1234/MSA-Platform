@@ -6,6 +6,11 @@ vi.mock('@/stores/auth', () => ({
   useAuthStore: vi.fn(),
 }));
 
+vi.mock('@/config/features', () => ({
+  isAcademyEnabled: false,
+  isPublicAuthEnabled: false,
+}));
+
 describe('roleGuard Router Guard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -30,7 +35,7 @@ describe('roleGuard Router Guard', () => {
     expect(roleGuard(to)).toBe(true);
   });
 
-  it('should redirect unauthorized users to the academy dashboard for requiresAdmin routes', () => {
+  it('should redirect unauthorized users to home for requiresAdmin routes while academy is disabled', () => {
     (useAuthStore as any).mockReturnValue({
       isAuthenticated: true,
       isPrivilegedAdmin: false,
@@ -46,7 +51,7 @@ describe('roleGuard Router Guard', () => {
       ]
     } as any;
 
-    expect(roleGuard(to)).toEqual({ name: 'academy-dashboard' });
+    expect(roleGuard(to)).toEqual({ name: 'home' });
   });
 
   it('should allow mentor users for requiresMentor routes', () => {
@@ -68,7 +73,7 @@ describe('roleGuard Router Guard', () => {
     expect(roleGuard(to)).toBe(true);
   });
 
-  it('should redirect non-mentor users to the academy dashboard for requiresMentor routes', () => {
+  it('should redirect non-mentor users to home for requiresMentor routes while academy is disabled', () => {
     (useAuthStore as any).mockReturnValue({
       isAuthenticated: true,
       isPrivilegedAdmin: false,
@@ -84,7 +89,7 @@ describe('roleGuard Router Guard', () => {
       ]
     } as any;
 
-    expect(roleGuard(to)).toEqual({ name: 'academy-dashboard' });
+    expect(roleGuard(to)).toEqual({ name: 'home' });
   });
 
   it('should allow student (volunteer or mentor) users for requiresStudent routes', () => {
