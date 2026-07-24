@@ -50,6 +50,8 @@ const form = ref({
   category: 'Social',
   status: 'draft' as 'draft' | 'published' | 'archived',
   featured: false,
+  spots_left: 50,
+  registration_deadline: '',
 });
 
 const CATEGORIES = ['Jummah', 'Social', 'Lecture', 'Workshop', 'Charity', 'Dinner'];
@@ -96,6 +98,8 @@ const openCreateForm = () => {
     category: 'Social',
     status: 'draft',
     featured: false,
+    spots_left: 50,
+    registration_deadline: '',
   };
   isFormOpen.value = true;
 };
@@ -119,6 +123,12 @@ const formatDatetimeLocal = (dateStr?: string | null) => {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 };
 
+const formatDateInput = (dateStr?: string | null) => {
+  if (!dateStr) return '';
+  const match = dateStr.match(/^(\d{4}-\d{2}-\d{2})/);
+  return match ? match[1] : '';
+};
+
 const openEditForm = (ev: Event) => {
   activeEvent.value = ev;
   form.value = {
@@ -133,6 +143,8 @@ const openEditForm = (ev: Event) => {
     category: ev.category,
     status: ev.status,
     featured: ev.featured,
+    spots_left: typeof ev.spots_left === 'number' ? ev.spots_left : 50,
+    registration_deadline: formatDateInput(ev.registration_deadline),
   };
   isFormOpen.value = true;
 };
@@ -143,9 +155,9 @@ const handleSubmit = async () => {
   try {
     const payload = {
       ...form.value,
-      spots_left: 0,
+      spots_left: Math.max(0, Number(form.value.spots_left) || 0),
       registration_url: null,
-      registration_deadline: null,
+      registration_deadline: form.value.registration_deadline || null,
     };
     // Format timezone offsets nicely for PHP backend
     payload.start_date = payload.start_date.replace('T', ' ');
@@ -285,6 +297,7 @@ const handleRollback = async (version: number) => {
             <tr>
               <th class="p-6">Event Details</th>
               <th class="p-6">Logistics</th>
+              <th class="p-6">Seats</th>
               <th class="p-6">Category</th>
               <th class="p-6">Status</th>
               <th class="p-6">Featured</th>
@@ -293,7 +306,7 @@ const handleRollback = async (version: number) => {
           </thead>
           <tbody class="divide-y divide-neutral-gray/10">
             <tr v-if="events.length === 0">
-              <td colspan="6" class="p-12 text-center text-neutral-black/30">
+              <td colspan="7" class="p-12 text-center text-neutral-black/30">
                 No events scheduled. Click "Add Event" to insert one.
               </td>
             </tr>
@@ -313,6 +326,9 @@ const handleRollback = async (version: number) => {
               <td class="p-6 text-neutral-black/60 space-y-1">
                 <div class="flex items-center gap-1 text-[10px]"><MapPin :size="10" class="text-primary-light" /> {{ ev.location }}</div>
                 <div class="flex items-center gap-1 text-[10px]"><Clock :size="10" class="text-secondary" /> {{ ev.time }}</div>
+              </td>
+              <td class="p-6 font-bold text-neutral-black/60">
+                {{ ev.spots_left }}
               </td>
               <td class="p-6 font-bold text-neutral-black/60">
                 {{ ev.category }}
@@ -424,6 +440,34 @@ const handleRollback = async (version: number) => {
             <div class="space-y-2 md:col-span-2">
               <label class="text-[10px] font-black uppercase tracking-widest text-primary/70">Physical / Online Location</label>
               <input type="text" required v-model="form.location" class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl py-4 px-5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 text-neutral-black" placeholder="SFU Burnaby, WMC 3260" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-2">
+              <label class="text-[10px] font-black uppercase tracking-widest text-primary/70">Available seats</label>
+              <input
+                type="number"
+                required
+                min="0"
+                step="1"
+                v-model.number="form.spots_left"
+                class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl py-4 px-5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 text-neutral-black"
+              />
+              <p class="text-[10px] text-neutral-black/40">
+                Remaining open spots for registration. This number decreases automatically as people register.
+              </p>
+            </div>
+            <div class="space-y-2">
+              <label class="text-[10px] font-black uppercase tracking-widest text-primary/70">Registration deadline (optional)</label>
+              <input
+                type="date"
+                v-model="form.registration_deadline"
+                class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl py-4 px-5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 text-neutral-black font-medium"
+              />
+              <p class="text-[10px] text-neutral-black/40">
+                Leave blank to keep registration open until the event ends.
+              </p>
             </div>
           </div>
 
