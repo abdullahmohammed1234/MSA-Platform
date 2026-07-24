@@ -45,7 +45,10 @@ class EventRegistration extends Model
                 $registration->uuid = (string) Str::uuid();
             }
 
-            if (empty($registration->registration_group_id)) {
+            if (
+                \Illuminate\Support\Facades\Schema::hasColumn('event_registrations', 'registration_group_id')
+                && empty($registration->registration_group_id)
+            ) {
                 $registration->registration_group_id = (string) Str::uuid();
             }
 

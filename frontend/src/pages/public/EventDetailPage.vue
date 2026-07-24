@@ -32,6 +32,12 @@ const submitError = ref('');
 const successMessage = ref('');
 const createdRegistrations = ref<EventRegistrationResult[]>([]);
 
+const cancelRegistrationId = ref('');
+const cancelEmail = ref('');
+const isCancelling = ref(false);
+const cancelError = ref('');
+const cancelSuccess = ref('');
+
 const emptyAttendee = (): EventRsvpAttendee => ({
   firstName: '',
   lastName: '',
@@ -111,6 +117,7 @@ async function handleRegister() {
 
   submitError.value = '';
   successMessage.value = '';
+  cancelSuccess.value = '';
   createdRegistrations.value = [];
   isSubmitting.value = true;
 
@@ -132,10 +139,10 @@ async function handleRegister() {
       event.value.spotsLeft = result.spotsLeft;
     }
 
-    if (result.registrationId) {
+    for (const registration of createdRegistrations.value) {
       websiteService.saveLocalEventRegistration({
         eventId: event.value.id,
-        registrationId: result.registrationId,
+        registrationId: registration.registrationId,
         status: 'registered',
         registeredAt: new Date().toISOString(),
       });
@@ -150,6 +157,44 @@ async function handleRegister() {
       'Registration could not be completed. Please try again.';
   } finally {
     isSubmitting.value = false;
+  }
+}
+
+async function cancelRegistration(registrationId?: string) {
+  if (!event.value) return;
+
+  const id = (registrationId || cancelRegistrationId.value).trim();
+  if (!id) {
+    cancelError.value = 'Enter the registration ID from your confirmation email.';
+    return;
+  }
+
+  isCancelling.value = true;
+  cancelError.value = '';
+  cancelSuccess.value = '';
+  successMessage.value = '';
+
+  try {
+    const result = await websiteService.cancelEventRsvp(event.value.id, id, cancelEmail.value.trim() || undefined);
+    cancelSuccess.value = result.message;
+    createdRegistrations.value = createdRegistrations.value.filter(
+      (item) => item.registrationId !== id && !id.includes(item.registrationId)
+    );
+    websiteService.removeLocalEventRegistration(event.value.id);
+
+    if (typeof result.spotsLeft === 'number') {
+      event.value.spotsLeft = result.spotsLeft;
+    }
+
+    cancelRegistrationId.value = '';
+    cancelEmail.value = '';
+  } catch (err: any) {
+    cancelError.value =
+      err?.response?.data?.message ||
+      err?.message ||
+      'Unable to cancel this registration.';
+  } finally {
+    isCancelling.value = false;
   }
 }
 
@@ -252,19 +297,32 @@ onMounted(loadEvent);
               <CheckCircle2 :size="18" class="shrink-0 mt-0.5" />
               <p>{{ successMessage }}</p>
             </div>
-            <ul v-if="createdRegistrations.length" class="space-y-1 pl-6 list-disc text-emerald-800/80">
-              <li v-for="item in createdRegistrations" :key="item.registrationId">
-                {{ item.name }} — {{ item.email }}
+            <ul v-if="createdRegistrations.length" class="space-y-3">
+              <li
+                v-for="item in createdRegistrations"
+                :key="item.registrationId"
+                class="rounded-xl bg-white/70 border border-emerald-100 px-3 py-2"
+              >
+                <div class="font-medium">{{ item.name }} — {{ item.email }}</div>
+                <div class="text-[11px] text-emerald-800/70 mt-1 break-all">ID: {{ item.registrationId }}</div>
+                <button
+                  type="button"
+                  class="mt-2 text-[11px] font-extrabold uppercase tracking-widest text-red-700 hover:underline cursor-pointer disabled:opacity-50"
+                  :disabled="isCancelling"
+                  @click="cancelRegistration(item.registrationId)"
+                >
+                  Cancel this registration
+                </button>
               </li>
             </ul>
           </div>
 
-          <div v-if="!canRegister" class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <div v-if="!canRegister" class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 mb-6">
             <p v-if="registrationClosed">Registration for this event has closed.</p>
             <p v-else>This event is full. No spots remain.</p>
           </div>
 
-          <form v-else class="space-y-6" @submit.prevent="handleRegister">
+          <form v-if="canRegister" class="space-y-6" @submit.prevent="handleRegister">
             <div>
               <label class="text-[10px] font-extrabold uppercase tracking-widest text-neutral-black/45 block mb-3">
                 Number of people
@@ -353,6 +411,49 @@ onMounted(loadEvent);
               {{ isSubmitting ? 'Registering...' : `Register ${attendeeCount} ${attendeeCount === 1 ? 'person' : 'people'}` }}
             </button>
           </form>
+
+          <div class="mt-8 pt-6 border-t border-neutral-ivory space-y-4">
+            <h3 class="text-sm font-extrabold text-primary uppercase tracking-wide">Cancel registration</h3>
+            <p class="text-xs text-neutral-black/50">
+              Use the Registration ID from your confirmation email. You can also paste the full check-in code.
+            </p>
+
+            <div v-if="cancelSuccess" class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+              {{ cancelSuccess }}
+            </div>
+
+            <form class="space-y-3" @submit.prevent="cancelRegistration()">
+              <div>
+                <label class="text-[10px] font-bold uppercase tracking-wider text-neutral-black/40 block mb-1.5">Registration ID</label>
+                <input
+                  v-model="cancelRegistrationId"
+                  required
+                  type="text"
+                  placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                  class="w-full rounded-xl border border-neutral-ivory px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary"
+                />
+              </div>
+              <div>
+                <label class="text-[10px] font-bold uppercase tracking-wider text-neutral-black/40 block mb-1.5">Email (optional)</label>
+                <input
+                  v-model="cancelEmail"
+                  type="email"
+                  placeholder="Same email used to register"
+                  class="w-full rounded-xl border border-neutral-ivory px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary"
+                />
+              </div>
+              <p v-if="cancelError" class="text-sm text-red-700 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+                {{ cancelError }}
+              </p>
+              <button
+                type="submit"
+                class="w-full rounded-2xl border border-red-200 text-red-700 py-3 text-xs font-extrabold uppercase tracking-widest hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-60"
+                :disabled="isCancelling"
+              >
+                {{ isCancelling ? 'Cancelling...' : 'Cancel registration' }}
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     </section>

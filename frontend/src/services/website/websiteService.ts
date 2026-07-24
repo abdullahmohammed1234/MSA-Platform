@@ -265,9 +265,16 @@ export const websiteService = {
     return response.data?.registrations ?? [];
   },
 
-  async cancelEventRsvp(eventId: string, registrationId?: string): Promise<EventRsvpResponse> {
+  async cancelEventRsvp(
+    eventId: string,
+    registrationId?: string,
+    email?: string
+  ): Promise<EventRsvpResponse> {
     const response = await api.delete(`/website/events/${eventId}/rsvp`, {
-      data: registrationId ? { registrationId } : undefined,
+      data: {
+        ...(registrationId ? { registrationId } : {}),
+        ...(email ? { email } : {}),
+      },
     });
     return {
       success: response.data?.success ?? true,

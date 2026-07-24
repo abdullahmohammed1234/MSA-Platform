@@ -61,12 +61,11 @@ class EventCheckInQrService
         $url = 'https://api.qrserver.com/v1/create-qr-code/?size=360x360&margin=12&data='.urlencode($payload);
         $png = @file_get_contents($url);
 
-        if (is_string($png) && strlen($png) > 100) {
+        if (is_string($png) && strlen($png) > 100 && str_starts_with($png, "\x89PNG")) {
             return $png;
         }
 
-        // Last resort: SVG bytes labeled as image/svg+xml by callers that need a visual.
-        return $this->svgBinary($registrationUuid);
+        throw new \RuntimeException('Unable to generate a PNG QR code for this registration.');
     }
 
     public function svgBinary(string $registrationUuid): string

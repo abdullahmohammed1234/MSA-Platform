@@ -12,12 +12,14 @@ use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use Throwable;
 
 class EventRsvpConfirmation extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public string $qrDataUri;
+    /** @var string|null Raw PNG bytes for CID embedding in the email body. */
+    public ?string $qrPngBinary = null;
 
     public function __construct(
         public Event $event,
@@ -27,7 +29,15 @@ class EventRsvpConfirmation extends Mailable
         public string $registrantPhone,
         public string $checkInCode,
     ) {
-        $this->qrDataUri = app(EventCheckInQrService::class)->dataUri($registration->uuid);
+        try {
+            $binary = app(EventCheckInQrService::class)->pngBinary($registration->uuid);
+            // Gmail only reliably displays PNG/JPEG inline — skip SVG fallbacks.
+            if (is_string($binary) && str_starts_with($binary, "\x89PNG")) {
+                $this->qrPngBinary = $binary;
+            }
+        } catch (Throwable) {
+            $this->qrPngBinary = null;
+        }
     }
 
     public function envelope(): Envelope
@@ -50,13 +60,15 @@ class EventRsvpConfirmation extends Mailable
 
     public function attachments(): array
     {
-        $qrService = app(EventCheckInQrService::class);
+        if (! $this->qrPngBinary) {
+            return [];
+        }
 
         return [
             Attachment::fromData(
-                fn () => $qrService->pngBinary($this->registration->uuid),
-                $qrService->attachmentFilename($this->registration->uuid)
-            )->withMime($qrService->attachmentMime($this->registration->uuid)),
+                fn () => $this->qrPngBinary,
+                'event-checkin-qr.png'
+            )->withMime('image/png'),
         ];
     }
 }

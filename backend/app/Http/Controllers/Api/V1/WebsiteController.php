@@ -23,6 +23,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -523,19 +524,29 @@ class WebsiteController extends Controller
                 }
 
                 $created = [];
+                $hasPhone = Schema::hasColumn('event_registrations', 'phone');
+                $hasGroupId = Schema::hasColumn('event_registrations', 'registration_group_id');
 
                 foreach ($attendees as $attendee) {
-                    $created[] = EventRegistration::create([
-                        'registration_group_id' => $groupId,
+                    $payload = [
                         'event_id' => $lockedEvent->id,
                         'user_id' => $request->user()?->id,
                         'first_name' => $attendee['firstName'],
                         'last_name' => $attendee['lastName'],
                         'email' => $attendee['email'],
-                        'phone' => $attendee['phone'],
-                        'student_id' => null,
+                        'student_id' => '',
                         'status' => EventRegistration::STATUS_REGISTERED,
-                    ]);
+                    ];
+
+                    if ($hasPhone) {
+                        $payload['phone'] = $attendee['phone'];
+                    }
+
+                    if ($hasGroupId) {
+                        $payload['registration_group_id'] = $groupId;
+                    }
+
+                    $created[] = EventRegistration::create($payload);
                 }
 
                 $lockedEvent->decrement('spots_left', $partySize);
@@ -551,6 +562,16 @@ class WebsiteController extends Controller
             }
 
             throw $exception;
+        } catch (Throwable $exception) {
+            Log::error('Event RSVP registration failed', [
+                'error' => $exception->getMessage(),
+                'event_id' => $event->id,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Registration could not be completed right now. Please try again shortly.',
+            ], 500);
         }
 
         Cache::forget('website_events');
@@ -653,7 +674,8 @@ class WebsiteController extends Controller
     public function cancelEventRsvp(Request $request, string $eventId): JsonResponse
     {
         $validated = $request->validate([
-            'registrationId' => 'nullable|uuid',
+            'registrationId' => 'nullable|string|max:255',
+            'email' => 'nullable|email|max:255',
         ]);
 
         $event = $this->findPublishedEvent($eventId);
@@ -665,22 +687,32 @@ class WebsiteController extends Controller
             ], 404);
         }
 
+        $registrationUuid = app(EventCheckInQrService::class)
+            ->parseRegistrationUuid($validated['registrationId'] ?? null);
+        $email = isset($validated['email']) ? strtolower($validated['email']) : null;
+
         $registrationQuery = EventRegistration::query()
             ->where('event_id', $event->id)
             ->where('status', EventRegistration::STATUS_REGISTERED);
 
-        if ($request->user()) {
-            $email = strtolower($request->user()->email);
-            $registrationQuery->where(function ($query) use ($request, $email) {
+        if ($registrationUuid) {
+            $registrationQuery->where('uuid', $registrationUuid);
+
+            if ($email) {
+                $registrationQuery->where('email', $email);
+            }
+        } elseif ($request->user()) {
+            $userEmail = strtolower($request->user()->email);
+            $registrationQuery->where(function ($query) use ($request, $userEmail) {
                 $query->where('user_id', $request->user()->id)
-                    ->orWhere('email', $email);
+                    ->orWhere('email', $userEmail);
             });
-        } elseif (! empty($validated['registrationId'])) {
-            $registrationQuery->where('uuid', $validated['registrationId']);
+        } elseif ($email) {
+            $registrationQuery->where('email', $email);
         } else {
             return response()->json([
                 'success' => false,
-                'message' => 'Sign in or provide a valid registration reference to cancel.',
+                'message' => 'Provide your registration ID from the confirmation email to cancel.',
             ], 422);
         }
 
@@ -691,6 +723,13 @@ class WebsiteController extends Controller
                 'success' => false,
                 'message' => 'No registration was found for this event.',
             ], 404);
+        }
+
+        if ($registration->status === EventRegistration::STATUS_ATTENDING) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This registration has already been checked in and cannot be cancelled.',
+            ], 422);
         }
 
         DB::transaction(function () use ($registration, $event) {

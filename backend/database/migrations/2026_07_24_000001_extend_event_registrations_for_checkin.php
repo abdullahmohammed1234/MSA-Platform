@@ -10,9 +10,17 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('event_registrations', function (Blueprint $table) {
-            $table->uuid('registration_group_id')->nullable()->after('uuid')->index();
-            $table->string('phone')->nullable()->after('email');
-            $table->timestamp('checked_in_at')->nullable()->after('status');
+            if (! Schema::hasColumn('event_registrations', 'registration_group_id')) {
+                $table->uuid('registration_group_id')->nullable()->after('uuid')->index();
+            }
+
+            if (! Schema::hasColumn('event_registrations', 'phone')) {
+                $table->string('phone')->nullable()->after('email');
+            }
+
+            if (! Schema::hasColumn('event_registrations', 'checked_in_at')) {
+                $table->timestamp('checked_in_at')->nullable()->after('status');
+            }
         });
 
         $driver = Schema::getConnection()->getDriverName();
@@ -21,8 +29,6 @@ return new class extends Migration
             DB::statement('ALTER TABLE event_registrations MODIFY student_id VARCHAR(255) NULL');
         } elseif ($driver === 'pgsql') {
             DB::statement('ALTER TABLE event_registrations ALTER COLUMN student_id DROP NOT NULL');
-        } elseif ($driver === 'sqlite') {
-            // SQLite does not enforce NOT NULL changes the same way; leave as-is for tests.
         }
 
         DB::table('event_registrations')
@@ -37,13 +43,20 @@ return new class extends Migration
             ->update(['status' => 'confirmed']);
 
         Schema::table('event_registrations', function (Blueprint $table) {
-            $table->dropColumn(['registration_group_id', 'phone', 'checked_in_at']);
+            $columns = collect(['registration_group_id', 'phone', 'checked_in_at'])
+                ->filter(fn (string $column) => Schema::hasColumn('event_registrations', $column))
+                ->values()
+                ->all();
+
+            if ($columns !== []) {
+                $table->dropColumn($columns);
+            }
         });
 
         $driver = Schema::getConnection()->getDriverName();
 
         if ($driver === 'mysql') {
-            DB::statement("ALTER TABLE event_registrations MODIFY student_id VARCHAR(255) NOT NULL");
+            DB::statement('ALTER TABLE event_registrations MODIFY student_id VARCHAR(255) NOT NULL');
         } elseif ($driver === 'pgsql') {
             DB::statement('ALTER TABLE event_registrations ALTER COLUMN student_id SET NOT NULL');
         }

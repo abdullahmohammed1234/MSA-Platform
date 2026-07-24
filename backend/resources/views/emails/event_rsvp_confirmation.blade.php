@@ -17,17 +17,29 @@
             <li><strong>Time:</strong> {{ $event->time }}</li>
             <li><strong>Location:</strong> {{ $event->location }}</li>
             <li><strong>Phone:</strong> {{ $registrantPhone }}</li>
+            <li><strong>Registration ID:</strong> {{ $registration->uuid }}</li>
             <li><strong>Check-in code:</strong> {{ $checkInCode }}</li>
         </ul>
 
         <p>Please bring this QR code to the event for identity confirmation and check-in:</p>
 
+        @if (!empty($qrPngBinary))
         <div style="text-align: center; margin: 28px 0;">
-            <img src="{{ $qrDataUri }}" alt="Event check-in QR code" width="220" height="220" style="border: 1px solid #ece7e0; border-radius: 12px; padding: 12px; background: #fff;" />
+            {{-- embedData uses a CID so Gmail/Outlook can display the image inline --}}
+            <img src="{{ $message->embedData($qrPngBinary, 'event-checkin-qr.png', 'image/png') }}" alt="Event check-in QR code" width="220" height="220" style="display: block; margin: 0 auto; border: 1px solid #ece7e0; border-radius: 12px; padding: 12px; background: #ffffff;" />
         </div>
+        <p style="color: #555; font-size: 14px; text-align: center;">
+            The same QR code is also attached to this email if the image above does not load.
+        </p>
+        @else
+        <p style="color: #555; font-size: 14px;">
+            Use this registration ID / check-in code at the event: <strong>{{ $registration->uuid }}</strong>
+        </p>
+        @endif
 
         <p style="color: #555; font-size: 14px;">
-            A copy of your QR code is also attached to this email. If your plans change, please contact events@sfumsa.ca.
+            Need to cancel? Open the event page on sfumsa.ca and use Cancel registration with your Registration ID.
+            If your plans change, you can also contact events@sfumsa.ca.
         </p>
 
         <p style="color: #666; font-size: 12px; margin-bottom: 0;">SFU Muslim Students Association</p>
