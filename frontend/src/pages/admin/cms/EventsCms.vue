@@ -18,7 +18,8 @@ import {
   MapPin,
   Clock,
   Star,
-  QrCode
+  QrCode,
+  Users
 } from 'lucide-vue-next';
 import { useRouter } from 'vue-router';
 
@@ -350,6 +351,20 @@ const handleRollback = async (version: number) => {
                 <span v-else class="text-neutral-black/30 font-medium">—</span>
               </td>
               <td class="p-6 text-right space-x-2">
+                <button
+                  @click="router.push({ name: 'admin-cms-event-registrations', params: { uuid: ev.uuid } })"
+                  class="p-2.5 bg-emerald-50 hover:bg-emerald-600 hover:text-white rounded-xl text-emerald-700 transition-all duration-300 cursor-pointer"
+                  title="Registrations"
+                >
+                  <Users :size="14" />
+                </button>
+                <button
+                  @click="router.push({ name: 'admin-cms-event-check-in', query: { event: ev.uuid } })"
+                  class="p-2.5 bg-primary/5 hover:bg-primary hover:text-white rounded-xl text-primary transition-all duration-300 cursor-pointer"
+                  title="Check-in scanner"
+                >
+                  <QrCode :size="14" />
+                </button>
                 <button @click="openEditForm(ev)" class="p-2.5 bg-primary/5 hover:bg-primary hover:text-white rounded-xl text-primary transition-all duration-300 cursor-pointer" title="Edit">
                   <Edit :size="14" />
                 </button>

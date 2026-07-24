@@ -168,32 +168,58 @@ class EventController extends Controller
             'eventUuid' => 'nullable|uuid',
         ]);
 
-        $registrationUuid = app(\App\Services\CMS\EventCheckInQrService::class)
-            ->parseRegistrationUuid($validated['code']);
+        $parsed = app(\App\Services\CMS\EventCheckInQrService::class)
+            ->parsePayload($validated['code']);
 
-        if (! $registrationUuid) {
+        if (! $parsed) {
             return response()->json([
                 'success' => false,
                 'message' => 'Invalid QR code. Please scan a valid event registration QR.',
             ], 422);
         }
 
-        $registration = EventRegistration::query()
+        $registrationUuid = $parsed['registrationUuid'];
+        $qrEventUuid = $parsed['eventUuid'];
+        $requestedEventUuid = $validated['eventUuid'] ?? $qrEventUuid;
+
+        // Resolve against the event's registrant list using the hidden check-in code.
+        $registrationQuery = EventRegistration::query()
             ->with('event')
-            ->where('uuid', $registrationUuid)
-            ->first();
+            ->where('uuid', $registrationUuid);
+
+        if ($requestedEventUuid) {
+            $registrationQuery->whereHas('event', function ($query) use ($requestedEventUuid) {
+                $query->where('uuid', $requestedEventUuid);
+            });
+        }
+
+        $registration = $registrationQuery->first();
 
         if (! $registration || ! $registration->event) {
             return response()->json([
                 'success' => false,
-                'message' => 'No registration was found for this QR code.',
+                'message' => $requestedEventUuid
+                    ? 'This check-in code was not found in that event\'s registration list.'
+                    : 'No registration was found for this QR code.',
+                'eventUuid' => $requestedEventUuid,
             ], 404);
+        }
+
+        // If QR embeds an event id, it must match the registration's event.
+        if ($qrEventUuid && $registration->event->uuid !== $qrEventUuid) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This QR code belongs to a different event.',
+                'eventUuid' => $registration->event->uuid,
+                'registration' => $this->registrationSummary($registration),
+            ], 422);
         }
 
         if (! empty($validated['eventUuid']) && $registration->event->uuid !== $validated['eventUuid']) {
             return response()->json([
                 'success' => false,
                 'message' => 'This QR code belongs to a different event.',
+                'eventUuid' => $registration->event->uuid,
                 'registration' => $this->registrationSummary($registration),
             ], 422);
         }
@@ -202,6 +228,7 @@ class EventController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'This registration was cancelled.',
+                'eventUuid' => $registration->event->uuid,
                 'registration' => $this->registrationSummary($registration),
             ], 422);
         }
@@ -211,6 +238,7 @@ class EventController extends Controller
                 'success' => true,
                 'alreadyCheckedIn' => true,
                 'message' => $registration->full_name.' is already marked as attending.',
+                'eventUuid' => $registration->event->uuid,
                 'registration' => $this->registrationSummary($registration),
             ]);
         }
@@ -235,6 +263,7 @@ class EventController extends Controller
             'success' => true,
             'alreadyCheckedIn' => false,
             'message' => $registration->full_name.' checked in successfully.',
+            'eventUuid' => $registration->event->uuid,
             'registration' => $this->registrationSummary($registration),
         ]);
     }

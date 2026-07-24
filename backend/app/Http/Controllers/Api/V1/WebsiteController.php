@@ -599,7 +599,7 @@ class WebsiteController extends Controller
                     $registration->full_name,
                     $registration->email,
                     (string) $registration->phone,
-                    $qrService->payloadForRegistration($registration->uuid),
+                    $qrService->payloadForRegistration($registration->uuid, $freshEvent->uuid),
                 ));
             } catch (Throwable $exception) {
                 Log::warning('Event RSVP confirmation email failed', [
@@ -624,7 +624,7 @@ class WebsiteController extends Controller
                 'email' => $registration->email,
                 'phone' => $registration->phone,
                 'status' => $registration->status,
-                'checkInCode' => $qrService->payloadForRegistration($registration->uuid),
+                'checkInCode' => $qrService->payloadForRegistration($registration->uuid, $freshEvent->uuid),
             ])->values(),
             'registrationId' => $registrations->first()?->uuid,
         ]);

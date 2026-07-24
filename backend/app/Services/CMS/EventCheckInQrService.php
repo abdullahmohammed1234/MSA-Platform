@@ -12,12 +12,25 @@ class EventCheckInQrService
 {
     public const PAYLOAD_PREFIX = 'sfumsa:event-checkin:';
 
-    public function payloadForRegistration(string $registrationUuid): string
+    /**
+     * New format: sfumsa:event-checkin:{eventUuid}:{registrationUuid}
+     * Legacy format: sfumsa:event-checkin:{registrationUuid}
+     */
+    public function payloadForRegistration(string $registrationUuid, ?string $eventUuid = null): string
     {
+        $registrationUuid = strtolower(trim($registrationUuid));
+
+        if ($eventUuid) {
+            return self::PAYLOAD_PREFIX.strtolower(trim($eventUuid)).':'.$registrationUuid;
+        }
+
         return self::PAYLOAD_PREFIX.$registrationUuid;
     }
 
-    public function parseRegistrationUuid(?string $raw): ?string
+    /**
+     * @return array{eventUuid: ?string, registrationUuid: string}|null
+     */
+    public function parsePayload(?string $raw): ?array
     {
         if (! is_string($raw) || $raw === '') {
             return null;
@@ -31,15 +44,46 @@ class EventCheckInQrService
 
         $value = trim($value);
 
-        return preg_match(
-            '/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i',
-            $value
-        ) ? strtolower($value) : null;
+        // New format: eventUuid:registrationUuid
+        if (preg_match(
+            '/^([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}):([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i',
+            $value,
+            $matches
+        )) {
+            return [
+                'eventUuid' => strtolower($matches[1]),
+                'registrationUuid' => strtolower($matches[2]),
+            ];
+        }
+
+        // Legacy format: registrationUuid only
+        if (preg_match(
+            '/^([0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12})$/i',
+            $value,
+            $matches
+        )) {
+            return [
+                'eventUuid' => null,
+                'registrationUuid' => strtolower($matches[1]),
+            ];
+        }
+
+        return null;
     }
 
-    public function pngBinary(string $registrationUuid): string
+    public function parseRegistrationUuid(?string $raw): ?string
     {
-        $payload = $this->payloadForRegistration($registrationUuid);
+        return $this->parsePayload($raw)['registrationUuid'] ?? null;
+    }
+
+    public function parseEventUuid(?string $raw): ?string
+    {
+        return $this->parsePayload($raw)['eventUuid'] ?? null;
+    }
+
+    public function pngBinary(string $registrationUuid, ?string $eventUuid = null): string
+    {
+        $payload = $this->payloadForRegistration($registrationUuid, $eventUuid);
 
         if (extension_loaded('gd')) {
             try {
@@ -68,11 +112,11 @@ class EventCheckInQrService
         throw new \RuntimeException('Unable to generate a PNG QR code for this registration.');
     }
 
-    public function svgBinary(string $registrationUuid): string
+    public function svgBinary(string $registrationUuid, ?string $eventUuid = null): string
     {
         $builder = new Builder(
             writer: new SvgWriter(),
-            data: $this->payloadForRegistration($registrationUuid),
+            data: $this->payloadForRegistration($registrationUuid, $eventUuid),
             encoding: new Encoding('UTF-8'),
             errorCorrectionLevel: ErrorCorrectionLevel::Medium,
             size: 360,
@@ -82,32 +126,8 @@ class EventCheckInQrService
         return $builder->build()->getString();
     }
 
-    public function dataUri(string $registrationUuid): string
+    public function dataUri(string $registrationUuid, ?string $eventUuid = null): string
     {
-        $binary = $this->pngBinary($registrationUuid);
-
-        if (str_starts_with(ltrim($binary), '<svg') || str_starts_with(ltrim($binary), '<?xml')) {
-            return 'data:image/svg+xml;base64,'.base64_encode($binary);
-        }
-
-        return 'data:image/png;base64,'.base64_encode($binary);
-    }
-
-    public function attachmentMime(string $registrationUuid): string
-    {
-        $binary = $this->pngBinary($registrationUuid);
-
-        if (str_starts_with(ltrim($binary), '<svg') || str_starts_with(ltrim($binary), '<?xml')) {
-            return 'image/svg+xml';
-        }
-
-        return 'image/png';
-    }
-
-    public function attachmentFilename(string $registrationUuid): string
-    {
-        return $this->attachmentMime($registrationUuid) === 'image/svg+xml'
-            ? 'event-checkin-qr.svg'
-            : 'event-checkin-qr.png';
+        return 'data:image/png;base64,'.base64_encode($this->pngBinary($registrationUuid, $eventUuid));
     }
 }

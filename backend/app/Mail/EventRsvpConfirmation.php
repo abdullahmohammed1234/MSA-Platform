@@ -30,7 +30,10 @@ class EventRsvpConfirmation extends Mailable
         public string $checkInCode,
     ) {
         try {
-            $binary = app(EventCheckInQrService::class)->pngBinary($registration->uuid);
+            $binary = app(EventCheckInQrService::class)->pngBinary(
+                $registration->uuid,
+                $event->uuid
+            );
             // Gmail only reliably displays PNG/JPEG inline — skip SVG fallbacks.
             if (is_string($binary) && str_starts_with($binary, "\x89PNG")) {
                 $this->qrPngBinary = $binary;

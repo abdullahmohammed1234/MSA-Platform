@@ -120,6 +120,7 @@ export const cmsService = {
     success: boolean;
     message: string;
     alreadyCheckedIn?: boolean;
+    eventUuid?: string;
     registration?: {
       uuid: string;
       full_name: string;
