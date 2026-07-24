@@ -445,7 +445,7 @@ const handleRollback = async (version: number) => {
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="space-y-2">
-              <label class="text-[10px] font-black uppercase tracking-widest text-primary/70">Available seats</label>
+              <label class="text-[10px] font-black uppercase tracking-widest text-primary/70">Number of seats available</label>
               <input
                 type="number"
                 required
@@ -453,20 +453,21 @@ const handleRollback = async (version: number) => {
                 step="1"
                 v-model.number="form.spots_left"
                 class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl py-4 px-5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 text-neutral-black"
+                placeholder="e.g. 100"
               />
               <p class="text-[10px] text-neutral-black/40">
-                Remaining open spots for registration. This number decreases automatically as people register.
+                Each registered person uses 1 seat. If someone registers for 3 people, seats drop by 3.
               </p>
             </div>
             <div class="space-y-2">
-              <label class="text-[10px] font-black uppercase tracking-widest text-primary/70">Registration deadline (optional)</label>
+              <label class="text-[10px] font-black uppercase tracking-widest text-primary/70">Registration deadline</label>
               <input
                 type="date"
                 v-model="form.registration_deadline"
                 class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl py-4 px-5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 text-neutral-black font-medium"
               />
               <p class="text-[10px] text-neutral-black/40">
-                Leave blank to keep registration open until the event ends.
+                Optional. Leave blank to keep registration open until the event ends.
               </p>
             </div>
           </div>
