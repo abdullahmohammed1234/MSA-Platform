@@ -53,6 +53,12 @@ const adminRoutes: Array<RouteRecordRaw> = [
         meta: { permissions: 'manage_events' }
       },
       {
+        path: 'cms/events/check-in',
+        name: 'admin-cms-event-check-in',
+        component: () => import('@/pages/admin/cms/EventCheckInPage.vue'),
+        meta: { permissions: 'manage_events' }
+      },
+      {
         path: 'cms/team',
         name: 'admin-cms-team',
         component: () => import('@/pages/admin/cms/TeamCms.vue'),

@@ -64,8 +64,10 @@ export interface EventRegistration {
   last_name: string;
   full_name: string;
   email: string;
-  student_id: string;
+  phone?: string | null;
+  student_id?: string | null;
   status: string;
+  checked_in_at?: string | null;
   registered_at: string;
 }
 

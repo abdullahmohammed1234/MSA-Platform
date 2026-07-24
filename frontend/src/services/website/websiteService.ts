@@ -92,11 +92,24 @@ export interface NewsletterSubscription {
   email: string;
 }
 
-export interface EventRsvpSubmission {
+export interface EventRsvpAttendee {
   firstName: string;
   lastName: string;
   email: string;
-  studentId: string;
+  phone: string;
+}
+
+export interface EventRsvpSubmission {
+  attendees: EventRsvpAttendee[];
+}
+
+export interface EventRegistrationResult {
+  registrationId: string;
+  name: string;
+  email: string;
+  phone: string;
+  status: string;
+  checkInCode: string;
 }
 
 export interface EventRsvpResponse {
@@ -104,12 +117,16 @@ export interface EventRsvpResponse {
   message: string;
   spotsLeft?: number;
   registrationId?: string;
+  registrationGroupId?: string;
+  registrations?: EventRegistrationResult[];
 }
 
 export interface EventRegistrationStatus {
   eventId: string;
   registrationId: string;
+  status?: string;
   registeredAt?: string;
+  checkedInAt?: string;
 }
 
 const LOCAL_REGISTRATIONS_KEY = 'msa_event_registrations';
@@ -151,6 +168,18 @@ export const websiteService = {
       ...event,
       image: resolvePublicImagePath(event.image),
     }));
+  },
+
+  async getEvent(eventId: string): Promise<EventItem> {
+    const response = await api.get(`/website/events/${eventId}`);
+    const event = response.data?.event;
+    if (!event) {
+      throw new Error('Event not found.');
+    }
+    return {
+      ...event,
+      image: resolvePublicImagePath(event.image),
+    };
   },
 
   async getTeamMembers(): Promise<TeamMember[]> {
@@ -223,9 +252,11 @@ export const websiteService = {
     const response = await api.post(`/website/events/${eventId}/rsvp`, data);
     return {
       success: response.data?.success ?? true,
-      message: response.data?.message || 'Registration successful! Check your email for confirmation.',
+      message: response.data?.message || 'Registration successful! Check your email for your QR code.',
       spotsLeft: response.data?.spotsLeft,
       registrationId: response.data?.registrationId,
+      registrationGroupId: response.data?.registrationGroupId,
+      registrations: response.data?.registrations ?? [],
     };
   },
 

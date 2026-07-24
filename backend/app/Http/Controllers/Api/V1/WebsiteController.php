@@ -11,6 +11,7 @@ use App\Models\CMS\EventRegistration;
 use App\Models\CMS\Media;
 use App\Models\CMS\TeamMember;
 use App\Models\CMS\Resource;
+use App\Services\CMS\EventCheckInQrService;
 use App\Services\CMS\HomepageService;
 use App\Services\Analytics\AnalyticsService;
 use App\Services\NewsletterService;
@@ -22,6 +23,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Throwable;
 
 class WebsiteController extends Controller
@@ -193,6 +195,22 @@ class WebsiteController extends Controller
 
         return response()->json([
             'events' => $events,
+        ]);
+    }
+
+    public function showEvent(string $eventId): JsonResponse
+    {
+        $event = $this->findPublishedEvent($eventId);
+
+        if (! $event) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Event not found.',
+            ], 404);
+        }
+
+        return response()->json([
+            'event' => $this->transformPublicEvent($event),
         ]);
     }
 
@@ -405,22 +423,53 @@ class WebsiteController extends Controller
     public function submitEventRsvp(Request $request, string $eventId): JsonResponse
     {
         $validated = $request->validate([
-            'firstName' => 'required|string|max:255',
-            'lastName' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
-            'studentId' => 'required|string|max:50',
+            'attendees' => 'nullable|array|min:1|max:10',
+            'attendees.*.firstName' => 'required_with:attendees|string|max:255',
+            'attendees.*.lastName' => 'required_with:attendees|string|max:255',
+            'attendees.*.email' => 'required_with:attendees|email|max:255',
+            'attendees.*.phone' => 'required_with:attendees|string|max:40',
+            'firstName' => 'required_without:attendees|string|max:255',
+            'lastName' => 'required_without:attendees|string|max:255',
+            'email' => 'required_without:attendees|email|max:255',
+            'phone' => 'required_without:attendees|string|max:40',
         ]);
 
-        $event = Event::query()
-            ->where('status', 'published')
-            ->where(function ($query) use ($eventId) {
-                $query->where('uuid', $eventId);
-
-                if (is_numeric($eventId)) {
-                    $query->orWhere('id', (int) $eventId);
-                }
+        $attendees = collect($validated['attendees'] ?? [])
+            ->map(function (array $attendee) {
+                return [
+                    'firstName' => trim($attendee['firstName']),
+                    'lastName' => trim($attendee['lastName']),
+                    'email' => strtolower(trim($attendee['email'])),
+                    'phone' => trim($attendee['phone']),
+                ];
             })
-            ->first();
+            ->values();
+
+        if ($attendees->isEmpty() && ! empty($validated['email'])) {
+            $attendees = collect([[
+                'firstName' => trim((string) ($validated['firstName'] ?? '')),
+                'lastName' => trim((string) ($validated['lastName'] ?? '')),
+                'email' => strtolower(trim((string) $validated['email'])),
+                'phone' => trim((string) ($validated['phone'] ?? '')),
+            ]]);
+        }
+
+        if ($attendees->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please provide at least one attendee.',
+            ], 422);
+        }
+
+        $duplicateEmails = $attendees->pluck('email')->duplicates()->values();
+        if ($duplicateEmails->isNotEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Each attendee must use a unique email address.',
+            ], 422);
+        }
+
+        $event = $this->findPublishedEvent($eventId);
 
         if (! $event) {
             return response()->json([
@@ -436,43 +485,62 @@ class WebsiteController extends Controller
             ], 422);
         }
 
-        if ($event->spots_left <= 0) {
+        $partySize = $attendees->count();
+
+        if ($event->spots_left < $partySize) {
             return response()->json([
                 'success' => false,
-                'message' => 'This event is full. No spots remain.',
+                'message' => $event->spots_left <= 0
+                    ? 'This event is full. No spots remain.'
+                    : "Only {$event->spots_left} spot(s) remain for this event.",
             ], 422);
         }
 
-        $email = strtolower($validated['email']);
+        $existingEmails = EventRegistration::query()
+            ->where('event_id', $event->id)
+            ->whereIn('status', [
+                EventRegistration::STATUS_REGISTERED,
+                EventRegistration::STATUS_ATTENDING,
+            ])
+            ->whereIn('email', $attendees->pluck('email')->all())
+            ->pluck('email');
 
-        if (EventRegistration::where('event_id', $event->id)->where('email', $email)->exists()) {
+        if ($existingEmails->isNotEmpty()) {
             return response()->json([
                 'success' => false,
-                'message' => 'This email is already registered for this event.',
+                'message' => 'One or more emails are already registered for this event: '.$existingEmails->unique()->implode(', '),
             ], 422);
         }
+
+        $groupId = (string) Str::uuid();
 
         try {
-            $registration = DB::transaction(function () use ($event, $validated, $email, $request) {
+            $registrations = DB::transaction(function () use ($event, $attendees, $request, $partySize, $groupId) {
                 $lockedEvent = Event::query()->whereKey($event->id)->lockForUpdate()->firstOrFail();
 
-                if ($lockedEvent->spots_left <= 0) {
+                if ($lockedEvent->spots_left < $partySize) {
                     throw new \RuntimeException('full');
                 }
 
-                $created = EventRegistration::create([
-                    'event_id' => $lockedEvent->id,
-                    'user_id' => $request->user()?->id,
-                    'first_name' => $validated['firstName'],
-                    'last_name' => $validated['lastName'],
-                    'email' => $email,
-                    'student_id' => $validated['studentId'],
-                    'status' => 'confirmed',
-                ]);
+                $created = [];
 
-                $lockedEvent->decrement('spots_left');
+                foreach ($attendees as $attendee) {
+                    $created[] = EventRegistration::create([
+                        'registration_group_id' => $groupId,
+                        'event_id' => $lockedEvent->id,
+                        'user_id' => $request->user()?->id,
+                        'first_name' => $attendee['firstName'],
+                        'last_name' => $attendee['lastName'],
+                        'email' => $attendee['email'],
+                        'phone' => $attendee['phone'],
+                        'student_id' => null,
+                        'status' => EventRegistration::STATUS_REGISTERED,
+                    ]);
+                }
 
-                return $created;
+                $lockedEvent->decrement('spots_left', $partySize);
+
+                return collect($created);
             });
         } catch (\RuntimeException $exception) {
             if ($exception->getMessage() === 'full') {
@@ -487,39 +555,57 @@ class WebsiteController extends Controller
 
         Cache::forget('website_events');
 
-        if ($request->user()) {
-            $this->analyticsService->trackEventRegistration(
-                $request->user()->id,
-                $event->id,
-                null,
-                [
-                    'email' => $email,
-                    'student_id' => $validated['studentId'],
-                ]
-            );
-        }
+        $freshEvent = $event->fresh();
+        $qrService = app(EventCheckInQrService::class);
 
-        try {
-            Mail::to($email)->send(new EventRsvpConfirmation(
-                $event->fresh(),
-                trim($validated['firstName'].' '.$validated['lastName']),
-                $email,
-                $validated['studentId'],
-            ));
-        } catch (Throwable $exception) {
-            Log::warning('Event RSVP confirmation email failed', [
-                'error' => $exception->getMessage(),
-                'event_id' => $event->id,
-                'registration_id' => $registration->id,
-                'email' => $email,
-            ]);
+        foreach ($registrations as $registration) {
+            if ($request->user()) {
+                $this->analyticsService->trackEventRegistration(
+                    $request->user()->id,
+                    $event->id,
+                    null,
+                    [
+                        'email' => $registration->email,
+                        'registration_id' => $registration->uuid,
+                    ]
+                );
+            }
+
+            try {
+                Mail::to($registration->email)->send(new EventRsvpConfirmation(
+                    $freshEvent,
+                    $registration,
+                    $registration->full_name,
+                    $registration->email,
+                    (string) $registration->phone,
+                    $qrService->payloadForRegistration($registration->uuid),
+                ));
+            } catch (Throwable $exception) {
+                Log::warning('Event RSVP confirmation email failed', [
+                    'error' => $exception->getMessage(),
+                    'event_id' => $event->id,
+                    'registration_id' => $registration->id,
+                    'email' => $registration->email,
+                ]);
+            }
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Registration successful! Check your email for confirmation.',
-            'spotsLeft' => $event->fresh()->spots_left,
-            'registrationId' => $registration->uuid,
+            'message' => $partySize === 1
+                ? 'Registration successful! Check your email for your QR code.'
+                : "Registration successful for {$partySize} people! Each person will receive a confirmation email with their QR code.",
+            'spotsLeft' => $freshEvent->spots_left,
+            'registrationGroupId' => $groupId,
+            'registrations' => $registrations->map(fn (EventRegistration $registration) => [
+                'registrationId' => $registration->uuid,
+                'name' => $registration->full_name,
+                'email' => $registration->email,
+                'phone' => $registration->phone,
+                'status' => $registration->status,
+                'checkInCode' => $qrService->payloadForRegistration($registration->uuid),
+            ])->values(),
+            'registrationId' => $registrations->first()?->uuid,
         ]);
     }
 
@@ -537,7 +623,10 @@ class WebsiteController extends Controller
 
         $registrations = EventRegistration::query()
             ->with('event:id,uuid')
-            ->where('status', 'confirmed')
+            ->whereIn('status', [
+                EventRegistration::STATUS_REGISTERED,
+                EventRegistration::STATUS_ATTENDING,
+            ])
             ->where(function ($query) use ($user, $email) {
                 $query->where('user_id', $user->id)
                     ->orWhere('email', $email);
@@ -548,7 +637,9 @@ class WebsiteController extends Controller
                 return [
                     'eventId' => $registration->event?->uuid ?? (string) $registration->event_id,
                     'registrationId' => $registration->uuid,
+                    'status' => $registration->status,
                     'registeredAt' => $registration->created_at?->toIso8601String(),
+                    'checkedInAt' => $registration->checked_in_at?->toIso8601String(),
                 ];
             })
             ->values()
@@ -565,16 +656,7 @@ class WebsiteController extends Controller
             'registrationId' => 'nullable|uuid',
         ]);
 
-        $event = Event::query()
-            ->where('status', 'published')
-            ->where(function ($query) use ($eventId) {
-                $query->where('uuid', $eventId);
-
-                if (is_numeric($eventId)) {
-                    $query->orWhere('id', (int) $eventId);
-                }
-            })
-            ->first();
+        $event = $this->findPublishedEvent($eventId);
 
         if (! $event) {
             return response()->json([
@@ -585,7 +667,7 @@ class WebsiteController extends Controller
 
         $registrationQuery = EventRegistration::query()
             ->where('event_id', $event->id)
-            ->where('status', 'confirmed');
+            ->where('status', EventRegistration::STATUS_REGISTERED);
 
         if ($request->user()) {
             $email = strtolower($request->user()->email);
@@ -626,5 +708,38 @@ class WebsiteController extends Controller
             'message' => 'Your registration has been cancelled.',
             'spotsLeft' => $event->fresh()->spots_left,
         ]);
+    }
+
+    private function findPublishedEvent(string $eventId): ?Event
+    {
+        return Event::query()
+            ->where('status', 'published')
+            ->where(function ($query) use ($eventId) {
+                $query->where('uuid', $eventId);
+
+                if (is_numeric($eventId)) {
+                    $query->orWhere('id', (int) $eventId);
+                }
+            })
+            ->first();
+    }
+
+    private function transformPublicEvent(Event $item): array
+    {
+        return [
+            'id' => $item->uuid,
+            'title' => $item->title,
+            'date' => $item->date,
+            'time' => $item->time,
+            'location' => $item->location,
+            'category' => $item->category,
+            'image' => CmsAssetUrl::resolve($item->image) ?? 'https://images.unsplash.com/photo-1519751138087-5bf79df62d5b?auto=format&fit=crop&q=80',
+            'description' => $item->description,
+            'spotsLeft' => $item->spots_left,
+            'featured' => $item->featured,
+            'registrationDeadline' => $item->registration_deadline ? $item->registration_deadline->format('Y-m-d') : '2026-12-31',
+            'startDate' => $item->start_date?->toIso8601String(),
+            'endDate' => $item->end_date?->toIso8601String(),
+        ];
     }
 }

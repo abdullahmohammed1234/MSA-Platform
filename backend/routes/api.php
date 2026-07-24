@@ -101,6 +101,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/announcements', [WebsiteController::class, 'announcements'])->name('api.website.announcements');
         Route::get('/events', [WebsiteController::class, 'events'])->name('api.website.events');
         Route::get('/events/registrations', [WebsiteController::class, 'myEventRegistrations'])->name('api.website.events.registrations');
+        Route::get('/events/{eventId}', [WebsiteController::class, 'showEvent'])->name('api.website.events.show');
         Route::post('/events/{eventId}/rsvp', [WebsiteController::class, 'submitEventRsvp'])->middleware('throttle:public_forms')->name('api.website.events.rsvp');
         Route::delete('/events/{eventId}/rsvp', [WebsiteController::class, 'cancelEventRsvp'])->middleware('throttle:public_forms')->name('api.website.events.rsvp.cancel');
         Route::get('/team', [WebsiteController::class, 'team'])->name('api.website.team');
@@ -312,6 +313,9 @@ Route::prefix('v1')->group(function () {
         Route::get('/cms/events/{uuid}/registrations', [\App\Http\Controllers\Admin\CMS\EventController::class, 'registrations'])
             ->middleware('permission:manage_events')
             ->name('api.admin.cms.events.registrations');
+        Route::post('/cms/events/check-in', [\App\Http\Controllers\Admin\CMS\EventController::class, 'checkIn'])
+            ->middleware('permission:manage_events')
+            ->name('api.admin.cms.events.check-in');
         Route::post('/cms/events/{uuid}/rollback', [\App\Http\Controllers\Admin\CMS\EventController::class, 'rollback'])
             ->middleware('permission:manage_events')
             ->name('api.admin.cms.events.rollback');

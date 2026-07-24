@@ -9,22 +9,21 @@ import {
   CalendarDays,
   LayoutGrid,
   List,
-  Info
+  ArrowRight
 } from 'lucide-vue-next';
+import { useRouter } from 'vue-router';
 import ScrollReveal from '@/components/shared/ScrollReveal.vue';
 import ParallaxSection from '@/components/shared/ParallaxSection.vue';
 import { useSeo } from '@/composables/useSeo';
 import websiteService, { type EventItem } from '@/services/website/websiteService';
 import { stripHtml, textPreview } from '@/utils/html';
 
-const REGISTRATION_NOTICE =
-  'For registration, please use the Google Forms link provided on the WhatsApp group when ready.';
-
 useSeo({
   title: 'Events Calendar | SFU MSA',
   description: 'Browse upcoming events, Jumu\'ah prayers, social activities, lectures, and workshops organized by Simon Fraser University MSA.'
 });
 
+const router = useRouter();
 const CATEGORIES = ['All', 'Jummah', 'Social', 'Lecture', 'Workshop', 'Charity', 'Dinner'];
 
 const eventsData = ref<EventItem[]>([]);
@@ -131,6 +130,10 @@ onMounted(() => {
 onUnmounted(() => {
   if (timerInterval) clearInterval(timerInterval);
 });
+
+function openEvent(eventId: string) {
+  router.push({ name: 'event-detail', params: { id: eventId } });
+}
 </script>
 
 <template>
@@ -207,11 +210,22 @@ onUnmounted(() => {
               </ScrollReveal>
 
               <ScrollReveal :delay="0.45" width="100%">
-                <div class="pt-4 max-w-xl">
-                  <div class="flex items-start gap-3 px-5 py-4 bg-white/10 backdrop-blur border border-white/15 rounded-2xl text-white/80 text-sm leading-relaxed">
-                    <Info :size="18" class="text-accent-gold shrink-0 mt-0.5" />
-                    <p>{{ REGISTRATION_NOTICE }}</p>
-                  </div>
+                <div class="pt-4 flex flex-wrap justify-center sm:justify-start gap-3">
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-2 px-6 py-3.5 bg-accent-gold text-primary rounded-2xl text-xs font-extrabold uppercase tracking-widest hover:brightness-105 transition-all cursor-pointer"
+                    @click="openEvent(heroEvent.id)"
+                  >
+                    View & Register
+                    <ArrowRight :size="14" />
+                  </button>
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-2 px-6 py-3.5 bg-white/10 border border-white/20 text-white rounded-2xl text-xs font-extrabold uppercase tracking-widest hover:bg-white/15 transition-all cursor-pointer"
+                    @click="openEvent(heroEvent.id)"
+                  >
+                    Event details
+                  </button>
                 </div>
               </ScrollReveal>
             </div>
@@ -318,8 +332,12 @@ onUnmounted(() => {
         <div 
           v-for="event in filteredEvents" 
           :key="event.id"
+          role="link"
+          tabindex="0"
+          @click="openEvent(event.id)"
+          @keydown.enter="openEvent(event.id)"
           :class="[
-            'group transition-all duration-300',
+            'group transition-all duration-300 cursor-pointer',
             viewMode === 'grid' 
               ? 'premium-card flex flex-col h-full bg-white border border-neutral-ivory shadow-soft hover:shadow-premium' 
               : 'bg-white p-6 rounded-3xl border border-neutral-ivory flex flex-col md:flex-row gap-8 items-center hover:shadow-premium'
@@ -358,10 +376,14 @@ onUnmounted(() => {
                   <MapPin :size="12" class="text-secondary" /> {{ event.location }}
                 </div>
               </div>
-              <p class="flex items-start gap-2 text-[11px] text-neutral-black/50 leading-relaxed">
-                <Info :size="14" class="text-primary shrink-0 mt-0.5" />
-                {{ REGISTRATION_NOTICE }}
-              </p>
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-[11px] text-neutral-black/45">
+                  {{ event.spotsLeft }} spot{{ event.spotsLeft === 1 ? '' : 's' }} left
+                </span>
+                <span class="inline-flex items-center gap-1.5 text-[11px] font-extrabold uppercase tracking-widest text-primary">
+                  Register <ArrowRight :size="12" />
+                </span>
+              </div>
             </div>
           </div>
         </div>

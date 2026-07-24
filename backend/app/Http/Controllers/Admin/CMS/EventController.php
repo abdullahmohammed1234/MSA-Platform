@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\CMS;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CMS\SaveEventRequest;
 use App\Models\CMS\Event;
+use App\Models\CMS\EventRegistration;
 use App\Services\CMS\EventService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -147,8 +148,10 @@ class EventController extends Controller
                 'last_name' => $registration->last_name,
                 'full_name' => trim($registration->first_name.' '.$registration->last_name),
                 'email' => $registration->email,
+                'phone' => $registration->phone,
                 'student_id' => $registration->student_id,
                 'status' => $registration->status,
+                'checked_in_at' => $registration->checked_in_at?->toIso8601String(),
                 'registered_at' => $registration->created_at?->toIso8601String(),
             ])->values(),
             'current_page' => $registrations->currentPage(),
@@ -156,5 +159,85 @@ class EventController extends Controller
             'per_page' => $registrations->perPage(),
             'total' => $registrations->total(),
         ]);
+    }
+
+    public function checkIn(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'code' => 'required|string|max:255',
+            'eventUuid' => 'nullable|uuid',
+        ]);
+
+        $registrationUuid = app(\App\Services\CMS\EventCheckInQrService::class)
+            ->parseRegistrationUuid($validated['code']);
+
+        if (! $registrationUuid) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid QR code. Please scan a valid event registration QR.',
+            ], 422);
+        }
+
+        $registration = EventRegistration::query()
+            ->with('event')
+            ->where('uuid', $registrationUuid)
+            ->first();
+
+        if (! $registration || ! $registration->event) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No registration was found for this QR code.',
+            ], 404);
+        }
+
+        if (! empty($validated['eventUuid']) && $registration->event->uuid !== $validated['eventUuid']) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This QR code belongs to a different event.',
+                'registration' => $this->registrationSummary($registration),
+            ], 422);
+        }
+
+        if ($registration->status === EventRegistration::STATUS_CANCELLED) {
+            return response()->json([
+                'success' => false,
+                'message' => 'This registration was cancelled.',
+                'registration' => $this->registrationSummary($registration),
+            ], 422);
+        }
+
+        if ($registration->status === EventRegistration::STATUS_ATTENDING) {
+            return response()->json([
+                'success' => true,
+                'alreadyCheckedIn' => true,
+                'message' => $registration->full_name.' is already marked as attending.',
+                'registration' => $this->registrationSummary($registration),
+            ]);
+        }
+
+        $registration->markAttending();
+
+        return response()->json([
+            'success' => true,
+            'alreadyCheckedIn' => false,
+            'message' => $registration->full_name.' checked in successfully.',
+            'registration' => $this->registrationSummary($registration->fresh('event')),
+        ]);
+    }
+
+    private function registrationSummary(EventRegistration $registration): array
+    {
+        return [
+            'uuid' => $registration->uuid,
+            'full_name' => $registration->full_name,
+            'email' => $registration->email,
+            'phone' => $registration->phone,
+            'status' => $registration->status,
+            'checked_in_at' => $registration->checked_in_at?->toIso8601String(),
+            'event' => [
+                'uuid' => $registration->event?->uuid,
+                'title' => $registration->event?->title,
+            ],
+        ];
     }
 }

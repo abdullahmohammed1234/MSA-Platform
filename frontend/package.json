@@ -12,6 +12,7 @@
   "dependencies": {
     "@motionone/vue": "^10.16.4",
     "axios": "^1.17.0",
+    "html5-qrcode": "^2.3.8",
     "lucide-vue-next": "^1.0.0",
     "motion": "^12.40.0",
     "pinia": "^3.0.4",

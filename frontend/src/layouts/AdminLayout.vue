@@ -129,6 +129,7 @@ const adminItems = computed(() => {
   }
   if (isSuper || authStore.permissions.includes('manage_events')) {
     cmsChildren.push({ label: 'Events', path: '/admin/cms/events', icon: 'calendar' });
+    cmsChildren.push({ label: 'Event Check-In', path: '/admin/cms/events/check-in', icon: 'qr' });
   }
   if (isSuper || authStore.permissions.includes('manage_team')) {
     cmsChildren.push({ label: 'Team Members', path: '/admin/cms/team', icon: 'users' });
@@ -244,6 +245,13 @@ const handleLogout = async () => {
       <template #calendar>
         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      </template>
+
+      <!-- QR / Check-in Icon Slot -->
+      <template #qr>
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 2h2v2h-2v-2zm4-2h2v2h-2v-2zm-4 4h2v2h-2v-2zm4 0h2v2h-2v-2z" />
         </svg>
       </template>
 

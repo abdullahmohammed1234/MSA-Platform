@@ -12,15 +12,28 @@ class EventRegistration extends Model
 {
     use HasFactory;
 
+    public const STATUS_REGISTERED = 'registered';
+
+    public const STATUS_ATTENDING = 'attending';
+
+    public const STATUS_CANCELLED = 'cancelled';
+
     protected $fillable = [
         'uuid',
+        'registration_group_id',
         'event_id',
         'user_id',
         'first_name',
         'last_name',
         'email',
+        'phone',
         'student_id',
         'status',
+        'checked_in_at',
+    ];
+
+    protected $casts = [
+        'checked_in_at' => 'datetime',
     ];
 
     protected static function boot(): void
@@ -30,6 +43,14 @@ class EventRegistration extends Model
         static::creating(function (self $registration) {
             if (empty($registration->uuid)) {
                 $registration->uuid = (string) Str::uuid();
+            }
+
+            if (empty($registration->registration_group_id)) {
+                $registration->registration_group_id = (string) Str::uuid();
+            }
+
+            if (empty($registration->status)) {
+                $registration->status = self::STATUS_REGISTERED;
             }
 
             $registration->email = strtolower($registration->email);
@@ -44,5 +65,18 @@ class EventRegistration extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function getFullNameAttribute(): string
+    {
+        return trim($this->first_name.' '.$this->last_name);
+    }
+
+    public function markAttending(): void
+    {
+        $this->forceFill([
+            'status' => self::STATUS_ATTENDING,
+            'checked_in_at' => now(),
+        ])->save();
     }
 }

@@ -29,6 +29,12 @@ const publicRoutes: Array<RouteRecordRaw> = [
         component: () => import('@/pages/public/EventsPage.vue'), 
         meta: { title: 'Events | SFU MSA', desc: 'Stay updated on upcoming seminars, congregations, and socials.' } 
       },
+      {
+        path: 'events/:id',
+        name: 'event-detail',
+        component: () => import('@/pages/public/EventDetailPage.vue'),
+        meta: { title: 'Event Details | SFU MSA', desc: 'View event details and register with SFU MSA.' }
+      },
       // { 
       //   path: 'resources', 
       //   name: 'resources', 

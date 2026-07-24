@@ -116,6 +116,27 @@ export const cmsService = {
     return response.data;
   },
 
+  async checkInEventRegistration(code: string, eventUuid?: string): Promise<{
+    success: boolean;
+    message: string;
+    alreadyCheckedIn?: boolean;
+    registration?: {
+      uuid: string;
+      full_name: string;
+      email: string;
+      phone: string | null;
+      status: string;
+      checked_in_at: string | null;
+      event: { uuid: string | null; title: string | null };
+    };
+  }> {
+    const response = await client.post('/admin/cms/events/check-in', {
+      code,
+      eventUuid: eventUuid || undefined,
+    });
+    return response.data;
+  },
+
   // 5. Team Members
   async getTeamMembers(params: any = {}): Promise<PaginatedResponse<TeamMember>> {
     const response = await client.get('/admin/cms/team', { params });

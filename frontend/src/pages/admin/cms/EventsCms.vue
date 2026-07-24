@@ -17,8 +17,10 @@ import {
   Calendar,
   MapPin,
   Clock,
-  Star
+  Star,
+  QrCode
 } from 'lucide-vue-next';
+import { useRouter } from 'vue-router';
 
 // State variables
 const events = ref<Event[]>([]);
@@ -51,6 +53,7 @@ const form = ref({
 });
 
 const CATEGORIES = ['Jummah', 'Social', 'Lecture', 'Workshop', 'Charity', 'Dinner'];
+const router = useRouter();
 
 onMounted(() => {
   fetchEvents();
@@ -215,12 +218,20 @@ const handleRollback = async (version: number) => {
         <h1 class="text-4xl font-display font-extrabold text-primary">Events CMS</h1>
         <p class="text-neutral-black/45 text-sm">Schedule gatherings, Jumu'ah times, and community dinners.</p>
       </div>
-      <button 
-        @click="openCreateForm"
-        class="w-fit flex items-center gap-2 px-5 py-3 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-secondary hover:shadow-brand transition-all cursor-pointer"
-      >
-        <Plus :size="14" /> Add Event
-      </button>
+      <div class="flex flex-wrap gap-3">
+        <button
+          @click="router.push({ name: 'admin-cms-event-check-in' })"
+          class="w-fit flex items-center gap-2 px-5 py-3 bg-white border border-neutral-gray/20 text-primary rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-primary/5 transition-all cursor-pointer"
+        >
+          <QrCode :size="14" /> Check-In Scanner
+        </button>
+        <button 
+          @click="openCreateForm"
+          class="w-fit flex items-center gap-2 px-5 py-3 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-secondary hover:shadow-brand transition-all cursor-pointer"
+        >
+          <Plus :size="14" /> Add Event
+        </button>
+      </div>
     </div>
 
     <!-- Filters -->
