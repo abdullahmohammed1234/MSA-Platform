@@ -9,8 +9,19 @@ import {
   QrCode,
   RefreshCw,
   AlertTriangle,
+  Users,
 } from 'lucide-vue-next';
 import cmsService from '@/services/cms/cmsService';
+
+type CheckInRecord = {
+  uuid: string;
+  full_name: string;
+  email: string;
+  phone: string | null;
+  status: string;
+  checked_in_at: string | null;
+  event: { uuid: string | null; title: string | null };
+};
 
 const route = useRoute();
 
@@ -19,6 +30,7 @@ const scanner = ref<Html5Qrcode | null>(null);
 const cameraActive = ref(false);
 const cameraError = ref('');
 const isProcessing = ref(false);
+const isLoadingCheckIns = ref(false);
 const manualCode = ref('');
 const lastResult = ref<{
   success: boolean;
@@ -26,17 +38,45 @@ const lastResult = ref<{
   alreadyCheckedIn?: boolean;
   name?: string;
   status?: string;
+  email?: string;
+  checkedInAt?: string | null;
+  eventTitle?: string | null;
 } | null>(null);
-const recentScans = ref<Array<{ code: string; message: string; at: string; success: boolean }>>([]);
+const attendingList = ref<CheckInRecord[]>([]);
+const listError = ref('');
 
 const selectedEventUuid = computed(() => {
   const value = route.query.event;
   return typeof value === 'string' && value.length > 0 ? value : undefined;
 });
 
+function formatCheckInTime(value?: string | null) {
+  if (!value) return 'Saved';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
+}
+
+async function loadAttendingList() {
+  isLoadingCheckIns.value = true;
+  listError.value = '';
+  try {
+    attendingList.value = await cmsService.getRecentEventCheckIns({
+      eventUuid: selectedEventUuid.value,
+      limit: 50,
+    });
+  } catch (err: any) {
+    listError.value =
+      err?.response?.data?.message ||
+      err?.message ||
+      'Could not load saved check-ins from the database.';
+  } finally {
+    isLoadingCheckIns.value = false;
+  }
+}
+
 async function startCamera() {
   cameraError.value = '';
-  lastResult.value = null;
 
   await nextTick();
 
@@ -102,15 +142,13 @@ async function handleScan(rawCode: string) {
       alreadyCheckedIn: result.alreadyCheckedIn,
       name: result.registration?.full_name,
       status: result.registration?.status,
+      email: result.registration?.email,
+      checkedInAt: result.registration?.checked_in_at,
+      eventTitle: result.registration?.event?.title,
     };
 
-    recentScans.value.unshift({
-      code,
-      message: result.message,
-      at: new Date().toLocaleTimeString(),
-      success: result.success,
-    });
-    recentScans.value = recentScans.value.slice(0, 8);
+    // Always refresh from DB so attending status survives page reloads.
+    await loadAttendingList();
   } catch (err: any) {
     const message =
       err?.response?.data?.message ||
@@ -122,15 +160,10 @@ async function handleScan(rawCode: string) {
       message,
       name: err?.response?.data?.registration?.full_name,
       status: err?.response?.data?.registration?.status,
+      email: err?.response?.data?.registration?.email,
+      checkedInAt: err?.response?.data?.registration?.checked_in_at,
+      eventTitle: err?.response?.data?.registration?.event?.title,
     };
-
-    recentScans.value.unshift({
-      code,
-      message,
-      at: new Date().toLocaleTimeString(),
-      success: false,
-    });
-    recentScans.value = recentScans.value.slice(0, 8);
   } finally {
     isProcessing.value = false;
   }
@@ -142,8 +175,9 @@ async function submitManualCode() {
   manualCode.value = '';
 }
 
-onMounted(() => {
-  startCamera();
+onMounted(async () => {
+  await loadAttendingList();
+  await startCamera();
 });
 
 onUnmounted(() => {
@@ -153,8 +187,9 @@ onUnmounted(() => {
   });
 });
 
-watch(selectedEventUuid, () => {
+watch(selectedEventUuid, async () => {
   lastResult.value = null;
+  await loadAttendingList();
 });
 </script>
 
@@ -164,21 +199,32 @@ watch(selectedEventUuid, () => {
       <div>
         <h1 class="text-2xl font-display font-extrabold text-primary">Event Check-In</h1>
         <p class="text-sm text-neutral-muted mt-1">
-          Scan a registrant QR code to mark them as attending.
+          Scan a registrant QR code to mark them as attending in the database.
           <span v-if="selectedEventUuid" class="block mt-1 text-xs">
             Filtering to event: {{ selectedEventUuid }}
           </span>
         </p>
       </div>
-      <button
-        type="button"
-        class="inline-flex items-center gap-2 rounded-xl bg-primary text-white px-4 py-2.5 text-xs font-bold uppercase tracking-wider hover:bg-primary-dark cursor-pointer"
-        :disabled="isProcessing"
-        @click="cameraActive ? stopCamera() : startCamera()"
-      >
-        <Camera :size="14" />
-        {{ cameraActive ? 'Stop camera' : 'Start camera' }}
-      </button>
+      <div class="flex flex-wrap gap-2">
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 rounded-xl border border-neutral-ivory bg-white text-primary px-4 py-2.5 text-xs font-bold uppercase tracking-wider hover:bg-primary/5 cursor-pointer"
+          :disabled="isLoadingCheckIns"
+          @click="loadAttendingList"
+        >
+          <RefreshCw :size="14" />
+          Refresh list
+        </button>
+        <button
+          type="button"
+          class="inline-flex items-center gap-2 rounded-xl bg-primary text-white px-4 py-2.5 text-xs font-bold uppercase tracking-wider hover:bg-primary-dark cursor-pointer"
+          :disabled="isProcessing"
+          @click="cameraActive ? stopCamera() : startCamera()"
+        >
+          <Camera :size="14" />
+          {{ cameraActive ? 'Stop camera' : 'Start camera' }}
+        </button>
+      </div>
     </div>
 
     <div class="grid grid-cols-1 xl:grid-cols-5 gap-6">
@@ -237,8 +283,11 @@ watch(selectedEventUuid, () => {
               <p class="text-sm mt-1" :class="lastResult.success ? 'text-emerald-900' : 'text-red-900'">
                 {{ lastResult.message }}
               </p>
+              <p v-if="lastResult.email" class="text-xs text-neutral-muted mt-2">{{ lastResult.email }}</p>
+              <p v-if="lastResult.eventTitle" class="text-xs text-neutral-muted mt-1">{{ lastResult.eventTitle }}</p>
               <p v-if="lastResult.status" class="text-xs uppercase tracking-widest font-bold mt-3 opacity-70">
                 Status: {{ lastResult.status }}
+                <span v-if="lastResult.alreadyCheckedIn"> (already scanned)</span>
               </p>
             </div>
           </div>
@@ -253,26 +302,39 @@ watch(selectedEventUuid, () => {
         </div>
 
         <div class="bg-white border border-neutral-ivory rounded-3xl p-6 shadow-soft">
-          <h3 class="text-sm font-bold text-neutral-black mb-4">Recent scans</h3>
-          <div v-if="recentScans.length === 0" class="text-sm text-neutral-muted">
-            No scans yet this session.
+          <div class="flex items-center justify-between gap-3 mb-4">
+            <h3 class="text-sm font-bold text-neutral-black inline-flex items-center gap-2">
+              <Users :size="14" /> Attending (saved)
+            </h3>
+            <span class="text-[10px] font-extrabold uppercase tracking-widest text-primary">
+              {{ attendingList.length }}
+            </span>
           </div>
-          <ul v-else class="space-y-3">
+
+          <p v-if="listError" class="text-sm text-red-700 bg-red-50 border border-red-100 rounded-xl px-4 py-3 mb-3">
+            {{ listError }}
+          </p>
+          <p v-else-if="isLoadingCheckIns" class="text-sm text-neutral-muted">
+            Loading saved check-ins...
+          </p>
+          <div v-else-if="attendingList.length === 0" class="text-sm text-neutral-muted">
+            No attending guests saved yet. Successful scans are stored in the database and will appear here after refresh.
+          </div>
+          <ul v-else class="space-y-3 max-h-[28rem] overflow-y-auto">
             <li
-              v-for="(scan, index) in recentScans"
-              :key="`${scan.at}-${index}`"
-              class="rounded-2xl border border-neutral-ivory px-4 py-3"
+              v-for="person in attendingList"
+              :key="person.uuid"
+              class="rounded-2xl border border-emerald-100 bg-emerald-50/40 px-4 py-3"
             >
               <div class="flex items-center justify-between gap-3">
-                <span
-                  class="text-[10px] font-extrabold uppercase tracking-widest"
-                  :class="scan.success ? 'text-emerald-700' : 'text-red-700'"
-                >
-                  {{ scan.success ? 'OK' : 'Failed' }}
+                <span class="text-[10px] font-extrabold uppercase tracking-widest text-emerald-700">
+                  Attending
                 </span>
-                <span class="text-[10px] text-neutral-muted">{{ scan.at }}</span>
+                <span class="text-[10px] text-neutral-muted">{{ formatCheckInTime(person.checked_in_at) }}</span>
               </div>
-              <p class="text-sm text-neutral-black mt-1">{{ scan.message }}</p>
+              <p class="text-sm font-semibold text-neutral-black mt-1">{{ person.full_name }}</p>
+              <p class="text-xs text-neutral-muted">{{ person.email }}</p>
+              <p v-if="person.event?.title" class="text-xs text-neutral-muted mt-1">{{ person.event.title }}</p>
             </li>
           </ul>
         </div>

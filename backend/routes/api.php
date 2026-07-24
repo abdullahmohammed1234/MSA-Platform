@@ -298,6 +298,12 @@ Route::prefix('v1')->group(function () {
         Route::post('/cms/events', [\App\Http\Controllers\Admin\CMS\EventController::class, 'store'])
             ->middleware('permission:manage_events')
             ->name('api.admin.cms.events.store');
+        Route::post('/cms/events/check-in', [\App\Http\Controllers\Admin\CMS\EventController::class, 'checkIn'])
+            ->middleware('permission:manage_events')
+            ->name('api.admin.cms.events.check-in');
+        Route::get('/cms/events/check-ins/recent', [\App\Http\Controllers\Admin\CMS\EventController::class, 'recentCheckIns'])
+            ->middleware('permission:manage_events')
+            ->name('api.admin.cms.events.check-ins.recent');
         Route::get('/cms/events/{uuid}', [\App\Http\Controllers\Admin\CMS\EventController::class, 'show'])
             ->middleware('permission:manage_events')
             ->name('api.admin.cms.events.show');
@@ -313,9 +319,6 @@ Route::prefix('v1')->group(function () {
         Route::get('/cms/events/{uuid}/registrations', [\App\Http\Controllers\Admin\CMS\EventController::class, 'registrations'])
             ->middleware('permission:manage_events')
             ->name('api.admin.cms.events.registrations');
-        Route::post('/cms/events/check-in', [\App\Http\Controllers\Admin\CMS\EventController::class, 'checkIn'])
-            ->middleware('permission:manage_events')
-            ->name('api.admin.cms.events.check-in');
         Route::post('/cms/events/{uuid}/rollback', [\App\Http\Controllers\Admin\CMS\EventController::class, 'rollback'])
             ->middleware('permission:manage_events')
             ->name('api.admin.cms.events.rollback');

@@ -77,9 +77,14 @@ class EventRegistration extends Model
 
     public function markAttending(): void
     {
-        $this->forceFill([
+        $attributes = [
             'status' => self::STATUS_ATTENDING,
-            'checked_in_at' => now(),
-        ])->save();
+        ];
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('event_registrations', 'checked_in_at')) {
+            $attributes['checked_in_at'] = now();
+        }
+
+        $this->forceFill($attributes)->save();
     }
 }

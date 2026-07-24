@@ -137,6 +137,19 @@ export const cmsService = {
     return response.data;
   },
 
+  async getRecentEventCheckIns(params: { eventUuid?: string; limit?: number } = {}): Promise<Array<{
+    uuid: string;
+    full_name: string;
+    email: string;
+    phone: string | null;
+    status: string;
+    checked_in_at: string | null;
+    event: { uuid: string | null; title: string | null };
+  }>> {
+    const response = await client.get('/admin/cms/events/check-ins/recent', { params });
+    return response.data?.data ?? [];
+  },
+
   // 5. Team Members
   async getTeamMembers(params: any = {}): Promise<PaginatedResponse<TeamMember>> {
     const response = await client.get('/admin/cms/team', { params });

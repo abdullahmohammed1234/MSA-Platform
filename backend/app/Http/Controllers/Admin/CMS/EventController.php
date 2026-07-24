@@ -215,13 +215,75 @@ class EventController extends Controller
             ]);
         }
 
-        $registration->markAttending();
+        try {
+            $registration->markAttending();
+        } catch (\Throwable $exception) {
+            \Illuminate\Support\Facades\Log::error('Event check-in save failed', [
+                'error' => $exception->getMessage(),
+                'registration_uuid' => $registration->uuid,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Could not save check-in to the database. Please run migrations and try again.',
+            ], 500);
+        }
+
+        $registration->refresh()->load('event');
 
         return response()->json([
             'success' => true,
             'alreadyCheckedIn' => false,
             'message' => $registration->full_name.' checked in successfully.',
-            'registration' => $this->registrationSummary($registration->fresh('event')),
+            'registration' => $this->registrationSummary($registration),
+        ]);
+    }
+
+    public function recentCheckIns(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'eventUuid' => 'nullable|uuid',
+            'limit' => 'nullable|integer|min:1|max:100',
+        ]);
+
+        $limit = $validated['limit'] ?? 40;
+
+        $query = EventRegistration::query()
+            ->with('event:id,uuid,title')
+            ->where('status', EventRegistration::STATUS_ATTENDING);
+
+        if (! empty($validated['eventUuid'])) {
+            $query->whereHas('event', function ($eventQuery) use ($validated) {
+                $eventQuery->where('uuid', $validated['eventUuid']);
+            });
+        }
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('event_registrations', 'checked_in_at')) {
+            $query->orderByDesc('checked_in_at');
+        }
+
+        $checkIns = $query
+            ->orderByDesc('updated_at')
+            ->limit($limit)
+            ->get()
+            ->map(fn (EventRegistration $registration) => [
+                'uuid' => $registration->uuid,
+                'full_name' => $registration->full_name,
+                'email' => $registration->email,
+                'phone' => $registration->phone,
+                'status' => $registration->status,
+                'checked_in_at' => $registration->checked_in_at?->toIso8601String()
+                    ?? $registration->updated_at?->toIso8601String(),
+                'event' => [
+                    'uuid' => $registration->event?->uuid,
+                    'title' => $registration->event?->title,
+                ],
+            ])
+            ->values();
+
+        return response()->json([
+            'data' => $checkIns,
+            'total' => $checkIns->count(),
         ]);
     }
 
