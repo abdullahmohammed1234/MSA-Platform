@@ -7,6 +7,7 @@ import { isPublicAuthEnabled } from '@/config/features';
 import { 
   BookOpen, 
   ChevronRight, 
+  ChevronDown,
   LogIn,
   LogOut,
   X 
@@ -52,11 +53,13 @@ const handleScroll = () => {
 
 onMounted(() => {
   window.addEventListener('scroll', handleScroll);
+  window.addEventListener('click', closeUserMenu);
   handleScroll(); // Check initial scroll state
 });
 
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll);
+  window.removeEventListener('click', closeUserMenu);
   document.body.style.overflow = '';
 });
 
@@ -66,6 +69,19 @@ const closeMenu = () => {
 
 watch(isOpen, (open) => {
   document.body.style.overflow = open ? 'hidden' : '';
+});
+
+const isUserMenuOpen = ref(false);
+const toggleUserMenu = (event: Event) => {
+  event.stopPropagation();
+  isUserMenuOpen.value = !isUserMenuOpen.value;
+};
+const closeUserMenu = () => {
+  isUserMenuOpen.value = false;
+};
+
+watch(route, () => {
+  closeUserMenu();
 });
 
 const handleLogout = async () => {
@@ -79,14 +95,14 @@ const handleLogout = async () => {
   <div class="fixed top-4 inset-x-0 z-50 w-full max-w-full px-3 sm:px-4 pointer-events-none box-border overflow-x-clip">
     <div
       :class="[
-        'pointer-events-auto mx-auto w-full max-w-7xl min-w-0 overflow-hidden rounded-full border transition-all duration-500 box-border animate-navbar-in',
+        'pointer-events-auto mx-auto w-full max-w-7xl min-w-0 rounded-full border transition-all duration-500 box-border animate-navbar-in',
         scrolled
           ? 'bg-white/90 backdrop-blur-xl border-neutral-ivory/80 shadow-premium py-2 px-3 sm:py-2.5 sm:px-4'
           : 'bg-neutral-background/75 backdrop-blur-lg border-neutral-ivory/30 shadow-soft py-3 px-3 sm:py-4 sm:px-6'
       ]"
     >
       <div class="flex items-center justify-between gap-2 min-w-0 w-full">
-        <router-link to="/" class="flex items-center gap-2 sm:gap-3 group min-w-0 flex-1 overflow-hidden pl-0.5 sm:pl-2">
+        <router-link to="/" class="flex items-center gap-2 sm:gap-3 group min-w-0 shrink-0 overflow-hidden pl-0.5 sm:pl-2">
           <div class="h-9 w-9 sm:h-11 sm:w-11 shrink-0 flex items-center justify-center">
             <img
               src="/logo.webp"
@@ -137,84 +153,112 @@ const handleLogout = async () => {
           </template>
         </div>
         
+
         <div class="flex items-center gap-3 pr-2">
-          <router-link
-            v-if="!isLoading && isAuthenticated && canAccessAcademy"
-            to="/academy"
-            :class="[
-              'inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest hover:shadow-premium transition-all hover:-translate-y-0.5 active:scale-95',
-              route.path.startsWith('/academy')
-                ? 'bg-secondary text-white'
-                : 'bg-primary text-white hover:bg-secondary'
-            ]"
-          >
-            <BookOpen class="h-3.5 w-3.5" />
-            Dawah
-          </router-link>
+          <!-- Guest Actions -->
+          <template v-if="!isAuthenticated">
+            <router-link
+              v-if="!isLoading && showPublicAuth"
+              to="/login"
+              class="inline-flex items-center gap-2 border border-primary/20 text-primary px-5 py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest hover:bg-primary/5 transition-all"
+            >
+              <LogIn class="h-3.5 w-3.5" />
+              Login
+            </router-link>
 
-          <router-link
-            v-if="!isLoading && isAuthenticated && hasEmsRole"
-            to="/ems"
-            class="inline-flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest hover:bg-secondary hover:shadow-premium transition-all hover:-translate-y-0.5 active:scale-95"
-          >
-            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            EMS
-          </router-link>
+            <router-link
+              v-if="showPublicAuth"
+              to="/register"
+              class="bg-primary text-white px-6 py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest hover:bg-secondary hover:shadow-premium transition-all hover:-translate-y-0.5 active:scale-95"
+            >
+              Register
+            </router-link>
+          </template>
 
-          <router-link
-            v-if="!isLoading && isAuthenticated && isAdminUser"
-            to="/admin"
-            class="inline-flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest hover:bg-secondary hover:shadow-premium transition-all hover:-translate-y-0.5 active:scale-95"
-          >
-            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-            </svg>
-            Admin
-          </router-link>
+          <!-- Authenticated Account Dropdown -->
+          <div v-else-if="!isLoading" class="relative">
+            <button
+              @click="toggleUserMenu"
+              class="inline-flex items-center gap-2 bg-primary text-white hover:bg-secondary px-5 py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest hover:shadow-premium transition-all hover:-translate-y-0.5 active:scale-95 cursor-pointer"
+            >
+              <span>{{ authStore.user?.name || 'My Account' }}</span>
+              <ChevronDown
+                :class="['h-3.5 w-3.5 transition-transform duration-300 shrink-0', isUserMenuOpen ? 'rotate-180' : '']"
+              />
+            </button>
 
-          <router-link
-            v-if="!isLoading && isAuthenticated"
-            to="/my-tickets"
-            :class="[
-              'inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest hover:shadow-premium transition-all hover:-translate-y-0.5 active:scale-95',
-              route.path.startsWith('/my-tickets')
-                ? 'bg-secondary text-white'
-                : 'border border-primary/20 text-primary hover:bg-primary/5'
-            ]"
-          >
-            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-            </svg>
-            My Tickets
-          </router-link>
+            <!-- Dropdown Options Box -->
+            <transition
+              enter-active-class="transition duration-200 ease-out"
+              enter-from-class="transform scale-95 opacity-0 translate-y-1"
+              enter-to-class="transform scale-100 opacity-100 translate-y-0"
+              leave-active-class="transition duration-150 ease-in"
+              leave-from-class="transform scale-100 opacity-100 translate-y-0"
+              leave-to-class="transform scale-95 opacity-0 translate-y-1"
+            >
+              <div
+                v-if="isUserMenuOpen"
+                class="absolute right-0 mt-3 w-56 rounded-2xl border border-neutral-ivory bg-white shadow-premium p-2 flex flex-col gap-1 z-50"
+                @click.stop
+              >
+                <router-link
+                  to="/my-tickets"
+                  class="flex items-center gap-2.5 px-4 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/70 hover:bg-neutral-background hover:text-primary transition-all"
+                  @click="closeUserMenu"
+                >
+                  <svg class="h-4 w-4 shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                  </svg>
+                  My Tickets
+                </router-link>
 
-          <router-link
-            v-if="!isLoading && !isAuthenticated && showPublicAuth"
-            to="/login"
-            class="inline-flex items-center gap-2 border border-primary/20 text-primary px-5 py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest hover:bg-primary/5 transition-all"
-          >
-            <LogIn class="h-3.5 w-3.5" />
-            Login
-          </router-link>
+                <router-link
+                  v-if="canAccessAcademy"
+                  to="/academy"
+                  class="flex items-center gap-2.5 px-4 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/70 hover:bg-neutral-background hover:text-primary transition-all"
+                  @click="closeUserMenu"
+                >
+                  <BookOpen class="h-4 w-4 shrink-0 text-primary" />
+                  Dawah Academy
+                </router-link>
 
-          <router-link
-            v-if="!isAuthenticated && showPublicAuth"
-            to="/register"
-            class="bg-primary text-white px-6 py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest hover:bg-secondary hover:shadow-premium transition-all hover:-translate-y-0.5 active:scale-95"
-          >
-            Register
-          </router-link>
-          <button
-            v-else-if="!isLoading && showPublicAuth && isAuthenticated"
-            type="button"
-            class="inline-flex items-center gap-2 bg-primary text-white px-6 py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest hover:bg-secondary hover:shadow-premium transition-all hover:-translate-y-0.5 active:scale-95 cursor-pointer"
-            @click="handleLogout"
-          >
-            <LogOut class="h-3.5 w-3.5" />
-            Logout
-          </button>
+                <router-link
+                  v-if="hasEmsRole"
+                  to="/ems"
+                  class="flex items-center gap-2.5 px-4 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/70 hover:bg-neutral-background hover:text-primary transition-all"
+                  @click="closeUserMenu"
+                >
+                  <svg class="h-4 w-4 shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  EMS Portal
+                </router-link>
+
+                <router-link
+                  v-if="isAdminUser"
+                  to="/admin"
+                  class="flex items-center gap-2.5 px-4 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/70 hover:bg-neutral-background hover:text-primary transition-all"
+                  @click="closeUserMenu"
+                >
+                  <svg class="h-4 w-4 shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                  </svg>
+                  Admin Portal
+                </router-link>
+
+                <div class="h-px bg-neutral-ivory/80 my-1" />
+
+                <button
+                  type="button"
+                  @click="handleLogout(); closeUserMenu();"
+                  class="flex items-center gap-2.5 px-4 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-wider text-red-600 hover:bg-red-50 transition-all w-full text-left cursor-pointer"
+                >
+                  <LogOut class="h-4 w-4 shrink-0" />
+                  Logout
+                </button>
+              </div>
+            </transition>
+          </div>
         </div>
       </nav>
 
