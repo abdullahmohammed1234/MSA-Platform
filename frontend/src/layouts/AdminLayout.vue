@@ -127,10 +127,6 @@ const adminItems = computed(() => {
   if (isSuper || authStore.permissions.includes('manage_announcements')) {
     cmsChildren.push({ label: 'Announcements', path: '/admin/cms/announcements', icon: 'file' });
   }
-  if (isSuper || authStore.permissions.includes('manage_events')) {
-    cmsChildren.push({ label: 'Events', path: '/admin/cms/events', icon: 'calendar' });
-    cmsChildren.push({ label: 'Event Check-In', path: '/admin/cms/events/check-in', icon: 'qr' });
-  }
   if (isSuper || authStore.permissions.includes('manage_team')) {
     cmsChildren.push({ label: 'Team Members', path: '/admin/cms/team', icon: 'users' });
   }
@@ -150,8 +146,8 @@ const adminItems = computed(() => {
   }
 
   const systemChildren = [
-    { label: 'Main Website', path: '/', icon: 'home' },
-    { label: 'Dawah Academy', path: '/academy', icon: 'book' },
+    { label: 'Main Website', path: '/admin/systems/main-website', icon: 'home' },
+    { label: 'Dawah Academy', path: '/admin/systems/dawah-academy', icon: 'book' },
   ];
 
   if (authStore.permissions.includes('view_queue_status') || isSuper) {
@@ -160,6 +156,10 @@ const adminItems = computed(() => {
 
   if (authStore.permissions.includes('view_security') || isSuper) {
     systemChildren.push({ label: 'Security Center', path: '/admin/security', icon: 'shield' });
+  }
+
+  if (authStore.permissions.includes('system.view') || isSuper) {
+    systemChildren.push({ label: 'Event Management System', path: '/admin/systems/ems', icon: 'calendar' });
   }
 
   items.push({

@@ -34,7 +34,19 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->job(new \App\Jobs\Reports\GenerateDailyReportJob)->dailyAt('23:55')->description('Generate Daily Analytics Report');
         $schedule->job(new \App\Jobs\Reports\GenerateWeeklyReportJob)->weeklyOn(7, '23:59')->description('Generate Weekly Analytics/Engagement Report');
         $schedule->job(new \App\Jobs\Reports\GenerateMonthlyReportJob)->lastDayOfMonth('23:59')->description('Generate Monthly Statistics & Leadership Report');
+
+        // EMS Phase 5 — communications
+        $schedule->job(new \App\Ems\Jobs\ProcessDueRemindersJob)
+            ->everyMinute()
+            ->withoutOverlapping()
+            ->description('EMS: Process due event reminders');
+        $schedule->job(new \App\Ems\Jobs\ProcessDueNotificationsJob)
+            ->everyMinute()
+            ->withoutOverlapping()
+            ->description('EMS: Process due scheduled notifications');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // Scoped to /api/v1/ems/* — every other module keeps the framework
+        // defaults it has today.
+        \App\Ems\Support\EmsExceptionHandler::register($exceptions);
     })->create();

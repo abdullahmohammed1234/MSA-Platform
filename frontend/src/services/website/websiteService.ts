@@ -83,6 +83,7 @@ export interface SponsorSubmission {
 export interface VolunteerSubmission {
   name: string;
   email: string;
+  student_number: string;
   department: string;
   interests: string;
   experience?: string;

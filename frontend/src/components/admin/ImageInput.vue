@@ -13,6 +13,8 @@ const props = withDefaults(defineProps<{
   previewClass?: string;
   /** Accepted file types for the device upload picker. */
   accept?: string;
+  /** External validation error to display. */
+  error?: string;
 }>(), {
   modelValue: '',
   label: '',
@@ -20,6 +22,7 @@ const props = withDefaults(defineProps<{
   hint: '',
   previewClass: 'w-full max-h-40 object-cover',
   accept: 'image/*',
+  error: '',
 });
 
 const emit = defineEmits<{
@@ -139,7 +142,7 @@ const clearImage = () => {
 
     <p v-if="hint" class="text-[10px] text-neutral-black/40 leading-relaxed">{{ hint }}</p>
 
-    <p v-if="uploadError" class="text-[10px] font-bold text-secondary">{{ uploadError }}</p>
+    <p v-if="error || uploadError" class="text-[10px] font-bold text-secondary">{{ error || uploadError }}</p>
 
     <!-- Preview -->
     <div v-if="modelValue" class="relative pt-2 w-fit max-w-full">

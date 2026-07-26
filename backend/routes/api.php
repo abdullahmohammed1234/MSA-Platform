@@ -291,37 +291,37 @@ Route::prefix('v1')->group(function () {
             ->middleware('permission:manage_announcements')
             ->name('api.admin.cms.announcements.rollback');
 
-        // CMS Events
-        Route::get('/cms/events', [\App\Http\Controllers\Admin\CMS\EventController::class, 'index'])
-            ->middleware('permission:manage_events')
-            ->name('api.admin.cms.events.index');
-        Route::post('/cms/events', [\App\Http\Controllers\Admin\CMS\EventController::class, 'store'])
-            ->middleware('permission:manage_events')
-            ->name('api.admin.cms.events.store');
-        Route::post('/cms/events/check-in', [\App\Http\Controllers\Admin\CMS\EventController::class, 'checkIn'])
-            ->middleware('permission:manage_events')
-            ->name('api.admin.cms.events.check-in');
-        Route::get('/cms/events/check-ins/recent', [\App\Http\Controllers\Admin\CMS\EventController::class, 'recentCheckIns'])
-            ->middleware('permission:manage_events')
-            ->name('api.admin.cms.events.check-ins.recent');
-        Route::get('/cms/events/{uuid}', [\App\Http\Controllers\Admin\CMS\EventController::class, 'show'])
-            ->middleware('permission:manage_events')
-            ->name('api.admin.cms.events.show');
-        Route::put('/cms/events/{uuid}', [\App\Http\Controllers\Admin\CMS\EventController::class, 'update'])
-            ->middleware('permission:manage_events')
-            ->name('api.admin.cms.events.update');
-        Route::delete('/cms/events/{uuid}', [\App\Http\Controllers\Admin\CMS\EventController::class, 'destroy'])
-            ->middleware('permission:manage_events')
-            ->name('api.admin.cms.events.destroy');
-        Route::get('/cms/events/{uuid}/revisions', [\App\Http\Controllers\Admin\CMS\EventController::class, 'revisions'])
-            ->middleware('permission:manage_events')
-            ->name('api.admin.cms.events.revisions');
-        Route::get('/cms/events/{uuid}/registrations', [\App\Http\Controllers\Admin\CMS\EventController::class, 'registrations'])
-            ->middleware('permission:manage_events')
-            ->name('api.admin.cms.events.registrations');
-        Route::post('/cms/events/{uuid}/rollback', [\App\Http\Controllers\Admin\CMS\EventController::class, 'rollback'])
-            ->middleware('permission:manage_events')
-            ->name('api.admin.cms.events.rollback');
+        // EMS Platform System Integration
+        Route::prefix('systems/ems')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\V1\Admin\EmsSystemController::class, 'index']);
+            Route::get('/health', [\App\Http\Controllers\Api\V1\Admin\EmsSystemController::class, 'health']);
+            Route::get('/metrics', [\App\Http\Controllers\Api\V1\Admin\EmsSystemController::class, 'metrics']);
+            Route::get('/logs', [\App\Http\Controllers\Api\V1\Admin\EmsSystemController::class, 'logs']);
+            Route::get('/integrations', [\App\Http\Controllers\Api\V1\Admin\EmsSystemController::class, 'integrations']);
+            Route::get('/webhooks', [\App\Http\Controllers\Api\V1\Admin\EmsSystemController::class, 'webhooks']);
+            Route::get('/config', [\App\Http\Controllers\Api\V1\Admin\EmsSystemController::class, 'getConfig']);
+            Route::put('/config', [\App\Http\Controllers\Api\V1\Admin\EmsSystemController::class, 'updateConfig']);
+        });
+
+        // Main Website System Integration
+        Route::prefix('systems/main-website')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\V1\Admin\MainWebsiteSystemController::class, 'index']);
+            Route::get('/health', [\App\Http\Controllers\Api\V1\Admin\MainWebsiteSystemController::class, 'health']);
+            Route::get('/metrics', [\App\Http\Controllers\Api\V1\Admin\MainWebsiteSystemController::class, 'metrics']);
+            Route::get('/integrations', [\App\Http\Controllers\Api\V1\Admin\MainWebsiteSystemController::class, 'integrations']);
+            Route::get('/config', [\App\Http\Controllers\Api\V1\Admin\MainWebsiteSystemController::class, 'getConfig']);
+            Route::put('/config', [\App\Http\Controllers\Api\V1\Admin\MainWebsiteSystemController::class, 'updateConfig']);
+        });
+
+        // Dawah Academy System Integration
+        Route::prefix('systems/dawah-academy')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\V1\Admin\DawahAcademySystemController::class, 'index']);
+            Route::get('/health', [\App\Http\Controllers\Api\V1\Admin\DawahAcademySystemController::class, 'health']);
+            Route::get('/metrics', [\App\Http\Controllers\Api\V1\Admin\DawahAcademySystemController::class, 'metrics']);
+            Route::get('/integrations', [\App\Http\Controllers\Api\V1\Admin\DawahAcademySystemController::class, 'integrations']);
+            Route::get('/config', [\App\Http\Controllers\Api\V1\Admin\DawahAcademySystemController::class, 'getConfig']);
+            Route::put('/config', [\App\Http\Controllers\Api\V1\Admin\DawahAcademySystemController::class, 'updateConfig']);
+        });
 
         // CMS Team
         Route::get('/cms/team', [\App\Http\Controllers\Admin\CMS\TeamController::class, 'index'])

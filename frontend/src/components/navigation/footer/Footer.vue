@@ -14,7 +14,7 @@ const props = withDefaults(defineProps<FooterProps>(), {
     {
       title: 'MSA Connect',
       links: [
-        { label: 'Events Calendar', path: '/events' },
+        { label: 'Events Calendar', path: '/events/calendar' },
         { label: 'Prayer Times', path: '/prayer' },
         { label: 'Volunteers SignUp', path: '/volunteer' }
       ]
@@ -57,7 +57,7 @@ const props = withDefaults(defineProps<FooterProps>(), {
           </p>
           <!-- Contact details -->
           <div class="text-xs text-neutral-muted space-y-1">
-            <div>Email: <a href="mailto:info@sfumsa.ca" class="hover:underline text-primary">info@sfumsa.ca</a></div>
+            <div>Email: <a href="mailto:sfumsa@hotmail.com" class="hover:underline text-primary">sfumsa@hotmail.com</a></div>
             <div>Address: Simon Fraser University, Burnaby, BC</div>
           </div>
         </div>

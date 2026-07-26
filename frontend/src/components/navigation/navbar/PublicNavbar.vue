@@ -28,6 +28,11 @@ const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 
+function isNavActive(href: string): boolean {
+  if (href === '/') return route.path === '/';
+  return route.path === href || route.path.startsWith(`${href}/`);
+}
+
 const isOpen = ref(false);
 const scrolled = ref(false);
 
@@ -113,14 +118,14 @@ const handleLogout = async () => {
               :to="link.href"
               :class="[
                 'text-[10px] font-extrabold uppercase tracking-[0.2em] transition-all relative py-2 group',
-                route.path === link.href ? 'text-primary' : 'text-neutral-black/55 hover:text-primary'
+                isNavActive(link.href) ? 'text-primary' : 'text-neutral-black/55 hover:text-primary'
               ]"
             >
               {{ link.name }}
               <span 
                 :class="[
                   'absolute bottom-0 left-0 h-[2px] bg-primary rounded-full transition-all duration-300',
-                  route.path === link.href ? 'w-full' : 'w-0 group-hover:w-full'
+                  isNavActive(link.href) ? 'w-full' : 'w-0 group-hover:w-full'
                 ]"
               />
             </router-link>
@@ -265,7 +270,7 @@ const handleLogout = async () => {
                     :to="link.href"
                     :class="[
                       'text-2xl font-serif py-3 flex items-center justify-between group transition-colors',
-                      route.path === link.href ? 'text-primary font-medium' : 'text-neutral-black hover:text-primary'
+                      isNavActive(link.href) ? 'text-primary font-medium' : 'text-neutral-black hover:text-primary'
                     ]"
                     @click="closeMenu"
                   >
@@ -273,7 +278,7 @@ const handleLogout = async () => {
                       <span class="text-[10px] font-mono text-neutral-black/20 mt-1">{{ (i + 1).toString().padStart(2, '0') }}</span>
                       {{ link.name }}
                     </div>
-                    <ChevronRight :class="['w-5 h-5 transition-transform group-hover:translate-x-1', route.path === link.href ? 'opacity-100' : 'opacity-0']" />
+                    <ChevronRight :class="['w-5 h-5 transition-transform group-hover:translate-x-1', isNavActive(link.href) ? 'opacity-100' : 'opacity-0']" />
                   </router-link>
                 </div>
               </nav>
@@ -301,7 +306,7 @@ const handleLogout = async () => {
                 <div class="flex flex-col gap-2">
                   <span class="text-[9px] uppercase tracking-widest text-neutral-black/30 font-bold">Connect With Us</span>
                   <div class="text-[11px] text-neutral-black/60 flex flex-col gap-y-1">
-                    <span>info@sfumsa.ca</span>
+                    <span>sfumsa@hotmail.com</span>
                     <span>@sfumsa</span>
                   </div>
                 </div>

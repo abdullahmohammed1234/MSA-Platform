@@ -47,22 +47,22 @@ const adminRoutes: Array<RouteRecordRaw> = [
         meta: { permissions: 'manage_announcements' }
       },
       {
-        path: 'cms/events',
-        name: 'admin-cms-events',
-        component: () => import('@/pages/admin/cms/EventsCms.vue'),
-        meta: { permissions: 'manage_events' }
+        path: 'systems/ems',
+        name: 'admin-systems-ems',
+        component: () => import('@/pages/admin/system/EmsSystemPage.vue'),
+        meta: { permissions: 'system.view' }
       },
       {
-        path: 'cms/events/check-in',
-        name: 'admin-cms-event-check-in',
-        component: () => import('@/pages/admin/cms/EventCheckInPage.vue'),
-        meta: { permissions: 'manage_events' }
+        path: 'systems/main-website',
+        name: 'admin-systems-main-website',
+        component: () => import('@/pages/admin/system/MainWebsiteSystemPage.vue'),
+        meta: { permissions: 'system.view' }
       },
       {
-        path: 'cms/events/:uuid/registrations',
-        name: 'admin-cms-event-registrations',
-        component: () => import('@/pages/admin/cms/EventRegistrationsPage.vue'),
-        meta: { permissions: 'manage_events' }
+        path: 'systems/dawah-academy',
+        name: 'admin-systems-dawah-academy',
+        component: () => import('@/pages/admin/system/DawahAcademySystemPage.vue'),
+        meta: { permissions: 'system.view' }
       },
       {
         path: 'cms/team',

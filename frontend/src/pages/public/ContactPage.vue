@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
+import { useRoute } from 'vue-router';
 import { 
   AlertCircle, Mail, Phone, MapPin, Send, MessageSquare, 
   CheckCircle2, ChevronDown, Instagram, Facebook, Plus 
@@ -7,6 +8,7 @@ import {
 import { Presence } from '@motionone/vue';
 import ScrollReveal from '@/components/shared/ScrollReveal.vue';
 import FloatingElement from '@/components/shared/FloatingElement.vue';
+import Dialog from '@/components/feedback/dialog/Dialog.vue';
 import { useSeo } from '@/composables/useSeo';
 import websiteService from '@/services/website/websiteService';
 
@@ -14,6 +16,8 @@ useSeo({
   title: 'Contact Us | SFU MSA',
   description: 'Get in touch with Simon Fraser University Muslim Students Association. Find our room location, send a message to our departments, or read our FAQs.'
 });
+
+const route = useRoute();
 
 const faqs = [
   {
@@ -34,14 +38,6 @@ const faqs = [
   }
 ];
 
-const departments = [
-  { name: 'General Inquiries', email: 'info@sfumsa.ca' },
-  { name: 'Events & Logistics', email: 'events@sfumsa.ca' },
-  { name: 'Media & Comms', email: 'media@sfumsa.ca' },
-  { name: 'Sisters\' Affairs', email: 'sisters@sfumsa.ca' },
-  { name: 'Education & Outreach', email: 'education@sfumsa.ca' },
-];
-
 const socialLinks = [
   { icon: Instagram, name: 'Instagram', href: 'https://www.instagram.com/sfu_msa/' },
   { icon: Facebook, name: 'Facebook', href: 'https://www.facebook.com/sfumsa/' },
@@ -52,6 +48,33 @@ const isSubmitting = ref(false);
 const isSuccess = ref(false);
 const submitError = ref('');
 const openFaq = ref<number | null>(null);
+
+const isVolunteerOpen = ref(false);
+const volunteerForm = ref({
+  name: '',
+  email: '',
+  student_number: '',
+  department: 'General Inquiries',
+  interests: '',
+  experience: ''
+});
+const isSubmittingVolunteer = ref(false);
+const volunteerSuccess = ref(false);
+const volunteerError = ref('');
+
+const volunteerDepts = [
+  'General Inquiries',
+  'Events & Logistics',
+  'Media & Comms',
+  'Sisters\' Affairs',
+  'Education & Outreach'
+];
+
+onMounted(() => {
+  if (route.query.volunteer === 'true') {
+    isVolunteerOpen.value = true;
+  }
+});
 
 const handleSubmit = async () => {
   isSubmitting.value = true;
@@ -69,6 +92,50 @@ const handleSubmit = async () => {
     submitError.value = err.message || 'Your message could not be sent right now.';
   } finally {
     isSubmitting.value = false;
+  }
+};
+
+const handleVolunteerSubmit = async () => {
+  isSubmittingVolunteer.value = true;
+  volunteerError.value = '';
+  volunteerSuccess.value = false;
+
+  const emailVal = volunteerForm.value.email.trim().toLowerCase();
+  if (!/^[a-zA-Z0-9._%+-]+@(?:[a-zA-Z0-9-]+\.)*sfu\.ca$/i.test(emailVal)) {
+    volunteerError.value = 'Volunteers must register with an @sfu.ca email address.';
+    isSubmittingVolunteer.value = false;
+    return;
+  }
+
+  if (!/^\d{9}$/.test(volunteerForm.value.student_number.trim())) {
+    volunteerError.value = 'Student number must be exactly 9 digits.';
+    isSubmittingVolunteer.value = false;
+    return;
+  }
+
+  try {
+    await websiteService.submitVolunteerApplication({
+      ...volunteerForm.value,
+      email: emailVal,
+      student_number: volunteerForm.value.student_number.trim()
+    });
+    volunteerSuccess.value = true;
+    volunteerForm.value = {
+      name: '',
+      email: '',
+      student_number: '',
+      department: 'General Inquiries',
+      interests: '',
+      experience: ''
+    };
+    setTimeout(() => {
+      volunteerSuccess.value = false;
+      isVolunteerOpen.value = false;
+    }, 4000);
+  } catch (err: any) {
+    volunteerError.value = err.message || 'Your application could not be submitted right now.';
+  } finally {
+    isSubmittingVolunteer.value = false;
   }
 };
 
@@ -220,7 +287,7 @@ const toggleFaq = (index: number) => {
                 </div>
                 <div>
                   <h3 class="text-lg font-bold mb-1 text-primary">General Inquiries</h3>
-                  <p class="text-neutral-black/60 text-sm">info@sfumsa.ca</p>
+                  <p class="text-neutral-black/60 text-sm">sfumsa@hotmail.com</p>
                 </div>
               </div>
 
@@ -235,15 +302,19 @@ const toggleFaq = (index: number) => {
               </div>
             </div>
 
-            <!-- Department Contacts -->
+            <!-- Volunteer With Us Card -->
             <div class="premium-card p-8 bg-white border border-neutral-gray/20 shadow-soft">
-              <h3 class="text-xl font-bold mb-6 text-primary">Department Contacts</h3>
-              <div class="space-y-4">
-                <div v-for="dept in departments" :key="dept.name" class="flex items-center justify-between py-3 border-b border-neutral-gray/10 last:border-0">
-                  <span class="text-sm font-medium text-neutral-black/50">{{ dept.name }}</span>
-                  <a :href="`mailto:${dept.email}`" class="text-sm font-bold text-primary hover:underline">{{ dept.email }}</a>
-                </div>
-              </div>
+              <h3 class="text-xl font-bold mb-4 text-primary">Volunteer With Us</h3>
+              <p class="text-neutral-black/60 text-sm mb-6 leading-relaxed">
+                Join the SFU MSA team and make a difference. We are always looking for passionate volunteers to help build a vibrant community!
+              </p>
+              <button 
+                type="button"
+                @click="isVolunteerOpen = true"
+                class="w-full bg-primary text-white py-4 rounded-2xl font-bold uppercase tracking-[0.2em] text-xs hover:bg-secondary transition-all flex items-center justify-center gap-2 cursor-pointer border-none"
+              >
+                Join the Team
+              </button>
             </div>
 
             <!-- Social Links -->
@@ -302,5 +373,116 @@ const toggleFaq = (index: number) => {
       </div>
     </section>
     <div class="h-12 sm:h-16 bg-neutral-background" />
+
+    <!-- Volunteer Dialog Modal -->
+    <Dialog 
+      :isOpen="isVolunteerOpen" 
+      title="Volunteer Application" 
+      @close="isVolunteerOpen = false" 
+      size="lg"
+    >
+      <form @submit.prevent="handleVolunteerSubmit" class="space-y-6">
+        <div class="grid md:grid-cols-2 gap-6">
+          <div class="space-y-2">
+            <label class="text-xs font-bold uppercase tracking-widest text-neutral-black/40 font-sans">Full Name</label>
+            <input 
+              type="text" 
+              required
+              placeholder="Your full name"
+              v-model="volunteerForm.name"
+              class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-primary/20 outline-none transition-all text-neutral-black text-sm"
+            />
+          </div>
+          <div class="space-y-2">
+            <label class="text-xs font-bold uppercase tracking-widest text-neutral-black/40 font-sans">SFU Email Address</label>
+            <input 
+              type="email" 
+              required
+              placeholder="yourid@sfu.ca"
+              v-model="volunteerForm.email"
+              class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-primary/20 outline-none transition-all text-neutral-black text-sm"
+            />
+          </div>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-6">
+          <div class="space-y-2">
+            <label class="text-xs font-bold uppercase tracking-widest text-neutral-black/40 font-sans">SFU Student Number</label>
+            <input 
+              type="text" 
+              required
+              placeholder="e.g. 301234567"
+              v-model="volunteerForm.student_number"
+              class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-primary/20 outline-none transition-all text-neutral-black text-sm"
+            />
+          </div>
+          <div class="space-y-2">
+            <label class="text-xs font-bold uppercase tracking-widest text-neutral-black/40 font-sans">Target Department</label>
+            <select 
+              required
+              v-model="volunteerForm.department"
+              class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-primary/20 outline-none transition-all text-neutral-black text-sm appearance-none cursor-pointer"
+            >
+              <option v-for="dept in volunteerDepts" :key="dept" :value="dept">
+                {{ dept }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <label class="text-xs font-bold uppercase tracking-widest text-neutral-black/40 font-sans">Interests & Motivation</label>
+          <textarea 
+            required
+            rows="4"
+            placeholder="Tell us why you want to join and what skills or interests you bring..."
+            v-model="volunteerForm.interests"
+            class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-primary/20 outline-none transition-all resize-none text-neutral-black text-sm"
+          />
+        </div>
+
+        <div class="space-y-2">
+          <label class="text-xs font-bold uppercase tracking-widest text-neutral-black/40 font-sans">Relevant Experience (Optional)</label>
+          <textarea 
+            rows="3"
+            placeholder="Any previous volunteer or leadership roles..."
+            v-model="volunteerForm.experience"
+            class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-primary/20 outline-none transition-all resize-none text-neutral-black text-sm"
+          />
+        </div>
+
+        <button 
+          type="submit"
+          :disabled="isSubmittingVolunteer || volunteerSuccess"
+          class="w-full bg-primary text-white py-5 rounded-2xl font-bold uppercase tracking-[0.2em] text-xs hover:bg-secondary transition-all flex items-center justify-center gap-3 disabled:opacity-50 cursor-pointer border-none"
+        >
+          <div v-if="isSubmittingVolunteer" class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          <template v-else-if="volunteerSuccess">Application Submitted!</template>
+          <template v-else>
+            Submit Application
+            <Send :size="16" />
+          </template>
+        </button>
+
+        <Presence>
+          <div 
+            v-if="volunteerSuccess"
+            class="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-500/20 text-emerald-600 rounded-2xl"
+          >
+            <CheckCircle2 :size="20" class="shrink-0" />
+            <p class="text-sm font-medium">Jazakullah Khair! Your volunteer application has been submitted successfully. We'll be in touch soon.</p>
+          </div>
+        </Presence>
+        <Presence>
+          <div 
+            v-if="volunteerError"
+            class="flex items-center gap-3 p-4 bg-red-50 border border-red-500/20 text-red-600 rounded-2xl"
+          >
+            <AlertCircle :size="20" class="shrink-0" />
+            <p class="text-sm font-medium">{{ volunteerError }}</p>
+          </div>
+        </Presence>
+      </form>
+    </Dialog>
   </div>
 </template>

@@ -123,6 +123,21 @@ return [
             'handler' => NullHandler::class,
         ],
 
+        /*
+         * Event Management System.
+         *
+         * EMS operational and audit activity is written here as structured
+         * context so it can be shipped and queried independently of the
+         * platform's general application log.
+         */
+        'ems' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/ems.log'),
+            'level' => env('EMS_LOG_LEVEL', env('LOG_LEVEL', 'debug')),
+            'days' => env('EMS_LOG_DAILY_DAYS', 30),
+            'replace_placeholders' => true,
+        ],
+
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
         ],

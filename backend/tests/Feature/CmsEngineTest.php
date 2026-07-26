@@ -97,7 +97,7 @@ class CmsEngineTest extends TestCase
             ->getJson(route('api.admin.cms.dashboard'))
             ->assertStatus(200)
             ->assertJsonStructure([
-                'stats' => ['announcements', 'events', 'team', 'resources'],
+                'stats' => ['announcements', 'team', 'resources'],
                 'recentLogs'
             ]);
     }

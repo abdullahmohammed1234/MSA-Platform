@@ -263,5 +263,8 @@ class DatabaseSeeder extends Seeder
                 ['name' => $cat['name']]
             );
         }
+
+        // 8. Seed the Event Management System (roles, permissions, categories)
+        $this->call(EmsDatabaseSeeder::class);
     }
 }

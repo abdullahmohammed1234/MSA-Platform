@@ -23,17 +23,87 @@ const publicRoutes: Array<RouteRecordRaw> = [
         component: () => import('@/pages/public/TeamPage.vue'), 
         meta: { title: 'Our Team | SFU MSA', desc: 'Meet the executive team and coordinators driving the SFU MSA.' } 
       },
-      { 
-        path: 'events', 
-        name: 'events', 
-        component: () => import('@/pages/public/EventsPage.vue'), 
-        meta: { title: 'Events | SFU MSA', desc: 'Stay updated on upcoming seminars, congregations, and socials.' } 
+      // Public events — EMS discovery, registration & checkout (keeps /events URL)
+      {
+        path: 'events',
+        name: 'events',
+        component: () => import('@/pages/public/ems/EmsPublicEventsPage.vue'),
+        meta: {
+          title: 'Events | SFU MSA',
+          desc: 'Browse upcoming SFU MSA community events and register for free.',
+        },
       },
       {
-        path: 'events/:id',
-        name: 'event-detail',
-        component: () => import('@/pages/public/EventDetailPage.vue'),
-        meta: { title: 'Event Details | SFU MSA', desc: 'View event details and register with SFU MSA.' }
+        path: 'events/calendar',
+        name: 'ems-public-calendar',
+        component: () => import('@/pages/public/ems/EmsPublicCalendarPage.vue'),
+        meta: {
+          title: 'Event Calendar | SFU MSA',
+          desc: 'Monthly and weekly calendar of SFU MSA events.',
+        },
+      },
+      {
+        path: 'events/:slug/checkout/success',
+        name: 'ems-checkout-success',
+        component: () => import('@/pages/public/ems/EmsCheckoutSuccessPage.vue'),
+        meta: {
+          title: 'Payment Confirmed | SFU MSA',
+          desc: 'Your Square payment was received.',
+        },
+      },
+      {
+        path: 'events/:slug/checkout/cancel',
+        name: 'ems-checkout-cancel',
+        component: () => import('@/pages/public/ems/EmsCheckoutCancelPage.vue'),
+        meta: {
+          title: 'Checkout Cancelled | SFU MSA',
+          desc: 'Checkout was cancelled. No payment was taken.',
+        },
+      },
+      {
+        path: 'events/:slug',
+        name: 'ems-public-event',
+        component: () => import('@/pages/public/ems/EmsPublicEventDetailPage.vue'),
+        meta: {
+          title: 'Event | SFU MSA',
+          desc: 'Event details and registration.',
+        },
+      },
+      // Legacy /ems-events URLs → /events (bookmarks & old Square redirects)
+      { path: 'ems-events', redirect: '/events' },
+      { path: 'ems-events/calendar', redirect: '/events/calendar' },
+      {
+        path: 'ems-events/:slug/checkout/success',
+        redirect: (to) => ({
+          name: 'ems-checkout-success',
+          params: { slug: to.params.slug },
+          query: to.query,
+        }),
+      },
+      {
+        path: 'ems-events/:slug/checkout/cancel',
+        redirect: (to) => ({
+          name: 'ems-checkout-cancel',
+          params: { slug: to.params.slug },
+          query: to.query,
+        }),
+      },
+      {
+        path: 'ems-events/:slug',
+        redirect: (to) => ({
+          name: 'ems-public-event',
+          params: { slug: to.params.slug },
+          query: to.query,
+        }),
+      },
+      {
+        path: 'tickets/:code',
+        name: 'ems-public-ticket',
+        component: () => import('@/pages/public/ems/EmsPublicTicketPage.vue'),
+        meta: {
+          title: 'My Ticket | SFU MSA',
+          desc: 'View your SFU MSA event ticket and QR code.',
+        },
       },
       // { 
       //   path: 'resources', 
@@ -73,7 +143,7 @@ const publicRoutes: Array<RouteRecordRaw> = [
       },
       {
         path: 'volunteer',
-        redirect: '/contact'
+        redirect: '/contact?volunteer=true'
       }
     ]
   },

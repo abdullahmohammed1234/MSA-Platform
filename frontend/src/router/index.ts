@@ -3,6 +3,7 @@ import publicRoutes from './public';
 import academyRoutes from './academy';
 import adminRoutes from './admin';
 import authRoutes from './auth';
+import emsRoutes from './ems';
 import { useAuthStore } from '@/stores/auth';
 import { authGuard } from './guards/authGuard';
 import { guestGuard } from './guards/guestGuard';
@@ -11,6 +12,7 @@ import { permissionGuard } from './guards/permissionGuard';
 import { verificationGuard } from './guards/verificationGuard';
 import { academyGuard } from './guards/academyGuard';
 import { publicAuthGuard } from './guards/publicAuthGuard';
+import { emsGuard } from './guards/emsGuard';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -18,6 +20,7 @@ const router = createRouter({
     ...publicRoutes,
     ...academyRoutes,
     ...adminRoutes,
+    ...emsRoutes,
     ...authRoutes,
     {
       path: '/:pathMatch(.*)*',
@@ -66,6 +69,12 @@ router.beforeEach(async (to) => {
   }
 
   // 2. Sequential guard pipeline
+  // The EMS owns /ems outright: its guard resolves the module's own access
+  // model and redirects to EMS screens rather than the academy fallbacks the
+  // generic guards use.
+  const emsResult = await emsGuard(to);
+  if (emsResult !== true) return emsResult;
+
   const academyResult = academyGuard(to);
   if (academyResult !== true) return academyResult;
 

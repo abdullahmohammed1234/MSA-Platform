@@ -3,7 +3,6 @@ import { onMounted } from 'vue';
 import { useCmsStore } from '@/stores/cms';
 import { 
   FileText, 
-  Calendar, 
   Users, 
   BookOpen, 
   ArrowRight, 
@@ -29,7 +28,6 @@ const formatTime = (timeStr: string) => {
 const quickActions = [
   { label: 'Edit Homepage Section', path: '/admin/cms/homepage', color: 'text-primary bg-primary/5 border-primary/20', icon: FileText },
   { label: 'Create Announcement', path: '/admin/cms/announcements', color: 'text-secondary bg-secondary/5 border-secondary/20', icon: Plus },
-  { label: 'Schedule New Event', path: '/admin/cms/events', color: 'text-accent-gold bg-accent-gold/5 border-accent-gold/20', icon: Calendar },
   { label: 'Upload Media File', path: '/admin/cms/media', color: 'text-primary-light bg-primary-light/5 border-primary-light/20', icon: Image },
 ];
 </script>
@@ -56,7 +54,7 @@ const quickActions = [
 
     <template v-else-if="cmsStore.stats">
       <!-- Stats Grid -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <!-- Announcements -->
         <div class="p-6 bg-white border border-neutral-gray/10 rounded-3xl shadow-soft flex items-center justify-between group hover:border-primary/25 hover:shadow-premium transition-all duration-300">
           <div class="space-y-2">
@@ -69,21 +67,6 @@ const quickActions = [
           </div>
           <div class="p-4 bg-primary/5 rounded-2xl text-primary group-hover:bg-primary group-hover:text-white transition-all duration-500">
             <FileText :size="24" />
-          </div>
-        </div>
-
-        <!-- Events -->
-        <div class="p-6 bg-white border border-neutral-gray/10 rounded-3xl shadow-soft flex items-center justify-between group hover:border-primary/25 hover:shadow-premium transition-all duration-300">
-          <div class="space-y-2">
-            <span class="text-[10px] font-black uppercase tracking-widest text-neutral-black/35">Events Calendar</span>
-            <div class="text-3xl font-display font-black text-primary">{{ cmsStore.stats.events.total }}</div>
-            <div class="text-[10px] font-bold text-neutral-black/55">
-              <span class="text-accent-gold font-black">{{ cmsStore.stats.events.upcoming }}</span> Upcoming &bull;
-              <span>{{ cmsStore.stats.events.past }}</span> Past
-            </div>
-          </div>
-          <div class="p-4 bg-accent-gold/5 rounded-2xl text-accent-gold group-hover:bg-accent-gold group-hover:text-white transition-all duration-500">
-            <Calendar :size="24" />
           </div>
         </div>
 

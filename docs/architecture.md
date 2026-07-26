@@ -61,6 +61,17 @@ The platform consists of two primary modules:
 
 ---
 
+## 2.1 Event Management System (EMS)
+
+The EMS is a bounded module inside this platform (not a second application).
+It owns `App\Ems`, `ems_*` tables, `/api/v1/ems/*` and `/ems`, while reusing
+Sanctum authentication, the platform RBAC tables and the shared audit trail.
+
+See [docs/ems/README.md](./ems/README.md) for the Phase 1 architecture, setup,
+API reference and deferred-work list.
+
+---
+
 ## 3. Environment Strategy
 
 Both directories maintain standard environment configurations:

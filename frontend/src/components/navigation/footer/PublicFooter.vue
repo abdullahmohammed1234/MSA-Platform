@@ -189,7 +189,7 @@ const handleSubmit = async () => {
               <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
                 <Mail :size="14" class="text-accent-gold" />
               </div>
-              <a href="mailto:info@sfumsa.ca" class="text-white/40 text-sm hover:text-white transition-colors">info@sfumsa.ca</a>
+              <a href="mailto:sfumsa@hotmail.com" class="text-white/40 text-sm hover:text-white transition-colors">sfumsa@hotmail.com</a>
             </li>
           </ul>
         </div>
