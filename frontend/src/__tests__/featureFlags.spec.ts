@@ -30,12 +30,12 @@ describe('Academy feature flags', () => {
   });
 
   describe('publicAuthGuard', () => {
-    it('redirects public auth routes when academy is disabled', async () => {
+    it('allows public auth routes when academy is disabled', async () => {
       vi.stubEnv('VITE_ACADEMY_ENABLED', 'false');
       const { publicAuthGuard: guard } = await import('../router/guards/publicAuthGuard');
 
       const to: any = { matched: [{ meta: { publicAuth: true } }] };
-      expect(guard(to)).toEqual({ name: 'home' });
+      expect(guard(to)).toBe(true);
     });
 
     it('allows public auth routes when academy is enabled', async () => {

@@ -175,7 +175,27 @@ class LoginTest extends TestCase
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['email'])
             ->assertJsonFragment([
-                'email' => ['Members and volunteers must sign in with an @sfu.ca email address.'],
+                'email' => ['Volunteers must sign in with an @sfu.ca email address.'],
             ]);
+    }
+
+    public function test_member_can_login_with_non_sfu_email(): void
+    {
+        Role::create(['name' => 'Member', 'slug' => 'member']);
+
+        $member = User::create([
+            'name' => 'Member User',
+            'email' => 'member@example.com',
+            'password' => Hash::make('password123'),
+            'is_active' => true,
+        ]);
+        $member->roles()->sync(Role::where('slug', 'member')->pluck('id'));
+
+        $response = $this->postJson(route('api.auth.login'), [
+            'email' => 'member@example.com',
+            'password' => 'password123',
+        ]);
+
+        $response->assertStatus(200)->assertJsonStructure(['token', 'user']);
     }
 }

@@ -41,7 +41,7 @@ class AuthService
 
         if (!$isSfuEmail && !$this->canUseNonSfuEmail($user)) {
             throw ValidationException::withMessages([
-                'email' => ['Members and volunteers must sign in with an @sfu.ca email address.'],
+                'email' => ['Volunteers must sign in with an @sfu.ca email address.'],
             ]);
         }
 
@@ -82,6 +82,18 @@ class AuthService
 
     private function canUseNonSfuEmail(User $user): bool
     {
-        return $user->hasAnyRole(User::STAFF_ROLES);
+        $allowedNonSfuRoles = [
+            'super-admin',
+            'admin',
+            'director',
+            'dawah-coordinator',
+            'mentor',
+            'member',
+            'event-administrator',
+            'event-organizer',
+            'event-staff',
+        ];
+
+        return $user->hasAnyRole($allowedNonSfuRoles);
     }
 }

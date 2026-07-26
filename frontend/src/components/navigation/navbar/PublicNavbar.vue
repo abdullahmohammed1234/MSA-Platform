@@ -38,6 +38,11 @@ const scrolled = ref(false);
 
 const isAuthenticated = computed(() => authStore.isAuthenticated);
 const canAccessAcademy = computed(() => authStore.canAccessAcademy);
+const EMS_ROLES = ['super-admin', 'event-administrator', 'event-organizer', 'event-staff'];
+const hasEmsRole = computed(() => {
+  return authStore.user?.roles?.some(role => EMS_ROLES.includes(role)) ?? false;
+});
+const isAdminUser = computed(() => authStore.isPrivilegedAdmin);
 const showPublicAuth = computed(() => isPublicAuthEnabled);
 const isLoading = ref(false);
 
@@ -148,7 +153,45 @@ const handleLogout = async () => {
           </router-link>
 
           <router-link
-            v-else-if="!isLoading && !isAuthenticated && showPublicAuth"
+            v-if="!isLoading && isAuthenticated && hasEmsRole"
+            to="/ems"
+            class="inline-flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest hover:bg-secondary hover:shadow-premium transition-all hover:-translate-y-0.5 active:scale-95"
+          >
+            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            EMS
+          </router-link>
+
+          <router-link
+            v-if="!isLoading && isAuthenticated && isAdminUser"
+            to="/admin"
+            class="inline-flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest hover:bg-secondary hover:shadow-premium transition-all hover:-translate-y-0.5 active:scale-95"
+          >
+            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+            Admin
+          </router-link>
+
+          <router-link
+            v-if="!isLoading && isAuthenticated"
+            to="/my-tickets"
+            :class="[
+              'inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest hover:shadow-premium transition-all hover:-translate-y-0.5 active:scale-95',
+              route.path.startsWith('/my-tickets')
+                ? 'bg-secondary text-white'
+                : 'border border-primary/20 text-primary hover:bg-primary/5'
+            ]"
+          >
+            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+            </svg>
+            My Tickets
+          </router-link>
+
+          <router-link
+            v-if="!isLoading && !isAuthenticated && showPublicAuth"
             to="/login"
             class="inline-flex items-center gap-2 border border-primary/20 text-primary px-5 py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest hover:bg-primary/5 transition-all"
           >
@@ -227,7 +270,7 @@ const handleLogout = async () => {
               <div v-if="!isLoading && isAuthenticated && canAccessAcademy" class="mb-4">
                 <router-link
                   to="/academy"
-                  class="inline-flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest"
+                  class="inline-flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest w-full justify-center"
                   @click="closeMenu"
                 >
                   <BookOpen class="h-3.5 w-3.5" />
@@ -235,10 +278,49 @@ const handleLogout = async () => {
                 </router-link>
               </div>
 
-              <div v-else-if="!isLoading && !isAuthenticated && showPublicAuth" class="mb-4">
+              <div v-if="!isLoading && isAuthenticated && hasEmsRole" class="mb-4">
+                <router-link
+                  to="/ems"
+                  class="inline-flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest w-full justify-center"
+                  @click="closeMenu"
+                >
+                  <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  EMS Portal
+                </router-link>
+              </div>
+
+              <div v-if="!isLoading && isAuthenticated && isAdminUser" class="mb-4">
+                <router-link
+                  to="/admin"
+                  class="inline-flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest w-full justify-center"
+                  @click="closeMenu"
+                >
+                  <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                  </svg>
+                  Admin Portal
+                </router-link>
+              </div>
+
+              <div v-if="!isLoading && isAuthenticated" class="mb-4">
+                <router-link
+                  to="/my-tickets"
+                  class="inline-flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest w-full justify-center"
+                  @click="closeMenu"
+                >
+                  <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                  </svg>
+                  My Tickets
+                </router-link>
+              </div>
+
+              <div v-if="!isLoading && !isAuthenticated && showPublicAuth" class="mb-4">
                 <router-link
                   to="/login"
-                  class="inline-flex items-center gap-2 border border-primary/20 text-primary px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest"
+                  class="inline-flex items-center gap-2 border border-primary/20 text-primary px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest w-full justify-center"
                   @click="closeMenu"
                 >
                   <LogIn class="h-3.5 w-3.5" />

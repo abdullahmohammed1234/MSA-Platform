@@ -145,6 +145,7 @@ export interface Event {
   category?: EventCategory | null;
 
   organizer_id: number | null;
+  organizer_name: string | null;
   organizer?: EmsUserSummary | null;
 
   location: string | null;
@@ -277,6 +278,7 @@ export interface EventPayload {
   banner_url?: string | null;
   category_id?: number | null;
   organizer_id?: number | null;
+  organizer_name?: string | null;
   location?: string | null;
   start_at: string;
   end_at?: string | null;

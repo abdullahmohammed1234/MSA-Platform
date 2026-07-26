@@ -100,7 +100,7 @@ const handleRegister = async () => {
     <div class="space-y-6">
       <div class="text-left mb-6">
         <h2 class="text-2xl font-display font-bold text-primary">Join the MSA</h2>
-        <p class="text-xs text-neutral-muted mt-1">SFU students can join as a member or volunteer using their @sfu.ca email.</p>
+        <p class="text-xs text-neutral-muted mt-1">Join the SFU MSA community to access events and programs.</p>
       </div>
 
       <!-- General Errors -->
@@ -149,7 +149,7 @@ const handleRegister = async () => {
             >
               <span class="text-xs font-semibold text-neutral-black block">Member</span>
               <span class="text-[10px] text-neutral-muted block font-normal leading-normal mt-1">
-                Access events, RSVP, and community features (@sfu.ca required).
+                Access events, RSVP, and community features (any email address).
               </span>
             </button>
             <button
@@ -171,9 +171,9 @@ const handleRegister = async () => {
 
         <!-- Email Address -->
         <Input
-          label="SFU Email Address"
+          :label="selectedRole === 'volunteer' ? 'SFU Email Address' : 'Email Address'"
           type="email"
-          placeholder="student@sfu.ca"
+          :placeholder="selectedRole === 'volunteer' ? 'student@sfu.ca' : 'you@example.com'"
           v-model="email"
           :error="validationErrors.email?.[0]"
           required

@@ -32,20 +32,6 @@ class EventCommunicationService
             ['idempotency_suffix' => 'confirm']
         );
 
-        if ($registration->tickets->isNotEmpty()) {
-            $this->dispatcher->notifyRegistration(
-                $registration,
-                NotificationType::TicketEmail->value,
-                ['idempotency_suffix' => 'ticket']
-            );
-
-            $this->dispatcher->notifyRegistration(
-                $registration,
-                NotificationType::QrCodeEmail->value,
-                ['idempotency_suffix' => 'qr']
-            );
-        }
-
         if ($includePayment) {
             $payment = $registration->settledPayment;
             if ($payment !== null && $payment->status === PaymentStatus::Paid) {

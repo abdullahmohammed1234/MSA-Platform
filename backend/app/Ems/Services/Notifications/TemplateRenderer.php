@@ -94,7 +94,7 @@ class TemplateRenderer
             'square_transaction_reference' => (string) ($payment?->provider_transaction_id ?? $payment?->provider_payment_id ?? ''),
             'refund_amount' => isset($extra['refund_amount']) ? number_format((float) $extra['refund_amount'], 2) : '',
             'change_summary' => (string) ($extra['change_summary'] ?? ''),
-            'organizer_name' => (string) ($event?->organizer?->name ?? config('ems.notifications.from_name', 'SFU MSA Events')),
+            'organizer_name' => (string) ($event?->organizer_name ?? ($event?->organizer?->name ?? config('ems.notifications.from_name', 'SFU MSA Events'))),
             'cancellation_reason' => (string) ($event?->cancellation_reason ?? $extra['cancellation_reason'] ?? ''),
         ];
     }

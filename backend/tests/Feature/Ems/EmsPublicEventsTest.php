@@ -336,4 +336,62 @@ class EmsPublicEventsTest extends EmsTestCase
 
         $response->assertStatus(404);
     }
+
+    public function test_my_tickets_retrieves_user_registrations(): void
+    {
+        $user = $this->emsUser(\App\Ems\Support\EmsRoles::ATTENDEE);
+        $event = $this->publicEvent();
+        
+        $registration = Registration::factory()->create([
+            'event_id' => $event->id,
+            'user_id' => $user->id,
+            'attendee_name' => $user->name,
+            'attendee_email' => $user->email,
+            'status' => 'confirmed',
+        ]);
+        Ticket::factory()->forRegistration($registration)->create([
+            'code' => 'MSA-MYTICKET1',
+            'qr_payload' => 'MSA-MYTICKET1',
+        ]);
+
+        $response = $this->actingAsEms($user)->getJson($this->url('public/my-tickets'));
+
+        $response->assertStatus(200);
+        $this->assertSuccessEnvelope($response);
+        $this->assertCount(1, $response->json('data'));
+        $this->assertSame($registration->reference, $response->json('data.0.reference'));
+        $this->assertSame('MSA-MYTICKET1', $response->json('data.0.tickets.0.code'));
+    }
+
+    public function test_user_can_cancel_their_registration(): void
+    {
+        $user = $this->emsUser(\App\Ems\Support\EmsRoles::ATTENDEE);
+        $event = $this->publicEvent();
+        
+        $registration = Registration::factory()->create([
+            'event_id' => $event->id,
+            'user_id' => $user->id,
+            'attendee_name' => $user->name,
+            'attendee_email' => $user->email,
+            'status' => 'confirmed',
+            'quantity' => 1,
+        ]);
+        $ticket = Ticket::factory()->forRegistration($registration)->create([
+            'code' => 'MSA-CANCELTKT',
+            'qr_payload' => 'MSA-CANCELTKT',
+            'status' => TicketStatus::Issued->value,
+        ]);
+
+        $response = $this->actingAsEms($user)->postJson($this->url("public/registrations/{$registration->uuid}/cancel"));
+
+        $response->assertStatus(200);
+        $this->assertSuccessEnvelope($response);
+        $this->assertSame('cancelled', $response->json('data.status'));
+        
+        $this->assertSame(TicketStatus::Revoked, $ticket->fresh()->status);
+        $this->assertDatabaseHas('ems_registrations', [
+            'id' => $registration->id,
+            'status' => 'cancelled',
+        ]);
+    }
 }

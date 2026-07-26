@@ -72,6 +72,14 @@ export const publicEventsService = {
     return emsHttp.get<PublicTicket>(`/public/tickets/${encodeURIComponent(code)}`);
   },
 
+  async getMyTickets(): Promise<PublicRegistration[]> {
+    return emsHttp.get<PublicRegistration[]>('/public/my-tickets');
+  },
+
+  async cancelRegistration(uuid: string): Promise<PublicRegistration> {
+    return emsHttp.post<PublicRegistration>(`/public/registrations/${encodeURIComponent(uuid)}/cancel`);
+  },
+
   async validateTicket(code: string): Promise<PublicTicket & { valid: boolean }> {
     return emsHttp.get(`/public/tickets/validate/${encodeURIComponent(code)}`);
   },

@@ -32,6 +32,7 @@ class EventResource extends JsonResource
             'category' => new EventCategoryResource($this->whenLoaded('category')),
 
             'organizer_id' => $this->organizer_id,
+            'organizer_name' => $this->organizer_name,
             'organizer' => new EmsUserSummaryResource($this->whenLoaded('organizer')),
 
             'location' => $this->location,

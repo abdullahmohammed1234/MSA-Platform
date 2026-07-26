@@ -124,15 +124,31 @@ class RegistrationTest extends TestCase
             ->assertJsonValidationErrors(['email']);
     }
 
-    public function test_user_cannot_register_with_non_sfu_email(): void
+    public function test_member_can_register_with_non_sfu_email(): void
     {
         $response = $this->postJson(route('api.auth.register'), [
-            'name' => 'Student Example',
-            'email' => 'student@example.com',
+            'name' => 'Member Non SFU',
+            'email' => 'member@example.com',
             'password' => 'SecurePassword123!',
             'password_confirmation' => 'SecurePassword123!',
             'terms' => true,
             'role' => 'member',
+        ]);
+
+        $response->assertStatus(201);
+        $user = User::where('email', 'member@example.com')->first();
+        $this->assertTrue($user->hasRole('member'));
+    }
+
+    public function test_volunteer_cannot_register_with_non_sfu_email(): void
+    {
+        $response = $this->postJson(route('api.auth.register'), [
+            'name' => 'Volunteer Non SFU',
+            'email' => 'volunteer@example.com',
+            'password' => 'SecurePassword123!',
+            'password_confirmation' => 'SecurePassword123!',
+            'terms' => true,
+            'role' => 'volunteer',
         ]);
 
         $response->assertStatus(422)

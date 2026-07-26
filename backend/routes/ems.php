@@ -96,6 +96,12 @@ Route::middleware(['auth:sanctum', 'throttle:' . config('ems.route.throttle', 'e
         Route::get('/roles', [AccessController::class, 'roles'])->name('roles.index');
         Route::get('/permissions', [AccessController::class, 'permissions'])->name('permissions.index');
 
+        // --- User Tickets & Registrations -------------------------------
+        Route::get('/public/my-tickets', [PublicEventController::class, 'myTickets'])
+            ->name('public.my-tickets');
+        Route::post('/public/registrations/{registration}/cancel', [PublicEventController::class, 'cancelRegistration'])
+            ->name('public.registrations.cancel');
+
         // --- Dashboard --------------------------------------------------
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 

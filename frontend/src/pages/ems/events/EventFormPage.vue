@@ -48,6 +48,7 @@ const form = reactive({
   description: '',
   category_id: UNCATEGORISED as string,
   location: '',
+  organizer_name: '',
   start_at: '',
   end_at: '',
   capacity: '',
@@ -110,6 +111,7 @@ onMounted(async () => {
           form.description = orig.description ?? '';
           form.category_id = orig.category_id ? String(orig.category_id) : UNCATEGORISED;
           form.location = orig.location ?? '';
+          form.organizer_name = orig.organizer_name ?? '';
           form.start_at = toDateTimeLocal(orig.start_at);
           form.end_at = toDateTimeLocal(orig.end_at);
           form.capacity = orig.capacity ? String(orig.capacity) : '';
@@ -137,6 +139,7 @@ onMounted(async () => {
       form.description = event.description ?? '';
       form.category_id = event.category_id ? String(event.category_id) : UNCATEGORISED;
       form.location = event.location ?? '';
+      form.organizer_name = event.organizer_name ?? '';
       form.start_at = toDateTimeLocal(event.start_at);
       form.end_at = toDateTimeLocal(event.end_at);
       form.capacity = event.capacity ? String(event.capacity) : '';
@@ -156,6 +159,7 @@ const buildPayload = (): EventPayload => ({
   description: form.description.trim() || null,
   category_id: form.category_id === UNCATEGORISED ? null : Number(form.category_id),
   location: form.location.trim() || null,
+  organizer_name: form.organizer_name.trim() || null,
   start_at: fromDateTimeLocal(form.start_at) ?? '',
   end_at: fromDateTimeLocal(form.end_at),
   capacity: form.capacity ? Number(form.capacity) : null,
@@ -300,6 +304,14 @@ const cancel = () =>
           label="Location"
           placeholder="SFU Burnaby, Student Union Building"
           :error="fieldError('location')"
+        />
+
+        <Input
+          v-model="form.organizer_name"
+          label="Organizer Name"
+          description="Custom organizer name (e.g. 'MSA Dawah Committee'). Falls back to default if blank."
+          placeholder="MSA Dawah Committee"
+          :error="fieldError('organizer_name')"
         />
 
         <Switch

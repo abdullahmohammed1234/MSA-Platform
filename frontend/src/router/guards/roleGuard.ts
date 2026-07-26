@@ -38,7 +38,14 @@ export const roleGuard = (
   }
 
   if (requiresStudent) {
-    if (!authStore.isAuthenticated || (!authStore.isVolunteer && !authStore.isMentor && !authStore.isAdmin)) {
+    if (
+      !authStore.isAuthenticated || 
+      (!authStore.isVolunteer && 
+       !authStore.isMentor && 
+       !authStore.isDirector && 
+       !authStore.isDawahCoordinator && 
+       !authStore.isAdmin)
+    ) {
       return { name: 'home' };
     }
   }

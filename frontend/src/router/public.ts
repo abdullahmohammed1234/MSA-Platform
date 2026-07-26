@@ -97,6 +97,16 @@ const publicRoutes: Array<RouteRecordRaw> = [
         }),
       },
       {
+        path: 'my-tickets',
+        name: 'ems-my-tickets',
+        component: () => import('@/pages/public/ems/EmsMyTicketsPage.vue'),
+        meta: {
+          title: 'My Tickets | SFU MSA',
+          desc: 'Manage your event registrations and tickets.',
+          requiresAuth: true,
+        },
+      },
+      {
         path: 'tickets/:code',
         name: 'ems-public-ticket',
         component: () => import('@/pages/public/ems/EmsPublicTicketPage.vue'),

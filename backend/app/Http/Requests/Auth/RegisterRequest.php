@@ -30,9 +30,11 @@ class RegisterRequest extends FormRequest
                 'max:255',
                 'unique:users',
                 function ($attribute, $value, $fail) {
-                    $email = trim(strtolower($value));
-                    if (!preg_match('/^[a-zA-Z0-9._%+-]+@(?:[a-zA-Z0-9-]+\.)*sfu\.ca$/i', $email)) {
-                        $fail('Members and volunteers must register with an @sfu.ca email address.');
+                    if ($this->input('role') === 'volunteer') {
+                        $email = trim(strtolower($value));
+                        if (!preg_match('/^[a-zA-Z0-9._%+-]+@(?:[a-zA-Z0-9-]+\.)*sfu\.ca$/i', $email)) {
+                            $fail('Volunteers must register with an @sfu.ca email address.');
+                        }
                     }
                 },
             ],

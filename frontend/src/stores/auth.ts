@@ -44,11 +44,12 @@ export const useAuthStore = defineStore('auth', () => {
   const isPrivilegedAdmin = computed(() => roles.value.includes('admin') || roles.value.includes('super-admin'));
   const isAdmin = isPrivilegedAdmin;
   const isDirector = computed(() => roles.value.includes('director') || isPrivilegedAdmin.value);
+  const isDawahCoordinator = computed(() => roles.value.includes('dawah-coordinator') || isPrivilegedAdmin.value);
   const isMentor = computed(() => roles.value.includes('mentor') || isPrivilegedAdmin.value);
   const isVolunteer = computed(() => roles.value.includes('volunteer') || isPrivilegedAdmin.value);
   const isMember = computed(() => roles.value.includes('member'));
   const canAccessAcademy = computed(
-    () => isAcademyEnabled && (isVolunteer.value || isMentor.value)
+    () => isAcademyEnabled && (isVolunteer.value || isMentor.value || isDirector.value || isDawahCoordinator.value)
   );
 
   const canManageCourses = computed(() => permissions.value.includes('manage_courses') || isPrivilegedAdmin.value);
@@ -251,6 +252,7 @@ export const useAuthStore = defineStore('auth', () => {
     isPrivilegedAdmin,
     isAdmin,
     isDirector,
+    isDawahCoordinator,
     isMentor,
     isVolunteer,
     isMember,

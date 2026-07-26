@@ -22,9 +22,9 @@ class PublicEventDetailResource extends PublicEventResource
 
         return array_merge($base, [
             'description' => $this->description,
-            'organizer' => $this->whenLoaded('organizer', fn () => $this->organizer ? [
-                'name' => $this->organizer->name,
-            ] : null),
+            'organizer' => [
+                'name' => $this->organizer_name ?? ($this->relationLoaded('organizer') && $this->organizer ? $this->organizer->name : config('ems.notifications.from_name', 'SFU MSA Events')),
+            ],
             'published_at' => $this->published_at?->toIso8601String(),
             'registration_open_at' => $this->registration_open_at?->toIso8601String(),
             'registration_closed_at' => $this->registration_closed_at?->toIso8601String(),

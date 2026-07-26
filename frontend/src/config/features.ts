@@ -4,4 +4,4 @@
  */
 export const isAcademyEnabled = import.meta.env.VITE_ACADEMY_ENABLED === 'true';
 
-export const isPublicAuthEnabled = isAcademyEnabled;
+export const isPublicAuthEnabled = true;

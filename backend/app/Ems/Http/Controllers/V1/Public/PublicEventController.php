@@ -255,10 +255,90 @@ class PublicEventController extends EmsController
         }
 
         $png = $this->qr->png($ticket);
-
+ 
         return response($png, 200, [
             'Content-Type' => 'image/png',
             'Cache-Control' => 'private, max-age=3600',
         ]);
+    }
+
+    /**
+     * GET /api/v1/ems/public/my-tickets
+     */
+    public function myTickets(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $registrations = \App\Ems\Models\Registration::query()
+            ->where('user_id', $user->id)
+            ->with(['event.category', 'tickets', 'ticketType'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return ApiResponse::success(
+            \App\Ems\Http\Resources\Public\PublicRegistrationResource::collection($registrations),
+            'My registrations retrieved successfully.'
+        );
+    }
+
+    /**
+     * POST /api/v1/ems/public/registrations/{registration}/cancel
+     */
+    public function cancelRegistration(Request $request, string $registration): JsonResponse
+    {
+        $user = $request->user();
+        
+        /** @var \App\Ems\Models\Registration|null $reg */
+        $reg = \App\Ems\Models\Registration::query()
+            ->where('uuid', $registration)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if ($reg === null) {
+            throw new NotFoundHttpException('Registration not found.');
+        }
+
+        if ($reg->status === \App\Ems\Enums\RegistrationStatus::Cancelled) {
+            return ApiResponse::success(
+                new \App\Ems\Http\Resources\Public\PublicRegistrationResource($reg),
+                'Registration is already cancelled.'
+            );
+        }
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($reg): void {
+            $reg->status = \App\Ems\Enums\RegistrationStatus::Cancelled;
+            $reg->cancelled_at = now();
+            $reg->save();
+
+            $reg->tickets()->update([
+                'status' => \App\Ems\Enums\TicketStatus::Revoked->value,
+                'revoked_at' => now(),
+            ]);
+
+            if ($reg->ticket_type_id) {
+                $ticketType = \App\Ems\Models\TicketType::query()
+                    ->whereKey($reg->ticket_type_id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($ticketType !== null) {
+                    $ticketType->quantity_sold = max(0, $ticketType->quantity_sold - $reg->quantity);
+                    $ticketType->save();
+                }
+            }
+
+            app(\App\Ems\Contracts\EventNotificationDispatcher::class)
+                ->notifyRegistration(
+                    $reg,
+                    \App\Ems\Enums\NotificationType::RegistrationCancelled->value,
+                    ['idempotency_suffix' => 'user_cancel', 'force' => true]
+                );
+
+            app(\App\Ems\Services\WaitlistService::class)->promoteAvailable($reg->event);
+        });
+
+        return ApiResponse::success(
+            new \App\Ems\Http\Resources\Public\PublicRegistrationResource($reg->fresh(['event', 'tickets', 'ticketType'])),
+            'Registration cancelled successfully.'
+        );
     }
 }
