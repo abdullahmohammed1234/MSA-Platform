@@ -269,7 +269,10 @@ class PublicEventController extends EmsController
     {
         $user = $request->user();
         $registrations = \App\Ems\Models\Registration::query()
-            ->where('user_id', $user->id)
+            ->where(function ($query) use ($user): void {
+                $query->where('user_id', $user->id)
+                    ->orWhere('attendee_email', $user->email);
+            })
             ->with(['event.category', 'tickets', 'ticketType'])
             ->orderBy('created_at', 'desc')
             ->get();
@@ -290,7 +293,10 @@ class PublicEventController extends EmsController
         /** @var \App\Ems\Models\Registration|null $reg */
         $reg = \App\Ems\Models\Registration::query()
             ->where('uuid', $registration)
-            ->where('user_id', $user->id)
+            ->where(function ($query) use ($user): void {
+                $query->where('user_id', $user->id)
+                    ->orWhere('attendee_email', $user->email);
+            })
             ->first();
 
         if ($reg === null) {
