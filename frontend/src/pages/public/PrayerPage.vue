@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue';
 import { 
   MapPin, 
   Info, 
@@ -19,6 +20,7 @@ import { HERO_IMAGES } from '@/constants/publicAssets';
 
 const { times, isLoading, error } = usePrayerTimes();
 const campuses: Campus[] = ['Burnaby', 'Surrey', 'Vancouver'];
+const selectedSchool = ref<'hanafi' | 'shafii'>('hanafi');
 
 const etiquette = [
   { title: "Shoes Off", desc: "Please leave shoes outside in the designated racks.", icon: Info },
@@ -72,13 +74,42 @@ const etiquette = [
     <div class="section-padding space-y-32">
       <!-- Today's Prayer Times -->
       <section class="container-custom">
-        <div class="max-w-3xl mb-16 space-y-4">
-          <h2 class="text-4xl md:text-5xl font-display font-bold text-primary">
-            Today's Prayer Times
-          </h2>
-          <p class="text-lg leading-relaxed text-neutral-black/60">
-            Daily start times are calculated for each SFU campus using Vancouver timezone settings.
-          </p>
+        <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
+          <div class="max-w-3xl space-y-4">
+            <h2 class="text-4xl md:text-5xl font-display font-bold text-primary">
+              Today's Prayer Times
+            </h2>
+            <p class="text-lg leading-relaxed text-neutral-black/60">
+              Daily start times are calculated for each SFU campus using Vancouver timezone settings.
+            </p>
+          </div>
+          <!-- School Toggle -->
+          <div class="shrink-0 flex items-center gap-3 bg-white/70 backdrop-blur border border-neutral-ivory p-1 rounded-full shadow-soft h-fit">
+            <button 
+              type="button"
+              @click="selectedSchool = 'hanafi'" 
+              :class="[
+                'px-5 py-2.5 rounded-full text-xs font-extrabold uppercase tracking-widest transition-all duration-300 cursor-pointer relative z-10',
+                selectedSchool === 'hanafi' 
+                  ? 'bg-primary text-white shadow-soft' 
+                  : 'text-neutral-black/55 hover:text-primary'
+              ]"
+            >
+              Hanafi
+            </button>
+            <button 
+              type="button"
+              @click="selectedSchool = 'shafii'" 
+              :class="[
+                'px-5 py-2.5 rounded-full text-xs font-extrabold uppercase tracking-widest transition-all duration-300 cursor-pointer relative z-10',
+                selectedSchool === 'shafii' 
+                  ? 'bg-primary text-white shadow-soft' 
+                  : 'text-neutral-black/55 hover:text-primary'
+              ]"
+            >
+              Shafi'i
+            </button>
+          </div>
         </div>
 
         <p v-if="error" class="mb-8 text-xs font-bold uppercase tracking-widest text-secondary-light">{{ error }}</p>
@@ -99,8 +130,8 @@ const etiquette = [
 
               <div class="space-y-3">
                 <div 
-                  v-for="prayer in (times[campus] || fallbackPrayerTimes)" 
-                  :key="prayer.name" 
+                  v-for="prayer in (times[campus] ? times[campus][selectedSchool] : fallbackPrayerTimes)" 
+                  :key="`${campus}-${selectedSchool}-${prayer.name}`" 
                   class="flex items-center justify-between border-b border-neutral-gray/10 pb-3 last:border-b-0 last:pb-0"
                 >
                   <span class="text-[10px] font-black uppercase tracking-[0.2em] text-secondary-light">{{ prayer.name }}</span>

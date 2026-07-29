@@ -68,7 +68,12 @@ export interface PrayerTime {
   time: string;
 }
 
-export type PrayerTimesByCampus = Partial<Record<Campus, PrayerTime[]>>;
+export interface CampusSchoolPrayerTimes {
+  hanafi: PrayerTime[];
+  shafii: PrayerTime[];
+}
+
+export type PrayerTimesByCampus = Partial<Record<Campus, CampusSchoolPrayerTimes>>;
 
 const PRAYER_NAMES: PrayerName[] = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
 
@@ -130,14 +135,14 @@ function getTodayForApi() {
   }).format(new Date()).replace(/\//g, '-');
 }
 
-async function fetchCampusPrayerTimes(campus: Campus): Promise<[Campus, PrayerTime[]]> {
+async function fetchCampusPrayerTimes(campus: Campus, school: 0 | 1 = 1): Promise<PrayerTime[]> {
   const { latitude, longitude } = campusPrayerInfo[campus].coordinates;
   const date = getTodayForApi();
   const params = new URLSearchParams({
     latitude: latitude.toString(),
     longitude: longitude.toString(),
     method: '2',
-    school: '1',
+    school: school.toString(),
     timezonestring: 'America/Vancouver',
   });
 
@@ -148,13 +153,10 @@ async function fetchCampusPrayerTimes(campus: Campus): Promise<[Campus, PrayerTi
 
   const payload = await response.json();
   const timings = payload?.data?.timings ?? {};
-  return [
-    campus,
-    PRAYER_NAMES.map((name) => ({
-      name,
-      time: formatPrayerTime(timings[name] ?? 'Updating'),
-    })),
-  ];
+  return PRAYER_NAMES.map((name) => ({
+    name,
+    time: formatPrayerTime(timings[name] ?? 'Updating'),
+  }));
 }
 
 async function fetchAllPrayerTimes(): Promise<PrayerTimesByCampus> {
@@ -174,7 +176,13 @@ export function usePrayerTimes() {
         nextTimes = await fetchAllPrayerTimes();
       } catch {
         const entries = await Promise.all(
-          (Object.keys(campusPrayerInfo) as Campus[]).map(fetchCampusPrayerTimes)
+          (Object.keys(campusPrayerInfo) as Campus[]).map(async (campus) => {
+            const [hanafi, shafii] = await Promise.all([
+              fetchCampusPrayerTimes(campus, 1),
+              fetchCampusPrayerTimes(campus, 0),
+            ]);
+            return [campus, { hanafi, shafii }];
+          })
         );
         nextTimes = Object.fromEntries(entries) as PrayerTimesByCampus;
       }

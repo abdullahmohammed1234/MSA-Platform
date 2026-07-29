@@ -18,15 +18,19 @@ class PrayerTimesService
 
     public function getPrayerTimesByCampus(): array
     {
-        $cacheKey = 'website_prayer_times_'.now('America/Vancouver')->format('Y-m-d');
+        $cacheKey = 'website_prayer_times_v2_'.now('America/Vancouver')->format('Y-m-d');
 
         return Cache::remember($cacheKey, 3600, function () {
             $times = [];
 
             foreach (self::CAMPUSES as $campus => $coordinates) {
-                $campusTimes = $this->fetchCampusPrayerTimes($campus, $coordinates);
-                if ($campusTimes !== null) {
-                    $times[$campus] = $campusTimes;
+                $hanafiTimes = $this->fetchCampusPrayerTimes($campus, $coordinates, 1);
+                $shafiiTimes = $this->fetchCampusPrayerTimes($campus, $coordinates, 0);
+                if ($hanafiTimes !== null && $shafiiTimes !== null) {
+                    $times[$campus] = [
+                        'hanafi' => $hanafiTimes,
+                        'shafii' => $shafiiTimes,
+                    ];
                 }
             }
 
@@ -34,7 +38,7 @@ class PrayerTimesService
         });
     }
 
-    private function fetchCampusPrayerTimes(string $campus, array $coordinates): ?array
+    private function fetchCampusPrayerTimes(string $campus, array $coordinates, int $school = 1): ?array
     {
         $date = now('America/Vancouver')->format('d-m-Y');
 
@@ -42,7 +46,7 @@ class PrayerTimesService
             'latitude' => $coordinates['latitude'],
             'longitude' => $coordinates['longitude'],
             'method' => 2,
-            'school' => 1,
+            'school' => $school,
             'timezonestring' => 'America/Vancouver',
         ]);
 

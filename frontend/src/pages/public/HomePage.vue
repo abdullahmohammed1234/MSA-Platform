@@ -29,13 +29,16 @@ useSeo({
 });
 
 const activeTab = ref<PrayerTab>('Burnaby');
+const selectedSchool = ref<'hanafi' | 'shafii'>('hanafi');
 const { times, isLoading, error } = usePrayerTimes();
 
 const isCampusTab = computed(() => activeTab.value !== "Jumu'ah");
 const activeData = computed(() => (isCampusTab.value ? campusPrayerInfo[activeTab.value as Campus] : null));
 const activeTimes = computed(() => {
   if (!isCampusTab.value) return [];
-  return times.value[activeTab.value as Campus] ?? fallbackPrayerTimes;
+  const campusTimes = times.value[activeTab.value as Campus];
+  if (!campusTimes) return fallbackPrayerTimes;
+  return campusTimes[selectedSchool.value] ?? fallbackPrayerTimes;
 });
 
 const featuredEvents = ref<EventItem[]>([]);
@@ -239,11 +242,42 @@ const ctaBtnUrl = computed(() => homepageData.value?.cta?.button_url ?? '/contac
             </ScrollReveal>
          </div>
 
-         <div class="lg:w-1/2 w-full flex items-center">
+         <div class="lg:w-1/2 w-full flex flex-col justify-center gap-6">
+            <!-- Calculation School Toggle -->
+            <div v-if="isCampusTab" class="flex justify-end items-center gap-3">
+              <span class="text-[9px] font-bold uppercase tracking-widest text-neutral-black/45">Asr Method:</span>
+              <div class="inline-flex p-1 bg-white/70 backdrop-blur border border-neutral-ivory rounded-full shadow-soft relative">
+                <button 
+                  type="button"
+                  @click="selectedSchool = 'hanafi'" 
+                  :class="[
+                    'px-4 py-1.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider transition-all duration-300 cursor-pointer relative z-10',
+                    selectedSchool === 'hanafi' 
+                      ? 'bg-primary text-white shadow-none' 
+                      : 'text-neutral-black/55 hover:text-primary'
+                  ]"
+                >
+                  Hanafi
+                </button>
+                <button 
+                  type="button"
+                  @click="selectedSchool = 'shafii'" 
+                  :class="[
+                    'px-4 py-1.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider transition-all duration-300 cursor-pointer relative z-10',
+                    selectedSchool === 'shafii' 
+                      ? 'bg-primary text-white shadow-none' 
+                      : 'text-neutral-black/55 hover:text-primary'
+                  ]"
+                >
+                  Shafi'i
+                </button>
+              </div>
+            </div>
+
             <div v-if="isCampusTab" class="grid grid-cols-2 gap-4 sm:gap-5 w-full relative">
               <div 
                 v-for="(prayer, i) in activeTimes" 
-                :key="`${activeTab}-${prayer.name}`"
+                :key="`${activeTab}-${selectedSchool}-${prayer.name}`"
                 :class="[
                   'p-6 sm:p-8 rounded-[2rem] bg-white border border-neutral-ivory text-center shadow-soft hover:shadow-premium transition-all duration-500 group active:scale-[0.98] cursor-pointer relative overflow-hidden',
                   i === 4 ? 'col-span-2' : ''
