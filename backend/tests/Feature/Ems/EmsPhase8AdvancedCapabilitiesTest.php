@@ -283,6 +283,20 @@ class EmsPhase8AdvancedCapabilitiesTest extends EmsTestCase
         $regBilal = Registration::where('attendee_email', 'bilal@msa.org')->first();
         $this->assertEquals(10.0, $regBilal->amount_due);
 
+        // Assert that the Square payment link request payload included the discount
+        \Illuminate\Support\Facades\Http::assertSent(function ($request) {
+            if (str_contains($request->url(), '/v2/online-checkout/payment-links')) {
+                $orderPayload = $request['order'] ?? [];
+                $discounts = $orderPayload['discounts'] ?? [];
+                return count($discounts) === 1 
+                    && $discounts[0]['name'] === 'FIFTYOFF' 
+                    && $discounts[0]['type'] === 'FIXED_AMOUNT'
+                    && $discounts[0]['amount_money']['amount'] === 1000
+                    && $discounts[0]['scope'] === 'ORDER';
+            }
+            return false;
+        });
+
         // 4. Create a 100% discount promo code
         $this->actingAsEms($admin);
         $response = $this->postJson($this->url('promo-codes'), [

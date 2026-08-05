@@ -43,6 +43,38 @@ class SquarePaymentProvider implements PaymentProvider
         $successUrl = $this->frontendUrl("/events/{$order->event->slug}/checkout/success?order={$order->uuid}");
         $cancelUrl = $this->frontendUrl("/events/{$order->event->slug}/checkout/cancel?order={$order->uuid}");
 
+        $orderPayload = [
+            'location_id' => $this->locationId(),
+            'reference_id' => $order->reference,
+            'line_items' => $order->items->map(function ($item) {
+                return [
+                    'name' => $item->name,
+                    'quantity' => (string) $item->quantity,
+                    'base_price_money' => [
+                        'amount' => (int) round(((float) $item->unit_price) * 100),
+                        'currency' => strtoupper($item->currency),
+                    ],
+                ];
+            })->values()->all(),
+        ];
+
+        if ((float) $order->discount_amount > 0.0) {
+            $promoCode = $order->promoCode;
+            $codeName = $promoCode ? $promoCode->code : 'Discount';
+
+            $orderPayload['discounts'] = [
+                [
+                    'name' => $codeName,
+                    'type' => 'FIXED_AMOUNT',
+                    'amount_money' => [
+                        'amount' => (int) round(((float) $order->discount_amount) * 100),
+                        'currency' => strtoupper($order->currency),
+                    ],
+                    'scope' => 'ORDER',
+                ]
+            ];
+        }
+
         $payload = [
             'idempotency_key' => (string) Str::uuid(),
             'checkout_options' => [
@@ -52,20 +84,7 @@ class SquarePaymentProvider implements PaymentProvider
             'pre_populated_data' => [
                 'buyer_email' => $order->buyer_email,
             ],
-            'order' => [
-                'location_id' => $this->locationId(),
-                'reference_id' => $order->reference,
-                'line_items' => $order->items->map(function ($item) {
-                    return [
-                        'name' => $item->name,
-                        'quantity' => (string) $item->quantity,
-                        'base_price_money' => [
-                            'amount' => (int) round(((float) $item->unit_price) * 100),
-                            'currency' => strtoupper($item->currency),
-                        ],
-                    ];
-                })->values()->all(),
-            ],
+            'order' => $orderPayload,
             'payment_note' => 'MSA EMS order ' . $order->reference,
         ];
 

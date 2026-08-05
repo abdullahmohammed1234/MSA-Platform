@@ -143,6 +143,7 @@ export interface RegisterForEventPayload {
   notes?: string | null;
   quantity?: number;
   ticket_type_id?: string | null;
+  promo_code?: string | null;
 }
 
 export interface CalendarFilters {

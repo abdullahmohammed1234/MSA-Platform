@@ -80,6 +80,22 @@ export const publicEventsService = {
     return emsHttp.post<PublicRegistration>(`/public/registrations/${encodeURIComponent(uuid)}/cancel`);
   },
 
+  async validatePromoCode(payload: {
+    code: string;
+    event_uuid: string;
+    ticket_type_uuid?: string | null;
+    email?: string | null;
+    amount?: number | null;
+  }): Promise<{
+    valid: boolean;
+    code: string;
+    discount_type: string;
+    discount_value: number;
+    discount_amount: number;
+  }> {
+    return emsHttp.post('/public/promo-codes/validate', payload);
+  },
+
   async validateTicket(code: string): Promise<PublicTicket & { valid: boolean }> {
     return emsHttp.get(`/public/tickets/validate/${encodeURIComponent(code)}`);
   },

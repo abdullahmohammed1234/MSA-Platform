@@ -45,6 +45,72 @@ const form = reactive({
   quantity: 1,
 });
 
+const promoCodeInput = ref('');
+const appliedPromoCode = ref<any | null>(null);
+const validatingPromo = ref(false);
+const promoMessage = ref('');
+const promoIsValid = ref(false);
+
+async function applyPromoCode() {
+  if (!event.value || !promoCodeInput.value) return;
+
+  validatingPromo.value = true;
+  promoMessage.value = '';
+  promoIsValid.value = false;
+
+  try {
+    const originalTotal = selectedTicket.value ? selectedTicket.value.price * form.quantity : 0;
+    const res = await publicEventsService.validatePromoCode({
+      code: promoCodeInput.value.trim(),
+      event_uuid: event.value.uuid,
+      ticket_type_uuid: selectedTicket.value?.uuid || null,
+      email: form.email.trim() || null,
+      amount: originalTotal,
+    });
+
+    if (res.valid) {
+      appliedPromoCode.value = res;
+      promoIsValid.value = true;
+      promoMessage.value = `Promo code applied! Saved ${formatMoney(res.discount_amount, selectedTicket.value?.currency || 'CAD')}`;
+    } else {
+      appliedPromoCode.value = null;
+      promoIsValid.value = false;
+      promoMessage.value = 'Invalid promo code.';
+    }
+  } catch (err: any) {
+    appliedPromoCode.value = null;
+    promoIsValid.value = false;
+    promoMessage.value = err?.message || 'Failed to validate promo code.';
+  } finally {
+    validatingPromo.value = false;
+  }
+}
+
+const discountAmount = computed(() => {
+  if (!appliedPromoCode.value || !selectedTicket.value) return 0;
+  const originalTotal = selectedTicket.value.price * form.quantity;
+  if (appliedPromoCode.value.discount_type === 'percentage') {
+    return Math.round(originalTotal * (appliedPromoCode.value.discount_value / 100) * 100) / 100;
+  } else if (appliedPromoCode.value.discount_type === 'fixed') {
+    return Math.min(originalTotal, appliedPromoCode.value.discount_value);
+  } else if (appliedPromoCode.value.discount_type === 'free') {
+    return originalTotal;
+  }
+  return 0;
+});
+
+const discountedTotal = computed(() => {
+  if (!selectedTicket.value) return 0;
+  return Math.max(0, (selectedTicket.value.price * form.quantity) - discountAmount.value);
+});
+
+watch([selectedTicketId, () => form.quantity, () => form.email], () => {
+  if (appliedPromoCode.value) {
+    promoCodeInput.value = appliedPromoCode.value.code;
+    applyPromoCode();
+  }
+});
+
 useSeo(() => ({
   title: event.value ? `${event.value.name} | SFU MSA Events` : 'Event | SFU MSA',
   description: event.value?.short_description
@@ -68,7 +134,7 @@ const canJoinWaitlist = computed(() =>
   Boolean(event.value?.is_accepting_registrations && isSoldOut.value && event.value?.waitlist_enabled)
 );
 
-const requiresPayment = computed(() => Boolean(selectedTicket.value && !selectedTicket.value.is_free));
+const requiresPayment = computed(() => Boolean(selectedTicket.value && discountedTotal.value > 0));
 
 async function load() {
   loading.value = true;
@@ -127,6 +193,7 @@ async function submit() {
       notes: form.notes.trim() || null,
       quantity: form.quantity,
       ticket_type_id: selectedTicketId.value || null,
+      promo_code: appliedPromoCode.value ? appliedPromoCode.value.code : null,
     };
 
     if (selectedTicket.value) {
@@ -184,7 +251,7 @@ function ctaLabel(): string {
   if (canJoinWaitlist.value) return submitting.value ? 'Joining…' : 'Join waitlist';
   if (requiresPayment.value) {
     const price = selectedTicket.value
-      ? formatMoney(selectedTicket.value.price * form.quantity, selectedTicket.value.currency)
+      ? formatMoney(discountedTotal.value, selectedTicket.value.currency)
       : '';
     return submitting.value ? 'Starting checkout…' : `Pay ${price} & register`;
   }
@@ -410,6 +477,28 @@ function ctaLabel(): string {
                   :max="selectedTicket?.max_per_order || event.max_tickets_per_order || 10"
                   class="mt-1.5 w-full rounded-xl border border-neutral-ivory px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary"
                 />
+              </label>
+
+              <label v-if="selectedTicket && !selectedTicket.is_free" class="block text-xs font-bold uppercase tracking-wider text-neutral-black/50">
+                Promo Code
+                <div class="flex gap-2 mt-1.5">
+                  <input
+                    v-model="promoCodeInput"
+                    placeholder="Enter promo code"
+                    class="flex-1 rounded-xl border border-neutral-ivory px-3 py-2 text-sm focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary uppercase"
+                  />
+                  <button
+                    type="button"
+                    class="px-4 py-2.5 rounded-xl bg-neutral-ivory hover:bg-neutral-ivory/80 text-xs font-extrabold uppercase tracking-widest cursor-pointer border border-transparent disabled:opacity-50"
+                    :disabled="validatingPromo || !promoCodeInput.trim()"
+                    @click="applyPromoCode"
+                  >
+                    {{ validatingPromo ? 'Applying...' : 'Apply' }}
+                  </button>
+                </div>
+                <span v-if="promoMessage" class="mt-1 block text-xs font-medium normal-case tracking-normal" :class="promoIsValid ? 'text-emerald-600' : 'text-red-600'">
+                  {{ promoMessage }}
+                </span>
               </label>
 
               <button
