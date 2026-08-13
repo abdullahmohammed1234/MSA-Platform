@@ -169,18 +169,36 @@ const formatSize = (bytes: number) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-const isImage = (mime: string) => mime.startsWith('image/');
-const isVideo = (mime: string) => mime.startsWith('video/');
+const IMAGE_EXTENSIONS = new Set(['jpeg', 'jpg', 'png', 'gif', 'svg', 'webp']);
+const VIDEO_EXTENSIONS = new Set(['mp4', 'webm', 'mov', 'ogv', 'ogg']);
 
-const mediaTypeLabel = (media: { media_type?: string; mime_type: string }) => {
+const fileExtension = (name: string | null | undefined) => {
+  if (!name || !name.includes('.')) return '';
+  return name.split('.').pop()!.toLowerCase();
+};
+
+const isImageMedia = (media: { media_type?: string; mime_type?: string | null; filename?: string }) => {
+  if (media.media_type === 'image') return true;
+  if (media.mime_type?.startsWith('image/')) return true;
+  return IMAGE_EXTENSIONS.has(fileExtension(media.filename));
+};
+
+const isVideoMedia = (media: { media_type?: string; mime_type?: string | null; filename?: string }) => {
+  if (media.media_type === 'video') return true;
+  if (media.mime_type?.startsWith('video/')) return true;
+  return VIDEO_EXTENSIONS.has(fileExtension(media.filename));
+};
+
+const mediaTypeLabel = (media: { media_type?: string; mime_type?: string | null; filename?: string }) => {
   if (media.media_type) return media.media_type;
-  if (isImage(media.mime_type)) return 'image';
-  if (isVideo(media.mime_type)) return 'video';
+  if (isImageMedia(media)) return 'image';
+  if (isVideoMedia(media)) return 'video';
   return 'document';
 };
 
-const getIcon = (mime: string) => {
-  if (isVideo(mime)) return Video;
+const getIcon = (media: { media_type?: string; mime_type?: string | null; filename?: string }) => {
+  if (isVideoMedia(media)) return Video;
+  const mime = media.mime_type || '';
   if (mime.includes('zip') || mime.includes('rar') || mime.includes('tar')) {
     return FileArchive;
   }
@@ -348,24 +366,24 @@ const selectedFileHint = computed(() => {
         <!-- Preview -->
         <div class="aspect-square bg-neutral-background flex items-center justify-center overflow-hidden border-b border-neutral-gray/10 relative">
           <img
-            v-if="isImage(media.mime_type)"
+            v-if="isImageMedia(media)"
             :src="resolveCmsMediaUrl(media.url)"
             class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             :alt="mediaLabel(media)"
             loading="lazy"
           />
           <video
-            v-else-if="isVideo(media.mime_type)"
-            :src="resolveCmsMediaUrl(media.url)"
+            v-else-if="isVideoMedia(media)"
+            :src="`${resolveCmsMediaUrl(media.url)}#t=0.1`"
             class="w-full h-full object-cover bg-black"
             muted
             preload="metadata"
             playsinline
           />
           <div v-else class="text-neutral-black/45 flex flex-col items-center gap-2">
-            <component :is="getIcon(media.mime_type)" :size="36" />
+            <component :is="getIcon(media)" :size="36" />
             <span class="text-[9px] font-black uppercase tracking-widest font-mono text-neutral-black/30">
-              {{ media.mime_type.split('/')[1] || 'FILE' }}
+              {{ (media.mime_type || '').split('/')[1] || fileExtension(media.filename) || 'FILE' }}
             </span>
           </div>
           <span

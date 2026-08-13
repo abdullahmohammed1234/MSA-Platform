@@ -62,7 +62,7 @@ class MediaService
             'category_id' => $categoryId,
             'filepath' => $filepath,
             'url' => $url,
-            'mime_type' => $file->getMimeType() ?: $file->getClientMimeType(),
+            'mime_type' => $this->resolveMimeType($file, $extension),
             'size' => $file->getSize(),
             'uploaded_by' => $userId,
         ]);
@@ -94,5 +94,52 @@ class MediaService
         }
 
         return $deleted;
+    }
+
+    /**
+     * Prefer a concrete image/video MIME. Some hosts report application/octet-stream
+     * from finfo, which breaks CMS preview rendering.
+     */
+    protected function resolveMimeType(UploadedFile $file, string $extension): string
+    {
+        $detected = strtolower((string) ($file->getMimeType() ?: ''));
+        $client = strtolower((string) ($file->getClientMimeType() ?: ''));
+
+        foreach ([$detected, $client] as $candidate) {
+            if (str_starts_with($candidate, 'image/') || str_starts_with($candidate, 'video/')) {
+                return $candidate;
+            }
+        }
+
+        $extensionMap = [
+            'jpeg' => 'image/jpeg',
+            'jpg' => 'image/jpeg',
+            'png' => 'image/png',
+            'gif' => 'image/gif',
+            'svg' => 'image/svg+xml',
+            'webp' => 'image/webp',
+            'mp4' => 'video/mp4',
+            'webm' => 'video/webm',
+            'mov' => 'video/quicktime',
+            'ogv' => 'video/ogg',
+            'pdf' => 'application/pdf',
+            'doc' => 'application/msword',
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'zip' => 'application/zip',
+        ];
+
+        if (isset($extensionMap[$extension])) {
+            return $extensionMap[$extension];
+        }
+
+        if ($detected !== '' && $detected !== 'application/octet-stream') {
+            return $detected;
+        }
+
+        if ($client !== '') {
+            return $client;
+        }
+
+        return 'application/octet-stream';
     }
 }

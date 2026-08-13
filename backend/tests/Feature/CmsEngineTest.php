@@ -473,6 +473,28 @@ class CmsEngineTest extends TestCase
     }
 
     /** @test */
+    public function uploaded_media_stores_concrete_image_mime_for_previews()
+    {
+        Storage::fake('public');
+
+        $file = UploadedFile::fake()->create('campus.jpg', 120, 'image/jpeg');
+
+        $this->actingAs($this->adminUser)
+            ->postJson(route('api.admin.cms.media.store'), [
+                'file' => $file,
+            ])
+            ->assertStatus(201)
+            ->assertJsonPath('media.media_type', 'image');
+
+        $mime = Media::where('filename', 'campus.jpg')->value('mime_type');
+        $this->assertNotNull($mime);
+        $this->assertTrue(
+            str_starts_with((string) $mime, 'image/'),
+            "Expected image/* mime for preview rendering, got: {$mime}"
+        );
+    }
+
+    /** @test */
     public function admin_can_list_and_create_media_categories()
     {
         $this->actingAs($this->adminUser)

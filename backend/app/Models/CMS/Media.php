@@ -44,13 +44,21 @@ class Media extends Model
 
     public function getMediaTypeAttribute(): string
     {
-        $mime = (string) ($this->attributes['mime_type'] ?? '');
+        $mime = strtolower((string) ($this->attributes['mime_type'] ?? ''));
 
         if (str_starts_with($mime, 'image/')) {
             return 'image';
         }
 
         if (str_starts_with($mime, 'video/')) {
+            return 'video';
+        }
+
+        $extension = strtolower((string) pathinfo((string) ($this->attributes['filename'] ?? ''), PATHINFO_EXTENSION));
+        if (in_array($extension, ['jpeg', 'jpg', 'png', 'gif', 'svg', 'webp'], true)) {
+            return 'image';
+        }
+        if (in_array($extension, ['mp4', 'webm', 'mov', 'ogv', 'ogg'], true)) {
             return 'video';
         }
 
