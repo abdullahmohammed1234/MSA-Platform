@@ -104,20 +104,37 @@ export interface Resource {
   updated_at?: string;
 }
 
+export interface MediaCategory {
+  id: number;
+  uuid: string;
+  name: string;
+  slug: string;
+  created_at?: string;
+}
+
 export interface Media {
   id: number;
   uuid: string;
   filename: string;
-  filepath: string;
+  display_name: string | null;
+  filepath?: string;
   url: string;
   mime_type: string;
+  media_type: 'image' | 'video' | 'document';
   size: number;
+  category_id?: number | null;
+  category?: MediaCategory | null;
   uploaded_by: number | null;
   uploader?: {
     id: number;
     name: string;
   } | null;
   created_at: string;
+}
+
+export interface MediaUploadOptions {
+  display_name?: string;
+  category_id?: number | null;
 }
 
 export interface CmsRevision {

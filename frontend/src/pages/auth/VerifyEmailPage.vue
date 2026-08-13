@@ -22,11 +22,6 @@ const redirectAfterVerification = () => {
     return;
   }
 
-  if (authStore.roles.includes('admin') || authStore.roles.includes('super-admin')) {
-    router.push({ name: 'admin-dashboard' });
-    return;
-  }
-
   router.push({ name: 'home' });
 };
 

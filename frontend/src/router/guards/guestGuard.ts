@@ -12,12 +12,7 @@ export const guestGuard = (
       return { name: 'verify-email' };
     }
 
-    if (authStore.roles.includes('admin') || authStore.roles.includes('super-admin')) {
-      return { name: 'admin-dashboard' };
-    }
-    if (authStore.canAccessAcademy) {
-      return { name: 'academy-dashboard' };
-    }
+    // Authenticated users on guest-only routes go to the main website.
     return { name: 'home' };
   }
 

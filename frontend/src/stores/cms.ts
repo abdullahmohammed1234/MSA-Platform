@@ -1,14 +1,23 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import cmsService from '@/services/cms/cmsService';
-import type { CmsSection, Media, CmsDashboardStats, CmsDashboardActivity } from '@/types/cms';
+import type {
+  CmsSection,
+  Media,
+  MediaCategory,
+  MediaUploadOptions,
+  CmsDashboardStats,
+  CmsDashboardActivity,
+} from '@/types/cms';
 
 export const useCmsStore = defineStore('cms', () => {
   const sections = ref<CmsSection[]>([]);
   const mediaList = ref<Media[]>([]);
+  const mediaCategories = ref<MediaCategory[]>([]);
   const stats = ref<CmsDashboardStats | null>(null);
   const recentActivity = ref<CmsDashboardActivity[]>([]);
   const isLoading = ref(false);
+  const isUploading = ref(false);
   const error = ref<string | null>(null);
 
   const lastFetchedDashboard = ref<number | null>(null);
@@ -70,7 +79,7 @@ export const useCmsStore = defineStore('cms', () => {
     }
   }
 
-  async function fetchMedia(params: any = {}) {
+  async function fetchMedia(params: Record<string, unknown> = {}) {
     isLoading.value = true;
     error.value = null;
     try {
@@ -85,18 +94,45 @@ export const useCmsStore = defineStore('cms', () => {
     }
   }
 
-  async function uploadMedia(file: File) {
-    isLoading.value = true;
+  async function fetchMediaCategories() {
     error.value = null;
     try {
-      const media = await cmsService.uploadMedia(file);
+      mediaCategories.value = await cmsService.getMediaCategories();
+      return mediaCategories.value;
+    } catch (err: any) {
+      error.value = err.response?.data?.message || 'Failed to load media categories.';
+      throw err;
+    }
+  }
+
+  async function createMediaCategory(name: string) {
+    error.value = null;
+    try {
+      const category = await cmsService.createMediaCategory(name);
+      mediaCategories.value = [...mediaCategories.value, category].sort((a, b) =>
+        a.name.localeCompare(b.name),
+      );
+      return category;
+    } catch (err: any) {
+      const validationMessage = err.response?.data?.errors?.name?.[0];
+      error.value = validationMessage || err.response?.data?.message || 'Failed to create media category.';
+      throw err;
+    }
+  }
+
+  async function uploadMedia(file: File, options: MediaUploadOptions = {}) {
+    isUploading.value = true;
+    error.value = null;
+    try {
+      const media = await cmsService.uploadMedia(file, options);
       mediaList.value.unshift(media);
       return media;
     } catch (err: any) {
-      error.value = err.response?.data?.message || 'Failed to upload file.';
+      const fileError = err.response?.data?.errors?.file?.[0];
+      error.value = fileError || err.response?.data?.message || 'Failed to upload file.';
       throw err;
     } finally {
-      isLoading.value = false;
+      isUploading.value = false;
     }
   }
 
@@ -117,14 +153,18 @@ export const useCmsStore = defineStore('cms', () => {
   return {
     sections,
     mediaList,
+    mediaCategories,
     stats,
     recentActivity,
     isLoading,
+    isUploading,
     error,
     fetchDashboard,
     fetchHomepageSections,
     updateHomepageSection,
     fetchMedia,
+    fetchMediaCategories,
+    createMediaCategory,
     uploadMedia,
     deleteMedia,
   };

@@ -54,11 +54,9 @@ const handleLogin = async () => {
     const redirectPath = route.query.redirect as string;
     if (redirectPath) {
       router.push(redirectPath);
-    } else if (isAdminLogin.value || authStore.isPrivilegedAdmin) {
-      router.push({ name: 'admin-dashboard' });
-    } else if (authStore.canAccessAcademy) {
-      router.push({ name: 'academy-dashboard' });
     } else {
+      // All roles land on the main MSA website after login.
+      // Admin/CMS access remains available via /admin (authorization unchanged).
       router.push({ path: '/' });
     }
   } catch (error: any) {

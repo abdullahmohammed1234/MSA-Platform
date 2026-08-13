@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Support\CmsAssetUrl;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
 
 class Media extends Model
@@ -15,6 +16,8 @@ class Media extends Model
     protected $fillable = [
         'uuid',
         'filename',
+        'display_name',
+        'category_id',
         'filepath',
         'url',
         'mime_type',
@@ -26,6 +29,10 @@ class Media extends Model
         'filepath',
     ];
 
+    protected $appends = [
+        'media_type',
+    ];
+
     public function getUrlAttribute($value): ?string
     {
         if (!empty($this->attributes['filepath'])) {
@@ -35,8 +42,38 @@ class Media extends Model
         return CmsAssetUrl::resolve($value);
     }
 
-    public function uploader()
+    public function getMediaTypeAttribute(): string
+    {
+        $mime = (string) ($this->attributes['mime_type'] ?? '');
+
+        if (str_starts_with($mime, 'image/')) {
+            return 'image';
+        }
+
+        if (str_starts_with($mime, 'video/')) {
+            return 'video';
+        }
+
+        return 'document';
+    }
+
+    /**
+     * Prefer custom display name; fall back to original filename.
+     */
+    public function resolvedDisplayName(): string
+    {
+        $custom = trim((string) ($this->display_name ?? ''));
+
+        return $custom !== '' ? $custom : (string) $this->filename;
+    }
+
+    public function uploader(): BelongsTo
     {
         return $this->belongsTo(User::class, 'uploaded_by');
+    }
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(MediaCategory::class, 'category_id');
     }
 }

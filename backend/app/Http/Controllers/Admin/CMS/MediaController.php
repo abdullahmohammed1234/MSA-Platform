@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Admin\CMS;
 
 use App\Http\Controllers\Controller;
-use App\Models\CMS\Media;
+use App\Http\Requests\CMS\UploadMediaRequest;
 use App\Services\CMS\MediaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,25 +20,24 @@ class MediaController extends Controller
 
     public function index(Request $request): JsonResponse
     {
-        $filters = $request->only(['search']);
+        $filters = $request->only(['search', 'category_id', 'media_type']);
         $media = $this->service->list($filters, $request->input('per_page', 18));
 
         return response()->json($media);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(UploadMediaRequest $request): JsonResponse
     {
-        $request->validate([
-            'file' => 'required|file|mimes:jpeg,png,jpg,gif,svg,webp,pdf,doc,docx,zip|max:10240', // max 10MB
-        ]);
-
         $file = $request->file('file');
-        $media = $this->service->upload($file, Auth::id());
+        $media = $this->service->upload($file, Auth::id(), [
+            'display_name' => $request->validated('display_name'),
+            'category_id' => $request->validated('category_id'),
+        ]);
 
         return response()->json([
             'success' => true,
             'message' => 'File uploaded successfully.',
-            'media' => $media
+            'media' => $media,
         ], 201);
     }
 
@@ -53,7 +52,7 @@ class MediaController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Media file deleted successfully.'
+            'message' => 'Media file deleted successfully.',
         ]);
     }
 }

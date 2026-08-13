@@ -30,33 +30,49 @@ class MediaService
         return $this->repository->findByUuid($uuid);
     }
 
-    public function upload(UploadedFile $file, ?int $userId): Media
+    /**
+     * @param  array{display_name?: string|null, category_id?: int|null}  $meta
+     */
+    public function upload(UploadedFile $file, ?int $userId, array $meta = []): Media
     {
-        // 1. Generate unique file name to prevent collision
-        $extension = $file->getClientOriginalExtension();
-        $safeName = Str::slug(pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME));
-        $filename = $safeName . '-' . time() . '.' . $extension;
+        $extension = strtolower($file->getClientOriginalExtension());
+        $extension = preg_replace('/[^a-z0-9]/', '', $extension) ?: 'bin';
 
-        // 2. Save file to public disk under uploads directory
-        // Under the hood, this puts it in storage/app/public/uploads
-        $filepath = $file->storeAs('uploads', $filename, 'public');
+        $originalBase = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $safeName = Str::slug($originalBase);
+        if ($safeName === '') {
+            $safeName = 'media';
+        }
 
-        // 3. Generate accessible asset URL
+        // Never use user-provided display names as filesystem paths.
+        $storedFilename = $safeName.'-'.time().'-'.Str::lower(Str::random(6)).'.'.$extension;
+
+        $filepath = $file->storeAs('uploads', $storedFilename, 'public');
         $url = Storage::disk('public')->url($filepath);
 
-        // 4. Register in database
+        $displayName = isset($meta['display_name']) ? trim((string) $meta['display_name']) : '';
+        $displayName = $displayName !== '' ? $displayName : null;
+
+        $categoryId = $meta['category_id'] ?? null;
+
         $media = $this->repository->create([
             'uuid' => (string) Str::uuid(),
             'filename' => $file->getClientOriginalName(),
+            'display_name' => $displayName,
+            'category_id' => $categoryId,
             'filepath' => $filepath,
             'url' => $url,
-            'mime_type' => $file->getClientMimeType(),
+            'mime_type' => $file->getMimeType() ?: $file->getClientMimeType(),
             'size' => $file->getSize(),
             'uploaded_by' => $userId,
         ]);
 
-        // Audit Log
-        $this->revisionService->logAction($userId, 'upload_media', $media, "Uploaded media asset: {$media->filename}");
+        $this->revisionService->logAction(
+            $userId,
+            'upload_media',
+            $media,
+            'Uploaded media asset: '.$media->resolvedDisplayName()
+        );
 
         Cache::forget('website_media');
 
@@ -65,16 +81,15 @@ class MediaService
 
     public function delete(Media $media, ?int $userId): bool
     {
-        // Delete from storage disk
         if (Storage::disk('public')->exists($media->filepath)) {
             Storage::disk('public')->delete($media->filepath);
         }
 
-        $filename = $media->filename;
+        $label = $media->resolvedDisplayName();
         $deleted = $this->repository->delete($media);
 
         if ($deleted) {
-            $this->revisionService->logAction($userId, 'delete_media', $media, "Deleted media asset: {$filename}");
+            $this->revisionService->logAction($userId, 'delete_media', $media, "Deleted media asset: {$label}");
             Cache::forget('website_media');
         }
 

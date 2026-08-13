@@ -65,19 +65,24 @@ class WebsiteController extends Controller
     {
         $media = Cache::remember('website_media', 3600, function () {
             return Media::query()
+                ->with('category:id,name')
                 ->where('mime_type', 'like', 'image/%')
                 ->orderByDesc('created_at')
                 ->get()
                 ->map(function (Media $item) {
-                    $title = pathinfo($item->filename, PATHINFO_FILENAME);
-                    $title = str_replace(['-', '_'], ' ', $title);
+                    $title = $item->display_name;
+                    if ($title === null || trim($title) === '') {
+                        $title = pathinfo($item->filename, PATHINFO_FILENAME);
+                        $title = str_replace(['-', '_'], ' ', $title);
+                        $title = ucwords($title);
+                    }
 
                     return [
                         'id' => $item->uuid,
                         'url' => $item->url,
-                        'title' => ucwords($title),
+                        'title' => $title,
                         'description' => 'Uploaded via CMS media library.',
-                        'category' => 'Community',
+                        'category' => $item->category?->name ?: 'Community',
                         'date' => $item->created_at?->format('Y') ?? date('Y'),
                         'isLandscape' => true,
                     ];

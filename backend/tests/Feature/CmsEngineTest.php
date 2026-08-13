@@ -231,7 +231,7 @@ class CmsEngineTest extends TestCase
             ->assertJsonPath('success', true);
 
         $uuid = $response->json('media.uuid');
-        $filepath = $response->json('media.filepath');
+        $filepath = Media::where('uuid', $uuid)->value('filepath');
 
         $this->assertDatabaseHas('media', [
             'uuid' => $uuid,
@@ -250,6 +250,288 @@ class CmsEngineTest extends TestCase
         ]);
 
         Storage::disk('public')->assertMissing($filepath);
+    }
+
+    /** @test */
+    public function admin_can_upload_image_with_custom_name_and_category()
+    {
+        Storage::fake('public');
+
+        $categoryResponse = $this->actingAs($this->adminUser)
+            ->postJson(route('api.admin.cms.media.categories.store'), [
+                'name' => 'Welcome Night',
+            ])
+            ->assertStatus(201)
+            ->assertJsonPath('success', true);
+
+        $categoryId = $categoryResponse->json('category.id');
+
+        $file = UploadedFile::fake()->create('IMG_4832.jpg', 200, 'image/jpeg');
+
+        $response = $this->actingAs($this->adminUser)
+            ->postJson(route('api.admin.cms.media.store'), [
+                'file' => $file,
+                'display_name' => 'MSA Welcome Night 2026',
+                'category_id' => $categoryId,
+            ])
+            ->assertStatus(201)
+            ->assertJsonPath('media.display_name', 'MSA Welcome Night 2026')
+            ->assertJsonPath('media.media_type', 'image')
+            ->assertJsonPath('media.category.id', $categoryId)
+            ->assertJsonPath('media.filename', 'IMG_4832.jpg');
+
+        $this->assertDatabaseHas('media', [
+            'uuid' => $response->json('media.uuid'),
+            'display_name' => 'MSA Welcome Night 2026',
+            'category_id' => $categoryId,
+            'filename' => 'IMG_4832.jpg',
+        ]);
+    }
+
+    /** @test */
+    public function display_name_cannot_influence_stored_filepath()
+    {
+        Storage::fake('public');
+
+        $file = UploadedFile::fake()->create('photo.jpg', 100, 'image/jpeg');
+
+        $response = $this->actingAs($this->adminUser)
+            ->postJson(route('api.admin.cms.media.store'), [
+                'file' => $file,
+                'display_name' => 'Test/../../../file',
+            ])
+            ->assertStatus(201);
+
+        $media = Media::where('uuid', $response->json('media.uuid'))->first();
+
+        $this->assertSame('Test/../../../file', $media->display_name);
+        $this->assertSame('photo.jpg', $media->filename);
+        $this->assertStringStartsWith('uploads/', $media->filepath);
+        $this->assertStringNotContainsString('..', $media->filepath);
+        $this->assertStringNotContainsString('Test/', $media->filepath);
+        $this->assertNull($response->json('media.filepath'));
+    }
+
+    /** @test */
+    public function empty_display_name_is_stored_as_null_and_special_names_are_accepted()
+    {
+        Storage::fake('public');
+
+        $empty = UploadedFile::fake()->create('raw.jpg', 50, 'image/jpeg');
+        $this->actingAs($this->adminUser)
+            ->postJson(route('api.admin.cms.media.store'), [
+                'file' => $empty,
+                'display_name' => '   ',
+            ])
+            ->assertStatus(201)
+            ->assertJsonPath('media.display_name', null)
+            ->assertJsonPath('media.filename', 'raw.jpg');
+
+        $special = UploadedFile::fake()->create('event.jpg', 50, 'image/jpeg');
+        $this->actingAs($this->adminUser)
+            ->postJson(route('api.admin.cms.media.store'), [
+                'file' => $special,
+                'display_name' => 'Jummah & Community Event',
+            ])
+            ->assertStatus(201)
+            ->assertJsonPath('media.display_name', 'Jummah & Community Event');
+
+        $arabic = UploadedFile::fake()->create('arabic.jpg', 50, 'image/jpeg');
+        $this->actingAs($this->adminUser)
+            ->postJson(route('api.admin.cms.media.store'), [
+                'file' => $arabic,
+                'display_name' => 'ليلة الترحيب',
+            ])
+            ->assertStatus(201)
+            ->assertJsonPath('media.display_name', 'ليلة الترحيب');
+
+        $tooLong = UploadedFile::fake()->create('long.jpg', 50, 'image/jpeg');
+        $this->actingAs($this->adminUser)
+            ->postJson(route('api.admin.cms.media.store'), [
+                'file' => $tooLong,
+                'display_name' => str_repeat('A', 256),
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['display_name']);
+    }
+
+    /** @test */
+    public function admin_can_upload_supported_video_formats_and_rejects_invalid_videos()
+    {
+        Storage::fake('public');
+
+        foreach (['clip.mp4' => 'video/mp4', 'clip.webm' => 'video/webm', 'clip.mov' => 'video/quicktime', 'clip.ogv' => 'video/ogg'] as $name => $mime) {
+            $this->actingAs($this->adminUser)
+                ->postJson(route('api.admin.cms.media.store'), [
+                    'file' => UploadedFile::fake()->create($name, 500, $mime),
+                ])
+                ->assertStatus(201)
+                ->assertJsonPath('media.media_type', 'video');
+        }
+
+        $this->actingAs($this->adminUser)
+            ->postJson(route('api.admin.cms.media.store'), [
+                'file' => UploadedFile::fake()->create('clip.avi', 500, 'video/x-msvideo'),
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['file']);
+
+        $oversizeKb = ((int) config('cms.media.max_video_kb', 51200)) + 1;
+        $this->actingAs($this->adminUser)
+            ->postJson(route('api.admin.cms.media.store'), [
+                'file' => UploadedFile::fake()->create('huge.mp4', $oversizeKb, 'video/mp4'),
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['file']);
+    }
+
+    /** @test */
+    public function public_media_api_supports_legacy_rows_and_assigned_categories()
+    {
+        Storage::fake('public');
+
+        $legacy = Media::create([
+            'uuid' => (string) Str::uuid(),
+            'filename' => 'legacy_photo.jpg',
+            'display_name' => null,
+            'category_id' => null,
+            'filepath' => 'uploads/legacy_photo.jpg',
+            'url' => '/storage/uploads/legacy_photo.jpg',
+            'mime_type' => 'image/jpeg',
+            'size' => 1234,
+            'uploaded_by' => $this->adminUser->id,
+        ]);
+
+        $category = \App\Models\CMS\MediaCategory::create([
+            'uuid' => (string) Str::uuid(),
+            'name' => 'Fundraiser',
+            'slug' => 'fundraiser',
+        ]);
+
+        $categorized = Media::create([
+            'uuid' => (string) Str::uuid(),
+            'filename' => 'IMG_1.jpg',
+            'display_name' => 'MSA Welcome Night 2026',
+            'category_id' => $category->id,
+            'filepath' => 'uploads/img1.jpg',
+            'url' => '/storage/uploads/img1.jpg',
+            'mime_type' => 'image/jpeg',
+            'size' => 2345,
+            'uploaded_by' => $this->adminUser->id,
+        ]);
+
+        $video = Media::create([
+            'uuid' => (string) Str::uuid(),
+            'filename' => 'ignore.mp4',
+            'display_name' => 'Not In Gallery',
+            'category_id' => $category->id,
+            'filepath' => 'uploads/ignore.mp4',
+            'url' => '/storage/uploads/ignore.mp4',
+            'mime_type' => 'video/mp4',
+            'size' => 999,
+            'uploaded_by' => $this->adminUser->id,
+        ]);
+
+        $response = $this->getJson(route('api.website.media'))
+            ->assertStatus(200);
+
+        $media = collect($response->json('media'));
+
+        $legacyItem = $media->firstWhere('id', $legacy->uuid);
+        $this->assertNotNull($legacyItem);
+        $this->assertSame('Community', $legacyItem['category']);
+        $this->assertSame('Legacy Photo', $legacyItem['title']);
+
+        $categorizedItem = $media->firstWhere('id', $categorized->uuid);
+        $this->assertNotNull($categorizedItem);
+        $this->assertSame('Fundraiser', $categorizedItem['category']);
+        $this->assertSame('MSA Welcome Night 2026', $categorizedItem['title']);
+
+        $this->assertNull($media->firstWhere('id', $video->uuid));
+    }
+
+    /** @test */
+    public function admin_can_upload_video_media()
+    {
+        Storage::fake('public');
+
+        $file = UploadedFile::fake()->create('welcome.mp4', 1024, 'video/mp4');
+
+        $this->actingAs($this->adminUser)
+            ->postJson(route('api.admin.cms.media.store'), [
+                'file' => $file,
+                'display_name' => 'Welcome Video',
+            ])
+            ->assertStatus(201)
+            ->assertJsonPath('media.media_type', 'video')
+            ->assertJsonPath('media.display_name', 'Welcome Video');
+
+        $this->assertDatabaseHas('media', [
+            'filename' => 'welcome.mp4',
+            'display_name' => 'Welcome Video',
+        ]);
+    }
+
+    /** @test */
+    public function admin_can_list_and_create_media_categories()
+    {
+        $this->actingAs($this->adminUser)
+            ->postJson(route('api.admin.cms.media.categories.store'), [
+                'name' => 'Community',
+            ])
+            ->assertStatus(201);
+
+        $this->actingAs($this->adminUser)
+            ->getJson(route('api.admin.cms.media.categories.index'))
+            ->assertStatus(200)
+            ->assertJsonFragment(['name' => 'Community']);
+
+        $this->actingAs($this->adminUser)
+            ->postJson(route('api.admin.cms.media.categories.store'), [
+                'name' => 'Community',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['name']);
+    }
+
+    /** @test */
+    public function unauthorized_users_cannot_manage_media_or_categories()
+    {
+        Storage::fake('public');
+        $file = UploadedFile::fake()->create('photo.jpg', 100, 'image/jpeg');
+
+        $this->postJson(route('api.admin.cms.media.store'), [
+            'file' => $file,
+        ])->assertStatus(401);
+
+        $this->actingAs($this->normalUser)
+            ->postJson(route('api.admin.cms.media.store'), [
+                'file' => $file,
+            ])->assertStatus(403);
+
+        $this->actingAs($this->normalUser)
+            ->postJson(route('api.admin.cms.media.categories.store'), [
+                'name' => 'Secret',
+            ])->assertStatus(403);
+
+        $this->actingAs($this->normalUser)
+            ->getJson(route('api.admin.cms.media.categories.index'))
+            ->assertStatus(403);
+    }
+
+    /** @test */
+    public function media_upload_rejects_unsupported_file_types()
+    {
+        Storage::fake('public');
+
+        $file = UploadedFile::fake()->create('malware.exe', 100, 'application/x-msdownload');
+
+        $this->actingAs($this->adminUser)
+            ->postJson(route('api.admin.cms.media.store'), [
+                'file' => $file,
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['file']);
     }
 
     /** @test */

@@ -7,6 +7,8 @@ import type {
   TeamMember,
   Resource,
   Media,
+  MediaCategory,
+  MediaUploadOptions,
   CmsRevision,
   CmsDashboardStats,
   CmsDashboardActivity
@@ -228,20 +230,36 @@ export const cmsService = {
   },
 
   // 7. Media Library
-  async getMedia(params: any = {}): Promise<PaginatedResponse<Media>> {
+  async getMedia(params: Record<string, unknown> = {}): Promise<PaginatedResponse<Media>> {
     const response = await client.get('/admin/cms/media', { params });
     return response.data;
   },
 
-  async uploadMedia(file: File): Promise<Media> {
+  async uploadMedia(file: File, options: MediaUploadOptions = {}): Promise<Media> {
     const formData = new FormData();
     formData.append('file', file);
+    if (options.display_name?.trim()) {
+      formData.append('display_name', options.display_name.trim());
+    }
+    if (options.category_id != null) {
+      formData.append('category_id', String(options.category_id));
+    }
     const response = await client.post('/admin/cms/media', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
     return response.data.media;
+  },
+
+  async getMediaCategories(): Promise<MediaCategory[]> {
+    const response = await client.get('/admin/cms/media/categories');
+    return response.data.categories ?? [];
+  },
+
+  async createMediaCategory(name: string): Promise<MediaCategory> {
+    const response = await client.post('/admin/cms/media/categories', { name });
+    return response.data.category;
   },
 
   async uploadTeamPhoto(file: File): Promise<{ success: boolean; message: string; url: string }> {

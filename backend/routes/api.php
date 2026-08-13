@@ -376,6 +376,12 @@ Route::prefix('v1')->group(function () {
             ->name('api.admin.cms.resources.rollback');
 
         // CMS Media
+        Route::get('/cms/media/categories', [\App\Http\Controllers\Admin\CMS\MediaCategoryController::class, 'index'])
+            ->middleware('permission:manage_media|manage_team|manage_announcements|manage_events|manage_resources|manage_homepage')
+            ->name('api.admin.cms.media.categories.index');
+        Route::post('/cms/media/categories', [\App\Http\Controllers\Admin\CMS\MediaCategoryController::class, 'store'])
+            ->middleware('permission:manage_media')
+            ->name('api.admin.cms.media.categories.store');
         Route::get('/cms/media', [\App\Http\Controllers\Admin\CMS\MediaController::class, 'index'])
             ->middleware('permission:manage_media')
             ->name('api.admin.cms.media.index');

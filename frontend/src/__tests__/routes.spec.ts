@@ -75,7 +75,7 @@ describe('Vue Router Navigation Guards', () => {
   });
 
   describe('guestGuard', () => {
-    it('should not redirect unverified admins to verify-email on guest-only routes', () => {
+    it('should redirect authenticated admins to home on guest-only routes', () => {
       const authStore = useAuthStore();
       authStore.token = 'valid-token';
       authStore.user = { id: 1, name: 'Admin', email: 'admin@sfu.ca', roles: ['admin'], permissions: [], is_verified: false, requires_email_verification: false } as any;
@@ -84,7 +84,7 @@ describe('Vue Router Navigation Guards', () => {
         matched: [{ meta: { guestOnly: true } }]
       };
 
-      expect(guestGuard(to)).toEqual({ name: 'admin-dashboard' });
+      expect(guestGuard(to)).toEqual({ name: 'home' });
     });
 
     it('should redirect unverified authenticated users to verify-email on guest-only routes', () => {
