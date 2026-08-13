@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useCmsStore } from '@/stores/cms';
 import { resolveCmsMediaUrl } from '@/constants/publicAssets';
 import {
@@ -7,6 +7,7 @@ import {
   CMS_MEDIA_MAX_IMAGE_KB,
   CMS_MEDIA_MAX_VIDEO_KB,
   formatCmsMediaLimitMb,
+  getCmsMediaFileKind,
   validateCmsMediaFileSize,
 } from '@/constants/cmsMediaUpload';
 import {
@@ -31,6 +32,7 @@ const fileInput = ref<HTMLInputElement | null>(null);
 const isDragging = ref(false);
 
 const selectedFile = ref<File | null>(null);
+const selectedPreviewUrl = ref<string | null>(null);
 const customName = ref('');
 const selectedCategoryId = ref<number | ''>('');
 const formError = ref<string | null>(null);
@@ -44,11 +46,32 @@ const maxImageMb = formatCmsMediaLimitMb(CMS_MEDIA_MAX_IMAGE_KB);
 const maxVideoMb = formatCmsMediaLimitMb(CMS_MEDIA_MAX_VIDEO_KB);
 const maxDocumentMb = formatCmsMediaLimitMb(CMS_MEDIA_MAX_DOCUMENT_KB);
 
+const revokeSelectedPreview = () => {
+  if (selectedPreviewUrl.value) {
+    URL.revokeObjectURL(selectedPreviewUrl.value);
+    selectedPreviewUrl.value = null;
+  }
+};
+
+watch(selectedFile, (file) => {
+  revokeSelectedPreview();
+  if (!file) return;
+
+  const kind = getCmsMediaFileKind(file);
+  if (kind === 'image' || kind === 'video') {
+    selectedPreviewUrl.value = URL.createObjectURL(file);
+  }
+});
+
 onMounted(async () => {
   await Promise.all([
     cmsStore.fetchMedia(),
     cmsStore.fetchMediaCategories(),
   ]);
+});
+
+onBeforeUnmount(() => {
+  revokeSelectedPreview();
 });
 
 const handleSearch = () => {
@@ -85,6 +108,10 @@ const clearSelectedFile = () => {
   customName.value = '';
   formError.value = null;
 };
+
+const selectedFileKind = computed(() =>
+  selectedFile.value ? getCmsMediaFileKind(selectedFile.value) : null,
+);
 
 const openCategoryModal = () => {
   newCategoryName.value = '';
@@ -259,6 +286,29 @@ const selectedFileHint = computed(() => {
           <p v-if="selectedFileHint" class="text-primary text-[11px] mt-2 font-semibold">
             Selected: {{ selectedFileHint }}
           </p>
+        </div>
+      </div>
+
+      <div
+        v-if="selectedFile && selectedPreviewUrl"
+        class="rounded-[1.5rem] overflow-hidden border border-neutral-gray/15 bg-neutral-background"
+      >
+        <div class="aspect-video max-h-72 flex items-center justify-center bg-neutral-black/5">
+          <img
+            v-if="selectedFileKind === 'image'"
+            :src="selectedPreviewUrl"
+            :alt="selectedFile.name"
+            class="max-h-72 w-full object-contain"
+          />
+          <video
+            v-else-if="selectedFileKind === 'video'"
+            :src="selectedPreviewUrl"
+            class="max-h-72 w-full object-contain bg-black"
+            controls
+            muted
+            playsinline
+            preload="metadata"
+          />
         </div>
       </div>
 
