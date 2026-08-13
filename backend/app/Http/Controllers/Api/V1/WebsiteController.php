@@ -66,7 +66,10 @@ class WebsiteController extends Controller
         $media = Cache::remember('website_media', 3600, function () {
             return Media::query()
                 ->with('category:id,name')
-                ->where('mime_type', 'like', 'image/%')
+                ->where(function ($query) {
+                    $query->where('mime_type', 'like', 'image/%')
+                        ->orWhere('mime_type', 'like', 'video/%');
+                })
                 ->orderByDesc('created_at')
                 ->get()
                 ->map(function (Media $item) {
@@ -77,6 +80,11 @@ class WebsiteController extends Controller
                         $title = ucwords($title);
                     }
 
+                    $mediaType = $item->media_type;
+                    if (!in_array($mediaType, ['image', 'video'], true)) {
+                        $mediaType = str_starts_with((string) $item->mime_type, 'video/') ? 'video' : 'image';
+                    }
+
                     return [
                         'id' => $item->uuid,
                         'url' => $item->url,
@@ -85,6 +93,8 @@ class WebsiteController extends Controller
                         'category' => $item->category?->name ?: 'Community',
                         'date' => $item->created_at?->format('Y') ?? date('Y'),
                         'isLandscape' => true,
+                        'media_type' => $mediaType,
+                        'mime_type' => $item->mime_type,
                     ];
                 })
                 ->values()

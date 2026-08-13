@@ -154,10 +154,19 @@ onUnmounted(() => {
           <div class="w-full lg:flex-1 lg:min-w-0 flex flex-col items-center">
             <div class="relative w-full flex items-center justify-center rounded-2xl bg-neutral-white/5 border border-neutral-white/10 p-3 sm:p-4">
               <img
+                v-if="currentImage.mediaType !== 'video'"
                 :src="currentImage.url"
                 :alt="currentImage.title ?? 'Gallery image'"
                 class="max-w-full max-h-[42vh] sm:max-h-[50vh] lg:max-h-[calc(100vh-14rem)] w-auto object-contain rounded-xl"
                 referrerpolicy="no-referrer"
+              />
+              <video
+                v-else
+                :src="currentImage.url"
+                class="max-w-full max-h-[42vh] sm:max-h-[50vh] lg:max-h-[calc(100vh-14rem)] w-auto rounded-xl bg-black"
+                controls
+                playsinline
+                preload="metadata"
               />
 
               <div

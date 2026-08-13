@@ -446,8 +446,12 @@ class CmsEngineTest extends TestCase
         $this->assertNotNull($categorizedItem);
         $this->assertSame('Fundraiser', $categorizedItem['category']);
         $this->assertSame('MSA Welcome Night 2026', $categorizedItem['title']);
+        $this->assertSame('image', $categorizedItem['media_type']);
 
-        $this->assertNull($media->firstWhere('id', $video->uuid));
+        $videoItem = $media->firstWhere('id', $video->uuid);
+        $this->assertNotNull($videoItem);
+        $this->assertSame('video', $videoItem['media_type']);
+        $this->assertSame('Not In Gallery', $videoItem['title']);
     }
 
     /** @test */

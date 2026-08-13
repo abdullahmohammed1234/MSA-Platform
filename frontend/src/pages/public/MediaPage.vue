@@ -7,7 +7,8 @@ import {
   Filter,
   Users,
   Heart,
-  Share2
+  Share2,
+  Play,
 } from 'lucide-vue-next';
 import ScrollReveal from '@/components/shared/ScrollReveal.vue';
 import FloatingElement from '@/components/shared/FloatingElement.vue';
@@ -81,6 +82,9 @@ const handleCategoryChange = (cat: string) => {
   selectedImageIndex.value = null;
 };
 
+const isVideoItem = (item: MediaGalleryItem) =>
+  item.media_type === 'video' || !!item.mime_type?.startsWith('video/');
+
 const lightboxImages = computed<LightboxImage[]>(() =>
   filteredData.value.map((item) => ({
     id: item.id,
@@ -90,6 +94,7 @@ const lightboxImages = computed<LightboxImage[]>(() =>
     category: item.category,
     date: item.date,
     downloadFilename: item.url.split('/').pop()?.split('?')[0],
+    mediaType: isVideoItem(item) ? 'video' : 'image',
   })),
 );
 
@@ -192,15 +197,32 @@ const openLightbox = (item: MediaGalleryItem) => {
           class="group relative rounded-[2rem] overflow-hidden bg-neutral-white shadow-soft border border-neutral-gray/10 hover:shadow-premium transition-all duration-700 cursor-zoom-in break-inside-avoid-column"
           @click="openLightbox(item)"
         >
-          <!-- Image -->
-          <div class="aspect-[4/5] md:aspect-auto overflow-hidden">
+          <!-- Media preview -->
+          <div class="aspect-[4/5] md:aspect-auto overflow-hidden relative bg-neutral-black/5">
             <img
+              v-if="!isVideoItem(item)"
               :src="item.url"
               :alt="item.title"
               class="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-1000 group-hover:scale-110"
               loading="lazy"
               referrerpolicy="no-referrer"
             />
+            <video
+              v-else
+              :src="`${item.url}#t=0.1`"
+              class="w-full h-full object-cover bg-black"
+              muted
+              playsinline
+              preload="metadata"
+            />
+            <div
+              v-if="isVideoItem(item)"
+              class="absolute inset-0 flex items-center justify-center pointer-events-none"
+            >
+              <span class="w-14 h-14 rounded-full bg-neutral-black/55 border border-neutral-white/30 text-neutral-white flex items-center justify-center backdrop-blur-sm">
+                <Play class="w-6 h-6 fill-current" />
+              </span>
+            </div>
           </div>
 
           <!-- Overlay -->

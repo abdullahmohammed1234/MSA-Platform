@@ -7,6 +7,7 @@ export interface LightboxImage {
   category?: string;
   date?: string;
   downloadFilename?: string;
+  mediaType?: 'image' | 'video' | 'document';
 }
 
 export function urlToLightboxImage(

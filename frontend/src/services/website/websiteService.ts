@@ -19,6 +19,8 @@ export interface MediaGalleryItem {
   category: string;
   date: string;
   isLandscape?: boolean;
+  media_type?: 'image' | 'video' | 'document';
+  mime_type?: string;
 }
 
 export interface EventItem {
