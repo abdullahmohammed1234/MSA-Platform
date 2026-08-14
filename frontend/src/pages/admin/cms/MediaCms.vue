@@ -270,7 +270,7 @@ const selectedFileHint = computed(() => {
           ref="fileInput"
           class="hidden"
           @change="handleFileChange"
-          accept="image/*,video/mp4,video/webm,video/quicktime,video/ogg,.ogv,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/zip"
+          accept="image/*,video/mp4,video/webm,video/quicktime,video/x-quicktime,video/x-m4v,.mov,.mp4,.webm,.ogv,video/ogg,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/zip"
         />
 
         <div class="p-4 bg-primary/5 text-primary rounded-full">

@@ -360,7 +360,15 @@ class CmsEngineTest extends TestCase
     {
         Storage::fake('public');
 
-        foreach (['clip.mp4' => 'video/mp4', 'clip.webm' => 'video/webm', 'clip.mov' => 'video/quicktime', 'clip.ogv' => 'video/ogg'] as $name => $mime) {
+        foreach ([
+            'clip.mp4' => 'video/mp4',
+            'clip.webm' => 'video/webm',
+            'clip.mov' => 'video/quicktime',
+            'iphone.mov' => 'video/x-quicktime',
+            'hevc.mov' => 'video/x-m4v',
+            'generic.mov' => 'application/octet-stream',
+            'clip.ogv' => 'video/ogg',
+        ] as $name => $mime) {
             $this->actingAs($this->adminUser)
                 ->postJson(route('api.admin.cms.media.store'), [
                     'file' => UploadedFile::fake()->create($name, 500, $mime),
