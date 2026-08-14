@@ -1,0 +1,1 @@
+import{r as e}from"./presets-sFzqZbu1.js";var t={hover:{scale:1.02,y:-2},tap:{scale:.98},transition:e.subtle},n={hover:{y:-8},transition:{duration:.3,ease:`easeOut`}},r={focus:{scale:1.01},transition:e.subtle};export{n,r,t};
