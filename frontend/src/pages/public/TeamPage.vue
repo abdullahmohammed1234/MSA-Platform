@@ -101,7 +101,7 @@ const values = [
     <section class="relative min-h-[80vh] flex items-center pt-24 sm:pt-32 pb-12 sm:pb-20 overflow-hidden border-b border-neutral-gray/20 bg-primary">
       <div class="absolute inset-0 z-0">
         <img 
-          :src="HERO_IMAGES.sfuMsaFnd2024_38" 
+          :src="HERO_IMAGES.msaSs2024_87" 
           class="absolute inset-0 w-full h-full object-cover opacity-80 grayscale-[25%]"
           alt="Team Hero"
         />
