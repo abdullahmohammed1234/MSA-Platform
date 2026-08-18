@@ -3,12 +3,14 @@
 namespace App\Ems\Services\Square;
 
 use App\Ems\Enums\SquareCatalogSyncStatus;
+use App\Ems\Exceptions\EmsException;
 use App\Ems\Models\Event;
 use App\Ems\Models\SquareCatalogMapping;
 use App\Ems\Models\SquareSyncCursor;
 use App\Ems\Models\TicketType;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 /**
  * Bidirectional EMS ticket type ↔ Square Catalog mapping.
@@ -26,6 +28,16 @@ class SquareCatalogService
     public const ATTR_TICKET_UUID = 'ems_ticket_type_uuid';
 
     public const ATTR_EVENT_UUID = 'ems_event_uuid';
+
+    public const ATTR_DEFS_CURSOR_KEY = 'catalog_attr_defs';
+
+    /** @var array<string, string> canonical EMS key => Square catalog object id */
+    private array $attributeDefinitionIds = [];
+
+    /** @var array<string, string> canonical EMS key => Square custom attribute key */
+    private array $attributeDefinitionKeys = [];
+
+    private bool $attributeDefinitionsReady = false;
 
     public function __construct(private readonly SquareClient $square)
     {
@@ -59,7 +71,7 @@ class SquareCatalogService
                 return $this->archiveVariation($mapping, $ticketType);
             }
 
-            return $this->upsertItemAndVariation($mapping, $ticketType);
+            return $this->upsertWithDefinitionRetry($mapping, $ticketType);
         } catch (\Throwable $e) {
             $mapping->sync_status = SquareCatalogSyncStatus::Failed;
             $mapping->last_error = Str::limit($e->getMessage(), 500, '');
@@ -146,6 +158,7 @@ class SquareCatalogService
         $mapping->last_error = null;
         $mapping->save();
 
+        $this->ensureCustomAttributeDefinitions();
         $this->pushEmsMetadata($mapping, $ticketType);
 
         Log::channel((string) config('ems.logging.channel', 'ems'))
@@ -216,8 +229,33 @@ class SquareCatalogService
             ->first();
     }
 
+    private function upsertWithDefinitionRetry(SquareCatalogMapping $mapping, TicketType $ticketType): SquareCatalogMapping
+    {
+        try {
+            return $this->upsertItemAndVariation($mapping, $ticketType);
+        } catch (\Throwable $e) {
+            if (! $this->isMissingAttributeDefinitionError($e)) {
+                throw $e;
+            }
+
+            Log::channel((string) config('ems.logging.channel', 'ems'))
+                ->warning('ems.square.catalog.attr_defs.stale', [
+                    'ticket_type_uuid' => $ticketType->uuid,
+                    'event_uuid' => $ticketType->event?->uuid,
+                    'error' => $e->getMessage(),
+                ]);
+
+            $this->forgetProvisionedDefinitions();
+            $this->ensureCustomAttributeDefinitions();
+
+            return $this->upsertItemAndVariation($mapping, $ticketType);
+        }
+    }
+
     private function upsertItemAndVariation(SquareCatalogMapping $mapping, TicketType $ticketType): SquareCatalogMapping
     {
+        $this->ensureCustomAttributeDefinitions();
+
         $event = $ticketType->event;
         $itemId = $mapping->square_catalog_item_id ?: $this->existingItemIdForEvent($event);
 
@@ -471,10 +509,10 @@ class SquareCatalogService
      */
     private function itemAttributes(Event $event): array
     {
-        return [
-            self::ATTR_MANAGED => ['name' => self::ATTR_MANAGED, 'key' => self::ATTR_MANAGED, 'type' => 'STRING', 'string_value' => 'true'],
-            self::ATTR_EVENT_UUID => ['name' => self::ATTR_EVENT_UUID, 'key' => self::ATTR_EVENT_UUID, 'type' => 'STRING', 'string_value' => $event->uuid],
-        ];
+        return array_merge(
+            $this->attributeValue(self::ATTR_MANAGED, 'true'),
+            $this->attributeValue(self::ATTR_EVENT_UUID, $event->uuid),
+        );
     }
 
     /**
@@ -482,52 +520,399 @@ class SquareCatalogService
      */
     private function variationAttributes(TicketType $ticketType, Event $event): array
     {
-        return [
-            self::ATTR_MANAGED => ['name' => self::ATTR_MANAGED, 'key' => self::ATTR_MANAGED, 'type' => 'STRING', 'string_value' => 'true'],
-            self::ATTR_TICKET_UUID => ['name' => self::ATTR_TICKET_UUID, 'key' => self::ATTR_TICKET_UUID, 'type' => 'STRING', 'string_value' => $ticketType->uuid],
-            self::ATTR_EVENT_UUID => ['name' => self::ATTR_EVENT_UUID, 'key' => self::ATTR_EVENT_UUID, 'type' => 'STRING', 'string_value' => $event->uuid],
-        ];
+        return array_merge(
+            $this->attributeValue(self::ATTR_MANAGED, 'true'),
+            $this->attributeValue(self::ATTR_TICKET_UUID, $ticketType->uuid),
+            $this->attributeValue(self::ATTR_EVENT_UUID, $event->uuid),
+        );
     }
 
-    private function ensureCustomAttributeDefinitions(): void
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private function attributeValue(string $canonicalKey, string $value): array
     {
-        if (SquareSyncCursor::getValue('catalog_attr_defs') === 'ready') {
+        $squareKey = $this->attributeDefinitionKeys[$canonicalKey] ?? $canonicalKey;
+        $payload = [
+            'name' => $canonicalKey,
+            'key' => $squareKey,
+            'type' => 'STRING',
+            'string_value' => $value,
+        ];
+
+        $definitionId = $this->attributeDefinitionIds[$canonicalKey] ?? null;
+        if (is_string($definitionId) && $definitionId !== '' && $definitionId !== 'pending') {
+            $payload['custom_attribute_definition_id'] = $definitionId;
+        }
+
+        return [$squareKey => $payload];
+    }
+
+    /**
+     * Ensure the three EMS Catalog custom attribute definitions exist on this
+     * Square seller before attaching values. Safe to call repeatedly.
+     *
+     * Do not trust a legacy `catalog_attr_defs=ready` cursor unless it stores
+     * Square definition IDs. The previous implementation marked the cursor
+     * ready even when batch-upsert failed (for example because one definition
+     * already existed and Square rejected the whole batch).
+     */
+    public function ensureCustomAttributeDefinitions(): void
+    {
+        if ($this->attributeDefinitionsReady && $this->allRequiredDefinitionsKnown()) {
             return;
         }
 
-        $defs = [
-            ['key' => self::ATTR_MANAGED, 'name' => 'EMS managed'],
-            ['key' => self::ATTR_TICKET_UUID, 'name' => 'EMS ticket type UUID'],
-            ['key' => self::ATTR_EVENT_UUID, 'name' => 'EMS event UUID'],
-        ];
+        if ($this->hydrateFromCursor()) {
+            $this->attributeDefinitionsReady = true;
 
-        $objects = [];
-        foreach ($defs as $def) {
-            $objects[] = [
+            return;
+        }
+
+        $listed = $this->listCustomAttributeDefinitionsByCanonicalKey();
+        $created = [];
+        $reused = [];
+
+        foreach ($this->requiredDefinitions() as $key => $name) {
+            if (isset($listed[$key])) {
+                $this->rememberDefinition($key, $listed[$key]);
+                $reused[] = $key;
+
+                continue;
+            }
+
+            $createdObject = $this->createCustomAttributeDefinition($key, $name);
+            if ($createdObject !== null) {
+                $this->rememberDefinition($key, $createdObject);
+                $created[] = $key;
+
+                continue;
+            }
+
+            $listed = $this->listCustomAttributeDefinitionsByCanonicalKey();
+            if (! isset($listed[$key])) {
+                throw new EmsException(
+                    'Unable to provision Square Catalog custom attribute "'.$key.'". The definition was not found after create.',
+                    [],
+                    HttpResponse::HTTP_BAD_GATEWAY
+                );
+            }
+
+            $this->rememberDefinition($key, $listed[$key]);
+            $reused[] = $key;
+        }
+
+        if (! $this->allRequiredDefinitionsKnown()) {
+            $missing = array_values(array_diff(
+                array_keys($this->requiredDefinitions()),
+                array_keys(array_filter($this->attributeDefinitionKeys))
+            ));
+
+            Log::channel((string) config('ems.logging.channel', 'ems'))
+                ->error('ems.square.catalog.attr_defs.failed', [
+                    'missing_keys' => $missing,
+                    'created_keys' => $created,
+                    'reused_keys' => $reused,
+                ]);
+
+            throw new EmsException(
+                'Unable to provision Square Catalog custom attributes: '.implode(', ', $missing).'.',
+                [],
+                HttpResponse::HTTP_BAD_GATEWAY
+            );
+        }
+
+        SquareSyncCursor::putValue(self::ATTR_DEFS_CURSOR_KEY, 'ready', [
+            'definition_ids' => $this->attributeDefinitionIds,
+            'definition_keys' => $this->attributeDefinitionKeys,
+            'provisioned_at' => now()->toIso8601String(),
+        ]);
+
+        $this->attributeDefinitionsReady = true;
+
+        Log::channel((string) config('ems.logging.channel', 'ems'))
+            ->info('ems.square.catalog.attr_defs.ready', [
+                'created_keys' => $created,
+                'reused_keys' => $reused,
+                'definition_ids' => $this->redactedDefinitionIds(),
+            ]);
+    }
+
+    /**
+     * @return array<string, string> canonical key => display name
+     */
+    public static function requiredDefinitions(): array
+    {
+        return [
+            self::ATTR_MANAGED => 'EMS managed',
+            self::ATTR_TICKET_UUID => 'EMS ticket type UUID',
+            self::ATTR_EVENT_UUID => 'EMS event UUID',
+        ];
+    }
+
+    private function hydrateFromCursor(): bool
+    {
+        $row = SquareSyncCursor::query()->where('key', self::ATTR_DEFS_CURSOR_KEY)->first();
+        if ($row === null || $row->cursor_value !== 'ready') {
+            return false;
+        }
+
+        $ids = is_array($row->metadata['definition_ids'] ?? null) ? $row->metadata['definition_ids'] : [];
+        $keys = is_array($row->metadata['definition_keys'] ?? null) ? $row->metadata['definition_keys'] : [];
+
+        foreach (array_keys($this->requiredDefinitions()) as $canonical) {
+            $id = $ids[$canonical] ?? null;
+            if (! is_string($id) || $id === '' || $id === 'pending') {
+                return false;
+            }
+        }
+
+        foreach (array_keys($this->requiredDefinitions()) as $canonical) {
+            $this->attributeDefinitionIds[$canonical] = (string) $ids[$canonical];
+            $this->attributeDefinitionKeys[$canonical] = is_string($keys[$canonical] ?? null) && $keys[$canonical] !== ''
+                ? (string) $keys[$canonical]
+                : $canonical;
+        }
+
+        return true;
+    }
+
+    /**
+     * @return array<string, array<string, mixed>> canonical key => catalog object
+     */
+    private function listCustomAttributeDefinitionsByCanonicalKey(): array
+    {
+        $found = [];
+        $cursor = null;
+
+        do {
+            $query = ['types' => 'CUSTOM_ATTRIBUTE_DEFINITION'];
+            if (is_string($cursor) && $cursor !== '') {
+                $query['cursor'] = $cursor;
+            }
+
+            $response = $this->square->get('/v2/catalog/list', $query);
+            foreach ($response['objects'] ?? [] as $object) {
+                if (! is_array($object) || ($object['type'] ?? '') !== 'CUSTOM_ATTRIBUTE_DEFINITION') {
+                    continue;
+                }
+
+                $canonical = $this->canonicalDefinitionKey($object);
+                if ($canonical === null) {
+                    continue;
+                }
+
+                $found[$canonical] = $object;
+            }
+
+            $cursor = $response['cursor'] ?? null;
+        } while (is_string($cursor) && $cursor !== '');
+
+        Log::channel((string) config('ems.logging.channel', 'ems'))
+            ->info('ems.square.catalog.attr_defs.listed', [
+                'matched_keys' => array_keys($found),
+                'matched_count' => count($found),
+            ]);
+
+        return $found;
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function createCustomAttributeDefinition(string $key, string $name): ?array
+    {
+        $clientId = '#'.$key;
+        $idempotency = 'ems-cad-v1-'.$key;
+
+        try {
+            $response = $this->square->post('/v2/catalog/batch-upsert', [
+                'idempotency_key' => $idempotency,
+                'batches' => [[
+                    'objects' => [[
+                        'type' => 'CUSTOM_ATTRIBUTE_DEFINITION',
+                        'id' => $clientId,
+                        'custom_attribute_definition_data' => [
+                            'allowed_object_types' => ['ITEM', 'ITEM_VARIATION'],
+                            'name' => $name,
+                            'description' => 'EMS integration metadata. Do not delete.',
+                            'type' => 'STRING',
+                            'key' => $key,
+                            'app_visibility' => 'APP_VISIBILITY_HIDDEN',
+                            'seller_visibility' => 'SELLER_VISIBILITY_HIDDEN',
+                        ],
+                    ]],
+                ]],
+            ], $idempotency);
+        } catch (\Throwable $e) {
+            if ($this->isAlreadyExistsError($e)) {
+                Log::channel((string) config('ems.logging.channel', 'ems'))
+                    ->info('ems.square.catalog.attr_defs.exists', [
+                        'key' => $key,
+                        'error' => $e->getMessage(),
+                    ]);
+
+                return null;
+            }
+
+            Log::channel((string) config('ems.logging.channel', 'ems'))
+                ->error('ems.square.catalog.attr_defs.create_failed', [
+                    'key' => $key,
+                    'error' => $e->getMessage(),
+                ]);
+
+            throw new EmsException(
+                'Unable to provision Square Catalog custom attribute "'.$key.'": '.$e->getMessage(),
+                [],
+                $e instanceof EmsException ? $e->status() : HttpResponse::HTTP_BAD_GATEWAY
+            );
+        }
+
+        foreach ($response['objects'] ?? [] as $object) {
+            if (is_array($object) && ($object['type'] ?? '') === 'CUSTOM_ATTRIBUTE_DEFINITION') {
+                Log::channel((string) config('ems.logging.channel', 'ems'))
+                    ->info('ems.square.catalog.attr_defs.created', [
+                        'key' => $key,
+                        'square_definition_id' => $object['id'] ?? null,
+                    ]);
+
+                return $object;
+            }
+        }
+
+        foreach ($response['id_mappings'] ?? [] as $pair) {
+            if (! is_array($pair) || ($pair['client_object_id'] ?? '') !== $clientId) {
+                continue;
+            }
+
+            $objectId = (string) ($pair['object_id'] ?? '');
+            if ($objectId === '') {
+                continue;
+            }
+
+            Log::channel((string) config('ems.logging.channel', 'ems'))
+                ->info('ems.square.catalog.attr_defs.created', [
+                    'key' => $key,
+                    'square_definition_id' => $objectId,
+                ]);
+
+            return [
                 'type' => 'CUSTOM_ATTRIBUTE_DEFINITION',
-                'id' => '#' . $def['key'],
+                'id' => $objectId,
                 'custom_attribute_definition_data' => [
-                    'allowed_object_types' => ['ITEM', 'ITEM_VARIATION'],
-                    'name' => $def['name'],
+                    'key' => $key,
+                    'name' => $name,
                     'type' => 'STRING',
-                    'key' => $def['key'],
-                    'app_visibility' => 'APP_VISIBILITY_HIDDEN',
-                    'seller_visibility' => 'SELLER_VISIBILITY_READ_WRITE_VALUES',
                 ],
             ];
         }
 
-        try {
-            $this->square->post('/v2/catalog/batch-upsert', [
-                'idempotency_key' => 'ems-catalog-attr-defs-v1',
-                'batches' => [['objects' => $objects]],
-            ], 'ems-catalog-attr-defs-v1');
-        } catch (\Throwable $e) {
-            // Definitions may already exist from a previous run.
-            Log::channel((string) config('ems.logging.channel', 'ems'))
-                ->info('ems.square.catalog.attr_defs', ['message' => $e->getMessage()]);
+        // HTTP 200 with an empty body (typical of coarse Http::fake stubs).
+        // Treat the key as created so attach-by-key can proceed; the next
+        // list will pick up the real Square object id when available.
+        Log::channel((string) config('ems.logging.channel', 'ems'))
+            ->info('ems.square.catalog.attr_defs.created', [
+                'key' => $key,
+                'square_definition_id' => null,
+            ]);
+
+        return [
+            'type' => 'CUSTOM_ATTRIBUTE_DEFINITION',
+            'id' => 'pending',
+            'custom_attribute_definition_data' => [
+                'key' => $key,
+                'name' => $name,
+                'type' => 'STRING',
+            ],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $object
+     */
+    private function rememberDefinition(string $canonicalKey, array $object): void
+    {
+        $squareKey = $object['custom_attribute_definition_data']['key'] ?? $canonicalKey;
+        $this->attributeDefinitionKeys[$canonicalKey] = is_string($squareKey) && $squareKey !== ''
+            ? $squareKey
+            : $canonicalKey;
+
+        $id = $object['id'] ?? null;
+        if (is_string($id) && $id !== '') {
+            $this->attributeDefinitionIds[$canonicalKey] = $id;
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $object
+     */
+    private function canonicalDefinitionKey(array $object): ?string
+    {
+        $key = $object['custom_attribute_definition_data']['key'] ?? null;
+        if (! is_string($key) || $key === '') {
+            return null;
         }
 
-        SquareSyncCursor::putValue('catalog_attr_defs', 'ready');
+        foreach (array_keys($this->requiredDefinitions()) as $expected) {
+            if ($key === $expected || str_ends_with($key, ':'.$expected)) {
+                return $expected;
+            }
+        }
+
+        return null;
+    }
+
+    private function allRequiredDefinitionsKnown(): bool
+    {
+        foreach (array_keys($this->requiredDefinitions()) as $key) {
+            if (($this->attributeDefinitionKeys[$key] ?? '') === '') {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function forgetProvisionedDefinitions(): void
+    {
+        $this->attributeDefinitionsReady = false;
+        $this->attributeDefinitionIds = [];
+        $this->attributeDefinitionKeys = [];
+
+        SquareSyncCursor::putValue(self::ATTR_DEFS_CURSOR_KEY, null, [
+            'definition_ids' => [],
+            'definition_keys' => [],
+        ]);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function redactedDefinitionIds(): array
+    {
+        $safe = [];
+        foreach ($this->attributeDefinitionIds as $key => $id) {
+            $safe[$key] = $id === 'pending' ? 'pending' : $id;
+        }
+
+        return $safe;
+    }
+
+    private function isAlreadyExistsError(\Throwable $e): bool
+    {
+        $message = strtolower($e->getMessage());
+
+        return str_contains($message, 'already exists')
+            || str_contains($message, 'duplicate')
+            || str_contains($message, 'conflicting unique')
+            || str_contains($message, 'duplicate key');
+    }
+
+    private function isMissingAttributeDefinitionError(\Throwable $e): bool
+    {
+        $message = strtolower($e->getMessage());
+
+        return str_contains($message, 'custom attribute definition')
+            && str_contains($message, 'not found');
     }
 }

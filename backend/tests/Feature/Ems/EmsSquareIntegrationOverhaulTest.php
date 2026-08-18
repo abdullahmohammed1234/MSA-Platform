@@ -16,6 +16,7 @@ use App\Ems\Models\Payment;
 use App\Ems\Models\Registration;
 use App\Ems\Models\SquareCatalogMapping;
 use App\Ems\Models\SquareRefund;
+use App\Ems\Models\SquareSyncCursor;
 use App\Ems\Models\Ticket;
 use App\Ems\Models\TicketType;
 use App\Ems\Models\WebhookEvent;
@@ -52,6 +53,7 @@ class EmsSquareIntegrationOverhaulTest extends EmsTestCase
         $user = $this->admin();
 
         Http::fake([
+            '*/v2/catalog/list*' => Http::response(['objects' => []], 200),
             '*/v2/catalog/batch-upsert' => Http::response([
                 'objects' => [[
                     'type' => 'ITEM',
@@ -101,6 +103,7 @@ class EmsSquareIntegrationOverhaulTest extends EmsTestCase
         ]);
 
         Http::fake([
+            '*/v2/catalog/list*' => Http::response(['objects' => []], 200),
             '*/v2/catalog/object/*' => Http::response([
                 'object' => ['id' => 'VAR_EXISTING', 'version' => 4, 'type' => 'ITEM_VARIATION', 'item_variation_data' => ['item_id' => 'ITEM_EXISTING']],
             ], 200),
@@ -121,6 +124,128 @@ class EmsSquareIntegrationOverhaulTest extends EmsTestCase
 
         $this->assertSame(1, SquareCatalogMapping::query()->where('ticket_type_id', $ticket->id)->count());
         $this->assertSame('VAR_EXISTING', SquareCatalogMapping::query()->where('ticket_type_id', $ticket->id)->value('square_catalog_variation_id'));
+    }
+
+    public function test_catalog_sync_creates_missing_custom_attribute_definitions(): void
+    {
+        $event = $this->openEvent(['name' => 'Frosh 2026']);
+        SquareSyncCursor::putValue(SquareCatalogService::ATTR_DEFS_CURSOR_KEY, 'ready');
+
+        $state = $this->fakeSquareCatalog();
+
+        $create = $this->actingAsEms($this->admin())->postJson($this->url("events/{$event->uuid}/tickets"), [
+            'name' => 'General Admission',
+            'price' => 15,
+            'currency' => 'CAD',
+        ]);
+        $create->assertCreated();
+
+        $this->assertEqualsCanonicalizing([
+            SquareCatalogService::ATTR_MANAGED,
+            SquareCatalogService::ATTR_TICKET_UUID,
+            SquareCatalogService::ATTR_EVENT_UUID,
+        ], $state->createdKeys);
+
+        $ticket = TicketType::query()->where('event_id', $event->id)->firstOrFail();
+        $mapping = SquareCatalogMapping::query()->where('ticket_type_id', $ticket->id)->first();
+        $this->assertNotNull($mapping);
+        $this->assertSame(SquareCatalogSyncStatus::Synced, $mapping->sync_status);
+        $this->assertSame('ITEM_FROSH', $mapping->square_catalog_item_id);
+        $this->assertSame('VAR_GA', $mapping->square_catalog_variation_id);
+        $this->assertSame('ready', SquareSyncCursor::getValue(SquareCatalogService::ATTR_DEFS_CURSOR_KEY));
+    }
+
+    public function test_catalog_sync_reuses_existing_custom_attribute_definitions(): void
+    {
+        $event = $this->openEvent();
+        $state = $this->fakeSquareCatalog([
+            SquareCatalogService::ATTR_MANAGED,
+            SquareCatalogService::ATTR_TICKET_UUID,
+            SquareCatalogService::ATTR_EVENT_UUID,
+        ]);
+
+        $this->actingAsEms($this->admin())->postJson($this->url("events/{$event->uuid}/tickets"), [
+            'name' => 'General Admission',
+            'price' => 15,
+            'currency' => 'CAD',
+        ])->assertCreated();
+
+        $this->assertSame([], $state->createdKeys);
+        $this->assertSame(
+            SquareCatalogSyncStatus::Synced,
+            SquareCatalogMapping::query()->first()?->sync_status
+        );
+    }
+
+    public function test_catalog_sync_creates_only_missing_custom_attribute_definitions(): void
+    {
+        $event = $this->openEvent();
+        $state = $this->fakeSquareCatalog([SquareCatalogService::ATTR_MANAGED]);
+
+        $this->actingAsEms($this->admin())->postJson($this->url("events/{$event->uuid}/tickets"), [
+            'name' => 'General Admission',
+            'price' => 15,
+            'currency' => 'CAD',
+        ])->assertCreated();
+
+        $this->assertEqualsCanonicalizing([
+            SquareCatalogService::ATTR_TICKET_UUID,
+            SquareCatalogService::ATTR_EVENT_UUID,
+        ], $state->createdKeys);
+        $this->assertSame(
+            SquareCatalogSyncStatus::Synced,
+            SquareCatalogMapping::query()->first()?->sync_status
+        );
+    }
+
+    public function test_catalog_sync_fails_cleanly_when_attribute_provisioning_fails(): void
+    {
+        $event = $this->openEvent();
+        $this->fakeSquareCatalog(failProvisioning: true);
+
+        $this->actingAsEms($this->admin())->postJson($this->url("events/{$event->uuid}/tickets"), [
+            'name' => 'General Admission',
+            'price' => 15,
+            'currency' => 'CAD',
+        ])->assertCreated();
+
+        $ticket = TicketType::query()->where('event_id', $event->id)->firstOrFail();
+        $mapping = SquareCatalogMapping::query()->where('ticket_type_id', $ticket->id)->first();
+
+        $this->assertNotNull($mapping);
+        $this->assertSame(SquareCatalogSyncStatus::Failed, $mapping->sync_status);
+        $this->assertNull($mapping->square_catalog_item_id);
+        $this->assertNull($mapping->square_catalog_variation_id);
+        $this->assertNotEmpty($mapping->last_error);
+        $this->assertStringContainsString('ems_managed', $mapping->last_error);
+        $this->assertNotSame('ready', SquareSyncCursor::getValue(SquareCatalogService::ATTR_DEFS_CURSOR_KEY));
+    }
+
+    public function test_repeated_catalog_sync_does_not_recreate_custom_attribute_definitions(): void
+    {
+        $event = $this->openEvent();
+        $state = $this->fakeSquareCatalog();
+        $user = $this->admin();
+
+        $create = $this->actingAsEms($user)->postJson($this->url("events/{$event->uuid}/tickets"), [
+            'name' => 'General Admission',
+            'price' => 15,
+            'currency' => 'CAD',
+        ]);
+        $create->assertCreated();
+        $ticketUuid = $create->json('data.uuid');
+
+        $this->assertCount(3, $state->createdKeys);
+
+        $this->actingAsEms($user)->postJson(
+            $this->url("events/{$event->uuid}/tickets/{$ticketUuid}/sync-square")
+        )->assertOk();
+
+        $this->assertCount(3, $state->createdKeys);
+        $this->assertSame(1, SquareCatalogMapping::query()->count());
+        $this->assertSame('ITEM_FROSH', SquareCatalogMapping::query()->value('square_catalog_item_id'));
+        $this->assertSame('VAR_GA', SquareCatalogMapping::query()->value('square_catalog_variation_id'));
+        $this->assertSame(SquareCatalogSyncStatus::Synced, SquareCatalogMapping::query()->first()?->sync_status);
     }
 
     public function test_unrelated_square_catalog_item_is_not_imported(): void
@@ -693,6 +818,109 @@ class EmsSquareIntegrationOverhaulTest extends EmsTestCase
             'code' => $ticket->code,
         ]);
         $checkIn->assertOk();
+    }
+
+    /**
+     * @param  list<string>  $existingKeys
+     */
+    private function fakeSquareCatalog(array $existingKeys = [], bool $failProvisioning = false): object
+    {
+        $state = (object) ['createdKeys' => []];
+        $definitions = [];
+
+        foreach ($existingKeys as $key) {
+            $definitions[$key] = [
+                'type' => 'CUSTOM_ATTRIBUTE_DEFINITION',
+                'id' => 'CAD_'.$key,
+                'custom_attribute_definition_data' => [
+                    'key' => $key,
+                    'name' => $key,
+                    'type' => 'STRING',
+                ],
+            ];
+        }
+
+        Http::fake(function (\Illuminate\Http\Client\Request $request) use ($state, &$definitions, $failProvisioning) {
+            $url = $request->url();
+
+            if ($request->method() === 'GET' && str_contains($url, '/v2/catalog/list')) {
+                return Http::response(['objects' => array_values($definitions)], 200);
+            }
+
+            if (str_contains($url, '/v2/catalog/object/')) {
+                return Http::response([
+                    'object' => [
+                        'id' => 'VAR_GA',
+                        'version' => 4,
+                        'type' => 'ITEM_VARIATION',
+                        'item_variation_data' => ['item_id' => 'ITEM_FROSH'],
+                    ],
+                ], 200);
+            }
+
+            if (str_contains($url, '/v2/catalog/batch-upsert')) {
+                $payload = $request->data();
+                if ($payload === []) {
+                    $decoded = json_decode($request->body(), true);
+                    $payload = is_array($decoded) ? $decoded : [];
+                }
+
+                $objects = $payload['batches'][0]['objects'] ?? [];
+                $type = $objects[0]['type'] ?? '';
+
+                if ($type === 'CUSTOM_ATTRIBUTE_DEFINITION') {
+                    if ($failProvisioning) {
+                        return Http::response([
+                            'errors' => [[
+                                'category' => 'API_ERROR',
+                                'code' => 'INTERNAL_SERVER_ERROR',
+                                'detail' => 'Unable to create catalog custom attribute definition',
+                            ]],
+                        ], 500);
+                    }
+
+                    $key = (string) ($objects[0]['custom_attribute_definition_data']['key'] ?? '');
+                    $state->createdKeys[] = $key;
+                    $definitions[$key] = [
+                        'type' => 'CUSTOM_ATTRIBUTE_DEFINITION',
+                        'id' => 'CAD_'.$key,
+                        'custom_attribute_definition_data' => [
+                            'key' => $key,
+                            'name' => (string) ($objects[0]['custom_attribute_definition_data']['name'] ?? $key),
+                            'type' => 'STRING',
+                        ],
+                    ];
+
+                    return Http::response([
+                        'objects' => [$definitions[$key]],
+                        'id_mappings' => [[
+                            'client_object_id' => '#'.$key,
+                            'object_id' => 'CAD_'.$key,
+                        ]],
+                    ], 200);
+                }
+
+                return Http::response([
+                    'objects' => [[
+                        'type' => 'ITEM',
+                        'id' => 'ITEM_FROSH',
+                        'version' => 11,
+                        'item_data' => [
+                            'variations' => [[
+                                'type' => 'ITEM_VARIATION',
+                                'id' => 'VAR_GA',
+                                'version' => 12,
+                            ]],
+                        ],
+                    ]],
+                    'id_mappings' => [],
+                ], 200);
+            }
+
+            return Http::response(['objects' => []], 200);
+        });
+
+        return $state;
     }
 
     private function admin()

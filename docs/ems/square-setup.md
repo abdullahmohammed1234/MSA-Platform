@@ -130,6 +130,9 @@ Square custom attributes (EMS namespace):
 - `ems_ticket_type_uuid`
 - `ems_event_uuid`
 
+EMS provisions those definitions automatically before the first catalog
+sync. See **6.1 Catalog Custom Attribute Provisioning**.
+
 Idempotency keys are stable per ticket type so retries do not create
 duplicates.
 
@@ -153,6 +156,63 @@ Square**, or create/update the type). If a mapping already exists, EMS
 updates that object. It does not create a second item.
 
 Free ticket types are not published to Square Catalog.
+
+## 6.1 Catalog Custom Attribute Provisioning
+
+EMS identifies its own Square Catalog objects with three seller-scoped Catalog
+custom attribute definitions:
+
+| Key | Type | Purpose |
+|---|---|---|
+| `ems_managed` | STRING (`"true"`) | Marks the item/variation as EMS-owned. Unrelated merchandise must not have this mapping. |
+| `ems_ticket_type_uuid` | STRING | Durable EMS ticket type UUID on the Square variation. |
+| `ems_event_uuid` | STRING | Durable EMS event UUID on the Square item and variation. |
+
+These are **Catalog custom attribute definitions** (`CUSTOM_ATTRIBUTE_DEFINITION`
+objects), not Order or Customer custom attributes. They belong to the Square
+seller/catalog that the access token authenticates against. Sandbox and
+Production are separate catalogs; each environment must have its own
+definitions.
+
+**Administrators do not need to create these in the Square Dashboard.** Before
+the first catalog upsert, EMS lists existing `CUSTOM_ATTRIBUTE_DEFINITION`
+objects (`GET /v2/catalog/list?types=CUSTOM_ATTRIBUTE_DEFINITION`) and creates
+only the missing keys (`POST /v2/catalog/batch-upsert`, one definition per
+request, stable idempotency key `ems-cad-v1-{key}`). Existing definitions are
+reused. The step is safe to run repeatedly.
+
+Definitions are created with `APP_VISIBILITY_HIDDEN` and
+`SELLER_VISIBILITY_HIDDEN` so they do not appear as editable item fields and
+do not consume the seller-visible custom-attribute quota. EMS still reads and
+writes the values because it owns the definitions.
+
+If a previous EMS version recorded `catalog_attr_defs=ready` without verifying
+that all three keys exist, the next sync lists Square again and creates any
+missing definitions (including `ems_event_uuid`) before attaching values.
+
+### Diagnosing provisioning failures
+
+Symptom: ticket Square Sync = Failed, last error similar to:
+
+```
+Custom attribute definition with key "ems_event_uuid" not found
+Unable to provision Square Catalog custom attribute "ems_event_uuid": ...
+```
+
+What to check:
+
+1. `ITEMS_READ` and `ITEMS_WRITE` on the production access token.
+2. EMS logs `ems.square.catalog.attr_defs.create_failed` and
+   `ems.square.catalog.attr_defs.failed` (keys only; no tokens).
+3. Square seller custom-attribute limits (10 seller-visible and 10 seller-hidden
+   per account). Hidden EMS definitions count toward the hidden quota.
+4. Name uniqueness: definition **names** (`EMS managed`, `EMS ticket type UUID`,
+   `EMS event UUID`) must be unique per seller/application pair.
+5. Retry **Sync to Square** after fixing credentials or quota. Do not create
+   duplicate catalog items; EMS updates the stored mapping.
+
+Do not attach `ems_managed` / `ems_ticket_type_uuid` / `ems_event_uuid` values
+to unrelated Square merchandise. Import remains an explicit admin action.
 
 ## 7. Online checkout
 
@@ -272,7 +332,7 @@ Also retries webhook rows in `unmatched`, `failed`, or `retry_pending`.
 
 | Symptom | What to do |
 |---|---|
-| Ticket type Square Sync = Failed | Open the ticket, **Retry sync**. Check ITEMS_WRITE and logs `ems.square.catalog.sync_failed`. |
+| Ticket type Square Sync = Failed | Open the ticket, **Retry sync**. Check ITEMS_WRITE and logs `ems.square.catalog.sync_failed`. If the error mentions a custom attribute definition key, see **6.1**. |
 | Buyer cannot resume checkout | Confirm `checkout_url` / expiry. If expired, start a new checkout (inventory should be released). |
 | POS sale missing from EMS | Confirm the variation is mapped. Run `php artisan ems:square-reconcile`. Check unmatched webhooks. |
 | Payment paid in Square, EMS still pending | Replay is safe. Check webhook signature URL. Run reconciliation. |
