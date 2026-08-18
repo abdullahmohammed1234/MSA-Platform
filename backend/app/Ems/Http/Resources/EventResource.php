@@ -33,6 +33,7 @@ class EventResource extends JsonResource
 
             'organizer_id' => $this->organizer_id,
             'organizer_name' => $this->organizer_name,
+            'display_organizer_name' => $this->organizer_name ?: ($this->relationLoaded('organizer') ? $this->organizer?->name : null),
             'organizer' => new EmsUserSummaryResource($this->whenLoaded('organizer')),
 
             'location' => $this->location,

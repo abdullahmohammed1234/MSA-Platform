@@ -7,7 +7,9 @@ use App\Ems\Enums\PaymentStatus;
 use App\Ems\Exceptions\EmsException;
 use App\Ems\Models\Order;
 use App\Ems\Models\Payment;
+use App\Ems\Models\SquareCatalogMapping;
 use App\Ems\Services\Payments\CheckoutSession;
+use App\Ems\Services\Square\SquareClient;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -21,6 +23,9 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class SquarePaymentProvider implements PaymentProvider
 {
+    public function __construct(private readonly SquareClient $square)
+    {
+    }
     public function name(): string
     {
         return 'square';
@@ -47,7 +52,7 @@ class SquarePaymentProvider implements PaymentProvider
             'location_id' => $this->locationId(),
             'reference_id' => $order->reference,
             'line_items' => $order->items->map(function ($item) {
-                return [
+                $line = [
                     'name' => $item->name,
                     'quantity' => (string) $item->quantity,
                     'base_price_money' => [
@@ -55,6 +60,17 @@ class SquarePaymentProvider implements PaymentProvider
                         'currency' => strtoupper($item->currency),
                     ],
                 ];
+
+                if ($item->ticket_type_id) {
+                    $variationId = SquareCatalogMapping::query()
+                        ->where('ticket_type_id', $item->ticket_type_id)
+                        ->value('square_catalog_variation_id');
+                    if (is_string($variationId) && $variationId !== '') {
+                        $line['catalog_object_id'] = $variationId;
+                    }
+                }
+
+                return $line;
             })->values()->all(),
         ];
 
@@ -76,23 +92,27 @@ class SquarePaymentProvider implements PaymentProvider
         }
 
         $payload = [
-            'idempotency_key' => (string) Str::uuid(),
+            'idempotency_key' => 'ems-plink-' . $payment->uuid,
             'checkout_options' => [
                 'redirect_url' => $successUrl,
                 'ask_for_shipping_address' => false,
-            ],
-            'pre_populated_data' => [
-                'buyer_email' => $order->buyer_email,
             ],
             'order' => $orderPayload,
             'payment_note' => 'MSA EMS order ' . $order->reference,
         ];
 
-        // Square Payment Links API does not accept cancel_url on all versions;
-        // store it in metadata for the EMS cancel return page.
+        if ($order->buyer_email) {
+            $payload['pre_populated_data'] = [
+                'buyer_email' => $order->buyer_email,
+            ];
+        }
+
+        // Square Payment Links API does not accept cancel_url; store it for EMS.
         $response = Http::withToken($this->accessToken())
             ->acceptJson()
+            ->timeout(20)
             ->baseUrl($this->baseUrl())
+            ->withHeaders(['Square-Version' => SquareClient::SQUARE_VERSION])
             ->post('/v2/online-checkout/payment-links', $payload);
 
         if (! $response->successful()) {
@@ -138,12 +158,39 @@ class SquarePaymentProvider implements PaymentProvider
             metadata: [
                 'success_url' => $successUrl,
                 'cancel_url' => $cancelUrl,
+                'checkout_url' => $checkoutUrl,
                 'square_payment_link' => [
                     'id' => $checkoutId,
                     'version' => $data['version'] ?? null,
                 ],
             ],
         );
+    }
+
+    public function retrievePaymentLink(string $checkoutId): ?array
+    {
+        try {
+            return $this->square->get('/v2/online-checkout/payment-links/' . urlencode($checkoutId));
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    public function deletePaymentLink(?string $checkoutId): void
+    {
+        if (! $checkoutId) {
+            return;
+        }
+
+        try {
+            $this->square->delete('/v2/online-checkout/payment-links/' . urlencode($checkoutId));
+        } catch (\Throwable $e) {
+            Log::channel((string) config('ems.logging.channel', 'ems'))
+                ->info('ems.payments.square.link_delete_skipped', [
+                    'provider_checkout_id' => $checkoutId,
+                    'error' => $e->getMessage(),
+                ]);
+        }
     }
 
     public function verifyWebhookSignature(string $body, string $signature, string $notificationUrl): bool
@@ -241,7 +288,9 @@ class SquarePaymentProvider implements PaymentProvider
 
         $response = Http::withToken($this->accessToken())
             ->acceptJson()
+            ->timeout(20)
             ->baseUrl($this->baseUrl())
+            ->withHeaders(['Square-Version' => SquareClient::SQUARE_VERSION])
             ->get('/v2/payments/' . urlencode($providerPaymentId));
 
         if (! $response->successful()) {
@@ -279,9 +328,8 @@ class SquarePaymentProvider implements PaymentProvider
 
     public function refund(Payment $payment, ?float $amount = null): Payment
     {
-        // Foundation only — full refund workflow belongs with Phase 6 finance.
         throw new EmsException(
-            'Refunds are not enabled in this phase.',
+            'Use SquareRefundService for refunds.',
             [],
             Response::HTTP_NOT_IMPLEMENTED
         );

@@ -20,6 +20,16 @@ export interface TicketType {
   is_on_sale: boolean;
   max_per_order: number | null;
   sort_order: number;
+  square_sync?: {
+    status: string;
+    status_label: string;
+    catalog_item_id: string | null;
+    catalog_variation_id: string | null;
+    location_id?: string | null;
+    last_synced_at: string | null;
+    last_error: string | null;
+    last_conflict_summary: string | null;
+  };
   created_at?: string | null;
   updated_at?: string | null;
 }

@@ -76,4 +76,11 @@ interface PaymentProvider
      * Refund a settled payment, in full or in part.
      */
     public function refund(Payment $payment, ?float $amount = null): Payment;
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function retrievePaymentLink(string $checkoutId): ?array;
+
+    public function deletePaymentLink(?string $checkoutId): void;
 }

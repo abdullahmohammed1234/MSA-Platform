@@ -35,6 +35,10 @@ class EmsPhase3TicketingPaymentsTest extends EmsTestCase
             'ems.payments.square.environment' => 'sandbox',
             'queue.default' => 'sync',
         ]);
+
+        Http::fake([
+            '*/v2/catalog/*' => Http::response(['objects' => [], 'id_mappings' => []], 200),
+        ]);
     }
 
     protected function publicUrl(string $path = ''): string
@@ -95,6 +99,7 @@ class EmsPhase3TicketingPaymentsTest extends EmsTestCase
         ]);
 
         Http::fake([
+            '*/v2/catalog/*' => Http::response(['objects' => [], 'id_mappings' => []], 200),
             '*/v2/online-checkout/payment-links' => Http::response([
                 'payment_link' => [
                     'id' => 'plink_1',
@@ -161,6 +166,7 @@ class EmsPhase3TicketingPaymentsTest extends EmsTestCase
         ]);
 
         Http::fake([
+            '*/v2/catalog/*' => Http::response(['objects' => [], 'id_mappings' => []], 200),
             '*/v2/online-checkout/payment-links' => Http::response([
                 'payment_link' => [
                     'id' => 'plink_vip',

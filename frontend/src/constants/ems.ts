@@ -56,6 +56,8 @@ export const EMS_PERMISSIONS = {
   ANALYTICS_VIEW: 'analytics.view',
   ANALYTICS_VIEW_FINANCIAL: 'analytics.view_financial',
   REPORTS_MANAGE: 'reports.manage',
+
+  PAYMENTS_REFUND: 'payments.refund',
 } as const;
 
 export type EmsPermissionSlug = (typeof EMS_PERMISSIONS)[keyof typeof EMS_PERMISSIONS];

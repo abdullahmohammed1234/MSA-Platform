@@ -138,6 +138,27 @@ async function duplicate(ticket: TicketType) {
   }
 }
 
+async function syncSquare(ticket: TicketType) {
+  try {
+    await ticketTypesService.syncToSquare(props.eventUuid, ticket.uuid);
+    toast.success('Synced to Square.');
+    await load();
+  } catch (caught) {
+    handle(caught);
+  }
+}
+
+async function refreshSquare(ticket: TicketType) {
+  if (!window.confirm(`Apply Square catalog name/price onto "${ticket.name}"?`)) return;
+  try {
+    await ticketTypesService.refreshFromSquare(props.eventUuid, ticket.uuid);
+    toast.success('Refreshed from Square.');
+    await load();
+  } catch (caught) {
+    handle(caught);
+  }
+}
+
 async function remove(ticket: TicketType) {
   if (!window.confirm(`Delete ${ticket.name}?`)) return;
   try {
@@ -147,6 +168,10 @@ async function remove(ticket: TicketType) {
   } catch (caught) {
     handle(caught);
   }
+}
+
+function squareLabel(ticket: TicketType) {
+  return ticket.square_sync?.status_label ?? 'Not Synced';
 }
 
 function formatMoney(amount: number, currency: string) {
@@ -199,12 +224,13 @@ function formatMoney(amount: number, currency: string) {
             <th class="px-4 py-3 font-bold">Sold</th>
             <th class="px-4 py-3 font-bold">Remaining</th>
             <th class="px-4 py-3 font-bold">Status</th>
+            <th class="px-4 py-3 font-bold">Square Sync</th>
             <th v-if="canManage" class="px-4 py-3 font-bold">Actions</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="ticketTypes.length === 0">
-            <td colspan="6" class="px-4 py-8 text-center text-neutral-muted">
+            <td colspan="7" class="px-4 py-8 text-center text-neutral-muted">
               No ticket types yet. Add free or paid tiers for this event.
             </td>
           </tr>
@@ -227,10 +253,38 @@ function formatMoney(amount: number, currency: string) {
               <span v-else-if="!ticket.is_active" class="text-neutral-muted">Disabled</span>
               <span v-else class="text-emerald-700">Active</span>
             </td>
+            <td class="px-4 py-3">
+              <p class="text-xs font-semibold">{{ squareLabel(ticket) }}</p>
+              <p v-if="ticket.square_sync?.catalog_variation_id" class="font-mono text-[10px] text-neutral-muted">
+                {{ ticket.square_sync.catalog_variation_id }}
+              </p>
+              <p v-if="ticket.square_sync?.last_error" class="text-[10px] text-red-600">
+                {{ ticket.square_sync.last_error }}
+              </p>
+              <p v-if="ticket.square_sync?.last_conflict_summary" class="text-[10px] text-amber-700">
+                {{ ticket.square_sync.last_conflict_summary }}
+              </p>
+            </td>
             <td v-if="canManage" class="px-4 py-3">
               <div class="flex flex-wrap gap-2">
                 <button type="button" class="text-xs font-semibold text-primary" @click="startEdit(ticket)">
                   Edit
+                </button>
+                <button
+                  v-if="Number(ticket.price) > 0"
+                  type="button"
+                  class="text-xs font-semibold text-neutral-muted"
+                  @click="syncSquare(ticket)"
+                >
+                  {{ ticket.square_sync?.status === 'failed' ? 'Retry sync' : 'Sync to Square' }}
+                </button>
+                <button
+                  v-if="ticket.square_sync?.catalog_variation_id"
+                  type="button"
+                  class="text-xs font-semibold text-neutral-muted"
+                  @click="refreshSquare(ticket)"
+                >
+                  Refresh from Square
                 </button>
                 <button type="button" class="text-xs font-semibold text-neutral-muted" @click="duplicate(ticket)">
                   Duplicate

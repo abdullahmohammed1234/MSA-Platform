@@ -38,6 +38,7 @@ class Order extends Model
         'total_amount',
         'currency',
         'status',
+        'source_channel',
         'completed_at',
         'cancelled_at',
         'failed_at',

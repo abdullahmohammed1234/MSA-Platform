@@ -60,7 +60,7 @@ class CheckInException extends EmsException
 
     public static function refundedTicket(): self
     {
-        return new self('Refunded Ticket', 'refunded_ticket');
+        return new self('Ticket refunded.', 'refunded_ticket');
     }
 
     public static function paymentRequired(): self

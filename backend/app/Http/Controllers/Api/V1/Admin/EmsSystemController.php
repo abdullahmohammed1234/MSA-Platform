@@ -371,9 +371,7 @@ class EmsSystemController extends Controller
             return response()->json(['message' => 'Unauthorized. Required permission: system.view'], 403);
         }
 
-        $squareConnected = config('ems.payments.enabled') && 
-                           !empty(config('ems.payments.square.access_token')) && 
-                           !empty(config('ems.payments.square.application_id'));
+        $square = app(\App\Ems\Services\Square\SquareHealthService::class)->snapshot();
 
         $smtpConfigured = !empty(config('mail.mailers.smtp.host')) && 
                           !empty(config('mail.mailers.smtp.username'));
@@ -383,13 +381,7 @@ class EmsSystemController extends Controller
         return response()->json([
             'success' => true,
             'integrations' => [
-                'square' => [
-                    'status' => $squareConnected ? 'Connected' : 'Disconnected',
-                    'authentication' => $squareConnected ? 'Valid Credentials' : 'Missing Credentials',
-                    'api_availability' => 'Operational',
-                    'webhook_connectivity' => !empty(config('ems.payments.square.webhook_signature_key')) ? 'Connected' : 'Missing Signature Key',
-                    'mode' => config('ems.payments.square.environment', 'sandbox'),
-                ],
+                'square' => $square,
                 'email' => [
                     'status' => $smtpConfigured ? 'Operational' : 'Warning',
                     'mail_service' => config('mail.default', 'smtp'),

@@ -26,6 +26,8 @@ class WebhookEvent extends Model
         'payload',
         'failure_reason',
         'processed_at',
+        'retry_count',
+        'last_attempt_at',
     ];
 
     protected function casts(): array
@@ -33,6 +35,7 @@ class WebhookEvent extends Model
         return [
             'payload' => 'array',
             'processed_at' => 'datetime',
+            'last_attempt_at' => 'datetime',
         ];
     }
 

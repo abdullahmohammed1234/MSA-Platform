@@ -178,6 +178,7 @@ class EventService
             'banner_url',
             'category_id',
             'organizer_id',
+            'organizer_name',
             'location',
             'start_at',
             'end_at',

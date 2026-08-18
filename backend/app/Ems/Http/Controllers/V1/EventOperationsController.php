@@ -183,6 +183,27 @@ class EventOperationsController extends EmsController
             : 'Walk-in registered successfully.');
     }
 
+    public function terminalCheckout(\App\Ems\Http\Requests\Operations\TerminalCheckoutRequest $request, Event $event): JsonResponse
+    {
+        $this->authorize('createRegistration', $event);
+
+        $result = app(\App\Ems\Services\Square\SquareTerminalService::class)->createCheckout(
+            $event,
+            $request->validated(),
+            $request->user()
+        );
+
+        return ApiResponse::created([
+            'registration' => new PublicRegistrationResource($result['registration']),
+            'order' => [
+                'uuid' => $result['order']->uuid,
+                'reference' => $result['order']->reference,
+            ],
+            'payment' => new \App\Ems\Http\Resources\PaymentResource($result['payment']),
+            'terminal_checkout_id' => $result['terminal_checkout_id'],
+        ], 'Terminal checkout sent to the Square Terminal.');
+    }
+
     public function undoCheckIn(UndoCheckInRequest $request, Event $event): JsonResponse
     {
         $this->authorize('undoCheckIn', $event);

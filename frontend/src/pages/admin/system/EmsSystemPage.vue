@@ -607,10 +607,20 @@ onMounted(() => {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
                   <div class="space-y-2">
                     <div>Connection Status: <span class="font-bold text-neutral-black">{{ integrationData.square.status }}</span></div>
-                    <div>API availability: <span class="font-bold text-neutral-black text-emerald-600">{{ integrationData.square.api_availability }}</span></div>
+                    <div>Environment: <span class="font-bold text-neutral-black capitalize">{{ integrationData.square.environment || integrationData.square.mode }}</span></div>
+                    <div>Location configured: <span class="font-bold text-neutral-black">{{ integrationData.square.location_configured ? 'Yes' : 'No' }}</span></div>
+                    <div>Credentials configured: <span class="font-bold text-neutral-black">{{ integrationData.square.credentials_configured ? 'Yes' : 'No' }}</span></div>
+                    <div>Catalog API: <span class="font-bold text-neutral-black">{{ integrationData.square.catalog_api || '—' }}</span></div>
+                    <div>Orders API: <span class="font-bold text-neutral-black">{{ integrationData.square.orders_api || '—' }}</span></div>
+                    <div>Payments API: <span class="font-bold text-neutral-black">{{ integrationData.square.payments_api || '—' }}</span></div>
+                    <div>Refunds API: <span class="font-bold text-neutral-black">{{ integrationData.square.refunds_api || '—' }}</span></div>
                   </div>
                   <div class="space-y-2">
-                    <div>Webhook connectivity: <span class="font-bold text-neutral-black">{{ integrationData.square.webhook_connectivity }}</span></div>
+                    <div>Webhook configuration: <span class="font-bold text-neutral-black">{{ integrationData.square.webhook_configuration || integrationData.square.webhook_connectivity }}</span></div>
+                    <div>Terminal: <span class="font-bold text-neutral-black">{{ integrationData.square.terminal_availability || 'not_configured' }}</span></div>
+                    <div>Unmatched transactions: <span class="font-bold text-neutral-black">{{ integrationData.square.unmatched_transactions ?? 0 }}</span></div>
+                    <div>Failed catalog syncs: <span class="font-bold text-neutral-black">{{ integrationData.square.failed_sync_jobs ?? 0 }}</span></div>
+                    <div>Last catalog sync: <span class="font-bold text-neutral-black">{{ integrationData.square.last_successful_synchronization || '—' }}</span></div>
                     <div>Secrets and Keys: <span class="font-mono text-neutral-muted">[Read-Only in .env]</span></div>
                   </div>
                 </div>

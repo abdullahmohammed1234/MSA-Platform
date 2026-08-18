@@ -55,6 +55,7 @@ class EmsServiceProvider extends ServiceProvider
 
         $this->app->singleton(TicketIssuer::class, DefaultTicketIssuer::class);
         $this->app->singleton(EventNotificationDispatcher::class, QueuedEventNotificationDispatcher::class);
+        $this->app->singleton(\App\Ems\Services\Square\SquareClient::class);
         $this->app->singleton(\App\Ems\Services\Payments\Providers\SquarePaymentProvider::class);
         $this->app->singleton(\App\Ems\Services\Payments\PaymentProviderManager::class);
     }

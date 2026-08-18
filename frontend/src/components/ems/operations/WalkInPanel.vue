@@ -76,6 +76,9 @@ const submit = async () => {
 <template>
   <form class="space-y-3 rounded-2xl border border-neutral-ivory bg-white p-4" @submit.prevent="submit">
     <h3 class="text-[11px] font-bold uppercase tracking-wider text-neutral-muted">Walk-in</h3>
+    <p class="text-xs text-neutral-muted">
+      The attendee is the guest named below — not the staff member recording the walk-in.
+    </p>
     <Input v-model="name" placeholder="Full name" required />
     <Input v-model="email" type="email" placeholder="Email (optional)" />
     <Input v-model="phone" placeholder="Phone (optional)" />

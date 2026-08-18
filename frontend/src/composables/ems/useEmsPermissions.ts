@@ -53,6 +53,7 @@ export function useEmsPermissions() {
     canManageNotifications: computed(() => can(EMS_PERMISSIONS.NOTIFICATIONS_MANAGE)),
     canViewAnalytics: computed(() => can(EMS_PERMISSIONS.ANALYTICS_VIEW)),
     canManageReports: computed(() => can(EMS_PERMISSIONS.REPORTS_MANAGE)),
+    canRefundPayments: computed(() => can(EMS_PERMISSIONS.PAYMENTS_REFUND)),
     canViewOperations: computed(() =>
       canAny([EMS_PERMISSIONS.REGISTRATIONS_VIEW, EMS_PERMISSIONS.CHECK_INS_VIEW])
     ),

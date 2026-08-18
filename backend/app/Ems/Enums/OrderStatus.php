@@ -32,7 +32,8 @@ enum OrderStatus: string
         return match ($this) {
             self::Pending => [self::Completed, self::Cancelled, self::Failed],
             self::Completed => [self::Refunded],
-            self::Cancelled, self::Failed, self::Refunded => [],
+            self::Cancelled => [self::Completed],
+            self::Failed, self::Refunded => [],
         };
     }
 

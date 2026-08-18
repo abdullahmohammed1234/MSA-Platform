@@ -98,6 +98,11 @@ class TicketType extends Model
         return $this->hasMany(Ticket::class, 'ticket_type_id');
     }
 
+    public function squareCatalogMapping(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(SquareCatalogMapping::class, 'ticket_type_id');
+    }
+
     public function isFree(): bool
     {
         return (float) $this->price === 0.0;

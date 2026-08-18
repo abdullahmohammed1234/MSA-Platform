@@ -4,10 +4,12 @@ namespace App\Ems\Http\Controllers\V1\Public;
 
 use App\Ems\Http\Controllers\EmsController;
 use App\Ems\Http\Requests\Public\CalendarPublicEventRequest;
+use App\Ems\Http\Requests\Public\CancelCheckoutRequest;
 use App\Ems\Http\Requests\Public\CheckoutEventRequest;
 use App\Ems\Http\Requests\Public\IndexPublicEventRequest;
 use App\Ems\Http\Requests\Public\JoinWaitlistRequest;
 use App\Ems\Http\Requests\Public\RegisterForEventRequest;
+use App\Ems\Http\Requests\Public\ResumeCheckoutRequest;
 use App\Ems\Http\Resources\Public\PublicCalendarEventResource;
 use App\Ems\Http\Resources\Public\PublicCategoryResource;
 use App\Ems\Http\Resources\Public\PublicCheckoutResource;
@@ -19,6 +21,7 @@ use App\Ems\Http\Resources\Public\PublicTicketTypeResource;
 use App\Ems\Http\Resources\Public\PublicTicketValidationResource;
 use App\Ems\Http\Resources\Public\PublicWaitlistResource;
 use App\Ems\Services\CheckoutService;
+use App\Ems\Services\CheckoutLifecycleService;
 use App\Ems\Services\PublicEventService;
 use App\Ems\Services\RegistrationService;
 use App\Ems\Services\TicketTypeService;
@@ -36,6 +39,7 @@ class PublicEventController extends EmsController
         private readonly PublicEventService $events,
         private readonly RegistrationService $registrations,
         private readonly CheckoutService $checkout,
+        private readonly CheckoutLifecycleService $checkoutLifecycle,
         private readonly TicketTypeService $ticketTypes,
         private readonly WaitlistService $waitlists,
         private readonly QrCodeGenerator $qr,
@@ -151,6 +155,58 @@ class PublicEventController extends EmsController
             new PublicCheckoutResource($result),
             $message
         );
+    }
+
+    /**
+     * POST /api/v1/ems/public/events/{slug}/checkout/resume
+     */
+    public function resumeCheckout(ResumeCheckoutRequest $request, string $slug): JsonResponse
+    {
+        $event = $this->events->findBySlug($slug);
+
+        if ($event === null) {
+            throw new NotFoundHttpException('The requested event was not found.');
+        }
+
+        $data = $request->validated();
+        $result = $this->checkoutLifecycle->resume(
+            $event,
+            strtolower(trim($data['email'])),
+            $data['order_uuid'] ?? null
+        );
+
+        return ApiResponse::success(
+            new PublicCheckoutResource($result),
+            'Checkout resumed. Redirect to Square to complete payment.'
+        );
+    }
+
+    /**
+     * POST /api/v1/ems/public/events/{slug}/checkout/cancel
+     */
+    public function cancelCheckout(CancelCheckoutRequest $request, string $slug): JsonResponse
+    {
+        $event = $this->events->findBySlug($slug);
+
+        if ($event === null) {
+            throw new NotFoundHttpException('The requested event was not found.');
+        }
+
+        $data = $request->validated();
+        $result = $this->checkoutLifecycle->resume(
+            $event,
+            strtolower(trim($data['email'])),
+            $data['order_uuid']
+        );
+
+        $payment = $result['payment'];
+        if ($payment === null) {
+            throw new NotFoundHttpException('The requested checkout was not found.');
+        }
+
+        $this->checkoutLifecycle->cancel($payment, 'Checkout cancelled by buyer.');
+
+        return ApiResponse::success(null, 'Checkout cancelled.');
     }
 
     /**

@@ -65,6 +65,12 @@ Route::prefix('public')
         Route::post('/events/{slug}/checkout', [PublicEventController::class, 'checkout'])
             ->middleware('throttle:' . config('ems.public.registration_throttle', 'ems_registration'))
             ->name('events.checkout');
+        Route::post('/events/{slug}/checkout/resume', [PublicEventController::class, 'resumeCheckout'])
+            ->middleware('throttle:' . config('ems.public.registration_throttle', 'ems_registration'))
+            ->name('events.checkout.resume');
+        Route::post('/events/{slug}/checkout/cancel', [PublicEventController::class, 'cancelCheckout'])
+            ->middleware('throttle:' . config('ems.public.registration_throttle', 'ems_registration'))
+            ->name('events.checkout.cancel');
         Route::post('/events/{slug}/waitlist', [PublicEventController::class, 'joinWaitlist'])
             ->middleware('throttle:' . config('ems.public.registration_throttle', 'ems_registration'))
             ->name('events.waitlist.join');
@@ -137,6 +143,12 @@ Route::middleware(['auth:sanctum', 'throttle:' . config('ems.route.throttle', 'e
             ->name('events.tickets.disable');
         Route::post('/events/{event}/tickets/{ticketType}/duplicate', [TicketTypeController::class, 'duplicate'])
             ->name('events.tickets.duplicate');
+        Route::post('/events/{event}/tickets/{ticketType}/sync-square', [TicketTypeController::class, 'syncToSquare'])
+            ->name('events.tickets.sync-square');
+        Route::post('/events/{event}/tickets/{ticketType}/refresh-square', [TicketTypeController::class, 'refreshFromSquare'])
+            ->name('events.tickets.refresh-square');
+        Route::post('/events/{event}/tickets/{ticketType}/import-square', [TicketTypeController::class, 'importFromSquare'])
+            ->name('events.tickets.import-square');
         Route::get('/events/{event}/payment-summary', [TicketTypeController::class, 'paymentSummary'])
             ->name('events.payment-summary');
 
@@ -159,6 +171,8 @@ Route::middleware(['auth:sanctum', 'throttle:' . config('ems.route.throttle', 'e
             ->name('events.manual-check-in');
         Route::post('/events/{event}/walk-in', [EventOperationsController::class, 'walkIn'])
             ->name('events.walk-in');
+        Route::post('/events/{event}/terminal-checkout', [EventOperationsController::class, 'terminalCheckout'])
+            ->name('events.terminal-checkout');
         Route::post('/events/{event}/undo-check-in', [EventOperationsController::class, 'undoCheckIn'])
             ->name('events.undo-check-in');
 
@@ -211,6 +225,7 @@ Route::middleware(['auth:sanctum', 'throttle:' . config('ems.route.throttle', 'e
         // --- Orders / payments / registrations --------------------------
         Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
         Route::get('/payments/{payment}', [PaymentController::class, 'show'])->name('payments.show');
+        Route::post('/payments/{payment}/refund', [PaymentController::class, 'refund'])->name('payments.refund');
         Route::get('/registrations/{registration}', [RegistrationController::class, 'show'])
             ->name('registrations.show');
 

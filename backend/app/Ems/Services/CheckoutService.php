@@ -251,7 +251,12 @@ class CheckoutService
             }
 
             if ($this->hasActiveRegistration($locked, $email, $user)) {
-                throw DuplicateRegistrationException::forEmail($email);
+                $resumable = $this->findResumableCheckout($locked, $email, $user);
+                if ($resumable !== null) {
+                    return $resumable;
+                }
+
+                throw DuplicateRegistrationException::forEmail($email !== '' ? $email : 'this attendee');
             }
 
             // Free ticket selected via checkout endpoint — complete immediately.
@@ -437,8 +442,13 @@ class CheckoutService
             $order->load(['items', 'event']);
             $session = $this->providers->default()->createCheckout($order, $payment);
 
+            $ttlMinutes = (int) config('ems.payments.checkout_ttl_minutes', 1440);
+
             $payment->provider_checkout_id = $session->checkoutId;
             $payment->provider_order_id = $session->providerOrderId;
+            $payment->checkout_url = $session->checkoutUrl;
+            $payment->checkout_expires_at = now()->addMinutes(max(15, $ttlMinutes));
+            $payment->source_channel = \App\Ems\Enums\PaymentSourceChannel::Online->value;
             $payment->status = PaymentStatus::Processing;
             $payment->metadata = array_merge($payment->metadata ?? [], $session->metadata);
             $payment->save();
@@ -536,7 +546,7 @@ class CheckoutService
 
         $maxPerAttendee = $event->max_registrations_per_attendee;
 
-        if ($maxPerAttendee !== null) {
+        if ($maxPerAttendee !== null && ($email !== '' || $user !== null)) {
             $existing = (int) $event->registrations()
                 ->occupyingCapacity()
                 ->where(function ($query) use ($email, $user): void {
@@ -578,6 +588,7 @@ class CheckoutService
         $order->status = $status;
         $order->promo_code_id = $promoCodeId;
         $order->discount_amount = $discountAmount;
+        $order->source_channel = \App\Ems\Enums\PaymentSourceChannel::Online->value;
         $order->save();
 
         return $order;
@@ -603,15 +614,85 @@ class CheckoutService
         return $item;
     }
 
+    /**
+     * @return array{order: Order, registration: Registration, checkout_url: string|null, payment: Payment|null}|null
+     */
+    public function findResumableCheckout(Event $event, string $email, ?User $user = null): ?array
+    {
+        $query = Registration::query()
+            ->where('event_id', $event->id)
+            ->where('status', RegistrationStatus::AwaitingPayment->value)
+            ->with(['order.items', 'order.event', 'ticketType']);
+
+        $query->where(function ($inner) use ($email, $user): void {
+            if ($email !== '') {
+                $inner->where('attendee_email', $email);
+            }
+            if ($user !== null) {
+                $inner->orWhere('user_id', $user->id);
+            }
+        });
+
+        /** @var Registration|null $registration */
+        $registration = $query->latest('id')->first();
+        if ($registration === null) {
+            return null;
+        }
+
+        $payment = Payment::query()
+            ->where('registration_id', $registration->id)
+            ->whereIn('status', [PaymentStatus::Pending->value, PaymentStatus::Processing->value])
+            ->latest('id')
+            ->first();
+
+        if ($payment === null) {
+            return null;
+        }
+
+        if ($payment->checkout_expires_at && $payment->checkout_expires_at->isPast()) {
+            return null;
+        }
+
+        if (! $payment->checkout_url && $payment->provider_checkout_id) {
+            $link = $this->providers->default()->retrievePaymentLink((string) $payment->provider_checkout_id);
+            $url = (string) data_get($link, 'payment_link.url', '');
+            if ($url !== '') {
+                $payment->checkout_url = $url;
+                $payment->save();
+            }
+        }
+
+        if (! $payment->checkout_url) {
+            return null;
+        }
+
+        $registration->load(['event.category', 'ticketType', 'order']);
+
+        return [
+            'order' => $registration->order ?? $payment->order,
+            'registration' => $registration,
+            'checkout_url' => $payment->checkout_url,
+            'payment' => $payment,
+        ];
+    }
+
     private function hasActiveRegistration(Event $event, string $email, ?User $user): bool
     {
+        if ($email === '' && $user === null) {
+            return false;
+        }
+
         return $event->registrations()
             ->occupyingCapacity()
             ->where(function ($query) use ($email, $user): void {
-                $query->where('attendee_email', $email);
+                if ($email !== '') {
+                    $query->where('attendee_email', $email);
+                }
 
                 if ($user !== null) {
-                    $query->orWhere('user_id', $user->id);
+                    $email !== ''
+                        ? $query->orWhere('user_id', $user->id)
+                        : $query->where('user_id', $user->id);
                 }
             })
             ->exists();

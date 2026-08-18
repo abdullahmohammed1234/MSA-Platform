@@ -19,7 +19,7 @@ class TicketTypeService
      */
     public function listForEvent(Event $event, bool $publicOnly = false): Collection
     {
-        $query = $event->ticketTypes()->ordered();
+        $query = $event->ticketTypes()->with('squareCatalogMapping')->ordered();
 
         if ($publicOnly) {
             $query->publiclyAvailable();
@@ -38,6 +38,8 @@ class TicketTypeService
         $this->fill($ticketType, $data);
         $ticketType->quantity_sold = 0;
         $ticketType->save();
+
+        $this->queueSquareSync($ticketType);
 
         Log::channel((string) config('ems.logging.channel', 'ems'))
             ->info('ems.ticket_types.created', [
@@ -69,6 +71,8 @@ class TicketTypeService
 
         $ticketType->save();
 
+        $this->queueSquareSync($ticketType);
+
         Log::channel((string) config('ems.logging.channel', 'ems'))
             ->info('ems.ticket_types.updated', [
                 'ticket_type_uuid' => $ticketType->uuid,
@@ -82,6 +86,8 @@ class TicketTypeService
     {
         $ticketType->is_active = false;
         $ticketType->save();
+
+        $this->queueSquareSync($ticketType, archive: true);
 
         Log::channel((string) config('ems.logging.channel', 'ems'))
             ->info('ems.ticket_types.disabled', [
@@ -101,6 +107,11 @@ class TicketTypeService
         }
 
         $uuid = $ticketType->uuid;
+        try {
+            app(\App\Ems\Services\Square\SquareCatalogService::class)->syncTicketType($ticketType, true);
+        } catch (\Throwable) {
+            // Historical Square catalog objects are archived best-effort.
+        }
         $ticketType->delete();
 
         Log::channel((string) config('ems.logging.channel', 'ems'))
@@ -120,6 +131,8 @@ class TicketTypeService
         $copy->quantity_sold = 0;
         $copy->is_active = false;
         $copy->save();
+
+        $this->queueSquareSync($copy);
 
         Log::channel((string) config('ems.logging.channel', 'ems'))
             ->info('ems.ticket_types.duplicated', [
@@ -202,5 +215,18 @@ class TicketTypeService
         }
 
         return $name;
+    }
+
+    private function queueSquareSync(TicketType $ticketType, bool $archive = false): void
+    {
+        try {
+            \App\Ems\Jobs\SyncTicketTypeToSquareJob::dispatch($ticketType->id, $archive);
+        } catch (\Throwable $e) {
+            Log::channel((string) config('ems.logging.channel', 'ems'))
+                ->warning('ems.ticket_types.square_sync_dispatch_failed', [
+                    'ticket_type_uuid' => $ticketType->uuid,
+                    'error' => $e->getMessage(),
+                ]);
+        }
     }
 }

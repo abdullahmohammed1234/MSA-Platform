@@ -48,6 +48,18 @@ export const ticketTypesService = {
   paymentSummary(eventUuid: string): Promise<EventPaymentSummary> {
     return emsHttp.get(`/events/${encodeURIComponent(eventUuid)}/payment-summary`);
   },
+
+  syncToSquare(eventUuid: string, ticketUuid: string): Promise<TicketType> {
+    return emsHttp.post(
+      `/events/${encodeURIComponent(eventUuid)}/tickets/${encodeURIComponent(ticketUuid)}/sync-square`
+    );
+  },
+
+  refreshFromSquare(eventUuid: string, ticketUuid: string): Promise<TicketType> {
+    return emsHttp.post(
+      `/events/${encodeURIComponent(eventUuid)}/tickets/${encodeURIComponent(ticketUuid)}/refresh-square`
+    );
+  },
 };
 
 export default ticketTypesService;

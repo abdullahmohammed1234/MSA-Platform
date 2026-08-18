@@ -216,7 +216,7 @@ const confirmDelete = async () => {
                 {{ event.location || '—' }}
               </td>
               <td class="px-5 py-4 text-xs text-neutral-muted">
-                {{ event.organizer?.name ?? '—' }}
+                {{ event.organizer_name || event.organizer?.name || '—' }}
               </td>
               <td class="px-5 py-4">
                 <EmsStatusBadge :label="event.status_label" :tone="event.status_tone" size="sm" />

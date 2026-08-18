@@ -203,7 +203,7 @@ const confirmDelete = async () => {
             <div>
               <dt class="text-[11px] font-bold uppercase tracking-wider text-neutral-muted">Organizer</dt>
               <dd class="mt-1 text-sm text-neutral-black">
-                {{ event.organizer?.name ?? 'Not assigned' }}
+                {{ event.organizer_name || event.organizer?.name || 'Not assigned' }}
               </dd>
             </div>
             <div>

@@ -50,8 +50,12 @@ class PaymentFulfillmentService
             }
 
             if (! $locked->status->canTransitionTo(PaymentStatus::Paid)
-                && $locked->status !== PaymentStatus::Authorized
-                && $locked->status !== PaymentStatus::Processing
+                && ! in_array($locked->status, [
+                    PaymentStatus::Authorized,
+                    PaymentStatus::Processing,
+                    PaymentStatus::Abandoned,
+                    PaymentStatus::Cancelled,
+                ], true)
             ) {
                 throw InvalidPaymentTransitionException::make(
                     $locked->status->value,
@@ -94,6 +98,7 @@ class PaymentFulfillmentService
             if ($orderLocked->status !== OrderStatus::Completed) {
                 if (! $orderLocked->status->canTransitionTo(OrderStatus::Completed)
                     && $orderLocked->status !== OrderStatus::Pending
+                    && $orderLocked->status !== OrderStatus::Cancelled
                 ) {
                     throw new EmsException(
                         'Order cannot be completed from its current state.',
@@ -104,6 +109,7 @@ class PaymentFulfillmentService
 
                 $orderLocked->status = OrderStatus::Completed;
                 $orderLocked->completed_at = now();
+                $orderLocked->cancelled_at = null;
                 $orderLocked->save();
             }
 
@@ -112,8 +118,20 @@ class PaymentFulfillmentService
                 ->lockForUpdate()
                 ->get();
 
+            $released = (bool) data_get($locked->metadata, 'inventory_released', false);
+
             foreach ($registrations as $registration) {
+                if ($released) {
+                    $this->restoreInventoryFor($registration);
+                }
                 $this->confirmRegistration($registration);
+            }
+
+            if ($released) {
+                $metadata = $locked->metadata ?? [];
+                $metadata['inventory_released'] = false;
+                $locked->metadata = $metadata;
+                $locked->save();
             }
 
             Log::channel((string) config('ems.logging.channel', 'ems'))
@@ -193,6 +211,53 @@ class PaymentFulfillmentService
         });
     }
 
+    public function markAbandoned(Payment $payment, ?string $reason = null): Payment
+    {
+        return DB::transaction(function () use ($payment, $reason): Payment {
+            /** @var Payment $locked */
+            $locked = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
+
+            if (in_array($locked->status, [
+                PaymentStatus::Paid,
+                PaymentStatus::Cancelled,
+                PaymentStatus::Failed,
+                PaymentStatus::Abandoned,
+                PaymentStatus::Refunded,
+            ], true)) {
+                return $locked;
+            }
+
+            $locked->status = PaymentStatus::Abandoned;
+            $locked->failure_reason = $reason;
+            $locked->save();
+
+            $this->releasePendingOrder($locked, OrderStatus::Cancelled);
+
+            Log::channel((string) config('ems.logging.channel', 'ems'))
+                ->info('ems.payments.abandoned', [
+                    'payment_uuid' => $locked->uuid,
+                ]);
+
+            return $locked->fresh();
+        });
+    }
+
+    private function restoreInventoryFor(Registration $registration): void
+    {
+        if (! $registration->ticket_type_id) {
+            return;
+        }
+
+        $ticketType = TicketType::query()
+            ->whereKey($registration->ticket_type_id)
+            ->lockForUpdate()
+            ->first();
+        if ($ticketType !== null) {
+            $ticketType->quantity_sold = (int) $ticketType->quantity_sold + (int) $registration->quantity;
+            $ticketType->save();
+        }
+    }
+
     private function confirmRegistration(Registration $registration): void
     {
         if ($registration->status === RegistrationStatus::Confirmed
@@ -247,7 +312,7 @@ class PaymentFulfillmentService
             ->get();
 
         foreach ($registrations as $registration) {
-            if ($registration->status === RegistrationStatus::AwaitingPayment) {
+            if (in_array($registration->status, [RegistrationStatus::AwaitingPayment, RegistrationStatus::Pending], true)) {
                 $registration->status = RegistrationStatus::Cancelled;
                 $registration->cancelled_at = now();
                 $registration->save();
@@ -263,6 +328,11 @@ class PaymentFulfillmentService
                         $ticketType->save();
                     }
                 }
+
+                $metadata = $payment->metadata ?? [];
+                $metadata['inventory_released'] = true;
+                $payment->metadata = $metadata;
+                $payment->save();
             }
         }
 

@@ -4,23 +4,36 @@ namespace App\Ems\Services;
 
 use App\Ems\Enums\PaymentProvider as PaymentProviderEnum;
 use App\Ems\Enums\PaymentStatus;
+use App\Ems\Enums\WebhookEventStatus;
 use App\Ems\Exceptions\EmsException;
+use App\Ems\Jobs\ProcessSquareWebhookJob;
 use App\Ems\Models\Order;
 use App\Ems\Models\Payment;
 use App\Ems\Models\WebhookEvent;
 use App\Ems\Services\Payments\PaymentProviderManager;
+use App\Ems\Services\Square\SquareCatalogService;
+use App\Ems\Services\Square\SquarePosIngestService;
+use App\Ems\Services\Square\SquareRefundService;
+use App\Ems\Services\Square\SquareTerminalService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Secure, idempotent Square webhook processing.
+ * Verify, persist, and process Square webhooks.
+ *
+ * Unmatched events are stored as unmatched — never discarded as processed —
+ * so they can be reconciled after EMS mappings become available.
  */
 class SquareWebhookService
 {
     public function __construct(
         private readonly PaymentProviderManager $providers,
         private readonly PaymentFulfillmentService $fulfillment,
+        private readonly SquarePosIngestService $pos,
+        private readonly SquareRefundService $refunds,
+        private readonly SquareCatalogService $catalog,
+        private readonly SquareTerminalService $terminal,
     ) {
     }
 
@@ -53,7 +66,7 @@ class SquareWebhookService
             throw new EmsException('Webhook missing event id.', [], Response::HTTP_BAD_REQUEST);
         }
 
-        return DB::transaction(function () use ($provider, $payload, $eventId, $eventType): ?Payment {
+        $record = DB::transaction(function () use ($payload, $eventId, $eventType): WebhookEvent {
             $existing = WebhookEvent::query()
                 ->where('provider', 'square')
                 ->where('event_id', $eventId)
@@ -61,66 +74,202 @@ class SquareWebhookService
                 ->first();
 
             if ($existing !== null) {
-                Log::channel((string) config('ems.logging.channel', 'ems'))
-                    ->info('ems.webhooks.square.duplicate_ignored', [
-                        'event_id' => $eventId,
-                        'event_type' => $eventType,
-                    ]);
-
-                return $existing->payment_id
-                    ? Payment::query()->find($existing->payment_id)
-                    : null;
+                return $existing;
             }
-
-            $parsed = $provider->parseWebhook($payload);
-            $payment = $this->resolvePayment($parsed, $payload);
 
             $record = new WebhookEvent();
             $record->provider = 'square';
             $record->event_id = $eventId;
             $record->event_type = $eventType;
-            $record->status = 'processed';
+            $record->status = WebhookEventStatus::Received->value;
             $record->payload = $this->redactPayload($payload);
-            $record->processed_at = now();
-            $record->order_id = $payment?->order_id;
-            $record->payment_id = $payment?->id;
             $record->save();
 
-            if ($payment === null) {
+            return $record;
+        });
+
+        $status = $this->normalizeStatus($record->status);
+
+        if ($status === WebhookEventStatus::Processed) {
+            Log::channel((string) config('ems.logging.channel', 'ems'))
+                ->info('ems.webhooks.square.duplicate_ignored', [
+                    'event_id' => $eventId,
+                    'event_type' => $eventType,
+                ]);
+
+            return $record->payment_id ? Payment::query()->find($record->payment_id) : null;
+        }
+
+        if ($status === WebhookEventStatus::Processing) {
+            return $record->payment_id ? Payment::query()->find($record->payment_id) : null;
+        }
+
+        Log::channel((string) config('ems.logging.channel', 'ems'))
+            ->info('ems.webhooks.square.received', [
+                'event_id' => $eventId,
+                'event_type' => $eventType,
+            ]);
+
+        if ((string) config('queue.default') === 'sync') {
+            return $this->processRecord($record);
+        }
+
+        ProcessSquareWebhookJob::dispatch($record->id);
+
+        return $record->payment_id ? Payment::query()->find($record->payment_id) : null;
+    }
+
+    public function processRecord(WebhookEvent $record): ?Payment
+    {
+        $status = $this->normalizeStatus($record->status);
+        if ($status === WebhookEventStatus::Processed) {
+            return $record->payment_id ? Payment::query()->find($record->payment_id) : null;
+        }
+
+        $record->status = WebhookEventStatus::Processing->value;
+        $record->last_attempt_at = now();
+        $record->retry_count = (int) $record->retry_count + 1;
+        $record->save();
+
+        $payload = is_array($record->payload) ? $record->payload : [];
+        $eventType = (string) ($record->event_type ?? '');
+
+        try {
+            $payment = $this->dispatchEvent($eventType, $payload, $record);
+            $record->refresh();
+
+            if ($this->normalizeStatus($record->status) === WebhookEventStatus::Processed) {
+                return $payment ?? ($record->payment_id ? Payment::query()->find($record->payment_id) : null);
+            }
+
+            if ($payment !== null) {
+                $record->status = WebhookEventStatus::Processed->value;
+                $record->payment_id = $payment->id;
+                $record->order_id = $payment->order_id;
+                $record->processed_at = now();
+                $record->failure_reason = null;
+                $record->save();
+
                 Log::channel((string) config('ems.logging.channel', 'ems'))
-                    ->warning('ems.webhooks.square.unmatched', [
-                        'event_id' => $eventId,
+                    ->info('ems.webhooks.square.processed', [
+                        'event_id' => $record->event_id,
                         'event_type' => $eventType,
+                        'payment_uuid' => $payment->uuid,
                     ]);
 
+                return $payment;
+            }
+
+            $record->status = WebhookEventStatus::Unmatched->value;
+            $record->failure_reason = 'No EMS mapping for this Square event.';
+            $record->save();
+
+            Log::channel((string) config('ems.logging.channel', 'ems'))
+                ->warning('ems.webhooks.square.unmatched', [
+                    'event_id' => $record->event_id,
+                    'event_type' => $eventType,
+                ]);
+
+            return null;
+        } catch (\Throwable $e) {
+            $record->status = WebhookEventStatus::Failed->value;
+            $record->failure_reason = mb_substr($e->getMessage(), 0, 500);
+            $record->save();
+
+            Log::channel((string) config('ems.logging.channel', 'ems'))
+                ->error('ems.webhooks.square.failed', [
+                    'event_id' => $record->event_id,
+                    'event_type' => $eventType,
+                    'error' => $e->getMessage(),
+                ]);
+
+            throw $e;
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function dispatchEvent(string $eventType, array $payload, WebhookEvent $record): ?Payment
+    {
+        if ($eventType === 'catalog.version.updated') {
+            $this->catalog->pullRemoteChanges();
+
+            $record->status = WebhookEventStatus::Processed->value;
+            $record->processed_at = now();
+            $record->failure_reason = null;
+            $record->save();
+
+            return null;
+        }
+
+        if (str_starts_with($eventType, 'refund.')) {
+            $refund = data_get($payload, 'data.object.refund', data_get($payload, 'data.object', []));
+            if (! is_array($refund)) {
                 return null;
             }
 
-            $status = $parsed['payment_status'] ?? null;
+            $applied = $this->refunds->applyFromWebhook($refund);
+            if ($applied?->payment) {
+                $record->order_id = $applied->payment->order_id;
 
-            Log::channel((string) config('ems.logging.channel', 'ems'))
-                ->info('ems.webhooks.square.processed', [
-                    'event_id' => $eventId,
-                    'event_type' => $eventType,
-                    'payment_uuid' => $payment->uuid,
-                    'mapped_status' => $status,
-                ]);
+                return $applied->payment;
+            }
 
-            return match ($status) {
-                PaymentStatus::Paid->value => $this->fulfillment->markPaid($payment, $parsed),
-                PaymentStatus::Failed->value => $this->fulfillment->markFailed(
-                    $payment,
-                    'Provider reported payment failure.',
-                    $parsed
-                ),
-                PaymentStatus::Cancelled->value => $this->fulfillment->markCancelled(
-                    $payment,
-                    'Provider reported payment cancellation.'
-                ),
-                PaymentStatus::Refunded->value => $this->recordRefundFoundation($payment, $parsed),
-                default => $payment,
-            };
-        });
+            return null;
+        }
+
+        if (str_starts_with($eventType, 'terminal.checkout.')) {
+            $checkout = data_get($payload, 'data.object.checkout', data_get($payload, 'data.object', []));
+            if (! is_array($checkout)) {
+                return null;
+            }
+
+            return $this->terminal->handleCheckoutUpdated($checkout);
+        }
+
+        if (str_starts_with($eventType, 'payment.') || str_starts_with($eventType, 'order.')) {
+            $provider = $this->providers->driver(PaymentProviderEnum::Square);
+            $parsed = $provider->parseWebhook($payload);
+            $payment = $this->resolvePayment($parsed, $payload);
+
+            if ($payment !== null) {
+                return $this->fulfillExisting($payment, $parsed, $eventType);
+            }
+
+            $squarePayment = data_get($payload, 'data.object.payment');
+            if (is_array($squarePayment)) {
+                return $this->pos->ingestPayment($squarePayment);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $parsed
+     */
+    private function fulfillExisting(Payment $payment, array $parsed, string $eventType): Payment
+    {
+        $status = $parsed['payment_status'] ?? null;
+
+        if (str_contains($eventType, 'refund')) {
+            return $payment;
+        }
+
+        return match ($status) {
+            PaymentStatus::Paid->value => $this->fulfillment->markPaid($payment, $parsed),
+            PaymentStatus::Failed->value => $this->fulfillment->markFailed(
+                $payment,
+                'Provider reported payment failure.',
+                $parsed
+            ),
+            PaymentStatus::Cancelled->value => $this->fulfillment->markCancelled(
+                $payment,
+                'Provider reported payment cancellation.'
+            ),
+            default => $payment,
+        };
     }
 
     /**
@@ -172,7 +321,6 @@ class SquareWebhookService
             }
         }
 
-        // Square payment.updated often includes order reference in note.
         $note = data_get($payload, 'data.object.payment.note');
         if (is_string($note) && preg_match('/ORD-[A-Z0-9]+/', $note, $matches)) {
             $order = Order::query()->where('reference', $matches[0])->first();
@@ -185,19 +333,13 @@ class SquareWebhookService
         return null;
     }
 
-    /**
-     * @param  array<string, mixed>  $parsed
-     */
-    private function recordRefundFoundation(Payment $payment, array $parsed): Payment
+    private function normalizeStatus(mixed $status): WebhookEventStatus
     {
-        // Foundation only — do not reverse tickets or registrations in Phase 3.
-        Log::channel((string) config('ems.logging.channel', 'ems'))
-            ->info('ems.webhooks.square.refund_noted', [
-                'payment_uuid' => $payment->uuid,
-                'provider_payment_id' => $parsed['provider_payment_id'] ?? null,
-            ]);
+        if ($status instanceof WebhookEventStatus) {
+            return $status;
+        }
 
-        return $payment;
+        return WebhookEventStatus::tryFrom((string) $status) ?? WebhookEventStatus::Received;
     }
 
     /**
@@ -207,9 +349,7 @@ class SquareWebhookService
     private function redactPayload(array $payload): array
     {
         $redacted = $payload;
-        unset(
-            $redacted['merchant_id'],
-        );
+        unset($redacted['merchant_id']);
 
         return $redacted;
     }

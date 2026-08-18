@@ -93,6 +93,24 @@ export const operationsService = {
     return emsHttp.post(`/events/${eventUuid}/walk-in`, payload);
   },
 
+  terminalCheckout(
+    eventUuid: string,
+    payload: {
+      attendee_name: string;
+      attendee_email?: string;
+      attendee_phone?: string;
+      ticket_type_id: string;
+      quantity?: number;
+      device_id?: string;
+    }
+  ) {
+    return emsHttp.post(`/events/${eventUuid}/terminal-checkout`, payload);
+  },
+
+  refundPayment(paymentUuid: string, payload: { amount?: number; reason?: string } = {}) {
+    return emsHttp.post(`/payments/${encodeURIComponent(paymentUuid)}/refund`, payload);
+  },
+
   undoCheckIn(
     eventUuid: string,
     payload: { check_in_uuid?: string; ticket_code?: string; reason: string }

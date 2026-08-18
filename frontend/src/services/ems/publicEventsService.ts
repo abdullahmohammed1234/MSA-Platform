@@ -54,6 +54,20 @@ export const publicEventsService = {
     );
   },
 
+  async resumeCheckout(slug: string, email: string, orderUuid?: string): Promise<CheckoutResult> {
+    return emsHttp.post<CheckoutResult>(
+      `/public/events/${encodeURIComponent(slug)}/checkout/resume`,
+      { email, order_uuid: orderUuid }
+    );
+  },
+
+  async cancelCheckout(slug: string, email: string, orderUuid: string): Promise<void> {
+    await emsHttp.post(
+      `/public/events/${encodeURIComponent(slug)}/checkout/cancel`,
+      { email, order_uuid: orderUuid }
+    );
+  },
+
   async joinWaitlist(slug: string, payload: RegisterForEventPayload & { ticket_type_id?: string }): Promise<WaitlistEntry> {
     return emsHttp.post(
       `/public/events/${encodeURIComponent(slug)}/waitlist`,

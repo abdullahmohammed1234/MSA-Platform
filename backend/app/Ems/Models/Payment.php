@@ -44,6 +44,11 @@ class Payment extends Model
         'refunded_at',
         'failure_reason',
         'metadata',
+        'checkout_url',
+        'checkout_expires_at',
+        'source_channel',
+        'terminal_checkout_id',
+        'terminal_device_id',
     ];
 
     protected function casts(): array
@@ -55,6 +60,7 @@ class Payment extends Model
             'status' => PaymentStatus::class,
             'paid_at' => 'datetime',
             'refunded_at' => 'datetime',
+            'checkout_expires_at' => 'datetime',
             'metadata' => 'array',
         ];
     }
@@ -83,6 +89,14 @@ class Payment extends Model
     public function isSettled(): bool
     {
         return $this->status->isSettled();
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<SquareRefund, $this>
+     */
+    public function squareRefunds(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(SquareRefund::class, 'payment_id');
     }
 
     public function transitionTo(PaymentStatus $status): bool

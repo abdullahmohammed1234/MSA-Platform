@@ -172,9 +172,6 @@ class CheckInService
 
         $name = trim($data['attendee_name']);
         $email = strtolower(trim((string) ($data['attendee_email'] ?? '')));
-        if ($email === '') {
-            $email = sprintf('walkin+%s@ems.local', substr(md5($name . microtime(true)), 0, 10));
-        }
         $phone = isset($data['attendee_phone']) ? trim((string) $data['attendee_phone']) : null;
         $autoCheckIn = (bool) ($data['check_in'] ?? true);
 
@@ -191,7 +188,7 @@ class CheckInService
                 'phone' => $phone,
                 'quantity' => 1,
                 'ticket_type_id' => $ticketType->uuid,
-            ], $staff);
+            ], null);
 
             /** @var Registration $registration */
             $registration = $result['registration'];
@@ -227,7 +224,8 @@ class CheckInService
             }
 
             if (
-                Registration::query()
+                $email !== ''
+                && Registration::query()
                     ->where('event_id', $locked->id)
                     ->where('attendee_email', $email)
                     ->whereIn('status', [
@@ -245,7 +243,7 @@ class CheckInService
             $order = new Order();
             $order->reference = $this->codes->orderReference();
             $order->event_id = $locked->id;
-            $order->user_id = $staff->id;
+            $order->user_id = null;
             $order->buyer_name = $name;
             $order->buyer_email = $email;
             $order->buyer_phone = $phone;

@@ -44,6 +44,16 @@ return Application::configure(basePath: dirname(__DIR__))
             ->everyMinute()
             ->withoutOverlapping()
             ->description('EMS: Process due scheduled notifications');
+
+        $schedule->job(new \App\Ems\Jobs\ExpireAbandonedCheckoutsJob)
+            ->everyFifteenMinutes()
+            ->withoutOverlapping()
+            ->description('EMS: Expire abandoned Square checkouts');
+
+        $schedule->job(new \App\Ems\Jobs\ReconcileSquareSalesJob)
+            ->hourly()
+            ->withoutOverlapping()
+            ->description('EMS: Reconcile Square POS and payment sales');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Scoped to /api/v1/ems/* — every other module keeps the framework

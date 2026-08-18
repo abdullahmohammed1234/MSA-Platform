@@ -21,6 +21,7 @@ class OrderResource extends JsonResource
             'status_label' => $this->status->label(),
             'total_amount' => (float) $this->total_amount,
             'currency' => $this->currency,
+            'source_channel' => $this->source_channel,
             'buyer_name' => $this->buyer_name,
             'buyer_email' => $this->buyer_email,
             'completed_at' => $this->completed_at?->toIso8601String(),
@@ -57,6 +58,9 @@ class OrderResource extends JsonResource
                     'amount' => (float) $payment->amount,
                     'currency' => $payment->currency,
                     'provider' => $payment->provider->value,
+                    'source_channel' => $payment->source_channel,
+                    'provider_payment_id' => $payment->provider_payment_id,
+                    'provider_order_id' => $payment->provider_order_id,
                     'paid_at' => $payment->paid_at?->toIso8601String(),
                 ];
             }),

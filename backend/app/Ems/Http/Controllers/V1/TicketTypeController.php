@@ -153,6 +153,48 @@ class TicketTypeController extends EmsController
         );
     }
 
+    public function syncToSquare(Event $event, TicketType $ticketType): JsonResponse
+    {
+        $this->authorize('update', $event);
+        $this->assertBelongsToEvent($event, $ticketType);
+
+        $mapping = app(\App\Ems\Services\Square\SquareCatalogService::class)->syncTicketType($ticketType);
+
+        return ApiResponse::success(
+            new TicketTypeResource($ticketType->fresh('squareCatalogMapping')),
+            $mapping->sync_status->value === 'synced' ? 'Synced to Square.' : 'Square sync did not complete.'
+        );
+    }
+
+    public function refreshFromSquare(Event $event, TicketType $ticketType): JsonResponse
+    {
+        $this->authorize('update', $event);
+        $this->assertBelongsToEvent($event, $ticketType);
+
+        app(\App\Ems\Services\Square\SquareCatalogService::class)->refreshFromSquare($ticketType);
+
+        return ApiResponse::success(
+            new TicketTypeResource($ticketType->fresh('squareCatalogMapping')),
+            'Ticket type refreshed from Square.'
+        );
+    }
+
+    public function importFromSquare(\App\Ems\Http\Requests\ImportSquareCatalogRequest $request, Event $event, TicketType $ticketType): JsonResponse
+    {
+        $this->authorize('update', $event);
+        $this->assertBelongsToEvent($event, $ticketType);
+
+        app(\App\Ems\Services\Square\SquareCatalogService::class)->importVariation(
+            $ticketType,
+            $request->validated('square_catalog_variation_id')
+        );
+
+        return ApiResponse::success(
+            new TicketTypeResource($ticketType->fresh('squareCatalogMapping')),
+            'Square catalog variation mapped to this ticket type.'
+        );
+    }
+
     private function assertBelongsToEvent(Event $event, TicketType $ticketType): void
     {
         abort_unless($ticketType->event_id === $event->id, 404);

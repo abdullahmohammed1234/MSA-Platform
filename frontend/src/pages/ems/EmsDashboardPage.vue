@@ -129,7 +129,7 @@ const cards = computed(() => {
                   <div class="flex gap-1.5">
                     <dt class="sr-only">Organizer</dt>
                     <dd class="truncate">
-                      {{ event.organizer?.name ?? 'No organizer assigned' }}
+                      {{ event.organizer_name || event.organizer?.name || 'No organizer assigned' }}
                     </dd>
                   </div>
                   <div v-if="event.category" class="flex gap-1.5">

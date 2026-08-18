@@ -14,7 +14,7 @@ import type { EmsAttendee } from '@/types/ems/operations';
 const route = useRoute();
 const router = useRouter();
 const { handle } = useEmsApiError();
-const { canCheckIn, canImportAttendees, canUndoCheckIn } = useEmsPermissions();
+const { canCheckIn, canImportAttendees, canUndoCheckIn, canRefundPayments } = useEmsPermissions();
 const { getStatusStyle } = useEventFormatting();
 
 const uuid = computed(() => route.params.uuid as string);
@@ -34,6 +34,9 @@ const isLoading = ref(true);
 const error = ref<string | null>(null);
 const undoReason = ref('');
 const undoTarget = ref<EmsAttendee | null>(null);
+const refundTarget = ref<EmsAttendee | null>(null);
+const refundReason = ref('');
+const refundBusy = ref(false);
 
 const statusOptions = [
   { value: '', label: 'All registration statuses' },
@@ -127,6 +130,26 @@ const confirmUndo = async () => {
     await load();
   } catch (caught) {
     handle(caught);
+  }
+};
+
+const confirmRefund = async () => {
+  if (!refundTarget.value?.payment_uuid) return;
+  if (!window.confirm(`Refund ${refundTarget.value.attendee_name}'s payment? This cannot be undone from EMS.`)) {
+    return;
+  }
+  refundBusy.value = true;
+  try {
+    await operationsService.refundPayment(refundTarget.value.payment_uuid, {
+      reason: refundReason.value.trim() || 'EMS refund',
+    });
+    refundTarget.value = null;
+    refundReason.value = '';
+    await load();
+  } catch (caught) {
+    handle(caught);
+  } finally {
+    refundBusy.value = false;
   }
 };
 
@@ -253,6 +276,14 @@ watch([registrationStatus, paymentStatus, checkInStatus, source, sortBy, sortDir
               >
                 Undo
               </Button>
+              <Button
+                v-if="canRefundPayments && row.payment_uuid && ['paid', 'partially_refunded'].includes(row.payment_status)"
+                size="sm"
+                variant="ghost"
+                @click="refundTarget = row"
+              >
+                Refund
+              </Button>
             </td>
           </tr>
         </tbody>
@@ -278,6 +309,23 @@ watch([registrationStatus, paymentStatus, checkInStatus, source, sortBy, sortDir
         <div class="mt-4 flex justify-end gap-2">
           <Button variant="ghost" @click="undoTarget = null">Cancel</Button>
           <Button :disabled="!undoReason.trim()" @click="confirmUndo">Undo check-in</Button>
+        </div>
+      </div>
+    </div>
+
+    <div
+      v-if="refundTarget"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      @click.self="refundTarget = null"
+    >
+      <div class="w-full max-w-md rounded-2xl bg-white p-5 shadow-soft">
+        <h3 class="text-lg font-semibold">Refund payment</h3>
+        <p class="mt-1 text-sm text-neutral-muted">{{ refundTarget.attendee_name }}</p>
+        <p class="mt-2 text-xs text-amber-700">Square will process this refund. A fully refunded ticket cannot be checked in.</p>
+        <Input v-model="refundReason" class="mt-4" placeholder="Reason (optional)" />
+        <div class="mt-4 flex justify-end gap-2">
+          <Button variant="ghost" @click="refundTarget = null">Cancel</Button>
+          <Button :disabled="refundBusy" @click="confirmRefund">{{ refundBusy ? 'Submitting…' : 'Refund' }}</Button>
         </div>
       </div>
     </div>

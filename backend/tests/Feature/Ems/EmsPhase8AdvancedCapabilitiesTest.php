@@ -32,6 +32,7 @@ class EmsPhase8AdvancedCapabilitiesTest extends EmsTestCase
         ]);
 
         \Illuminate\Support\Facades\Http::fake([
+            '*/v2/catalog/*' => \Illuminate\Support\Facades\Http::response(['objects' => [], 'id_mappings' => []], 200),
             '*/v2/online-checkout/payment-links' => \Illuminate\Support\Facades\Http::response([
                 'payment_link' => [
                     'id' => 'plink_vip',

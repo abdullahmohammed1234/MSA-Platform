@@ -115,6 +115,7 @@ final class EmsRoles
                 EmsPermissions::PROMO_CODES_MANAGE,
                 EmsPermissions::FEEDBACK_VIEW,
                 EmsPermissions::FEEDBACK_SUBMIT,
+                EmsPermissions::PAYMENTS_REFUND,
             ],
 
             // Scoped to the events they organize: no events.view_all grant.
@@ -158,6 +159,7 @@ final class EmsRoles
                 EmsPermissions::PROMO_CODES_MANAGE,
                 EmsPermissions::FEEDBACK_VIEW,
                 EmsPermissions::FEEDBACK_SUBMIT,
+                EmsPermissions::PAYMENTS_REFUND,
             ],
 
             // Event-day operations only: check-in, search, walk-ins.

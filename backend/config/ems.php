@@ -153,6 +153,7 @@ return [
         'queue' => env('EMS_PAYMENTS_QUEUE', 'ems-payments'),
         'webhook_throttle' => env('EMS_WEBHOOK_THROTTLE', 'ems_webhooks'),
         'webhook_rate_limit_per_minute' => (int) env('EMS_WEBHOOK_RATE_LIMIT', 120),
+        'checkout_ttl_minutes' => (int) env('EMS_CHECKOUT_TTL_MINUTES', 1440),
 
         'square' => [
             'environment' => env('SQUARE_ENVIRONMENT', 'sandbox'),
@@ -160,6 +161,8 @@ return [
             'access_token' => env('SQUARE_ACCESS_TOKEN'),
             'location_id' => env('SQUARE_LOCATION_ID'),
             'webhook_signature_key' => env('SQUARE_WEBHOOK_SIGNATURE_KEY'),
+            'terminal_device_id' => env('SQUARE_TERMINAL_DEVICE_ID'),
+            'api_version' => env('SQUARE_API_VERSION', '2026-07-15'),
             // Must exactly match the URL configured in the Square Developer Dashboard.
             'webhook_notification_url' => env(
                 'SQUARE_WEBHOOK_NOTIFICATION_URL',

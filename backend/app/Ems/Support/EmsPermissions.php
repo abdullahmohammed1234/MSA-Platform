@@ -89,6 +89,8 @@ final class EmsPermissions
     public const FEEDBACK_VIEW = 'feedback.view';
     public const FEEDBACK_SUBMIT = 'feedback.submit';
 
+    public const PAYMENTS_REFUND = 'payments.refund';
+
     /**
      * Every EMS permission with the metadata required by the `permissions`
      * table. `name` is prefixed with "EMS:" because the platform enforces a
@@ -410,6 +412,12 @@ final class EmsPermissions
                 'name' => 'EMS: Submit Feedback',
                 'group' => 'Feedback',
                 'description' => 'Submit ratings and feedback for attended events.',
+            ],
+            [
+                'slug' => self::PAYMENTS_REFUND,
+                'name' => 'EMS: Refund Payments',
+                'group' => 'Payments',
+                'description' => 'Issue Square refunds for paid EMS orders.',
             ],
         ];
     }

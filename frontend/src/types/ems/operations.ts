@@ -36,6 +36,9 @@ export interface EmsAttendee {
   is_member: boolean;
   registered_at: string | null;
   quantity: number;
+  payment_uuid?: string | null;
+  order_uuid?: string | null;
+  source_channel?: string | null;
 }
 
 export interface EmsCheckIn {
