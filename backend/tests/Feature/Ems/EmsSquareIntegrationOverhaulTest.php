@@ -10,9 +10,11 @@ use App\Ems\Enums\SquareCatalogSyncStatus;
 use App\Ems\Enums\SquareRefundStatus;
 use App\Ems\Enums\TicketStatus;
 use App\Ems\Enums\WebhookEventStatus;
+use App\Ems\Jobs\QueueRegistrationConfirmation;
 use App\Ems\Models\Event;
 use App\Ems\Models\Order;
 use App\Ems\Models\Payment;
+use App\Ems\Models\PromoCode;
 use App\Ems\Models\Registration;
 use App\Ems\Models\SquareCatalogMapping;
 use App\Ems\Models\SquareRefund;
@@ -25,6 +27,7 @@ use App\Ems\Services\Operations\CheckInService;
 use App\Ems\Services\Square\SquareCatalogService;
 use App\Ems\Services\Square\SquareReconciliationService;
 use App\Ems\Support\EmsRoles;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Http;
 
 class EmsSquareIntegrationOverhaulTest extends EmsTestCase
@@ -306,12 +309,386 @@ class EmsSquareIntegrationOverhaulTest extends EmsTestCase
         $second->assertCreated();
         $second->assertJsonPath('data.checkout_url', 'https://square.test/checkout/resume');
         $this->assertSame(1, Registration::query()->count());
+        $this->assertNotNull($payment->fresh()->checkout_details_hash);
+        $this->assertSame(1, (int) $payment->fresh()->checkout_version);
+        $this->assertSame(1, $this->paymentLinkCreateCount());
 
         $resume = $this->postJson($this->publicUrl("events/{$event->slug}/checkout/resume"), [
             'email' => 'amina@example.com',
         ]);
         $resume->assertOk();
         $resume->assertJsonPath('data.checkout_url', 'https://square.test/checkout/resume');
+        $this->assertSame(1, $this->paymentLinkCreateCount());
+    }
+
+    public function test_changing_ticket_type_replaces_square_payment_link(): void
+    {
+        $event = $this->openEvent();
+        $ga = TicketType::factory()->paid(10)->create(['event_id' => $event->id, 'name' => 'General Admission']);
+        $vip = TicketType::factory()->paid(20)->create(['event_id' => $event->id, 'name' => 'VIP']);
+        $this->fakeSequentialPaymentLinks();
+
+        $first = $this->postJson($this->publicUrl("events/{$event->slug}/checkout"), [
+            'first_name' => 'Amina',
+            'last_name' => 'Ali',
+            'email' => 'amina@example.com',
+            'ticket_type_id' => $ga->uuid,
+            'quantity' => 1,
+        ]);
+        $first->assertCreated();
+        $first->assertJsonPath('data.checkout_url', 'https://square.test/checkout/v1');
+
+        $payment = Payment::query()->firstOrFail();
+        $oldHash = $payment->checkout_details_hash;
+        $oldUrl = $payment->checkout_url;
+
+        $second = $this->postJson($this->publicUrl("events/{$event->slug}/checkout"), [
+            'first_name' => 'Amina',
+            'last_name' => 'Ali',
+            'email' => 'amina@example.com',
+            'ticket_type_id' => $vip->uuid,
+            'quantity' => 1,
+        ]);
+        $second->assertCreated();
+        $second->assertJsonPath('data.checkout_url', 'https://square.test/checkout/v2');
+        $this->assertNotSame($oldUrl, $second->json('data.checkout_url'));
+
+        $payment->refresh();
+        $this->assertSame(2, (int) $payment->checkout_version);
+        $this->assertNotSame($oldHash, $payment->checkout_details_hash);
+        $this->assertSame('plink_v2', $payment->provider_checkout_id);
+        $this->assertSame(20.0, (float) $payment->amount);
+        $this->assertSame($vip->id, Registration::query()->first()->ticket_type_id);
+        $this->assertSame(1, Payment::query()->count());
+        $this->assertSame(1, Order::query()->count());
+        $this->assertNotEmpty($payment->metadata['superseded_checkouts'] ?? []);
+        $this->assertSame(2, $this->paymentLinkCreateCount());
+
+        Http::assertSent(function (\Illuminate\Http\Client\Request $request) {
+            if ($request->method() !== 'POST' || ! str_contains($request->url(), '/v2/online-checkout/payment-links')) {
+                return false;
+            }
+            $payload = $request->data();
+            $item = $payload['order']['line_items'][0] ?? [];
+
+            return ($item['name'] ?? null) === 'VIP'
+                && (int) ($item['base_price_money']['amount'] ?? 0) === 2000
+                && str_contains((string) ($payload['idempotency_key'] ?? ''), '-v2');
+        });
+    }
+
+    public function test_changing_quantity_replaces_checkout_and_inventory(): void
+    {
+        $event = $this->openEvent();
+        $ticket = TicketType::factory()->paid(10)->limited(5)->create(['event_id' => $event->id, 'name' => 'GA']);
+        $this->fakeSequentialPaymentLinks();
+
+        $this->postJson($this->publicUrl("events/{$event->slug}/checkout"), [
+            'first_name' => 'Omar',
+            'last_name' => 'Hassan',
+            'email' => 'omar@example.com',
+            'ticket_type_id' => $ticket->uuid,
+            'quantity' => 1,
+        ])->assertCreated();
+
+        $this->assertSame(1, (int) $ticket->fresh()->quantity_sold);
+
+        $second = $this->postJson($this->publicUrl("events/{$event->slug}/checkout"), [
+            'first_name' => 'Omar',
+            'last_name' => 'Hassan',
+            'email' => 'omar@example.com',
+            'ticket_type_id' => $ticket->uuid,
+            'quantity' => 2,
+        ]);
+        $second->assertCreated();
+        $second->assertJsonPath('data.payment.amount', 20);
+
+        $this->assertSame(2, (int) $ticket->fresh()->quantity_sold);
+        $this->assertSame(2, (int) Registration::query()->first()->quantity);
+        $this->assertSame(1, Payment::query()->count());
+        $this->assertSame(2, $this->paymentLinkCreateCount());
+    }
+
+    public function test_promo_discount_replaces_payment_link_with_backend_total(): void
+    {
+        $event = $this->openEvent();
+        $ticket = TicketType::factory()->paid(10)->create(['event_id' => $event->id]);
+        $promo = new PromoCode();
+        $promo->code = 'SAVE5';
+        $promo->discount_type = 'fixed';
+        $promo->discount_value = 5;
+        $promo->is_active = true;
+        $promo->usage_per_attendee = 5;
+        $promo->save();
+        $this->fakeSequentialPaymentLinks();
+
+        $this->postJson($this->publicUrl("events/{$event->slug}/checkout"), [
+            'first_name' => 'Layla',
+            'last_name' => 'Noor',
+            'email' => 'layla@example.com',
+            'ticket_type_id' => $ticket->uuid,
+        ])->assertCreated();
+
+        $oldHash = Payment::query()->value('checkout_details_hash');
+
+        $second = $this->postJson($this->publicUrl("events/{$event->slug}/checkout"), [
+            'first_name' => 'Layla',
+            'last_name' => 'Noor',
+            'email' => 'layla@example.com',
+            'ticket_type_id' => $ticket->uuid,
+            'promo_code' => 'SAVE5',
+        ]);
+        $second->assertCreated();
+        $second->assertJsonPath('data.payment.amount', 5);
+
+        $payment = Payment::query()->firstOrFail();
+        $this->assertNotSame($oldHash, $payment->checkout_details_hash);
+        $this->assertSame(5.0, (float) $payment->amount);
+        $this->assertSame(2, $this->paymentLinkCreateCount());
+    }
+
+    public function test_email_change_before_payment_updates_pending_registration(): void
+    {
+        $event = $this->openEvent();
+        $ticket = TicketType::factory()->paid(10)->create(['event_id' => $event->id]);
+        $this->fakeSequentialPaymentLinks();
+
+        $first = $this->postJson($this->publicUrl("events/{$event->slug}/checkout"), [
+            'first_name' => 'Amina',
+            'last_name' => 'Ali',
+            'email' => 'amina@example.com',
+            'ticket_type_id' => $ticket->uuid,
+        ]);
+        $first->assertCreated();
+        $orderUuid = $first->json('data.order.uuid');
+
+        $second = $this->postJson($this->publicUrl("events/{$event->slug}/checkout"), [
+            'first_name' => 'Amina',
+            'last_name' => 'Ali',
+            'email' => 'aisha@example.com',
+            'ticket_type_id' => $ticket->uuid,
+            'order_uuid' => $orderUuid,
+        ]);
+        $second->assertCreated();
+
+        $registration = Registration::query()->firstOrFail();
+        $this->assertSame('aisha@example.com', $registration->attendee_email);
+        $this->assertSame('aisha@example.com', Order::query()->first()->buyer_email);
+        $this->assertSame(1, Registration::query()->count());
+        $this->assertSame(2, $this->paymentLinkCreateCount());
+    }
+
+    public function test_resume_after_replacement_reuses_new_payment_link(): void
+    {
+        $event = $this->openEvent();
+        $ga = TicketType::factory()->paid(10)->create(['event_id' => $event->id, 'name' => 'GA']);
+        $vip = TicketType::factory()->paid(20)->create(['event_id' => $event->id, 'name' => 'VIP']);
+        $this->fakeSequentialPaymentLinks();
+
+        $this->postJson($this->publicUrl("events/{$event->slug}/checkout"), [
+            'first_name' => 'Amina',
+            'last_name' => 'Ali',
+            'email' => 'amina@example.com',
+            'ticket_type_id' => $ga->uuid,
+        ])->assertCreated();
+
+        $this->postJson($this->publicUrl("events/{$event->slug}/checkout"), [
+            'first_name' => 'Amina',
+            'last_name' => 'Ali',
+            'email' => 'amina@example.com',
+            'ticket_type_id' => $vip->uuid,
+        ])->assertCreated();
+
+        $this->assertSame(2, $this->paymentLinkCreateCount());
+
+        $resume = $this->postJson($this->publicUrl("events/{$event->slug}/checkout/resume"), [
+            'email' => 'amina@example.com',
+            'ticket_type_id' => $vip->uuid,
+            'quantity' => 1,
+            'first_name' => 'Amina',
+            'last_name' => 'Ali',
+        ]);
+        $resume->assertOk();
+        $resume->assertJsonPath('data.checkout_url', 'https://square.test/checkout/v2');
+        $this->assertSame(2, $this->paymentLinkCreateCount());
+        $this->assertSame(1, Payment::query()->count());
+    }
+
+    public function test_superseded_checkout_paid_webhook_does_not_fulfill_new_order(): void
+    {
+        $event = $this->openEvent();
+        $ga = TicketType::factory()->paid(10)->create(['event_id' => $event->id, 'name' => 'GA']);
+        $vip = TicketType::factory()->paid(20)->create(['event_id' => $event->id, 'name' => 'VIP']);
+        $this->fakeSequentialPaymentLinks();
+
+        $this->postJson($this->publicUrl("events/{$event->slug}/checkout"), [
+            'first_name' => 'Amina',
+            'last_name' => 'Ali',
+            'email' => 'amina@example.com',
+            'ticket_type_id' => $ga->uuid,
+        ])->assertCreated();
+
+        $this->postJson($this->publicUrl("events/{$event->slug}/checkout"), [
+            'first_name' => 'Amina',
+            'last_name' => 'Ali',
+            'email' => 'amina@example.com',
+            'ticket_type_id' => $vip->uuid,
+        ])->assertCreated();
+
+        $this->postWebhook([
+            'event_id' => 'evt_old_plink',
+            'type' => 'payment.updated',
+            'data' => ['object' => ['payment' => [
+                'id' => 'sq_pay_old',
+                'status' => 'COMPLETED',
+                'order_id' => 'sq_order_v1',
+                'amount_money' => ['amount' => 1000, 'currency' => 'CAD'],
+            ]]],
+        ])->assertOk();
+
+        $payment = Payment::query()->firstOrFail();
+        $this->assertSame(PaymentStatus::Processing, $payment->status);
+        $this->assertSame(0, Ticket::query()->count());
+        $this->assertSame(RegistrationStatus::AwaitingPayment, Registration::query()->first()->status);
+        $this->assertSame($vip->id, Registration::query()->first()->ticket_type_id);
+        $this->assertSame(20.0, (float) $payment->amount);
+    }
+
+    public function test_paying_replaced_checkout_issues_one_correct_ticket(): void
+    {
+        Bus::fake();
+        $event = $this->openEvent();
+        $ga = TicketType::factory()->paid(10)->create(['event_id' => $event->id, 'name' => 'GA']);
+        $vip = TicketType::factory()->paid(20)->create(['event_id' => $event->id, 'name' => 'VIP']);
+        $this->fakeSequentialPaymentLinks();
+
+        $this->postJson($this->publicUrl("events/{$event->slug}/checkout"), [
+            'first_name' => 'Amina',
+            'last_name' => 'Ali',
+            'email' => 'amina@example.com',
+            'ticket_type_id' => $ga->uuid,
+        ])->assertCreated();
+
+        $this->postJson($this->publicUrl("events/{$event->slug}/checkout"), [
+            'first_name' => 'Amina',
+            'last_name' => 'Ali',
+            'email' => 'amina@example.com',
+            'ticket_type_id' => $vip->uuid,
+        ])->assertCreated();
+
+        Bus::assertNotDispatched(QueueRegistrationConfirmation::class);
+
+        $this->postWebhook([
+            'event_id' => 'evt_new_plink',
+            'type' => 'payment.updated',
+            'data' => ['object' => ['payment' => [
+                'id' => 'sq_pay_new',
+                'status' => 'COMPLETED',
+                'order_id' => 'sq_order_v2',
+                'amount_money' => ['amount' => 2000, 'currency' => 'CAD'],
+            ]]],
+        ])->assertOk();
+
+        $this->assertSame(1, Registration::query()->count());
+        $this->assertSame(1, Ticket::query()->count());
+        $this->assertSame($vip->id, Registration::query()->first()->ticket_type_id);
+        $this->assertSame(1, (int) Registration::query()->first()->quantity);
+        $this->assertSame(PaymentStatus::Paid, Payment::query()->first()->status);
+        $this->assertSame(20.0, (float) Payment::query()->first()->amount);
+        $this->assertNotNull(Ticket::query()->first()->qr_payload);
+        Bus::assertDispatched(QueueRegistrationConfirmation::class);
+    }
+
+    public function test_abandoned_replaced_checkout_releases_new_inventory(): void
+    {
+        $event = $this->openEvent();
+        $ga = TicketType::factory()->paid(10)->limited(5)->create(['event_id' => $event->id, 'name' => 'GA']);
+        $vip = TicketType::factory()->paid(20)->limited(5)->create(['event_id' => $event->id, 'name' => 'VIP']);
+        $this->fakeSequentialPaymentLinks();
+
+        $this->postJson($this->publicUrl("events/{$event->slug}/checkout"), [
+            'first_name' => 'Omar',
+            'last_name' => 'Hassan',
+            'email' => 'omar@example.com',
+            'ticket_type_id' => $ga->uuid,
+        ])->assertCreated();
+
+        $this->postJson($this->publicUrl("events/{$event->slug}/checkout"), [
+            'first_name' => 'Omar',
+            'last_name' => 'Hassan',
+            'email' => 'omar@example.com',
+            'ticket_type_id' => $vip->uuid,
+        ])->assertCreated();
+
+        $this->assertSame(0, (int) $ga->fresh()->quantity_sold);
+        $this->assertSame(1, (int) $vip->fresh()->quantity_sold);
+
+        $payment = Payment::query()->firstOrFail();
+        $payment->checkout_expires_at = now()->subMinute();
+        $payment->save();
+
+        app(CheckoutLifecycleService::class)->expireStale();
+
+        $this->assertSame(PaymentStatus::Abandoned, $payment->fresh()->status);
+        $this->assertSame(0, (int) $vip->fresh()->quantity_sold);
+        $this->assertSame(0, Ticket::query()->count());
+        $this->assertNotEmpty($payment->fresh()->metadata['superseded_checkouts'] ?? []);
+    }
+
+    public function test_cancel_after_checkout_change_releases_inventory(): void
+    {
+        $event = $this->openEvent();
+        $ga = TicketType::factory()->paid(10)->limited(5)->create(['event_id' => $event->id, 'name' => 'GA']);
+        $vip = TicketType::factory()->paid(20)->limited(5)->create(['event_id' => $event->id, 'name' => 'VIP']);
+        $this->fakeSequentialPaymentLinks();
+
+        $this->postJson($this->publicUrl("events/{$event->slug}/checkout"), [
+            'first_name' => 'Omar',
+            'last_name' => 'Hassan',
+            'email' => 'omar@example.com',
+            'ticket_type_id' => $ga->uuid,
+        ])->assertCreated();
+
+        $this->postJson($this->publicUrl("events/{$event->slug}/checkout"), [
+            'first_name' => 'Omar',
+            'last_name' => 'Hassan',
+            'email' => 'omar@example.com',
+            'ticket_type_id' => $vip->uuid,
+        ])->assertCreated();
+
+        $this->postJson($this->publicUrl("events/{$event->slug}/checkout/cancel"), [
+            'email' => 'omar@example.com',
+            'order_uuid' => Order::query()->value('uuid'),
+        ])->assertOk();
+
+        $this->assertSame(PaymentStatus::Cancelled, Payment::query()->first()->status);
+        $this->assertSame(0, (int) $vip->fresh()->quantity_sold);
+        $this->assertSame(0, Ticket::query()->count());
+        $this->assertSame(RegistrationStatus::Cancelled, Registration::query()->first()->status);
+    }
+
+    public function test_identical_checkout_requests_are_idempotent(): void
+    {
+        $event = $this->openEvent();
+        $ticket = TicketType::factory()->paid(10)->create(['event_id' => $event->id]);
+        $this->fakeSequentialPaymentLinks();
+
+        $payload = [
+            'first_name' => 'Amina',
+            'last_name' => 'Ali',
+            'email' => 'amina@example.com',
+            'ticket_type_id' => $ticket->uuid,
+            'quantity' => 1,
+        ];
+
+        $this->postJson($this->publicUrl("events/{$event->slug}/checkout"), $payload)->assertCreated();
+        $this->postJson($this->publicUrl("events/{$event->slug}/checkout"), $payload)->assertCreated();
+        $this->postJson($this->publicUrl("events/{$event->slug}/checkout"), $payload)->assertCreated();
+
+        $this->assertSame(1, Payment::query()->count());
+        $this->assertSame(1, Order::query()->count());
+        $this->assertSame(1, Registration::query()->count());
+        $this->assertSame(1, $this->paymentLinkCreateCount());
     }
 
     public function test_cancel_and_expire_checkout_release_inventory(): void
@@ -818,6 +1195,46 @@ class EmsSquareIntegrationOverhaulTest extends EmsTestCase
             'code' => $ticket->code,
         ]);
         $checkIn->assertOk();
+    }
+
+    private function fakeSequentialPaymentLinks(): void
+    {
+        $creates = 0;
+
+        Http::fake(function (\Illuminate\Http\Client\Request $request) use (&$creates) {
+            $url = $request->url();
+
+            if (str_contains($url, '/v2/catalog')) {
+                return Http::response(['objects' => []], 200);
+            }
+
+            if ($request->method() === 'DELETE' && str_contains($url, '/v2/online-checkout/payment-links')) {
+                return Http::response([], 200);
+            }
+
+            if ($request->method() === 'POST' && str_contains($url, '/v2/online-checkout/payment-links')) {
+                $creates++;
+                $n = $creates;
+
+                return Http::response([
+                    'payment_link' => [
+                        'id' => 'plink_v'.$n,
+                        'url' => 'https://square.test/checkout/v'.$n,
+                        'order_id' => 'sq_order_v'.$n,
+                    ],
+                ], 200);
+            }
+
+            return Http::response(['objects' => []], 200);
+        });
+    }
+
+    private function paymentLinkCreateCount(): int
+    {
+        return count(Http::recorded(function (\Illuminate\Http\Client\Request $request) {
+            return $request->method() === 'POST'
+                && str_contains($request->url(), '/v2/online-checkout/payment-links');
+        }));
     }
 
     /**

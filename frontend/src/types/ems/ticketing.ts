@@ -107,6 +107,8 @@ export interface CheckoutResult {
     status_label: string;
     amount: number;
     currency: string;
+    checkout_url?: string | null;
+    checkout_version?: number;
   } | null;
 }
 

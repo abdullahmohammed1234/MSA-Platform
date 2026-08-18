@@ -54,10 +54,13 @@ export const publicEventsService = {
     );
   },
 
-  async resumeCheckout(slug: string, email: string, orderUuid?: string): Promise<CheckoutResult> {
+  async resumeCheckout(
+    slug: string,
+    payload: { email: string; order_uuid?: string; ticket_type_id?: string; quantity?: number; promo_code?: string | null; first_name?: string; last_name?: string; phone?: string | null }
+  ): Promise<CheckoutResult> {
     return emsHttp.post<CheckoutResult>(
       `/public/events/${encodeURIComponent(slug)}/checkout/resume`,
-      { email, order_uuid: orderUuid }
+      payload
     );
   },
 

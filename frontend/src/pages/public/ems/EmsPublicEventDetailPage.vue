@@ -18,7 +18,7 @@ import publicEventsService from '@/services/ems/publicEventsService';
 import { EMS_PUBLIC_EVENTS_PATH } from '@/constants/ems';
 import { resolvePublicImagePath } from '@/constants/publicAssets';
 import type { PublicEventDetail, PublicRegistration } from '@/types/ems/public';
-import type { PublicTicketType, WaitlistEntry } from '@/types/ems/ticketing';
+import type { CheckoutResult, PublicTicketType, WaitlistEntry } from '@/types/ems/ticketing';
 
 const route = useRoute();
 const router = useRouter();
@@ -34,6 +34,8 @@ const formErrors = ref<Record<string, string[]>>({});
 const success = ref<PublicRegistration | null>(null);
 const waitlistSuccess = ref<WaitlistEntry | null>(null);
 const selectedTicketId = ref<string>('');
+const pendingCheckout = ref<CheckoutResult | null>(null);
+const completeLater = ref(false);
 
 const form = reactive({
   first_name: '',
@@ -162,7 +164,7 @@ function formatMoney(amount: number, currency: string) {
   return new Intl.NumberFormat('en-CA', { style: 'currency', currency }).format(amount);
 }
 
-async function submit() {
+async function submit(payNow = true) {
   if (!event.value) return;
 
   submitting.value = true;
@@ -200,11 +202,19 @@ async function submit() {
       const result = await publicEventsService.checkout(slug.value, {
         ...payload,
         ticket_type_id: selectedTicket.value.uuid,
+      order_uuid: pendingCheckout.value?.order?.uuid || undefined,
       });
 
+      pendingCheckout.value = result;
+
       if (result.requires_payment && result.checkout_url) {
-        toast.success('Redirecting to secure Square checkout…');
-        window.location.href = result.checkout_url;
+        if (payNow) {
+          toast.success('Redirecting to secure Square checkout…');
+          window.location.href = result.checkout_url;
+          return;
+        }
+        completeLater.value = true;
+        toast.success('Payment saved. Complete it when you are ready — Square will use these current details.');
         return;
       }
 
@@ -236,6 +246,25 @@ async function submit() {
   }
 }
 
+async function cancelPending() {
+  if (!event.value || !pendingCheckout.value) return;
+  submitting.value = true;
+  try {
+    await publicEventsService.cancelCheckout(
+      slug.value,
+      form.email.trim(),
+      pendingCheckout.value.order.uuid
+    );
+    pendingCheckout.value = null;
+    completeLater.value = false;
+    toast.success('Pending checkout cancelled.');
+  } catch (err) {
+    toast.error(err instanceof EmsApiError ? err.message : 'Could not cancel checkout.');
+  } finally {
+    submitting.value = false;
+  }
+}
+
 function fieldError(field: string): string | undefined {
   return formErrors.value[field]?.[0];
 }
@@ -253,10 +282,14 @@ function ctaLabel(): string {
     const price = selectedTicket.value
       ? formatMoney(discountedTotal.value, selectedTicket.value.currency)
       : '';
-    return submitting.value ? 'Starting checkout…' : `Pay ${price} & register`;
+    return submitting.value ? 'Starting checkout…' : `Pay ${price} now`;
   }
   return submitting.value ? 'Registering…' : 'Register for free';
 }
+
+const previewSubtotal = computed(() =>
+  selectedTicket.value ? selectedTicket.value.price * form.quantity : 0
+);
 </script>
 
 <template>
@@ -390,7 +423,7 @@ function ctaLabel(): string {
               <template v-else>Registration is not open yet.</template>
             </div>
 
-            <form v-else class="space-y-4" @submit.prevent="submit">
+            <form v-else class="space-y-4" @submit.prevent="submit(true)">
               <div v-if="ticketTypes.length" class="space-y-2">
                 <p class="text-xs font-bold uppercase tracking-wider text-neutral-black/50">Choose ticket</p>
                 <label
@@ -501,6 +534,53 @@ function ctaLabel(): string {
                 </span>
               </label>
 
+              <div
+                v-if="selectedTicket"
+                class="rounded-2xl border border-neutral-ivory bg-neutral-background/80 p-4 text-sm space-y-1.5"
+              >
+                <p class="text-[10px] font-extrabold uppercase tracking-widest text-neutral-black/45">Order preview</p>
+                <div class="flex justify-between gap-3">
+                  <span>{{ selectedTicket.name }} × {{ form.quantity }}</span>
+                  <span class="font-semibold">{{ formatMoney(previewSubtotal, selectedTicket.currency) }}</span>
+                </div>
+                <div v-if="discountAmount > 0" class="flex justify-between gap-3 text-emerald-700">
+                  <span>Discount{{ appliedPromoCode?.code ? ` (${appliedPromoCode.code})` : '' }}</span>
+                  <span>− {{ formatMoney(discountAmount, selectedTicket.currency) }}</span>
+                </div>
+                <div class="flex justify-between gap-3 font-bold pt-1 border-t border-neutral-ivory">
+                  <span>Total</span>
+                  <span>{{ formatMoney(discountedTotal, selectedTicket.currency) }}</span>
+                </div>
+                <p class="text-[11px] text-neutral-black/45">
+                  Preview only. Square charges the amount EMS confirms on checkout.
+                </p>
+              </div>
+
+              <div
+                v-if="completeLater && pendingCheckout?.payment"
+                class="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950 space-y-2"
+              >
+                <p class="font-semibold">Payment saved for later</p>
+                <p>
+                  Authorized total:
+                  {{ formatMoney(pendingCheckout.payment.amount, pendingCheckout.payment.currency) }}
+                  <span v-if="pendingCheckout.payment.checkout_version">
+                    · checkout v{{ pendingCheckout.payment.checkout_version }}
+                  </span>
+                </p>
+                <p class="text-xs text-amber-900/80">
+                  Change the ticket, quantity, promo, or email above, then pay now. EMS will replace the Square link if those details changed.
+                </p>
+                <button
+                  type="button"
+                  class="text-xs font-bold uppercase tracking-widest text-amber-900 underline"
+                  :disabled="submitting"
+                  @click="cancelPending"
+                >
+                  Cancel pending checkout
+                </button>
+              </div>
+
               <button
                 type="submit"
                 class="w-full inline-flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-primary text-white text-xs font-extrabold uppercase tracking-widest hover:brightness-110 disabled:opacity-60 cursor-pointer"
@@ -508,6 +588,16 @@ function ctaLabel(): string {
               >
                 <CheckCircle2 v-if="!submitting" :size="16" />
                 {{ ctaLabel() }}
+              </button>
+
+              <button
+                v-if="requiresPayment"
+                type="button"
+                class="w-full inline-flex items-center justify-center py-3 rounded-2xl border border-neutral-ivory text-xs font-extrabold uppercase tracking-widest text-neutral-black/70 hover:border-primary/40 disabled:opacity-60 cursor-pointer"
+                :disabled="submitting || (ticketTypes.length > 0 && !selectedTicketId)"
+                @click="submit(false)"
+              >
+                {{ submitting && !completeLater ? 'Saving…' : 'Complete payment later' }}
               </button>
 
               <p v-if="requiresPayment" class="text-[11px] text-center text-neutral-black/45">

@@ -91,8 +91,9 @@ class SquarePaymentProvider implements PaymentProvider
             ];
         }
 
+        $version = max(1, (int) ($payment->checkout_version ?? 1));
         $payload = [
-            'idempotency_key' => 'ems-plink-' . $payment->uuid,
+            'idempotency_key' => 'ems-plink-' . $payment->uuid . '-v' . $version,
             'checkout_options' => [
                 'redirect_url' => $successUrl,
                 'ask_for_shipping_address' => false,

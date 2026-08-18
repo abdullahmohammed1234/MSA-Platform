@@ -31,6 +31,7 @@ class PaymentResource extends JsonResource
             'terminal_checkout_id' => $this->terminal_checkout_id,
             'checkout_url' => $this->checkout_url,
             'checkout_expires_at' => $this->checkout_expires_at?->toIso8601String(),
+            'checkout_version' => (int) $this->checkout_version,
             'paid_at' => $this->paid_at?->toIso8601String(),
             'refunded_at' => $this->refunded_at?->toIso8601String(),
             'failure_reason' => $this->failure_reason,

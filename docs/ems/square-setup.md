@@ -222,24 +222,40 @@ Flow:
 2. EMS creates a pending order, registration, and payment, and reserves
    inventory.
 3. EMS creates a Square Payment Link (`POST /v2/online-checkout/payment-links`)
-   with a stable idempotency key `ems-plink-{payment.uuid}`.
+   with a stable idempotency key `ems-plink-{payment.uuid}-v{checkout_version}`
+   and stores `checkout_details_hash` for later comparison.
 4. The Payment Link URL is persisted on the EMS payment.
 5. After Square payment, webhooks mark the payment paid and EMS issues tickets.
 
-## 8. Resume / abandoned checkout
+## 8. Resume / abandoned checkout / Complete Payment Later
 
-If the buyer leaves Square:
+If the buyer leaves Square or chooses **Complete payment later**:
 
 - `POST /api/v1/ems/public/events/{slug}/checkout` with the same email
-  resumes the stored Payment Link when it is still valid.
-- `POST /api/v1/ems/public/events/{slug}/checkout/resume` does the same
-  explicitly.
+  submits the **current** ticket type, quantity, promo, and email.
+- That pending Square Payment Link is reused **only when** those payment
+  details still match the stored checkout fingerprint.
+- Payment-affecting changes (ticket type, quantity, price, discount, email,
+  catalog variation) supersede the old Payment Link: EMS deletes it when
+  Square allows, increments `checkout_version`, and creates a new Payment
+  Link (`idempotency_key` `ems-plink-{payment.uuid}-v{version}`).
+- Completed, refunded, or partially refunded payments are immutable. Frontend
+  edits do not rewrite a paid order.
+- Late webhooks for a superseded Payment Link are matched by stored Square
+  IDs and are **not** applied to the new pending order. They do not issue a
+  second ticket.
+- Repeated resume/checkout requests for the same current state remain
+  idempotent (one EMS payment, one live Payment Link).
+- `POST /api/v1/ems/public/events/{slug}/checkout/resume` may include the
+  current ticket fields; without them it returns the live link as before.
 - `POST /api/v1/ems/public/events/{slug}/checkout/cancel` cancels the
-  session, deletes the Payment Link when possible, and releases inventory.
+  current checkout, deletes the Payment Link when possible, and releases
+  inventory.
 
 Expired sessions are cleaned by `ExpireAbandonedCheckoutsJob` (every 15
-minutes). A delayed webhook after expiration still fulfills the payment
-and re-reserves inventory if Square actually captured funds.
+minutes). A delayed webhook after expiration still fulfills the **current**
+checkout and re-reserves inventory if Square actually captured funds for
+that checkout.
 
 ## 9. POS workflow (Square POS app + Reader)
 

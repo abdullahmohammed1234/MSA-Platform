@@ -172,7 +172,8 @@ class PublicEventController extends EmsController
         $result = $this->checkoutLifecycle->resume(
             $event,
             strtolower(trim($data['email'])),
-            $data['order_uuid'] ?? null
+            $data['order_uuid'] ?? null,
+            $data
         );
 
         return ApiResponse::success(

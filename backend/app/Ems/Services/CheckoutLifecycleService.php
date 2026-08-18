@@ -25,10 +25,29 @@ class CheckoutLifecycleService
     }
 
     /**
+     * @param  array<string, mixed>  $current
      * @return array{order: Order, registration: mixed, checkout_url: string|null, payment: Payment|null}
      */
-    public function resume(Event $event, string $email, ?string $orderUuid = null): array
+    public function resume(Event $event, string $email, ?string $orderUuid = null, array $current = []): array
     {
+        if (! empty($current['ticket_type_id'])) {
+            $found = $this->checkout->findResumableCheckout($event, $email);
+            $registration = $found['registration'] ?? null;
+            $meta = is_array($registration?->metadata) ? $registration->metadata : [];
+            $nameParts = preg_split('/\s+/', trim((string) ($registration?->attendee_name ?? '')), 2) ?: [];
+
+            return $this->checkout->checkout($event, [
+                'first_name' => $current['first_name'] ?? $meta['first_name'] ?? ($nameParts[0] ?? 'Guest'),
+                'last_name' => $current['last_name'] ?? $meta['last_name'] ?? ($nameParts[1] ?? 'Attendee'),
+                'email' => $email,
+                'phone' => $current['phone'] ?? $registration?->attendee_phone,
+                'ticket_type_id' => $current['ticket_type_id'],
+                'quantity' => $current['quantity'] ?? $registration?->quantity ?? 1,
+                'promo_code' => $current['promo_code'] ?? null,
+                'notes' => $current['notes'] ?? $registration?->notes,
+            ]);
+        }
+
         if ($orderUuid) {
             $order = Order::query()->where('uuid', $orderUuid)->where('event_id', $event->id)->first();
             if ($order && strcasecmp((string) $order->buyer_email, $email) === 0) {

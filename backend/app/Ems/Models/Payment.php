@@ -46,6 +46,8 @@ class Payment extends Model
         'metadata',
         'checkout_url',
         'checkout_expires_at',
+        'checkout_details_hash',
+        'checkout_version',
         'source_channel',
         'terminal_checkout_id',
         'terminal_device_id',
@@ -61,6 +63,7 @@ class Payment extends Model
             'paid_at' => 'datetime',
             'refunded_at' => 'datetime',
             'checkout_expires_at' => 'datetime',
+            'checkout_version' => 'integer',
             'metadata' => 'array',
         ];
     }
@@ -89,6 +92,23 @@ class Payment extends Model
     public function isSettled(): bool
     {
         return $this->status->isSettled();
+    }
+
+    public function recordsSupersededSquareId(?string $orderId = null, ?string $checkoutId = null): bool
+    {
+        foreach ($this->metadata['superseded_checkouts'] ?? [] as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            if ($orderId && ($row['provider_order_id'] ?? null) === $orderId) {
+                return true;
+            }
+            if ($checkoutId && ($row['provider_checkout_id'] ?? null) === $checkoutId) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

@@ -144,6 +144,7 @@ export interface RegisterForEventPayload {
   quantity?: number;
   ticket_type_id?: string | null;
   promo_code?: string | null;
+  order_uuid?: string | null;
 }
 
 export interface CalendarFilters {

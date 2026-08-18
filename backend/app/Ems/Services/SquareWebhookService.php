@@ -257,6 +257,20 @@ class SquareWebhookService
             return $payment;
         }
 
+        if ($this->isSupersededSquareCapture($payment, $parsed)) {
+            Log::channel((string) config('ems.logging.channel', 'ems'))
+                ->info('ems.checkout.superseded_payment_ignored', [
+                    'payment_uuid' => $payment->uuid,
+                    'order_uuid' => $payment->order?->uuid,
+                    'checkout_version' => $payment->checkout_version,
+                    'square_order_id' => $parsed['provider_order_id'] ?? null,
+                    'square_payment_id' => $parsed['provider_payment_id'] ?? null,
+                    'reason' => 'superseded_checkout',
+                ]);
+
+            return $payment;
+        }
+
         return match ($status) {
             PaymentStatus::Paid->value => $this->fulfillment->markPaid($payment, $parsed),
             PaymentStatus::Failed->value => $this->fulfillment->markFailed(
@@ -311,13 +325,21 @@ class SquareWebhookService
             }
         }
 
+        $superseded = $this->findPaymentBySupersededCheckout($parsed);
+        if ($superseded !== null) {
+            return $superseded;
+        }
+
         $reference = $parsed['reference'] ?? null;
 
         if (is_string($reference) && str_starts_with($reference, 'ORD-')) {
             $order = Order::query()->where('reference', $reference)->first();
 
             if ($order !== null) {
-                return $order->latestPayment;
+                $payment = $order->latestPayment;
+                if ($payment !== null && $this->squareIdsBelongToCurrentCheckout($payment, $parsed)) {
+                    return $payment;
+                }
             }
         }
 
@@ -326,7 +348,76 @@ class SquareWebhookService
             $order = Order::query()->where('reference', $matches[0])->first();
 
             if ($order !== null) {
-                return $order->latestPayment;
+                $payment = $order->latestPayment;
+                if ($payment !== null && $this->squareIdsBelongToCurrentCheckout($payment, $parsed)) {
+                    return $payment;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $parsed
+     */
+    private function isSupersededSquareCapture(Payment $payment, array $parsed): bool
+    {
+        $orderId = isset($parsed['provider_order_id']) ? (string) $parsed['provider_order_id'] : '';
+        $checkoutId = isset($parsed['provider_checkout_id']) ? (string) $parsed['provider_checkout_id'] : '';
+
+        if ($orderId !== '' && $payment->provider_order_id && $orderId === (string) $payment->provider_order_id) {
+            return false;
+        }
+        if ($checkoutId !== '' && $payment->provider_checkout_id && $checkoutId === (string) $payment->provider_checkout_id) {
+            return false;
+        }
+
+        return $payment->recordsSupersededSquareId(
+            $orderId !== '' ? $orderId : null,
+            $checkoutId !== '' ? $checkoutId : null
+        );
+    }
+
+    /**
+     * @param  array<string, mixed>  $parsed
+     */
+    private function squareIdsBelongToCurrentCheckout(Payment $payment, array $parsed): bool
+    {
+        $orderId = isset($parsed['provider_order_id']) ? (string) $parsed['provider_order_id'] : '';
+        if ($orderId === '' || ! $payment->provider_order_id) {
+            return true;
+        }
+
+        return $orderId === (string) $payment->provider_order_id;
+    }
+
+    /**
+     * @param  array<string, mixed>  $parsed
+     */
+    private function findPaymentBySupersededCheckout(array $parsed): ?Payment
+    {
+        $orderId = isset($parsed['provider_order_id']) ? (string) $parsed['provider_order_id'] : '';
+        $checkoutId = isset($parsed['provider_checkout_id']) ? (string) $parsed['provider_checkout_id'] : '';
+        if ($orderId === '' && $checkoutId === '') {
+            return null;
+        }
+
+        $needle = $orderId !== '' ? $orderId : $checkoutId;
+
+        $candidates = Payment::query()
+            ->where('provider', PaymentProviderEnum::Square->value)
+            ->whereNotNull('metadata')
+            ->where('metadata', 'like', '%'.$needle.'%')
+            ->limit(20)
+            ->get();
+
+        foreach ($candidates as $candidate) {
+            if ($candidate->recordsSupersededSquareId(
+                $orderId !== '' ? $orderId : null,
+                $checkoutId !== '' ? $checkoutId : null
+            )) {
+                return $candidate;
             }
         }
 

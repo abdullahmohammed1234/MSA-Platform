@@ -114,7 +114,7 @@ const values = [
           <ScrollReveal direction="right">
             <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 text-accent-gold text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-6 sm:mb-8 border border-white/20 backdrop-blur-md">
               <span class="w-2 h-2 rounded-full bg-accent-gold animate-pulse shadow-glow shadow-accent-gold/50" />
-              The Executive Council 2025-2026
+              The Executive Council 2026-2027
             </div>
           </ScrollReveal>
           
