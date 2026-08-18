@@ -78,7 +78,7 @@ class EmsEventTemplateSeeder extends Seeder
             [
                 'name' => 'Charity Dinner',
                 'description' => 'Setup for paid fundraising dinners with tables and ticketing limits.',
-                'category_slug' => 'fundraising',
+                'category_slug' => 'social',
                 'capacity' => 200,
                 'is_public' => true,
                 'waitlist_enabled' => true,
@@ -104,7 +104,7 @@ class EmsEventTemplateSeeder extends Seeder
             [
                 'name' => 'Brothers Event',
                 'description' => 'Configured specifically for brothers activities, sports or socials.',
-                'category_slug' => 'brothers',
+                'category_slug' => 'social',
                 'capacity' => 50,
                 'is_public' => true,
                 'waitlist_enabled' => true,
@@ -121,7 +121,7 @@ class EmsEventTemplateSeeder extends Seeder
             [
                 'name' => 'Sisters Event',
                 'description' => 'Configured specifically for sisters activities, halaqahs or socials.',
-                'category_slug' => 'sisters',
+                'category_slug' => 'social',
                 'capacity' => 50,
                 'is_public' => true,
                 'waitlist_enabled' => true,
@@ -138,7 +138,7 @@ class EmsEventTemplateSeeder extends Seeder
             [
                 'name' => 'Ramadan Event',
                 'description' => 'Configured for high-capacity Ramadan community dinners or lectures.',
-                'category_slug' => 'ramadan',
+                'category_slug' => 'social',
                 'capacity' => 300,
                 'is_public' => true,
                 'waitlist_enabled' => true,

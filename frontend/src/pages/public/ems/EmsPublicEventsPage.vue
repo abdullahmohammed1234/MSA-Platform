@@ -45,9 +45,7 @@ const savedCheckouts = ref<StoredPendingCheckout[]>([]);
 
 const categoryChips = computed(() => [
   { label: 'All', value: 'all' },
-  ...categories.value
-    .filter((category) => !['jummah', 'other'].includes(category.slug))
-    .map((category) => ({ label: category.name, value: category.slug })),
+  ...categories.value.map((category) => ({ label: category.name, value: category.slug })),
 ]);
 
 async function loadCategories() {

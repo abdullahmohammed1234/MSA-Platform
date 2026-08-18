@@ -186,13 +186,36 @@ class EmsEventCategoryTest extends EmsTestCase
     {
         $this->seed(\Database\Seeders\Ems\EmsEventCategorySeeder::class);
 
-        foreach (['brothers', 'sisters', 'community', 'education', 'social', 'fundraising', 'ramadan', 'jummah', 'other'] as $slug) {
-            $this->assertDatabaseHas('ems_event_categories', ['slug' => $slug]);
+        foreach (['social', 'education', 'other'] as $slug) {
+            $this->assertDatabaseHas('ems_event_categories', ['slug' => $slug, 'deleted_at' => null]);
         }
+
+        $this->assertDatabaseHas('ems_event_categories', [
+            'slug' => 'education',
+            'name' => 'Educational/Halaqahs',
+        ]);
+
+        $this->assertSame(3, EventCategory::count());
 
         // Re-running must not duplicate anything.
         $before = EventCategory::count();
         $this->seed(\Database\Seeders\Ems\EmsEventCategorySeeder::class);
         $this->assertSame($before, EventCategory::count());
+    }
+
+    public function test_the_seeder_retires_legacy_categories_and_reassigns_events(): void
+    {
+        $brothers = $this->category(['name' => 'Brothers', 'slug' => 'brothers']);
+        $social = $this->category(['name' => 'Social', 'slug' => 'social']);
+        $event = Event::factory()->create(['category_id' => $brothers->id]);
+
+        $this->seed(\Database\Seeders\Ems\EmsEventCategorySeeder::class);
+
+        $this->assertSame($social->id, $event->fresh()->category_id);
+        $this->assertSoftDeleted('ems_event_categories', ['id' => $brothers->id]);
+        $this->assertDatabaseHas('ems_event_categories', [
+            'slug' => 'education',
+            'name' => 'Educational/Halaqahs',
+        ]);
     }
 }

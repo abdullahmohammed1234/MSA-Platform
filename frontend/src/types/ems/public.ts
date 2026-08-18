@@ -125,7 +125,10 @@ export interface PublicRegistration {
     name: string;
     slug: string;
     start_at: string | null;
+    end_at?: string | null;
     location: string | null;
+    status?: EventStatus;
+    status_label?: string;
   } | null;
   tickets: PublicTicket[];
 }

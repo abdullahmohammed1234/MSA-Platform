@@ -54,13 +54,16 @@ class PublicRegistrationResource extends JsonResource
                 }
             ),
 
-            'event' => $this->whenLoaded('event', fn () => [
+            'event' => $this->whenLoaded('event', fn () => $this->event ? [
                 'uuid' => $this->event->uuid,
                 'name' => $this->event->name,
                 'slug' => $this->event->slug,
                 'start_at' => $this->event->start_at?->toIso8601String(),
+                'end_at' => $this->event->end_at?->toIso8601String(),
                 'location' => $this->event->location,
-            ]),
+                'status' => $this->event->status->value,
+                'status_label' => $this->event->status->label(),
+            ] : null),
 
             'tickets' => PublicTicketResource::collection($this->whenLoaded('tickets')),
         ];

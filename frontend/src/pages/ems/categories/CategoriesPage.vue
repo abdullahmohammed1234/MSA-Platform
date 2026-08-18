@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
-import { Plus } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -21,17 +20,13 @@ import { EMS_PERMISSIONS } from '@/constants/ems';
 import type { EventCategory } from '@/types/ems';
 
 /**
- * The event taxonomy.
- *
- * Categories are database-driven — nothing here is hard-coded — and each
- * action is gated on its own permission, then enforced again server-side.
+ * The event taxonomy: Social, Educational/Halaqahs, and Other.
  */
 const toast = useToastStore();
 const store = useEmsCategoriesStore();
 const { can } = useEmsPermissions();
 const { fieldError, generalError, handle, clear } = useEmsApiError();
 
-const canCreate = computed(() => can(EMS_PERMISSIONS.CATEGORIES_CREATE));
 const canUpdate = computed(() => can(EMS_PERMISSIONS.CATEGORIES_UPDATE));
 const canDelete = computed(() => can(EMS_PERMISSIONS.CATEGORIES_DELETE));
 
@@ -63,19 +58,6 @@ async function load() {
     // The store records the message; the error state renders it.
   }
 }
-
-const openCreate = () => {
-  clear();
-  editing.value = null;
-  Object.assign(form, {
-    name: '',
-    description: '',
-    color: '#640c0e',
-    sort_order: String(store.categories.length),
-    is_active: true,
-  });
-  isFormOpen.value = true;
-};
 
 const openEdit = (category: EventCategory) => {
   clear();
@@ -148,15 +130,8 @@ const confirmDelete = async () => {
   <div>
     <EmsPageHeader
       title="Event Categories"
-      description="The taxonomy used to classify MSA events."
-    >
-      <template #actions>
-        <Button v-if="canCreate" variant="primary" @click="openCreate">
-          <template #left-icon><Plus class="h-4 w-4" /></template>
-          New Category
-        </Button>
-      </template>
-    </EmsPageHeader>
+      description="Events are classified as Social, Educational/Halaqahs, or Other."
+    />
 
     <EmsErrorState v-if="store.error" :message="store.error" @retry="load" />
 
@@ -167,9 +142,7 @@ const confirmDelete = async () => {
         v-else-if="store.categories.length === 0"
         class="my-8 border-0"
         title="No categories yet"
-        description="Categories let organizers classify events for filtering and reporting."
-        :action-label="canCreate ? 'New Category' : undefined"
-        @action="openCreate"
+        description="Seed Social, Educational/Halaqahs, and Other to classify events."
       />
 
       <ul v-else class="divide-y divide-neutral-ivory">

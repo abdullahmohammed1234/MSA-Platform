@@ -45,7 +45,7 @@ const statusOptions = computed(() => [
 
 const categoryOptions = computed(() => [
   { label: 'All categories', value: ANY },
-  ...categories.categories.map((category) => ({ label: category.name, value: String(category.id) })),
+  ...categories.activeCategories.map((category) => ({ label: category.name, value: String(category.id) })),
 ]);
 
 const sortOptions = [

@@ -118,6 +118,7 @@ const confirmDelete = async () => {
           <Button
             v-if="canViewAnalytics"
             variant="outline"
+            size="sm"
             @click="router.push({ name: 'ems-event-analytics', params: { uuid } })"
           >
             Analytics
@@ -125,6 +126,7 @@ const confirmDelete = async () => {
           <Button
             v-if="canViewOperations"
             variant="outline"
+            size="sm"
             @click="router.push({ name: 'ems-event-operations', params: { uuid } })"
           >
             Operations
@@ -132,6 +134,7 @@ const confirmDelete = async () => {
           <Button
             v-if="canViewNotifications"
             variant="outline"
+            size="sm"
             @click="router.push({ name: 'ems-event-notifications', params: { uuid } })"
           >
             Communications
@@ -139,6 +142,7 @@ const confirmDelete = async () => {
           <Button
             v-if="canViewAttendees"
             variant="outline"
+            size="sm"
             @click="router.push({ name: 'ems-event-attendees', params: { uuid } })"
           >
             Attendees
@@ -146,6 +150,7 @@ const confirmDelete = async () => {
           <Button
             v-if="canCheckIn"
             variant="outline"
+            size="sm"
             @click="router.push({ name: 'ems-event-staff', params: { uuid } })"
           >
             Staff check-in
@@ -153,6 +158,7 @@ const confirmDelete = async () => {
           <Button
             v-if="canImportAttendees"
             variant="outline"
+            size="sm"
             @click="router.push({ name: 'ems-event-import', params: { uuid } })"
           >
             Import
@@ -160,6 +166,7 @@ const confirmDelete = async () => {
           <Button
             v-if="canUpdateEvents"
             variant="outline"
+            size="sm"
             @click="router.push({ name: 'ems-event-edit', params: { uuid } })"
           >
             Edit
@@ -167,11 +174,12 @@ const confirmDelete = async () => {
           <Button
             v-if="canUpdateEvents"
             variant="outline"
+            size="sm"
             @click="router.push({ name: 'ems-event-create', query: { duplicate_from: uuid } })"
           >
             Duplicate
           </Button>
-          <Button v-if="canDeleteEvents" variant="ghost" @click="isDeleteOpen = true">Delete</Button>
+          <Button v-if="canDeleteEvents" variant="ghost" size="sm" @click="isDeleteOpen = true">Delete</Button>
         </template>
       </EmsPageHeader>
 

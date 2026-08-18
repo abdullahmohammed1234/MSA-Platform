@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { resolveTeamMembers, normalizeTeamMembers, normalizeCmsTeamMember } from '@/utils/teamMembers';
 import { toStorableImagePath } from '@/constants/publicAssets';
 import { DEFAULT_TEAM_MEMBERS } from '@/data/teamMembers';
+import { independentCoordinators, membersWithRoles } from '@/data/teamOrg';
 
 describe('resolveTeamMembers', () => {
   it('returns defaults when API payload is empty', () => {
@@ -45,5 +46,29 @@ describe('resolveTeamMembers', () => {
       .toBe('/storage/uploads/team-photo.webp');
     expect(toStorableImagePath('/Team/hamza.webp')).toBe('/Team/hamza.webp');
     expect(toStorableImagePath('')).toBeNull();
+  });
+});
+
+describe('team org chart matching', () => {
+  it('places independent coordinators without a lead', () => {
+    const independents = independentCoordinators(DEFAULT_TEAM_MEMBERS).map((member) => member.role);
+
+    expect(independents).toEqual([
+      'NCCM Coordinator',
+      'Prayer Services Coordinator',
+      'IT Coordinator',
+    ]);
+  });
+
+  it('groups finance coordinators under the finance director', () => {
+    const finance = membersWithRoles(DEFAULT_TEAM_MEMBERS, ['Director of Finance']);
+    const coordinators = membersWithRoles(DEFAULT_TEAM_MEMBERS, [
+      'Finance Coordinator',
+      'Sponsorship Outreach Coordinator',
+      'Logistics Outreach Coordinator',
+    ]);
+
+    expect(finance).toHaveLength(1);
+    expect(coordinators).toHaveLength(4);
   });
 });

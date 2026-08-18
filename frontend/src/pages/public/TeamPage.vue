@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { 
   ArrowRight, Heart, Sparkles, Shield
 } from 'lucide-vue-next';
@@ -7,10 +7,11 @@ import ScrollReveal from '@/components/shared/ScrollReveal.vue';
 import FloatingElement from '@/components/shared/FloatingElement.vue';
 import PublicButton from '@/components/shared/PublicButton.vue';
 import ImageLightbox from '@/components/shared/ImageLightbox.vue';
+import TeamOrgChart from '@/components/shared/TeamOrgChart.vue';
 import { useSeo } from '@/composables/useSeo';
 import websiteService, { type TeamMember } from '@/services/website/websiteService';
 import { DEFAULT_TEAM_MEMBERS } from '@/data/teamMembers';
-import { HERO_IMAGES, TEAM_FALLBACK_IMAGE } from '@/constants/publicAssets';
+import { HERO_IMAGES } from '@/constants/publicAssets';
 import type { LightboxImage } from '@/types/lightbox';
 
 useSeo({
@@ -18,42 +19,20 @@ useSeo({
   description: 'Meet the executive council and directors who lead and shape the Simon Fraser University Muslim Students Association.'
 });
 
-const DEPARTMENTS = [
-  'All',
-  'President',
-  'Vice Presidents',
-  'Directors',
-  'Secretary',
-  'Coordinators'
-];
-
 const teamMembers = ref<TeamMember[]>([...DEFAULT_TEAM_MEMBERS]);
-const activeDept = ref('All');
-const isLoadingTeam = ref(false);
+const selectedMemberIndex = ref<number | null>(null);
 
 onMounted(async () => {
-  isLoadingTeam.value = true;
   try {
     teamMembers.value = await websiteService.getTeamMembers();
   } catch (err) {
     console.error('Failed to load team members:', err);
     teamMembers.value = [...DEFAULT_TEAM_MEMBERS];
-  } finally {
-    isLoadingTeam.value = false;
   }
 });
-
-const filteredTeam = computed(() => {
-  if (activeDept.value === 'All') {
-    return teamMembers.value;
-  }
-  return teamMembers.value.filter(m => m.dept === activeDept.value);
-});
-
-const selectedMemberIndex = ref<number | null>(null);
 
 const teamLightboxImages = computed<LightboxImage[]>(() =>
-  filteredTeam.value.map((member, index) => ({
+  teamMembers.value.map((member, index) => ({
     id: `${member.name}-${index}`,
     url: member.img,
     title: member.name,
@@ -65,13 +44,9 @@ const teamLightboxImages = computed<LightboxImage[]>(() =>
 );
 
 const openMemberLightbox = (member: TeamMember) => {
-  const index = filteredTeam.value.findIndex((entry) => entry.name === member.name);
+  const index = teamMembers.value.findIndex((entry) => entry.name === member.name);
   selectedMemberIndex.value = index >= 0 ? index : 0;
 };
-
-watch(activeDept, () => {
-  selectedMemberIndex.value = null;
-});
 
 const values = [
   {
@@ -171,75 +146,7 @@ const values = [
       </div>
     </section>
 
-    <!-- Department Filter Bar -->
-    <div class="sticky top-20 z-40 bg-neutral-background/95 backdrop-blur-xl border-b border-neutral-gray/20">
-      <div class="container-custom py-4">
-        <div class="flex items-center gap-6 overflow-x-auto pb-2 no-scrollbar">
-          <div class="flex-shrink-0 text-[10px] font-black uppercase tracking-[0.3em] text-neutral-black/30 mr-4">Departments:</div>
-          <button
-            v-for="dept in DEPARTMENTS"
-            :key="dept"
-            @click="activeDept = dept"
-            :class="[
-              'flex-shrink-0 px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all duration-300 relative group cursor-pointer',
-              activeDept === dept ? 'text-primary font-bold' : 'text-neutral-black/30 hover:text-primary/60'
-            ]"
-          >
-            {{ dept }}
-            <div 
-              v-if="activeDept === dept"
-              class="absolute -bottom-4 left-0 right-0 h-1 bg-primary rounded-full"
-            />
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Team Grid -->
-    <section class="container-custom py-24">
-      <div v-if="filteredTeam.length === 0 && !isLoadingTeam" class="py-16 text-center text-neutral-black/50">
-        <p class="text-lg font-display text-primary">No team members to display.</p>
-      </div>
-      <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-20">
-        <div 
-          v-for="member in filteredTeam" 
-          :key="member.name"
-          class="group relative"
-        >
-          <!-- Profile Card -->
-          <button
-            type="button"
-            class="relative mb-8 w-full bg-white rounded-[2.5rem] overflow-hidden shadow-soft group-hover:shadow-premium border border-neutral-gray/10 transition-all duration-700 cursor-zoom-in text-left"
-            @click="openMemberLightbox(member)"
-          >
-            <div class="aspect-[4/5] relative overflow-hidden bg-primary/5">
-              <img 
-                :src="member.img" 
-                :alt="member.name" 
-                class="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-1000 group-hover:scale-105"
-                @error="($event.target as HTMLImageElement).src = TEAM_FALLBACK_IMAGE"
-              />
-              <!-- Department Tag Overlay -->
-              <div class="absolute top-4 left-4">
-                <div class="px-3 py-1 bg-primary/90 backdrop-blur-sm rounded-full text-[9px] font-black uppercase tracking-widest text-white shadow-sm border border-white/10">
-                  {{ member.dept }}
-                </div>
-              </div>
-            </div>
-          </button>
-
-          <!-- Info Text -->
-          <div class="px-2">
-            <h3 class="text-2xl font-display font-medium text-primary group-hover:text-secondary transition-colors duration-300">
-              {{ member.name }}
-            </h3>
-            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-black/30 mt-1 font-sans">
-              {{ member.role }}
-            </p>
-          </div>
-        </div>
-      </div>
-    </section>
+    <TeamOrgChart :members="teamMembers" @select="openMemberLightbox" />
 
     <ImageLightbox
       v-model="selectedMemberIndex"
@@ -248,12 +155,12 @@ const values = [
 
     <!-- Modern Recruitment Section -->
     <section class="container-custom py-40">
-      <ScrollReveal direction="up" :distance="50" class="w-full">
+      <ScrollReveal direction="up" :distance="50" width="100%">
         <div class="relative rounded-[4rem] bg-primary overflow-hidden p-12 md:p-32 text-center shadow-2xl shadow-primary/30 group border border-secondary/10">
           <div class="absolute top-0 left-0 w-full h-full pattern-islamic opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-1000" />
           <FloatingElement class="absolute -top-24 -right-24 w-96 h-96 bg-secondary opacity-20 blur-[120px] rounded-full" />
           
-          <div class="relative z-10 max-w-3xl mx-auto space-y-10">
+          <div class="relative z-10 mx-auto max-w-3xl space-y-10 text-center flex flex-col items-center">
             <div class="inline-flex w-16 h-16 rounded-full bg-white/10 backdrop-blur-md items-center justify-center text-accent-gold mb-6 ring-1 ring-white/20">
               <Sparkles class="w-8 h-8" />
             </div>
@@ -271,7 +178,7 @@ const values = [
             <div class="flex flex-col sm:flex-row justify-center gap-4 w-full max-w-md sm:max-w-xl mx-auto pt-6 px-4">
               <router-link to="/contact" class="w-full sm:flex-1">
                 <PublicButton variant="secondary" size="lg" class="bg-secondary hover:bg-secondary-light text-white w-full font-bold">
-                  Apply for 2026 Board <ArrowRight :size="16" class="ml-2 inline-block shrink-0" />
+                  Apply for 2027 Board <ArrowRight :size="16" class="ml-2 inline-block shrink-0" />
                 </PublicButton>
               </router-link>
               <router-link to="/contact" class="w-full sm:flex-1">
