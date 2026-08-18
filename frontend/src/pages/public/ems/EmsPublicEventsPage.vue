@@ -17,9 +17,10 @@ import { useSeo } from '@/composables/useSeo';
 import { useEventFormatting } from '@/composables/ems/useEventFormatting';
 import { EmsApiError } from '@/services/ems/emsClient';
 import publicEventsService from '@/services/ems/publicEventsService';
-import { EMS_PUBLIC_CALENDAR_PATH } from '@/constants/ems';
+import { EMS_PUBLIC_CALENDAR_PATH, emsPublicEventPath } from '@/constants/ems';
 import { resolvePublicImagePath } from '@/constants/publicAssets';
 import type { PublicCategory, PublicEvent } from '@/types/ems/public';
+import pendingCheckoutStorage, { type StoredPendingCheckout } from '@/services/ems/pendingCheckoutStorage';
 
 useSeo({
   title: 'Events | SFU MSA',
@@ -40,6 +41,7 @@ const registrationFilter = ref<'any' | 'open' | 'closed'>('any');
 const page = ref(1);
 const lastPage = ref(1);
 const total = ref(0);
+const savedCheckouts = ref<StoredPendingCheckout[]>([]);
 
 const categoryChips = computed(() => [
   { label: 'All', value: 'all' },
@@ -167,6 +169,7 @@ onMounted(async () => {
     now.value = Date.now();
   }, 1000);
 
+  savedCheckouts.value = pendingCheckoutStorage.list();
   await Promise.all([loadCategories(), loadHeroCandidates()]);
   await loadEvents();
 });
@@ -363,6 +366,26 @@ function capacityLabel(event: PublicEvent): string {
     </div>
 
     <section class="container-custom pt-10">
+      <div
+        v-if="savedCheckouts.length"
+        class="mb-6 rounded-[1.75rem] border border-amber-200 bg-amber-50 p-5 sm:p-6"
+      >
+        <p class="text-[10px] font-extrabold uppercase tracking-widest text-amber-800">Saved payments</p>
+        <p class="mt-1 text-sm text-amber-950/80">
+          You have unfinished checkout{{ savedCheckouts.length > 1 ? 's' : '' }} on this device.
+        </p>
+        <div class="mt-3 flex flex-col gap-2">
+          <RouterLink
+            v-for="item in savedCheckouts"
+            :key="item.order_uuid"
+            :to="emsPublicEventPath(item.slug)"
+            class="flex items-center justify-between gap-3 rounded-2xl bg-white/80 px-4 py-3 text-sm hover:bg-white"
+          >
+            <span class="font-semibold text-primary">{{ item.event_name }}</span>
+            <span class="text-xs font-bold uppercase tracking-widest text-amber-800">Complete payment</span>
+          </RouterLink>
+        </div>
+      </div>
       <div v-if="loading" class="grid gap-6 sm:grid-cols-2 xl:grid-cols-3" aria-busy="true">
         <div
           v-for="n in 6"

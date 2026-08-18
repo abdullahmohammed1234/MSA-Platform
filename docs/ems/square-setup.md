@@ -252,6 +252,15 @@ If the buyer leaves Square or chooses **Complete payment later**:
   current checkout, deletes the Payment Link when possible, and releases
   inventory.
 
+The public event page keeps a **Complete payment later** checkout on this
+device (browser storage) and restores it after refresh, navigation, or a
+cancelled Square session. Signed-in buyers also see pending payments on
+**My Tickets**, including the Square checkout URL. Guests who cleared
+storage can look up the pending session on the event page with the email
+used at checkout. `GET /api/v1/ems/public/my-tickets` includes
+`pending_checkout` (order UUID, amount, checkout URL) when the
+registration is still `awaiting_payment`.
+
 Expired sessions are cleaned by `ExpireAbandonedCheckoutsJob` (every 15
 minutes). A delayed webhook after expiration still fulfills the **current**
 checkout and re-reserves inventory if Square actually captured funds for

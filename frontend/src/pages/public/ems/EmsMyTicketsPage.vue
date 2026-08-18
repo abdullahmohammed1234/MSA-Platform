@@ -5,7 +5,8 @@ import { useSeo } from '@/composables/useSeo';
 import { useEventFormatting } from '@/composables/ems/useEventFormatting';
 import { EmsApiError } from '@/services/ems/emsClient';
 import publicEventsService from '@/services/ems/publicEventsService';
-import { EMS_PUBLIC_EVENTS_PATH } from '@/constants/ems';
+import pendingCheckoutStorage, { type StoredPendingCheckout } from '@/services/ems/pendingCheckoutStorage';
+import { EMS_PUBLIC_EVENTS_PATH, emsPublicEventPath } from '@/constants/ems';
 import type { PublicRegistration } from '@/types/ems/public';
 import { useToastStore } from '@/components/feedback/toast';
 
@@ -13,11 +14,12 @@ const toast = useToastStore();
 const { formatDate, formatTime } = useEventFormatting();
 
 const registrations = ref<PublicRegistration[]>([]);
+const localPending = ref<StoredPendingCheckout[]>([]);
 const loading = ref(true);
 const error = ref('');
 const activeTab = ref<'active' | 'past'>('active');
+const payingKey = ref('');
 
-// Cancellation state
 const isCancelling = ref(false);
 const registrationToCancel = ref<PublicRegistration | null>(null);
 const showCancelConfirm = ref(false);
@@ -27,9 +29,14 @@ useSeo(() => ({
   description: 'Manage your event registrations and tickets.',
 }));
 
+function formatMoney(amount: number, currency: string) {
+  return new Intl.NumberFormat('en-CA', { style: 'currency', currency }).format(amount);
+}
+
 async function load() {
   loading.value = true;
   error.value = '';
+  localPending.value = pendingCheckoutStorage.list();
 
   try {
     registrations.value = await publicEventsService.getMyTickets();
@@ -47,6 +54,12 @@ const isPastEvent = (dateStr: string | null): boolean => {
   return new Date(dateStr) < new Date();
 };
 
+const extraPending = computed(() => {
+  if (activeTab.value !== 'active') return [];
+  const slugs = new Set(registrations.value.map((reg) => reg.event?.slug).filter(Boolean));
+  return localPending.value.filter((item) => !slugs.has(item.slug));
+});
+
 const filteredRegistrations = computed(() => {
   return registrations.value.filter((reg) => {
     const isPast = isPastEvent(reg.event?.start_at ?? null);
@@ -54,11 +67,16 @@ const filteredRegistrations = computed(() => {
   });
 });
 
+const showEmpty = computed(() =>
+  filteredRegistrations.value.length === 0 && extraPending.value.length === 0
+);
+
 const getStatusClass = (status: string) => {
   switch (status) {
     case 'confirmed':
       return 'bg-green-50 text-green-700 border-green-200';
     case 'waitlisted':
+    case 'awaiting_payment':
       return 'bg-amber-50 text-amber-700 border-amber-200';
     case 'cancelled':
       return 'bg-red-50 text-red-700 border-red-200';
@@ -78,6 +96,9 @@ const executeCancel = async () => {
 
   try {
     await publicEventsService.cancelRegistration(registrationToCancel.value.uuid);
+    if (registrationToCancel.value.event?.slug) {
+      pendingCheckoutStorage.remove(registrationToCancel.value.event.slug);
+    }
     toast.success('Registration cancelled successfully.');
     showCancelConfirm.value = false;
     registrationToCancel.value = null;
@@ -89,6 +110,37 @@ const executeCancel = async () => {
     isCancelling.value = false;
   }
 };
+
+async function payRegistration(reg: PublicRegistration) {
+  const url = reg.pending_checkout?.checkout_url;
+  if (url) {
+    window.location.href = url;
+    return;
+  }
+
+  if (!reg.event?.slug) return;
+  payingKey.value = reg.uuid;
+  try {
+    const result = await publicEventsService.resumeCheckout(reg.event.slug, {
+      email: reg.attendee_email,
+      order_uuid: reg.pending_checkout?.order_uuid ?? undefined,
+    });
+    if (result.checkout_url) {
+      window.location.href = result.checkout_url;
+      return;
+    }
+  } catch (err) {
+    toast.error(err instanceof EmsApiError ? err.message : 'Could not resume checkout.');
+  } finally {
+    payingKey.value = '';
+  }
+}
+
+function payLocalPending(item: StoredPendingCheckout) {
+  if (item.checkout_url) {
+    window.location.href = item.checkout_url;
+  }
+}
 </script>
 
 <template>
@@ -148,7 +200,7 @@ const executeCancel = async () => {
 
         <!-- Empty State -->
         <div
-          v-else-if="filteredRegistrations.length === 0"
+          v-else-if="showEmpty"
           class="bg-white rounded-3xl border border-neutral-ivory shadow-sm p-12 text-center"
         >
           <div class="h-16 w-16 bg-neutral-background rounded-2xl flex items-center justify-center mx-auto mb-4 border border-neutral-ivory">
@@ -170,9 +222,50 @@ const executeCancel = async () => {
         <!-- Registrations List -->
         <div v-else class="space-y-6">
           <div
+            v-for="item in extraPending"
+            :key="'pending-' + item.order_uuid"
+            class="bg-white rounded-3xl border border-amber-200 shadow-soft overflow-hidden flex flex-col md:flex-row md:items-stretch"
+          >
+            <div class="p-6 md:p-8 flex-1">
+              <span class="px-3 py-1 rounded-full text-[9px] font-extrabold uppercase tracking-wider border bg-amber-50 text-amber-700 border-amber-200">
+                Pending Payment
+              </span>
+              <h3 class="mt-3 font-display text-xl sm:text-2xl font-black text-primary leading-snug">
+                {{ item.event_name }}
+              </h3>
+              <p class="mt-2 text-sm text-neutral-black/60">
+                {{ item.ticket_name || 'Ticket' }} × {{ item.quantity }}
+                · {{ formatMoney(item.amount, item.currency) }}
+              </p>
+              <p class="mt-1 text-xs text-neutral-black/45">
+                Saved on this device for {{ item.email }}. Return to the event page if you want to change details first.
+              </p>
+            </div>
+            <div class="px-6 pb-6 md:pb-0 md:px-8 border-t md:border-t-0 md:border-l border-neutral-ivory bg-amber-50/40 flex flex-col justify-center min-w-[200px] shrink-0">
+              <div class="space-y-2 md:space-y-3">
+                <button
+                  v-if="item.checkout_url"
+                  type="button"
+                  class="block w-full text-center bg-primary text-white py-2.5 px-4 rounded-xl text-[10px] font-extrabold uppercase tracking-widest hover:bg-secondary transition-all cursor-pointer"
+                  @click="payLocalPending(item)"
+                >
+                  Complete Payment
+                </button>
+                <RouterLink
+                  :to="emsPublicEventPath(item.slug)"
+                  class="block w-full text-center border border-neutral-ivory text-neutral-black py-2.5 px-4 rounded-xl text-[10px] font-extrabold uppercase tracking-widest hover:border-primary/40 transition-all"
+                >
+                  Review Details
+                </RouterLink>
+              </div>
+            </div>
+          </div>
+
+          <div
             v-for="reg in filteredRegistrations"
             :key="reg.uuid"
-            class="bg-white rounded-3xl border border-neutral-ivory shadow-soft hover:shadow-premium transition-all overflow-hidden flex flex-col md:flex-row md:items-stretch"
+            class="bg-white rounded-3xl border shadow-soft hover:shadow-premium transition-all overflow-hidden flex flex-col md:flex-row md:items-stretch"
+            :class="reg.status === 'awaiting_payment' ? 'border-amber-200' : 'border-neutral-ivory'"
           >
             <!-- Card Left: Event Info -->
             <div class="p-6 md:p-8 flex-1 flex flex-col justify-between">
@@ -208,6 +301,11 @@ const executeCancel = async () => {
                     <MapPin class="text-primary shrink-0" :size="14" />
                     <span>{{ reg.event.location }}</span>
                   </div>
+                  <p v-if="reg.status === 'awaiting_payment'" class="pt-1 font-semibold text-amber-800">
+                    {{ formatMoney(reg.pending_checkout?.amount ?? reg.amount_due ?? 0, reg.pending_checkout?.currency || reg.currency || 'CAD') }}
+                    still due
+                    <span v-if="reg.ticket_type?.name"> · {{ reg.ticket_type.name }} × {{ reg.quantity }}</span>
+                  </p>
                 </div>
               </div>
 
@@ -233,8 +331,24 @@ const executeCancel = async () => {
             <!-- Card Right: Action Panel -->
             <div class="px-6 pb-6 md:pb-0 md:px-8 border-t md:border-t-0 md:border-l border-neutral-ivory bg-neutral-background/30 flex flex-col justify-center min-w-[200px] shrink-0">
               <div class="space-y-2 md:space-y-3">
-                <template v-if="reg.status !== 'cancelled'">
-                  <!-- Browse Ticket Option -->
+                <template v-if="reg.status === 'awaiting_payment'">
+                  <button
+                    type="button"
+                    class="block w-full text-center bg-primary text-white py-2.5 px-4 rounded-xl text-[10px] font-extrabold uppercase tracking-widest hover:bg-secondary transition-all cursor-pointer disabled:opacity-60"
+                    :disabled="payingKey === reg.uuid"
+                    @click="payRegistration(reg)"
+                  >
+                    {{ payingKey === reg.uuid ? 'Opening…' : 'Complete Payment' }}
+                  </button>
+                  <RouterLink
+                    v-if="reg.event?.slug"
+                    :to="{ path: emsPublicEventPath(reg.event.slug), query: { resume: '1', email: reg.attendee_email } }"
+                    class="block w-full text-center border border-neutral-ivory text-neutral-black py-2.5 px-4 rounded-xl text-[10px] font-extrabold uppercase tracking-widest hover:border-primary/40 transition-all"
+                  >
+                    Review Details
+                  </RouterLink>
+                </template>
+                <template v-else-if="reg.status !== 'cancelled'">
                   <RouterLink
                     v-if="reg.tickets && reg.tickets.length > 0"
                     :to="{ name: 'ems-public-ticket', params: { code: reg.tickets[0].code } }"
@@ -243,7 +357,6 @@ const executeCancel = async () => {
                     View Ticket
                   </RouterLink>
 
-                  <!-- Cancel Button -->
                   <button
                     @click="confirmCancel(reg)"
                     class="block w-full text-center border border-red-200 text-red-600 hover:bg-red-50 py-2.5 px-4 rounded-xl text-[10px] font-extrabold uppercase tracking-widest transition-all cursor-pointer"

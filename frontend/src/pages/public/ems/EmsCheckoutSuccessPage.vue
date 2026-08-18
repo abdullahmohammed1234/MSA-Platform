@@ -1,13 +1,23 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import { CheckCircle2 } from 'lucide-vue-next';
 import { emsPublicEventPath } from '@/constants/ems';
+import pendingCheckoutStorage from '@/services/ems/pendingCheckoutStorage';
 
 const route = useRoute();
 const orderUuid = computed(() => String(route.query.order || ''));
 const slug = computed(() => String(route.params.slug || ''));
 const eventPath = computed(() => emsPublicEventPath(slug.value));
+
+onMounted(() => {
+  if (orderUuid.value) {
+    pendingCheckoutStorage.removeByOrderUuid(orderUuid.value);
+  }
+  if (slug.value) {
+    pendingCheckoutStorage.remove(slug.value);
+  }
+});
 </script>
 
 <template>

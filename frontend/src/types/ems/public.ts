@@ -107,8 +107,19 @@ export interface PublicRegistration {
   attendee_name: string;
   attendee_email: string;
   quantity: number;
+  amount_due?: number;
+  currency?: string;
   registered_at: string | null;
   confirmed_at: string | null;
+  ticket_type?: { uuid: string; name: string } | null;
+  pending_checkout?: {
+    order_uuid: string | null;
+    checkout_url: string | null;
+    amount: number;
+    currency: string;
+    checkout_version?: number | null;
+    checkout_expires_at?: string | null;
+  } | null;
   event: {
     uuid: string;
     name: string;

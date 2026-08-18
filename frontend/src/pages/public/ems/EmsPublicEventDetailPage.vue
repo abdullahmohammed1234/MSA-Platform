@@ -15,14 +15,17 @@ import { useEventFormatting } from '@/composables/ems/useEventFormatting';
 import { useToastStore } from '@/components/feedback/toast';
 import { EmsApiError } from '@/services/ems/emsClient';
 import publicEventsService from '@/services/ems/publicEventsService';
+import pendingCheckoutStorage from '@/services/ems/pendingCheckoutStorage';
 import { EMS_PUBLIC_EVENTS_PATH } from '@/constants/ems';
 import { resolvePublicImagePath } from '@/constants/publicAssets';
+import { useAuthStore } from '@/stores/auth';
 import type { PublicEventDetail, PublicRegistration } from '@/types/ems/public';
 import type { CheckoutResult, PublicTicketType, WaitlistEntry } from '@/types/ems/ticketing';
 
 const route = useRoute();
 const router = useRouter();
 const toast = useToastStore();
+const auth = useAuthStore();
 const { formatDate, formatTime } = useEventFormatting();
 
 const slug = computed(() => String(route.params.slug || ''));
@@ -36,6 +39,8 @@ const waitlistSuccess = ref<WaitlistEntry | null>(null);
 const selectedTicketId = ref<string>('');
 const pendingCheckout = ref<CheckoutResult | null>(null);
 const completeLater = ref(false);
+const lookupEmail = ref('');
+const lookingUp = ref(false);
 
 const form = reactive({
   first_name: '',
@@ -143,11 +148,14 @@ async function load() {
   error.value = '';
   success.value = null;
   waitlistSuccess.value = null;
+  pendingCheckout.value = null;
+  completeLater.value = false;
 
   try {
     event.value = await publicEventsService.getEvent(slug.value);
     const available = (event.value.ticket_types ?? []).filter((t) => t.is_on_sale && !t.is_sold_out);
     selectedTicketId.value = available[0]?.uuid || event.value.ticket_types?.[0]?.uuid || '';
+    await restorePending();
   } catch (err) {
     event.value = null;
     error.value = err instanceof EmsApiError ? err.message : 'Event not found.';
@@ -162,6 +170,123 @@ onMounted(() => void load());
 function formatMoney(amount: number, currency: string) {
   if (amount === 0) return 'Free';
   return new Intl.NumberFormat('en-CA', { style: 'currency', currency }).format(amount);
+}
+
+function persistPending(result: CheckoutResult) {
+  if (!event.value || !result.requires_payment || !result.order?.uuid) return;
+
+  pendingCheckoutStorage.save(
+    pendingCheckoutStorage.fromCheckoutResult(
+      slug.value,
+      event.value.name,
+      form,
+      selectedTicketId.value,
+      selectedTicket.value?.name ?? result.registration?.ticket_type?.name ?? '',
+      appliedPromoCode.value?.code ?? null,
+      result
+    )
+  );
+}
+
+function applyCheckoutToForm(
+  result: CheckoutResult,
+  hints?: {
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    phone?: string;
+    quantity?: number;
+    ticket_type_id?: string;
+  } | null
+) {
+  pendingCheckout.value = result;
+  completeLater.value = Boolean(result.requires_payment);
+
+  const reg = result.registration;
+  const nameParts = (reg?.attendee_name ?? '').trim().split(/\s+/).filter(Boolean);
+  form.first_name = hints?.first_name || form.first_name || nameParts[0] || '';
+  form.last_name = hints?.last_name || form.last_name || nameParts.slice(1).join(' ') || '';
+  form.email = hints?.email || reg?.attendee_email || form.email;
+  form.phone = hints?.phone || form.phone;
+  form.quantity = hints?.quantity || reg?.quantity || form.quantity;
+  selectedTicketId.value = hints?.ticket_type_id || reg?.ticket_type?.uuid || selectedTicketId.value;
+  persistPending(result);
+}
+
+async function restorePending() {
+  const stored = pendingCheckoutStorage.get(slug.value);
+  if (stored) {
+    form.first_name = stored.first_name;
+    form.last_name = stored.last_name;
+    form.email = stored.email;
+    form.phone = stored.phone;
+    form.quantity = stored.quantity || 1;
+    selectedTicketId.value = stored.ticket_type_id || selectedTicketId.value;
+    lookupEmail.value = stored.email;
+    pendingCheckout.value = pendingCheckoutStorage.toCheckoutResult(stored);
+    completeLater.value = true;
+
+    try {
+      const fresh = await publicEventsService.resumeCheckout(slug.value, {
+        email: stored.email,
+        order_uuid: stored.order_uuid,
+      });
+      applyCheckoutToForm(fresh, stored);
+    } catch {
+      pendingCheckoutStorage.remove(slug.value);
+      pendingCheckout.value = null;
+      completeLater.value = false;
+      toast.info('Your saved checkout expired. You can start a new one with the details below.');
+    }
+
+    if (stored.promo_code) {
+      promoCodeInput.value = stored.promo_code;
+      await applyPromoCode();
+    }
+    return;
+  }
+
+  if (String(route.query.resume || '') !== '1') return;
+
+  const email = auth.user?.email || String(route.query.email || '').trim();
+  if (!email) return;
+
+  lookupEmail.value = email;
+  try {
+    const fresh = await publicEventsService.resumeCheckout(slug.value, { email });
+    applyCheckoutToForm(fresh, { email });
+  } catch {
+    toast.info('No saved payment was found for this event.');
+  }
+}
+
+async function findSavedPayment() {
+  const email = lookupEmail.value.trim() || form.email.trim();
+  if (!email) {
+    toast.error('Enter the email you used when you started checkout.');
+    return;
+  }
+
+  lookingUp.value = true;
+  try {
+    const fresh = await publicEventsService.resumeCheckout(slug.value, { email });
+    form.email = email;
+    applyCheckoutToForm(fresh);
+    toast.success('Found your saved payment. Complete it when you are ready.');
+  } catch (err) {
+    toast.error(err instanceof EmsApiError ? err.message : 'No saved payment found for that email.');
+  } finally {
+    lookingUp.value = false;
+  }
+}
+
+function paySavedCheckout() {
+  const url = pendingCheckout.value?.checkout_url || pendingCheckout.value?.payment?.checkout_url;
+  if (!url) {
+    void submit(true);
+    return;
+  }
+  window.location.href = url;
 }
 
 async function submit(payNow = true) {
@@ -202,10 +327,11 @@ async function submit(payNow = true) {
       const result = await publicEventsService.checkout(slug.value, {
         ...payload,
         ticket_type_id: selectedTicket.value.uuid,
-      order_uuid: pendingCheckout.value?.order?.uuid || undefined,
+        order_uuid: pendingCheckout.value?.order?.uuid || undefined,
       });
 
       pendingCheckout.value = result;
+      persistPending(result);
 
       if (result.requires_payment && result.checkout_url) {
         if (payNow) {
@@ -214,10 +340,11 @@ async function submit(payNow = true) {
           return;
         }
         completeLater.value = true;
-        toast.success('Payment saved. Complete it when you are ready — Square will use these current details.');
+        toast.success('Payment saved. Return to this event page anytime — your details stay on this device.');
         return;
       }
 
+      pendingCheckoutStorage.remove(slug.value);
       success.value = result.registration;
       toast.success('You are registered. Your ticket is ready.');
       const ticketCode = result.registration.tickets?.[0]?.code;
@@ -228,6 +355,7 @@ async function submit(payNow = true) {
     }
 
     const registration = await publicEventsService.register(slug.value, payload);
+    pendingCheckoutStorage.remove(slug.value);
     success.value = registration;
     toast.success('You are registered. Your ticket is ready.');
     const ticketCode = registration.tickets?.[0]?.code;
@@ -257,6 +385,7 @@ async function cancelPending() {
     );
     pendingCheckout.value = null;
     completeLater.value = false;
+    pendingCheckoutStorage.remove(slug.value);
     toast.success('Pending checkout cancelled.');
   } catch (err) {
     toast.error(err instanceof EmsApiError ? err.message : 'Could not cancel checkout.');
@@ -569,16 +698,27 @@ const previewSubtotal = computed(() =>
                   </span>
                 </p>
                 <p class="text-xs text-amber-900/80">
-                  Change the ticket, quantity, promo, or email above, then pay now. EMS will replace the Square link if those details changed.
+                  This stays on this device. Come back to this event page, or sign in and open My Tickets.
+                  Change the ticket, quantity, promo, or email above, then pay now if those details changed.
                 </p>
-                <button
-                  type="button"
-                  class="text-xs font-bold uppercase tracking-widest text-amber-900 underline"
-                  :disabled="submitting"
-                  @click="cancelPending"
-                >
-                  Cancel pending checkout
-                </button>
+                <div class="flex flex-wrap gap-3 pt-1">
+                  <button
+                    type="button"
+                    class="text-xs font-bold uppercase tracking-widest text-primary underline"
+                    :disabled="submitting"
+                    @click="paySavedCheckout"
+                  >
+                    Pay with Square
+                  </button>
+                  <button
+                    type="button"
+                    class="text-xs font-bold uppercase tracking-widest text-amber-900 underline"
+                    :disabled="submitting"
+                    @click="cancelPending"
+                  >
+                    Cancel pending checkout
+                  </button>
+                </div>
               </div>
 
               <button
@@ -597,8 +737,33 @@ const previewSubtotal = computed(() =>
                 :disabled="submitting || (ticketTypes.length > 0 && !selectedTicketId)"
                 @click="submit(false)"
               >
-                {{ submitting && !completeLater ? 'Saving…' : 'Complete payment later' }}
+                {{ completeLater ? 'Update saved payment' : (submitting ? 'Saving…' : 'Complete payment later') }}
               </button>
+
+              <div
+                v-if="requiresPayment && !completeLater"
+                class="rounded-2xl border border-dashed border-neutral-ivory p-4 space-y-2"
+              >
+                <p class="text-[10px] font-extrabold uppercase tracking-widest text-neutral-black/45">
+                  Already started checkout?
+                </p>
+                <div class="flex gap-2">
+                  <input
+                    v-model="lookupEmail"
+                    type="email"
+                    placeholder="Email used at checkout"
+                    class="flex-1 rounded-xl border border-neutral-ivory px-3 py-2 text-sm focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary"
+                  />
+                  <button
+                    type="button"
+                    class="px-3 py-2 rounded-xl bg-neutral-ivory hover:bg-neutral-ivory/80 text-[10px] font-extrabold uppercase tracking-widest cursor-pointer disabled:opacity-50"
+                    :disabled="lookingUp"
+                    @click="findSavedPayment"
+                  >
+                    {{ lookingUp ? 'Looking…' : 'Find' }}
+                  </button>
+                </div>
+              </div>
 
               <p v-if="requiresPayment" class="text-[11px] text-center text-neutral-black/45">
                 Secure payment is processed by Square. Tickets are issued only after payment is confirmed.

@@ -330,7 +330,7 @@ class PublicEventController extends EmsController
                 $query->where('user_id', $user->id)
                     ->orWhere('attendee_email', $user->email);
             })
-            ->with(['event.category', 'tickets', 'ticketType'])
+            ->with(['event.category', 'tickets', 'ticketType', 'order.latestPayment'])
             ->orderBy('created_at', 'desc')
             ->get();
 

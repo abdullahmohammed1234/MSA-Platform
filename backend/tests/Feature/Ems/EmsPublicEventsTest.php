@@ -3,10 +3,15 @@
 namespace Tests\Feature\Ems;
 
 use App\Ems\Enums\EventStatus;
+use App\Ems\Enums\PaymentStatus;
+use App\Ems\Enums\RegistrationStatus;
 use App\Ems\Enums\TicketStatus;
 use App\Ems\Models\Event;
+use App\Ems\Models\Order;
+use App\Ems\Models\Payment;
 use App\Ems\Models\Registration;
 use App\Ems\Models\Ticket;
+use App\Ems\Models\TicketType;
 use Illuminate\Support\Str;
 
 /**
@@ -393,5 +398,53 @@ class EmsPublicEventsTest extends EmsTestCase
             'id' => $registration->id,
             'status' => 'cancelled',
         ]);
+    }
+
+    public function test_my_tickets_includes_pending_checkout_for_unpaid_registrations(): void
+    {
+        $user = $this->emsUser(\App\Ems\Support\EmsRoles::ATTENDEE);
+        $event = $this->publicEvent();
+        $ticketType = TicketType::factory()->paid(25)->create(['event_id' => $event->id]);
+        $order = Order::factory()->create([
+            'event_id' => $event->id,
+            'user_id' => $user->id,
+            'buyer_email' => $user->email,
+            'total_amount' => 25,
+        ]);
+        $registration = Registration::factory()->create([
+            'event_id' => $event->id,
+            'user_id' => $user->id,
+            'order_id' => $order->id,
+            'ticket_type_id' => $ticketType->id,
+            'attendee_name' => $user->name,
+            'attendee_email' => $user->email,
+            'status' => RegistrationStatus::AwaitingPayment,
+            'type' => 'paid',
+            'quantity' => 1,
+            'amount_due' => 25,
+            'confirmed_at' => null,
+        ]);
+        Payment::query()->create([
+            'order_id' => $order->id,
+            'registration_id' => $registration->id,
+            'amount' => 25,
+            'currency' => 'CAD',
+            'provider' => 'square',
+            'status' => PaymentStatus::Pending->value,
+            'checkout_url' => 'https://square.test/pay/saved',
+            'checkout_version' => 2,
+            'checkout_expires_at' => now()->addHours(2),
+        ]);
+
+        $response = $this->actingAsEms($user)->getJson($this->url('public/my-tickets'));
+
+        $response->assertStatus(200);
+        $this->assertSuccessEnvelope($response);
+        $this->assertSame('awaiting_payment', $response->json('data.0.status'));
+        $this->assertSame($ticketType->name, $response->json('data.0.ticket_type.name'));
+        $this->assertSame($order->uuid, $response->json('data.0.pending_checkout.order_uuid'));
+        $this->assertSame('https://square.test/pay/saved', $response->json('data.0.pending_checkout.checkout_url'));
+        $this->assertEquals(25, $response->json('data.0.pending_checkout.amount'));
+        $this->assertSame(2, $response->json('data.0.pending_checkout.checkout_version'));
     }
 }

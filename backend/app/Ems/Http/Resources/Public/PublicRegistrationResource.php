@@ -2,6 +2,7 @@
 
 namespace App\Ems\Http\Resources\Public;
 
+use App\Ems\Enums\RegistrationStatus;
 use App\Ems\Models\Registration;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -27,8 +28,31 @@ class PublicRegistrationResource extends JsonResource
             'attendee_name' => $this->attendee_name,
             'attendee_email' => $this->attendee_email,
             'quantity' => $this->quantity,
+            'amount_due' => (float) $this->amount_due,
+            'currency' => $this->currency,
             'registered_at' => $this->registered_at?->toIso8601String(),
             'confirmed_at' => $this->confirmed_at?->toIso8601String(),
+
+            'ticket_type' => $this->whenLoaded('ticketType', fn () => $this->ticketType ? [
+                'uuid' => $this->ticketType->uuid,
+                'name' => $this->ticketType->name,
+            ] : null),
+
+            'pending_checkout' => $this->when(
+                $this->status === RegistrationStatus::AwaitingPayment && $this->relationLoaded('order'),
+                function () {
+                    $payment = $this->order?->latestPayment;
+
+                    return [
+                        'order_uuid' => $this->order?->uuid,
+                        'checkout_url' => $payment?->checkout_url,
+                        'amount' => (float) ($payment?->amount ?? $this->amount_due),
+                        'currency' => $payment?->currency ?? $this->currency,
+                        'checkout_version' => $payment ? (int) $payment->checkout_version : null,
+                        'checkout_expires_at' => $payment?->checkout_expires_at?->toIso8601String(),
+                    ];
+                }
+            ),
 
             'event' => $this->whenLoaded('event', fn () => [
                 'uuid' => $this->event->uuid,
