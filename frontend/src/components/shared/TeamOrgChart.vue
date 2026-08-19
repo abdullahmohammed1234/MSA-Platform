@@ -127,15 +127,23 @@ const hasChart = computed(
           >
             <p class="text-[9px] font-black uppercase tracking-[0.28em] text-secondary mb-5">{{ branch.label }}</p>
 
-            <div class="flex flex-wrap justify-center gap-4">
+            <div
+              :class="branch.leads.length > 1
+                ? 'grid grid-cols-2 gap-2 items-start'
+                : 'flex justify-center'"
+            >
               <button
                 v-for="lead in branch.leads"
                 :key="lead.name"
                 type="button"
-                class="group w-[8.5rem] cursor-zoom-in"
+                class="group min-w-0 cursor-zoom-in"
+                :class="branch.leads.length > 1 ? 'w-full' : 'w-[8.5rem]'"
                 @click="emit('select', lead)"
               >
-                <div class="relative mx-auto mb-3 h-[4.5rem] w-[4.5rem] rounded-full overflow-hidden ring-2 ring-primary/20 group-hover:ring-secondary/50 bg-primary/5 transition-all">
+                <div
+                  class="relative mx-auto mb-2 rounded-full overflow-hidden ring-2 ring-primary/20 group-hover:ring-secondary/50 bg-primary/5 transition-all"
+                  :class="branch.leads.length > 1 ? 'h-14 w-14' : 'h-[4.5rem] w-[4.5rem]'"
+                >
                   <img
                     :src="lead.img"
                     :alt="lead.name"
@@ -143,8 +151,8 @@ const hasChart = computed(
                     @error="($event.target as HTMLImageElement).src = TEAM_FALLBACK_IMAGE"
                   />
                 </div>
-                <p class="text-xs font-display font-semibold text-primary leading-tight">{{ lead.name }}</p>
-                <p class="mt-1 text-[8px] font-black uppercase tracking-[0.16em] text-neutral-black/40">{{ lead.role }}</p>
+                <p class="text-[11px] font-display font-semibold text-primary leading-tight">{{ lead.name }}</p>
+                <p class="mt-1 text-[7px] font-black uppercase tracking-[0.14em] text-neutral-black/40 leading-tight">{{ lead.role }}</p>
               </button>
             </div>
 
