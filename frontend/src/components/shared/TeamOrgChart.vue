@@ -4,9 +4,12 @@ import type { TeamMember } from '@/services/website/websiteService';
 import { TEAM_FALLBACK_IMAGE } from '@/constants/publicAssets';
 import {
   EXEC_ROLES,
+  EXEC_DEPTS,
   ORG_BRANCHES,
   independentCoordinators,
+  membersMatching,
   membersWithRoles,
+  vicePresidentMembers,
 } from '@/data/teamOrg';
 
 const props = defineProps<{
@@ -17,9 +20,13 @@ const emit = defineEmits<{
   select: [member: TeamMember];
 }>();
 
-const president = computed(() => membersWithRoles(props.members, EXEC_ROLES.president));
-const vicePresidents = computed(() => membersWithRoles(props.members, EXEC_ROLES.vicePresidents));
-const secretary = computed(() => membersWithRoles(props.members, EXEC_ROLES.secretary));
+const president = computed(() =>
+  membersMatching(props.members, EXEC_ROLES.president, EXEC_DEPTS.president)
+);
+const vicePresidents = computed(() => vicePresidentMembers(props.members));
+const secretary = computed(() =>
+  membersMatching(props.members, EXEC_ROLES.secretary, EXEC_DEPTS.secretary)
+);
 const execRow = computed(() => [...vicePresidents.value, ...secretary.value]);
 const independents = computed(() => independentCoordinators(props.members));
 

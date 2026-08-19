@@ -9,7 +9,13 @@ export interface OrgBranch {
 
 export const EXEC_ROLES = {
   president: ['President'],
-  vicePresidents: ['Brothers VP', 'Sisters VP'],
+  vicePresidents: ['Brothers VP', 'Sisters VP', 'Vice President', 'VP'],
+  secretary: ['Secretary'],
+} as const;
+
+export const EXEC_DEPTS = {
+  president: ['President'],
+  vicePresidents: ['Vice Presidents', 'Vice President'],
   secretary: ['Secretary'],
 } as const;
 
@@ -56,33 +62,113 @@ export const INDEPENDENT_COORDINATOR_ROLES = [
   'IT Coordinator',
 ];
 
-function normalizeRole(role: string): string {
-  return role.trim().toLowerCase();
+function normalize(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/['’]/g, '')
+    .replace(/[_./-]+/g, ' ')
+    .replace(/\s+/g, ' ');
+}
+
+function tokens(value: string): string[] {
+  return normalize(value)
+    .replace(/\bvp\b/g, 'vice president')
+    .split(' ')
+    .filter((token) => token && token !== 'of' && token !== 'the');
+}
+
+function looksLikeVicePresident(member: TeamMember): boolean {
+  const role = normalize(member.role);
+  const dept = normalize(member.dept);
+
+  if (dept === 'vice presidents' || dept === 'vice president') {
+    return true;
+  }
+
+  return /\bvp\b/.test(role) || role.includes('vice president');
+}
+
+function roleFuzzyMatch(memberRole: string, wantedRole: string): boolean {
+  const actual = normalize(memberRole);
+  const wanted = normalize(wantedRole);
+
+  if (actual === wanted) {
+    return true;
+  }
+
+  const wantedTokens = tokens(wantedRole);
+  const actualTokens = new Set(tokens(memberRole));
+
+  if (wantedTokens.length === 0) {
+    return false;
+  }
+
+  // "President" must not match "Vice President".
+  if (wantedTokens.length === 1) {
+    return actualTokens.size === 1 && actualTokens.has(wantedTokens[0]);
+  }
+
+  return wantedTokens.every((token) => actualTokens.has(token));
 }
 
 export function membersWithRoles(members: TeamMember[], roles: readonly string[]): TeamMember[] {
-  const wanted = new Set(roles.map(normalizeRole));
-  return members.filter((member) => wanted.has(normalizeRole(member.role)));
+  return members.filter((member) =>
+    roles.some((role) => roleFuzzyMatch(member.role, role))
+  );
+}
+
+export function membersMatching(
+  members: TeamMember[],
+  roles: readonly string[],
+  departments: readonly string[] = [],
+): TeamMember[] {
+  const depts = new Set(departments.map(normalize));
+  const seen = new Set<string>();
+  const matched: TeamMember[] = [];
+
+  for (const member of members) {
+    const byDept = depts.has(normalize(member.dept));
+    const byRole = roles.some((role) => roleFuzzyMatch(member.role, role));
+    if (!byDept && !byRole) {
+      continue;
+    }
+    if (seen.has(member.name)) {
+      continue;
+    }
+    seen.add(member.name);
+    matched.push(member);
+  }
+
+  return matched;
+}
+
+export function vicePresidentMembers(members: TeamMember[]): TeamMember[] {
+  const matched = membersMatching(members, EXEC_ROLES.vicePresidents, EXEC_DEPTS.vicePresidents);
+  const extras = members.filter(
+    (member) => looksLikeVicePresident(member) && !matched.some((entry) => entry.name === member.name)
+  );
+  return [...matched, ...extras];
 }
 
 function collectAssigned(members: TeamMember[]): Set<string> {
   const assigned = new Set<string>();
-  const take = (roles: readonly string[]) => {
-    for (const member of membersWithRoles(members, roles)) {
+  const take = (list: TeamMember[]) => {
+    for (const member of list) {
       assigned.add(member.name);
     }
   };
 
-  take(EXEC_ROLES.president);
-  take(EXEC_ROLES.vicePresidents);
-  take(EXEC_ROLES.secretary);
+  take(membersMatching(members, EXEC_ROLES.president, EXEC_DEPTS.president));
+  take(vicePresidentMembers(members));
+  take(membersMatching(members, EXEC_ROLES.secretary, EXEC_DEPTS.secretary));
 
   for (const branch of ORG_BRANCHES) {
-    take(branch.leadRoles);
-    take(branch.coordinatorRoles);
+    take(membersWithRoles(members, branch.leadRoles));
+    take(membersWithRoles(members, branch.coordinatorRoles));
   }
 
-  take(INDEPENDENT_COORDINATOR_ROLES);
+  take(membersWithRoles(members, INDEPENDENT_COORDINATOR_ROLES));
   return assigned;
 }
 

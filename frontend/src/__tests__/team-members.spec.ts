@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { resolveTeamMembers, normalizeTeamMembers, normalizeCmsTeamMember } from '@/utils/teamMembers';
 import { toStorableImagePath } from '@/constants/publicAssets';
 import { DEFAULT_TEAM_MEMBERS } from '@/data/teamMembers';
-import { independentCoordinators, membersWithRoles } from '@/data/teamOrg';
+import { independentCoordinators, membersWithRoles, vicePresidentMembers } from '@/data/teamOrg';
 
 describe('resolveTeamMembers', () => {
   it('returns defaults when API payload is empty', () => {
@@ -70,5 +70,22 @@ describe('team org chart matching', () => {
 
     expect(finance).toHaveLength(1);
     expect(coordinators).toHaveLength(4);
+  });
+
+  it('still finds VPs when CMS uses a longer title and the Vice Presidents department', () => {
+    const cmsRoster = [
+      { name: 'FATIMA HAYAT', role: 'President', dept: 'President', img: '/x.webp' },
+      { name: 'HAMMAD ZAIDI', role: 'Vice President of Brothers', dept: 'Vice Presidents', img: '/x.webp' },
+      { name: 'HAFSA IRSHAD', role: 'Sisters Vice President', dept: 'Vice Presidents', img: '/x.webp' },
+      { name: 'LEEZA ABDULFATAH', role: 'Secretary', dept: 'Secretary', img: '/x.webp' },
+    ];
+
+    expect(vicePresidentMembers(cmsRoster).map((member) => member.name)).toEqual([
+      'HAMMAD ZAIDI',
+      'HAFSA IRSHAD',
+    ]);
+    expect(membersWithRoles(cmsRoster, ['President']).map((member) => member.name)).toEqual([
+      'FATIMA HAYAT',
+    ]);
   });
 });
