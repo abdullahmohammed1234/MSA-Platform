@@ -111,7 +111,8 @@ class EventCommunicationService
         Registration $registration,
         NotificationType $type,
         float $refundAmount,
-        ?Payment $payment = null
+        ?Payment $payment = null,
+        ?string $operationKey = null
     ): void {
         $this->dispatcher->notifyRegistration(
             $registration,
@@ -120,8 +121,8 @@ class EventCommunicationService
                 'refund_amount' => $refundAmount,
                 'payment_id' => $payment?->id,
                 'payment' => $payment,
-                'force' => true,
-                'idempotency_suffix' => $type->value . ':' . ($payment?->id ?? 'na'),
+                'force' => false,
+                'idempotency_suffix' => $type->value . ':' . ($operationKey ?? (string) ($payment?->id ?? 'na')),
             ]
         );
     }

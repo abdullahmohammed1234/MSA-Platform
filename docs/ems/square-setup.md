@@ -309,11 +309,16 @@ POST /api/v1/ems/payments/{payment}/refund
 { "amount": 15.00, "reason": "..." }   # amount optional = full refund
 ```
 
-Requires `payments.refund`. EMS creates a Square refund with a unique
-idempotency key and stores it as **pending** until Square reports
-`COMPLETED`, `FAILED`, or `REJECTED`.
+Requires `payments.refund`. Each EMS refund row is one logical operation.
+Its Square idempotency key is `ems-rfnd-{refund.uuid}` so a timeout retry
+resubmits the same Square refund instead of creating a second one.
 
-- Full completed refund: payment/order/registration refunded, ticket revoked.
+EMS stores the row as **pending** until Square reports `COMPLETED`,
+`FAILED`, or `REJECTED`. Terminal statuses are monotonic: `completed`
+never regresses to `pending`/`failed`/`rejected`.
+
+- Full completed refund: payment/order/registration refunded, ticket revoked,
+  ticket-type `quantity_sold` restored once.
 - Partial completed refund: payment `partially_refunded`, ticket remains valid.
 - Failed/rejected refund: EMS payment stays paid, ticket remains valid.
 
@@ -333,6 +338,12 @@ Scheduled hourly. Safe to re-run. Only imports payments whose catalog
 variations map to EMS ticket types. Never duplicates tickets.
 
 Also retries webhook rows in `unmatched`, `failed`, or `retry_pending`.
+
+Independently lists Square refunds (`GET /v2/refunds`) for the same
+`--since` / cursor window and applies those whose Square `payment_id`
+matches an EMS payment. Duplicate Square refund IDs converge on one
+`ems_square_refunds` row. Refunds for unknown Square payment IDs are
+skipped, not attached to another payment.
 
 ## 13. Sandbox testing
 
