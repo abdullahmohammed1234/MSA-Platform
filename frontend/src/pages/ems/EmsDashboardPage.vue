@@ -3,7 +3,7 @@ import { computed, onMounted } from 'vue';
 import { RouterLink } from 'vue-router';
 import { useEmsDashboardStore } from '@/stores/ems/emsDashboard';
 import { useEventFormatting } from '@/composables/ems/useEventFormatting';
-import { EmsErrorState, EmsPageHeader, EmsStatusBadge, EmsSummaryCard } from '@/components/ems';
+import { EmsCategoryBadge, EmsErrorState, EmsPageHeader, EmsStatusBadge, EmsSummaryCard } from '@/components/ems';
 import EmptyState from '@/components/data-display/empty-state/EmptyState.vue';
 
 /**
@@ -134,7 +134,9 @@ const cards = computed(() => {
                   </div>
                   <div v-if="event.category" class="flex gap-1.5">
                     <dt class="sr-only">Category</dt>
-                    <dd class="truncate">{{ event.category.name }}</dd>
+                    <dd>
+                      <EmsCategoryBadge :name="event.category.name" :color="event.category.color" />
+                    </dd>
                   </div>
                 </dl>
               </RouterLink>

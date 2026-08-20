@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { Button } from '@/components/ui/button';
 import { useToastStore } from '@/components/feedback/toast';
 import {
+  EmsCategoryBadge,
   EmsConfirmDialog,
   EmsErrorState,
   EmsPageHeader,
@@ -206,7 +207,15 @@ const confirmDelete = async () => {
             </div>
             <div>
               <dt class="text-[11px] font-bold uppercase tracking-wider text-neutral-muted">Category</dt>
-              <dd class="mt-1 text-sm text-neutral-black">{{ event.category?.name ?? 'Uncategorised' }}</dd>
+              <dd class="mt-1">
+                <EmsCategoryBadge
+                  v-if="event.category"
+                  :name="event.category.name"
+                  :color="event.category.color"
+                  size="md"
+                />
+                <span v-else class="text-sm text-neutral-black">Uncategorised</span>
+              </dd>
             </div>
             <div>
               <dt class="text-[11px] font-bold uppercase tracking-wider text-neutral-muted">Organizer</dt>

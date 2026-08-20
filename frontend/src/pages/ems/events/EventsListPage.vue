@@ -8,6 +8,7 @@ import { Select } from '@/components/ui/select';
 import { useToastStore } from '@/components/feedback/toast';
 import EmptyState from '@/components/data-display/empty-state/EmptyState.vue';
 import {
+  EmsCategoryBadge,
   EmsConfirmDialog,
   EmsErrorState,
   EmsPageHeader,
@@ -204,8 +205,8 @@ const confirmDelete = async () => {
             >
               <td class="px-5 py-4">
                 <p class="text-sm font-bold text-neutral-black">{{ event.name }}</p>
-                <p v-if="event.category" class="mt-0.5 text-[11px] text-neutral-muted">
-                  {{ event.category.name }}
+                <p v-if="event.category" class="mt-1">
+                  <EmsCategoryBadge :name="event.category.name" :color="event.category.color" />
                 </p>
               </td>
               <td class="px-5 py-4 text-xs text-neutral-muted">
@@ -253,6 +254,9 @@ const confirmDelete = async () => {
                 <p class="min-w-0 flex-1 text-sm font-bold text-neutral-black">{{ event.name }}</p>
                 <EmsStatusBadge :label="event.status_label" :tone="event.status_tone" size="sm" />
               </div>
+              <p v-if="event.category" class="mt-1">
+                <EmsCategoryBadge :name="event.category.name" :color="event.category.color" />
+              </p>
               <p class="mt-1 text-xs text-neutral-muted">
                 {{ formatDate(event.start_at) }} · {{ formatTime(event.start_at) }}
               </p>

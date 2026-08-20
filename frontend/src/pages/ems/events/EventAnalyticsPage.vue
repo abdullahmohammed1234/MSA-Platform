@@ -17,6 +17,7 @@ import {
 } from '@/services/ems/analyticsService';
 import { eventsService } from '@/services/ems/eventsService';
 import type { Event } from '@/types/ems';
+import { EmsCategoryBadge } from '@/components/ems';
 import SvgLineChart from '@/components/ems/charts/SvgLineChart.vue';
 import SvgPieChart from '@/components/ems/charts/SvgPieChart.vue';
 import { useToastStore } from '@/components/feedback/toast';
@@ -209,8 +210,16 @@ const getFormatBadgeColor = (format: string) => {
     <div v-if="event" class="rounded-2xl border border-neutral-ivory bg-white p-5 shadow-soft">
       <div class="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <span class="rounded-full bg-primary/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-primary">
-            {{ event.category?.name ?? 'General' }}
+          <EmsCategoryBadge
+            v-if="event.category"
+            :name="event.category.name"
+            :color="event.category.color"
+          />
+          <span
+            v-else
+            class="rounded-full bg-primary/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-primary"
+          >
+            General
           </span>
           <h2 class="text-xl font-bold font-serif text-neutral-black mt-1.5">{{ event.name }}</h2>
           <p class="text-xs text-neutral-muted mt-1">

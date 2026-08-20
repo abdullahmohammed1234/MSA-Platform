@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { ChevronLeft, ChevronRight, List } from 'lucide-vue-next';
 import { useSeo } from '@/composables/useSeo';
+import { useEventFormatting } from '@/composables/ems/useEventFormatting';
 import { EmsApiError } from '@/services/ems/emsClient';
 import publicEventsService from '@/services/ems/publicEventsService';
 import { EMS_PUBLIC_EVENTS_PATH } from '@/constants/ems';
@@ -14,6 +15,7 @@ useSeo({
 });
 
 const router = useRouter();
+const { categoryTintStyle, categorySolidStyle } = useEventFormatting();
 
 const view = ref<'month' | 'week'>('month');
 const cursor = ref(startOfMonth(new Date()));
@@ -135,6 +137,10 @@ function openEvent(slug: string) {
 
 function eventsOn(date: Date): PublicCalendarEvent[] {
   return eventsByDay.value.get(dateKey(date)) ?? [];
+}
+
+function eventColorStyle(event: PublicCalendarEvent) {
+  return categoryTintStyle(event.category?.color);
 }
 
 function isToday(date: Date): boolean {
@@ -300,11 +306,8 @@ function dateKey(date: Date): string {
                 v-for="event in eventsOn(cell.date).slice(0, 3)"
                 :key="event.uuid"
                 type="button"
-                class="w-full text-left truncate px-1.5 py-1 rounded-md text-[10px] font-semibold cursor-pointer hover:brightness-95"
-                :style="{
-                  backgroundColor: event.category?.color ? `${event.category.color}22` : '#0f766e18',
-                  color: event.category?.color || '#0f766e',
-                }"
+                class="w-full text-left truncate px-1.5 py-1 rounded-md text-[10px] font-semibold cursor-pointer hover:brightness-95 border"
+                :style="eventColorStyle(event)"
                 :title="event.name"
                 @click="openEvent(event.slug)"
               >
@@ -343,11 +346,12 @@ function dateKey(date: Date): string {
               v-for="event in eventsOn(day)"
               :key="event.uuid"
               type="button"
-              class="w-full text-left rounded-xl border border-neutral-ivory px-2.5 py-2 hover:border-primary/30 cursor-pointer"
+              class="w-full text-left rounded-xl border px-2.5 py-2 cursor-pointer hover:brightness-95"
+              :style="eventColorStyle(event)"
               @click="openEvent(event.slug)"
             >
               <div class="text-xs font-bold leading-snug">{{ event.name }}</div>
-              <div v-if="event.category" class="mt-1 text-[10px] uppercase tracking-wider text-neutral-black/45">
+              <div v-if="event.category" class="mt-1 text-[10px] uppercase tracking-wider opacity-80">
                 {{ event.category.name }}
               </div>
             </button>
@@ -357,6 +361,17 @@ function dateKey(date: Date): string {
           </div>
         </div>
       </div>
+
+      <ul v-if="categories.length" class="flex flex-wrap items-center gap-3 pt-1" aria-label="Category colors">
+        <li v-for="cat in categories" :key="cat.slug" class="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-neutral-black/60">
+          <span
+            class="h-2.5 w-2.5 rounded-full border"
+            :style="categorySolidStyle(cat.color)"
+            aria-hidden="true"
+          />
+          {{ cat.name }}
+        </li>
+      </ul>
     </section>
   </div>
 </template>

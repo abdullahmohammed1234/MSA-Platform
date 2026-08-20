@@ -110,13 +110,33 @@ export function useEventFormatting() {
   const getStatusStyle = (status: string | undefined) => {
     const s = status?.toLowerCase() || '';
 
-    // Green statuses
-    if (['confirmed', 'paid', 'checked_in', 'registration_open'].includes(s)) {
+    // Registered — sky, distinct from attending
+    if (['confirmed', 'registered'].includes(s)) {
+      return {
+        bg: 'bg-sky-50/80',
+        text: 'text-sky-700',
+        border: 'border-sky-200/60',
+        icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
+      };
+    }
+
+    // Attending / paid / open — emerald
+    if (['paid', 'checked_in', 'attending', 'registration_open'].includes(s)) {
       return {
         bg: 'bg-emerald-50/80',
         text: 'text-emerald-700',
         border: 'border-emerald-200/60',
-        icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z', // Check circle
+        icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+      };
+    }
+
+    // Didn't come
+    if (['no_show', 'didnt_come', "didn't come"].includes(s)) {
+      return {
+        bg: 'bg-rose-50/80',
+        text: 'text-rose-700',
+        border: 'border-rose-200/60',
+        icon: 'M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636',
       };
     }
 
@@ -126,7 +146,7 @@ export function useEventFormatting() {
         bg: 'bg-amber-50/80',
         text: 'text-amber-700',
         border: 'border-amber-200/60',
-        icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z', // Clock
+        icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
       };
     }
 
@@ -136,7 +156,7 @@ export function useEventFormatting() {
         bg: 'bg-purple-50/80',
         text: 'text-purple-700',
         border: 'border-purple-200/60',
-        icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10', // Waitlist/Briefcase
+        icon: 'M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10',
       };
     }
 
@@ -146,7 +166,7 @@ export function useEventFormatting() {
         bg: 'bg-rose-50/80',
         text: 'text-rose-700',
         border: 'border-rose-200/60',
-        icon: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z', // Cancel/X
+        icon: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z',
       };
     }
 
@@ -156,7 +176,7 @@ export function useEventFormatting() {
         bg: 'bg-blue-50/80',
         text: 'text-blue-700',
         border: 'border-blue-200/60',
-        icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z', // Info circle
+        icon: 'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
       };
     }
 
@@ -165,7 +185,56 @@ export function useEventFormatting() {
       bg: 'bg-neutral-50/80',
       text: 'text-neutral-600',
       border: 'border-neutral-200/60',
-      icon: 'M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z', // Minus circle
+      icon: 'M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z',
+    };
+  };
+
+  const FALLBACK_CATEGORY_COLOR = '#6b7280';
+
+  const normalizeHexColor = (value: string | null | undefined): string => {
+    const raw = (value ?? '').trim();
+    if (/^#([0-9a-f]{6})$/i.test(raw)) return raw;
+    if (/^#([0-9a-f]{3})$/i.test(raw)) {
+      const [, short] = raw.match(/^#([0-9a-f]{3})$/i) ?? [];
+      if (!short) return FALLBACK_CATEGORY_COLOR;
+      return `#${short[0]}${short[0]}${short[1]}${short[1]}${short[2]}${short[2]}`;
+    }
+    return FALLBACK_CATEGORY_COLOR;
+  };
+
+  const hexToRgba = (hex: string, alpha: number): string => {
+    const normalized = normalizeHexColor(hex);
+    const r = Number.parseInt(normalized.slice(1, 3), 16);
+    const g = Number.parseInt(normalized.slice(3, 5), 16);
+    const b = Number.parseInt(normalized.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+
+  const isDarkHex = (hex: string): boolean => {
+    const normalized = normalizeHexColor(hex);
+    const r = Number.parseInt(normalized.slice(1, 3), 16);
+    const g = Number.parseInt(normalized.slice(3, 5), 16);
+    const b = Number.parseInt(normalized.slice(5, 7), 16);
+    return (r * 299 + g * 587 + b * 114) / 1000 < 150;
+  };
+
+  /** Soft pill used on event lists and calendar chips. */
+  const categoryTintStyle = (color: string | null | undefined) => {
+    const hex = normalizeHexColor(color);
+    return {
+      backgroundColor: hexToRgba(hex, 0.14),
+      color: hex,
+      borderColor: hexToRgba(hex, 0.38),
+    };
+  };
+
+  /** Solid pill for selected filters and dark overlays. */
+  const categorySolidStyle = (color: string | null | undefined) => {
+    const hex = normalizeHexColor(color);
+    return {
+      backgroundColor: hex,
+      color: isDarkHex(hex) ? '#ffffff' : '#111827',
+      borderColor: hex,
     };
   };
 
@@ -179,5 +248,7 @@ export function useEventFormatting() {
     toDateTimeLocal,
     fromDateTimeLocal,
     getStatusStyle,
+    categoryTintStyle,
+    categorySolidStyle,
   };
 }

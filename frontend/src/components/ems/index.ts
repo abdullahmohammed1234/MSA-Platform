@@ -1,4 +1,5 @@
 export { default as EmsStatusBadge } from './EmsStatusBadge.vue';
+export { default as EmsCategoryBadge } from './EmsCategoryBadge.vue';
 export { default as EmsPageHeader } from './EmsPageHeader.vue';
 export { default as EmsSummaryCard } from './EmsSummaryCard.vue';
 export { default as EmsConfirmDialog } from './EmsConfirmDialog.vue';

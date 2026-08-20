@@ -5,6 +5,7 @@ namespace App\Ems\Http\Resources;
 use App\Ems\Enums\CheckInStatus;
 use App\Ems\Enums\PaymentStatus;
 use App\Ems\Enums\RegistrationStatus;
+use App\Ems\Models\Event;
 use App\Ems\Models\Registration;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -26,7 +27,7 @@ class AttendeeResource extends JsonResource
         $payment = $this->payments->sortByDesc('id')->first();
 
         $paymentStatus = $this->resolvePaymentStatus($payment);
-        $checkInStatus = $checkIn ? CheckInStatus::CheckedIn : CheckInStatus::NotCheckedIn;
+        $checkInStatus = $this->resolveCheckInStatus($checkIn !== null, $this->event, $this->status);
 
         return [
             'uuid' => $this->uuid,
@@ -83,5 +84,18 @@ class AttendeeResource extends JsonResource
 
         return $payment?->status?->value
             ?? ($this->metadata['payment_status'] ?? PaymentStatus::Pending->value);
+    }
+
+    private function resolveCheckInStatus(bool $checkedIn, ?Event $event, RegistrationStatus $status): CheckInStatus
+    {
+        if ($checkedIn) {
+            return CheckInStatus::CheckedIn;
+        }
+
+        if ($event?->hasEnded() && $status === RegistrationStatus::Confirmed) {
+            return CheckInStatus::NoShow;
+        }
+
+        return CheckInStatus::NotCheckedIn;
     }
 }

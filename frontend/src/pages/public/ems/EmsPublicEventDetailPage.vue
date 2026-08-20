@@ -26,7 +26,7 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToastStore();
 const auth = useAuthStore();
-const { formatDate, formatTime } = useEventFormatting();
+const { formatDate, formatTime, categorySolidStyle } = useEventFormatting();
 
 const slug = computed(() => String(route.params.slug || ''));
 const event = ref<PublicEventDetail | null>(null);
@@ -461,7 +461,8 @@ const previewSubtotal = computed(() =>
             <div class="flex flex-wrap gap-2 mb-4">
               <span
                 v-if="event.category"
-                class="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-white/15 text-white"
+                class="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest"
+                :style="categorySolidStyle(event.category.color)"
               >
                 {{ event.category.name }}
               </span>

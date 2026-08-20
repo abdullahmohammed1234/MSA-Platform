@@ -10,13 +10,15 @@ enum CheckInStatus: string
     case NotCheckedIn = 'not_checked_in';
     case CheckedIn = 'checked_in';
     case CheckedOut = 'checked_out';
+    case NoShow = 'no_show';
 
     public function label(): string
     {
         return match ($this) {
             self::NotCheckedIn => 'Not Checked In',
-            self::CheckedIn => 'Checked In',
+            self::CheckedIn => 'Attending',
             self::CheckedOut => 'Checked Out',
+            self::NoShow => "Didn't come",
         };
     }
 

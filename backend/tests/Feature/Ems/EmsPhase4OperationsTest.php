@@ -328,6 +328,73 @@ class EmsPhase4OperationsTest extends EmsTestCase
         $ops->assertJsonPath('data.checked_in_count', 0);
     }
 
+    public function test_attendee_attendance_status_uses_registered_attending_and_no_show(): void
+    {
+        $liveEvent = $this->liveEvent([
+            'start_at' => now()->addHour(),
+            'end_at' => now()->addHours(3),
+        ]);
+        $user = $this->organizerFor($liveEvent);
+        $ticketType = $this->freeTicketType($liveEvent);
+        ['registration' => $upcoming, 'ticket' => $ticket] = $this->confirmedAttendee($liveEvent, $ticketType, [
+            'attendee_email' => 'upcoming@example.com',
+        ]);
+
+        $upcomingList = $this->actingAsEms($user)->getJson(
+            $this->url("events/{$liveEvent->uuid}/attendees")
+        );
+        $this->assertSuccessEnvelope($upcomingList);
+        $upcomingList->assertJsonPath('data.0.check_in_status', 'not_checked_in');
+        $upcomingList->assertJsonPath('data.0.check_in_status_label', 'Not Checked In');
+        $upcomingList->assertJsonPath('data.0.registration_status_label', 'Registered');
+
+        CheckIn::create([
+            'uuid' => (string) Str::uuid(),
+            'event_id' => $liveEvent->id,
+            'ticket_id' => $ticket->id,
+            'registration_id' => $upcoming->id,
+            'checked_in_at' => now(),
+        ]);
+
+        $attendingList = $this->actingAsEms($user)->getJson(
+            $this->url("events/{$liveEvent->uuid}/attendees")
+        );
+        $attendingList->assertJsonPath('data.0.check_in_status', 'checked_in');
+        $attendingList->assertJsonPath('data.0.check_in_status_label', 'Attending');
+
+        $pastEvent = $this->liveEvent([
+            'name' => 'Past Dinner',
+            'slug' => 'past-dinner-' . Str::lower(Str::random(4)),
+            'status' => \App\Ems\Enums\EventStatus::Completed,
+            'start_at' => now()->subDays(2),
+            'end_at' => now()->subDay(),
+        ]);
+        $pastEvent->update(['organizer_id' => $user->id, 'created_by' => $user->id]);
+        $pastTicketType = $this->freeTicketType($pastEvent);
+        $this->confirmedAttendee($pastEvent, $pastTicketType, [
+            'attendee_email' => 'noshow@example.com',
+        ]);
+
+        $noShowList = $this->actingAsEms($user)->getJson(
+            $this->url("events/{$pastEvent->uuid}/attendees")
+        );
+        $this->assertSuccessEnvelope($noShowList);
+        $noShowList->assertJsonPath('data.0.check_in_status', 'no_show');
+        $noShowList->assertJsonPath('data.0.check_in_status_label', "Didn't come");
+
+        $filtered = $this->actingAsEms($user)->getJson(
+            $this->url("events/{$pastEvent->uuid}/attendees") . '?check_in_status=no_show'
+        );
+        $this->assertSuccessEnvelope($filtered);
+        $this->assertCount(1, $filtered->json('data'));
+
+        $emptyOnLive = $this->actingAsEms($user)->getJson(
+            $this->url("events/{$liveEvent->uuid}/attendees") . '?check_in_status=no_show'
+        );
+        $this->assertSuccessEnvelope($emptyOnLive);
+        $this->assertCount(0, $emptyOnLive->json('data'));
+    }
+
     public function test_staff_cannot_import_attendees(): void
     {
         $event = $this->liveEvent();

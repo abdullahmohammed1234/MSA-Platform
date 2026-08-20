@@ -43,7 +43,7 @@ class AttendeeService
             ->withMax('checkIns as check_in_time', 'checked_in_at');
 
         $this->applySearch($query, $filters['search'] ?? null);
-        $this->applyFilters($query, $filters);
+        $this->applyFilters($query, $filters, $event);
 
         if ($sortColumn === 'check_in_time') {
             $query->orderBy('check_in_time', $direction);
@@ -51,7 +51,12 @@ class AttendeeService
             $query->orderBy($sortColumn, $direction);
         }
 
-        return $query->orderBy('id', 'desc')->paginate($perPage)->withQueryString();
+        $paginator = $query->orderBy('id', 'desc')->paginate($perPage)->withQueryString();
+        $paginator->getCollection()->each(
+            fn (Registration $registration) => $registration->setRelation('event', $event)
+        );
+
+        return $paginator;
     }
 
     /**
@@ -84,7 +89,7 @@ class AttendeeService
      * @param  Builder<Registration>  $query
      * @param  array<string, mixed>  $filters
      */
-    private function applyFilters(Builder $query, array $filters): void
+    private function applyFilters(Builder $query, array $filters, Event $event): void
     {
         if (! empty($filters['ticket_type_id'])) {
             $query->whereHas('ticketType', fn (Builder $q) => $q->where('uuid', $filters['ticket_type_id']));
@@ -116,6 +121,7 @@ class AttendeeService
             match ((string) $filters['check_in_status']) {
                 CheckInStatus::CheckedIn->value => $query->whereHas('checkIns'),
                 CheckInStatus::NotCheckedIn->value => $query->whereDoesntHave('checkIns'),
+                CheckInStatus::NoShow->value => $this->constrainNoShows($query, $event),
                 // Checked-out is foundation-only; treat as empty set for now.
                 CheckInStatus::CheckedOut->value => $query->whereRaw('1 = 0'),
                 default => null,
@@ -147,6 +153,21 @@ class AttendeeService
                 });
             }
         }
+    }
+
+    /**
+     * @param  Builder<Registration>  $query
+     */
+    private function constrainNoShows(Builder $query, Event $event): void
+    {
+        if (! $event->hasEnded()) {
+            $query->whereRaw('1 = 0');
+
+            return;
+        }
+
+        $query->whereDoesntHave('checkIns')
+            ->where('status', RegistrationStatus::Confirmed->value);
     }
 
     private function normalizeRegistrationStatus(string $value): ?string

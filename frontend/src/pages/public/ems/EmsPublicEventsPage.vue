@@ -28,7 +28,7 @@ useSeo({
 });
 
 const router = useRouter();
-const { formatDate, formatTime } = useEventFormatting();
+const { formatDate, formatTime, categoryTintStyle, categorySolidStyle } = useEventFormatting();
 
 const events = ref<PublicEvent[]>([]);
 const categories = ref<PublicCategory[]>([]);
@@ -44,9 +44,18 @@ const total = ref(0);
 const savedCheckouts = ref<StoredPendingCheckout[]>([]);
 
 const categoryChips = computed(() => [
-  { label: 'All', value: 'all' },
-  ...categories.value.map((category) => ({ label: category.name, value: category.slug })),
+  { label: 'All', value: 'all', color: null as string | null },
+  ...categories.value.map((category) => ({
+    label: category.name,
+    value: category.slug,
+    color: category.color,
+  })),
 ]);
+
+function chipStyle(chip: { value: string; color: string | null }, selected: boolean) {
+  if (chip.value === 'all' || !chip.color) return undefined;
+  return selected ? categorySolidStyle(chip.color) : categoryTintStyle(chip.color);
+}
 
 async function loadCategories() {
   try {
@@ -332,10 +341,13 @@ function capacityLabel(event: PublicEvent): string {
             v-for="chip in categoryChips"
             :key="chip.value"
             type="button"
-            class="flex-shrink-0 h-11 px-5 rounded-full text-[10px] font-extrabold uppercase tracking-widest transition cursor-pointer"
-            :class="selectedCategory === chip.value
-              ? 'bg-primary text-white'
-              : 'bg-white text-neutral-black/55 border border-neutral-ivory hover:bg-primary/5'"
+            class="flex-shrink-0 h-11 px-5 rounded-full text-[10px] font-extrabold uppercase tracking-widest transition cursor-pointer border"
+            :class="chip.value === 'all'
+              ? (selectedCategory === chip.value
+                ? 'bg-primary text-white border-primary'
+                : 'bg-white text-neutral-black/55 border-neutral-ivory hover:bg-primary/5')
+              : (selectedCategory === chip.value ? '' : 'hover:brightness-95')"
+            :style="chipStyle(chip, selectedCategory === chip.value)"
             @click="selectedCategory = chip.value"
           >
             {{ chip.label }}
@@ -442,7 +454,8 @@ function capacityLabel(event: PublicEvent): string {
               <div class="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2">
                 <span
                   v-if="event.category"
-                  class="text-[10px] font-extrabold uppercase tracking-widest text-white/90 bg-white/15 backdrop-blur px-3 py-1 rounded-full"
+                  class="text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded-full"
+                  :style="categorySolidStyle(event.category.color)"
                 >
                   {{ event.category.name }}
                 </span>

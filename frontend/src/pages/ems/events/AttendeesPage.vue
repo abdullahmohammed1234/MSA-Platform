@@ -57,9 +57,10 @@ const paymentOptions = [
 ];
 
 const checkInOptions = [
-  { value: '', label: 'All check-in statuses' },
+  { value: '', label: 'All attendance statuses' },
   { value: 'not_checked_in', label: 'Not Checked In' },
-  { value: 'checked_in', label: 'Checked In' },
+  { value: 'checked_in', label: 'Attending' },
+  { value: 'no_show', label: "Didn't come" },
 ];
 
 const sourceOptions = [
@@ -223,7 +224,7 @@ watch([registrationStatus, paymentStatus, checkInStatus, source, sortBy, sortDir
             <th class="px-3 py-3">Ticket</th>
             <th class="px-3 py-3">Registration</th>
             <th class="px-3 py-3">Payment</th>
-            <th class="px-3 py-3">Check-in</th>
+            <th class="px-3 py-3">Attendance</th>
             <th class="px-3 py-3">Source</th>
             <th class="px-3 py-3" />
           </tr>

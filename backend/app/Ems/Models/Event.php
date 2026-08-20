@@ -481,4 +481,30 @@ class Event extends Model
     {
         return $this->capacity !== null && $this->remainingCapacity() === 0;
     }
+
+    /**
+     * Whether the event is over, so remaining confirmed guests count as no-shows.
+     *
+     * Cancelled events are excluded: those guests did not skip a held event.
+     */
+    public function hasEnded(): bool
+    {
+        if ($this->status === EventStatus::Cancelled) {
+            return false;
+        }
+
+        if (in_array($this->status, [EventStatus::Completed, EventStatus::Archived], true)) {
+            return true;
+        }
+
+        if ($this->end_at !== null) {
+            return $this->end_at->isPast();
+        }
+
+        if ($this->start_at === null) {
+            return false;
+        }
+
+        return $this->start_at->copy()->endOfDay()->isPast();
+    }
 }
