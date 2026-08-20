@@ -184,6 +184,30 @@ class EmsPublicEventsTest extends EmsTestCase
         $this->assertTrue(collect($response->json('data'))->pluck('slug')->contains('cal-event'));
     }
 
+    public function test_calendar_includes_multi_day_events_that_overlap_the_window(): void
+    {
+        $this->publicEvent([
+            'slug' => 'retreat',
+            'start_at' => now()->subDays(2),
+            'end_at' => now()->addDays(3),
+        ]);
+        $this->publicEvent([
+            'slug' => 'already-over',
+            'start_at' => now()->subWeeks(3),
+            'end_at' => now()->subWeeks(3)->addDays(2),
+        ]);
+
+        $response = $this->getJson($this->publicUrl('events/calendar?' . http_build_query([
+            'starts_after' => now()->startOfDay()->toIso8601String(),
+            'starts_before' => now()->addWeek()->toIso8601String(),
+        ])));
+
+        $this->assertSuccessEnvelope($response);
+        $slugs = collect($response->json('data'))->pluck('slug');
+        $this->assertTrue($slugs->contains('retreat'));
+        $this->assertFalse($slugs->contains('already-over'));
+    }
+
     public function test_free_registration_creates_ticket_and_qr(): void
     {
         $event = $this->publicEvent(['slug' => 'reg-event', 'capacity' => 10]);

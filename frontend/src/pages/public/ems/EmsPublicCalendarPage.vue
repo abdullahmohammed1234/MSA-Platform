@@ -15,7 +15,7 @@ useSeo({
 });
 
 const router = useRouter();
-const { categoryTintStyle, categorySolidStyle } = useEventFormatting();
+const { categoryTintStyle, categorySolidStyle, eventLocalDateKeys, localDateKey } = useEventFormatting();
 
 const view = ref<'month' | 'week'>('month');
 const cursor = ref(startOfMonth(new Date()));
@@ -64,11 +64,11 @@ const eventsByDay = computed(() => {
   const map = new Map<string, PublicCalendarEvent[]>();
 
   for (const event of events.value) {
-    if (!event.start_at) continue;
-    const key = dateKey(new Date(event.start_at));
-    const list = map.get(key) ?? [];
-    list.push(event);
-    map.set(key, list);
+    for (const key of eventLocalDateKeys(event.start_at, event.end_at)) {
+      const list = map.get(key) ?? [];
+      list.push(event);
+      map.set(key, list);
+    }
   }
 
   return map;
@@ -176,7 +176,7 @@ function addMonths(date: Date, months: number): Date {
 }
 
 function dateKey(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  return localDateKey(date);
 }
 </script>
 

@@ -28,7 +28,7 @@ useSeo({
 });
 
 const router = useRouter();
-const { formatDate, formatTime, categoryTintStyle, categorySolidStyle } = useEventFormatting();
+const { formatDateRange, formatTimeRange, categoryTintStyle, categorySolidStyle } = useEventFormatting();
 
 const events = ref<PublicEvent[]>([]);
 const categories = ref<PublicCategory[]>([]);
@@ -249,7 +249,7 @@ function capacityLabel(event: PublicEvent): string {
                     </div>
                     <div>
                       <div class="text-[9px] uppercase tracking-widest text-white/45 font-bold">Date</div>
-                      <div class="text-sm sm:text-base font-extrabold">{{ formatDate(heroEvent.start_at) }}</div>
+                      <div class="text-sm sm:text-base font-extrabold">{{ formatDateRange(heroEvent.start_at, heroEvent.end_at) }}</div>
                     </div>
                   </div>
                   <div class="flex items-center gap-3.5 text-white text-left">
@@ -258,7 +258,7 @@ function capacityLabel(event: PublicEvent): string {
                     </div>
                     <div>
                       <div class="text-[9px] uppercase tracking-widest text-white/45 font-bold">Time</div>
-                      <div class="text-sm sm:text-base font-extrabold">{{ formatTime(heroEvent.start_at) }}</div>
+                      <div class="text-sm sm:text-base font-extrabold">{{ formatTimeRange(heroEvent.start_at, heroEvent.end_at) }}</div>
                     </div>
                   </div>
                   <div v-if="heroEvent.location" class="flex items-center gap-3.5 text-white text-left">
@@ -476,11 +476,11 @@ function capacityLabel(event: PublicEvent): string {
               <div class="mt-auto space-y-2 pt-2 text-xs text-neutral-black/60">
                 <div class="flex items-center gap-2">
                   <Calendar :size="14" class="text-primary shrink-0" />
-                  <span>{{ formatDate(event.start_at) }}</span>
+                  <span>{{ formatDateRange(event.start_at, event.end_at) }}</span>
                 </div>
                 <div class="flex items-center gap-2">
                   <Clock :size="14" class="text-primary shrink-0" />
-                  <span>{{ formatTime(event.start_at) }}</span>
+                  <span>{{ formatTimeRange(event.start_at, event.end_at) }}</span>
                 </div>
                 <div v-if="event.location" class="flex items-center gap-2">
                   <MapPin :size="14" class="text-primary shrink-0" />

@@ -14,7 +14,7 @@ import EmptyState from '@/components/data-display/empty-state/EmptyState.vue';
  * renders what it is given rather than deciding who sees what.
  */
 const dashboard = useEmsDashboardStore();
-const { formatDate, formatTime, formatRelative } = useEventFormatting();
+const { formatDateRange, formatTimeRange, formatRelative } = useEventFormatting();
 
 onMounted(() => dashboard.fetch());
 
@@ -120,7 +120,7 @@ const cards = computed(() => {
                 <dl class="mt-2 grid gap-x-6 gap-y-1 text-xs text-neutral-muted sm:grid-cols-2">
                   <div class="flex gap-1.5">
                     <dt class="sr-only">Date and time</dt>
-                    <dd>{{ formatDate(event.start_at) }} · {{ formatTime(event.start_at) }}</dd>
+                    <dd>{{ formatDateRange(event.start_at, event.end_at) }} · {{ formatTimeRange(event.start_at, event.end_at) }}</dd>
                   </div>
                   <div class="flex gap-1.5">
                     <dt class="sr-only">Location</dt>

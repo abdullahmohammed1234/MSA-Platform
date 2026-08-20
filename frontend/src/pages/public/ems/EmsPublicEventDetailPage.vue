@@ -26,7 +26,7 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToastStore();
 const auth = useAuthStore();
-const { formatDate, formatTime, categorySolidStyle } = useEventFormatting();
+const { formatDateRange, formatTimeRange, categorySolidStyle } = useEventFormatting();
 
 const slug = computed(() => String(route.params.slug || ''));
 const event = ref<PublicEventDetail | null>(null);
@@ -490,17 +490,14 @@ const previewSubtotal = computed(() =>
                 <Calendar class="text-primary mt-0.5 shrink-0" :size="18" />
                 <div>
                   <div class="text-[10px] uppercase tracking-widest text-neutral-black/40 font-bold">Date</div>
-                  <div class="font-semibold">{{ formatDate(event.start_at) }}</div>
+                  <div class="font-semibold">{{ formatDateRange(event.start_at, event.end_at) }}</div>
                 </div>
               </div>
               <div class="flex items-start gap-3">
                 <Clock class="text-primary mt-0.5 shrink-0" :size="18" />
                 <div>
                   <div class="text-[10px] uppercase tracking-widest text-neutral-black/40 font-bold">Time</div>
-                  <div class="font-semibold">
-                    {{ formatTime(event.start_at) }}
-                    <span v-if="event.end_at"> – {{ formatTime(event.end_at) }}</span>
-                  </div>
+                  <div class="font-semibold">{{ formatTimeRange(event.start_at, event.end_at) }}</div>
                 </div>
               </div>
               <div v-if="event.location" class="flex items-start gap-3">

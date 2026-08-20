@@ -10,7 +10,7 @@ import { EMS_PUBLIC_EVENTS_PATH } from '@/constants/ems';
 import type { PublicTicket } from '@/types/ems/public';
 
 const route = useRoute();
-const { formatDate, formatTime } = useEventFormatting();
+const { formatDateRange, formatTimeRange } = useEventFormatting();
 
 const code = computed(() => String(route.params.code || '').toUpperCase());
 const ticket = ref<PublicTicket | null>(null);
@@ -85,11 +85,11 @@ function downloadQr() {
           <div class="space-y-3 text-sm">
             <div class="flex items-center gap-3">
               <Calendar class="text-primary shrink-0" :size="16" />
-              <span>{{ formatDate(ticket.event?.start_at) }}</span>
+              <span>{{ formatDateRange(ticket.event?.start_at, ticket.event?.end_at) }}</span>
             </div>
             <div class="flex items-center gap-3">
               <Clock class="text-primary shrink-0" :size="16" />
-              <span>{{ formatTime(ticket.event?.start_at) }}</span>
+              <span>{{ formatTimeRange(ticket.event?.start_at, ticket.event?.end_at) }}</span>
             </div>
             <div v-if="ticket.event?.location" class="flex items-center gap-3">
               <MapPin class="text-primary shrink-0" :size="16" />

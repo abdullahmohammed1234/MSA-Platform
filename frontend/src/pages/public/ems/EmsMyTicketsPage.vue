@@ -12,7 +12,7 @@ import type { PublicRegistration } from '@/types/ems/public';
 import { useToastStore } from '@/components/feedback/toast';
 
 const toast = useToastStore();
-const { formatDate, formatTime } = useEventFormatting();
+const { formatDateRange, formatTimeRange } = useEventFormatting();
 
 const registrations = ref<PublicRegistration[]>([]);
 const localPending = ref<StoredPendingCheckout[]>([]);
@@ -344,11 +344,11 @@ function payLocalPending(item: StoredPendingCheckout) {
                 <div class="mt-4 space-y-2.5 text-xs text-neutral-black/60">
                   <div class="flex items-center gap-2">
                     <Calendar class="text-primary shrink-0" :size="14" />
-                    <span>{{ formatDate(reg.event?.start_at) }}</span>
+                    <span>{{ formatDateRange(reg.event?.start_at, reg.event?.end_at) }}</span>
                   </div>
                   <div class="flex items-center gap-2">
                     <Clock class="text-primary shrink-0" :size="14" />
-                    <span>{{ formatTime(reg.event?.start_at) }}</span>
+                    <span>{{ formatTimeRange(reg.event?.start_at, reg.event?.end_at) }}</span>
                   </div>
                   <div v-if="reg.event?.location" class="flex items-center gap-2">
                     <MapPin class="text-primary shrink-0" :size="14" />

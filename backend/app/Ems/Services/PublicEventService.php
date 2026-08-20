@@ -62,6 +62,8 @@ class PublicEventService
 
     /**
      * Calendar feed for a date window — lightweight rows only.
+     * The window is an overlap filter: multi-day events that started before
+     * `starts_after` still appear if they have not ended yet.
      *
      * @param  array<string, mixed>  $filters
      * @return Collection<int, Event>
@@ -73,8 +75,21 @@ class PublicEventService
 
         return $this->baseQuery($filters)
             ->with(['category'])
-            ->when($startsAfter, fn (Builder $q) => $q->where('start_at', '>=', $startsAfter))
-            ->when($startsBefore, fn (Builder $q) => $q->where('start_at', '<=', $startsBefore))
+            ->when($startsAfter || $startsBefore, function (Builder $q) use ($startsAfter, $startsBefore) {
+                if ($startsAfter) {
+                    $q->where(function (Builder $overlap) use ($startsAfter) {
+                        $overlap->where('end_at', '>=', $startsAfter)
+                            ->orWhere(function (Builder $noEnd) use ($startsAfter) {
+                                $noEnd->whereNull('end_at')
+                                    ->where('start_at', '>=', $startsAfter);
+                            });
+                    });
+                }
+
+                if ($startsBefore) {
+                    $q->where('start_at', '<=', $startsBefore);
+                }
+            })
             ->orderBy('start_at')
             ->limit((int) config('ems.public.calendar_max_events', 500))
             ->get(['id', 'uuid', 'name', 'slug', 'category_id', 'start_at', 'end_at', 'timezone', 'status', 'location']);

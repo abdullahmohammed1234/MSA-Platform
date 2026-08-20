@@ -17,7 +17,7 @@ const route = useRoute();
 const router = useRouter();
 const events = useEmsEventsStore();
 const { handle } = useEmsApiError();
-const { formatDateTime } = useEventFormatting();
+const { formatDateRange, formatTimeRange } = useEventFormatting();
 
 const uuid = computed(() => route.params.uuid as string);
 const event = computed(() => events.current);
@@ -99,7 +99,7 @@ onUnmounted(() => {
       <dl class="mt-2 grid gap-2 sm:grid-cols-2">
         <div>
           <dt class="text-neutral-muted">When</dt>
-          <dd>{{ formatDateTime(event.start_at) }}</dd>
+          <dd>{{ formatDateRange(event.start_at, event.end_at) }} · {{ formatTimeRange(event.start_at, event.end_at) }}</dd>
         </div>
         <div>
           <dt class="text-neutral-muted">Where</dt>

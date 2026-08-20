@@ -37,10 +37,26 @@ export function useEventFormatting() {
   const dotClass = (tone: EventStatusTone | undefined): string =>
     (tone && TONE_TO_DOT[tone]) || TONE_TO_DOT.neutral;
 
-  const formatDate = (value: string | null | undefined): string => {
-    if (!value) return '—';
+  const parseDate = (value: string | null | undefined): Date | null => {
+    if (!value) return null;
 
-    return new Date(value).toLocaleDateString(undefined, {
+    const date = new Date(value);
+
+    return Number.isNaN(date.getTime()) ? null : date;
+  };
+
+  const sameLocalDay = (a: Date, b: Date): boolean =>
+    a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+  const localDateKey = (date: Date): string =>
+    `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+  const formatDate = (value: string | null | undefined): string => {
+    const date = parseDate(value);
+
+    if (!date) return '—';
+
+    return date.toLocaleDateString(undefined, {
       weekday: 'short',
       day: 'numeric',
       month: 'short',
@@ -49,15 +65,77 @@ export function useEventFormatting() {
   };
 
   const formatTime = (value: string | null | undefined): string => {
-    if (!value) return '—';
+    const date = parseDate(value);
 
-    return new Date(value).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+    if (!date) return '—';
+
+    return date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
   };
 
   const formatDateTime = (value: string | null | undefined): string => {
-    if (!value) return '—';
+    if (!parseDate(value)) return '—';
 
     return `${formatDate(value)} · ${formatTime(value)}`;
+  };
+
+  /** Single-day events stay as one date; multi-day events include the end date. */
+  const formatDateRange = (
+    startAt: string | null | undefined,
+    endAt: string | null | undefined,
+  ): string => {
+    const start = parseDate(startAt);
+
+    if (!start) return '—';
+
+    const end = parseDate(endAt);
+
+    if (!end || sameLocalDay(start, end)) {
+      return formatDate(startAt);
+    }
+
+    return `${formatDate(startAt)} – ${formatDate(endAt)}`;
+  };
+
+  const formatTimeRange = (
+    startAt: string | null | undefined,
+    endAt: string | null | undefined,
+  ): string => {
+    const start = parseDate(startAt);
+
+    if (!start) return '—';
+
+    const end = parseDate(endAt);
+
+    if (!end) return formatTime(startAt);
+
+    return `${formatTime(startAt)} – ${formatTime(endAt)}`;
+  };
+
+  /**
+   * Local calendar days an event occupies, inclusive of start and end.
+   * Used by the public month/week calendar so multi-day events appear on every day.
+   */
+  const eventLocalDateKeys = (
+    startAt: string | null | undefined,
+    endAt: string | null | undefined,
+    maxDays = 366,
+  ): string[] => {
+    const start = parseDate(startAt);
+
+    if (!start) return [];
+
+    const parsedEnd = parseDate(endAt);
+    const end = parsedEnd && parsedEnd >= start ? parsedEnd : start;
+    const keys: string[] = [];
+    const cursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const last = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+
+    for (let i = 0; i < maxDays && cursor <= last; i++) {
+      keys.push(localDateKey(cursor));
+      cursor.setDate(cursor.getDate() + 1);
+    }
+
+    return keys;
   };
 
   /** "in 3 days" / "2 hours ago", used by the activity feed. */
@@ -244,6 +322,10 @@ export function useEventFormatting() {
     formatDate,
     formatTime,
     formatDateTime,
+    formatDateRange,
+    formatTimeRange,
+    eventLocalDateKeys,
+    localDateKey,
     formatRelative,
     toDateTimeLocal,
     fromDateTimeLocal,

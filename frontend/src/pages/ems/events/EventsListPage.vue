@@ -29,7 +29,7 @@ const events = useEmsEventsStore();
 const categories = useEmsCategoriesStore();
 const { canCreateEvents, canUpdateEvents, canDeleteEvents } = useEmsPermissions();
 const { handle } = useEmsApiError();
-const { formatDate, formatTime } = useEventFormatting();
+const { formatDateRange, formatTimeRange } = useEventFormatting();
 
 const search = ref((route.query.search as string) ?? '');
 const pendingDeletion = ref<Event | null>(null);
@@ -210,8 +210,8 @@ const confirmDelete = async () => {
                 </p>
               </td>
               <td class="px-5 py-4 text-xs text-neutral-muted">
-                <p>{{ formatDate(event.start_at) }}</p>
-                <p class="text-[11px]">{{ formatTime(event.start_at) }}</p>
+                <p>{{ formatDateRange(event.start_at, event.end_at) }}</p>
+                <p class="text-[11px]">{{ formatTimeRange(event.start_at, event.end_at) }}</p>
               </td>
               <td class="max-w-[200px] truncate px-5 py-4 text-xs text-neutral-muted">
                 {{ event.location || '—' }}
@@ -258,7 +258,7 @@ const confirmDelete = async () => {
                 <EmsCategoryBadge :name="event.category.name" :color="event.category.color" />
               </p>
               <p class="mt-1 text-xs text-neutral-muted">
-                {{ formatDate(event.start_at) }} · {{ formatTime(event.start_at) }}
+                {{ formatDateRange(event.start_at, event.end_at) }} · {{ formatTimeRange(event.start_at, event.end_at) }}
               </p>
               <p class="text-xs text-neutral-muted">{{ event.location || 'Location to be confirmed' }}</p>
             </button>
