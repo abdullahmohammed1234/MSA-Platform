@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { resolveTeamMembers, normalizeTeamMembers, normalizeCmsTeamMember } from '@/utils/teamMembers';
 import { toStorableImagePath } from '@/constants/publicAssets';
 import { DEFAULT_TEAM_MEMBERS } from '@/data/teamMembers';
-import { independentCoordinators, membersWithRoles, vicePresidentMembers } from '@/data/teamOrg';
+import { independentCoordinators, membersWithRoles, vicePresidentMembers, buildOrgBranches } from '@/data/teamOrg';
 
 describe('resolveTeamMembers', () => {
   it('returns defaults when API payload is empty', () => {
@@ -86,6 +86,16 @@ describe('team org chart matching', () => {
     ]);
     expect(membersWithRoles(cmsRoster, ['President']).map((member) => member.name)).toEqual([
       'FATIMA HAYAT',
+    ]);
+  });
+
+  it('does not list a graphics lead as a graphics designer too', () => {
+    const graphics = buildOrgBranches(DEFAULT_TEAM_MEMBERS).find((branch) => branch.id === 'graphics');
+
+    expect(graphics?.leads.map((member) => member.name)).toEqual(['MARYAM MOHSEN']);
+    expect(graphics?.coordinators.map((member) => member.name)).toEqual([
+      'ESHAAL PATEL',
+      'SHARON DEO',
     ]);
   });
 });

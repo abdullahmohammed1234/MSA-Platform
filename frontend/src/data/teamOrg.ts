@@ -109,7 +109,17 @@ function roleFuzzyMatch(memberRole: string, wantedRole: string): boolean {
     return actualTokens.size === 1 && actualTokens.has(wantedTokens[0]);
   }
 
-  return wantedTokens.every((token) => actualTokens.has(token));
+  if (!wantedTokens.every((token) => actualTokens.has(token))) {
+    return false;
+  }
+
+  // "Lead Graphics Designer" must not also match "Graphics Designer".
+  const seniority = new Set(['lead', 'director', 'head', 'chief', 'vp', 'vice', 'president']);
+  const extraSeniority = [...actualTokens].some(
+    (token) => seniority.has(token) && !wantedTokens.includes(token)
+  );
+
+  return !extraSeniority;
 }
 
 export function membersWithRoles(members: TeamMember[], roles: readonly string[]): TeamMember[] {
@@ -151,6 +161,21 @@ export function vicePresidentMembers(members: TeamMember[]): TeamMember[] {
   return [...matched, ...extras];
 }
 
+export function buildOrgBranches(members: TeamMember[]) {
+  return ORG_BRANCHES.map((branch) => {
+    const leads = membersWithRoles(members, branch.leadRoles);
+    const leadNames = new Set(leads.map((lead) => lead.name));
+    const coordinators = membersWithRoles(members, branch.coordinatorRoles)
+      .filter((member) => !leadNames.has(member.name));
+
+    return {
+      ...branch,
+      leads,
+      coordinators,
+    };
+  }).filter((branch) => branch.leads.length > 0 || branch.coordinators.length > 0);
+}
+
 function collectAssigned(members: TeamMember[]): Set<string> {
   const assigned = new Set<string>();
   const take = (list: TeamMember[]) => {
@@ -163,9 +188,9 @@ function collectAssigned(members: TeamMember[]): Set<string> {
   take(vicePresidentMembers(members));
   take(membersMatching(members, EXEC_ROLES.secretary, EXEC_DEPTS.secretary));
 
-  for (const branch of ORG_BRANCHES) {
-    take(membersWithRoles(members, branch.leadRoles));
-    take(membersWithRoles(members, branch.coordinatorRoles));
+  for (const branch of buildOrgBranches(members)) {
+    take(branch.leads);
+    take(branch.coordinators);
   }
 
   take(membersWithRoles(members, INDEPENDENT_COORDINATOR_ROLES));

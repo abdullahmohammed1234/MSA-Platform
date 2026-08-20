@@ -5,11 +5,10 @@ import { TEAM_FALLBACK_IMAGE } from '@/constants/publicAssets';
 import {
   EXEC_ROLES,
   EXEC_DEPTS,
-  ORG_BRANCHES,
   independentCoordinators,
   membersMatching,
-  membersWithRoles,
   vicePresidentMembers,
+  buildOrgBranches,
 } from '@/data/teamOrg';
 
 const props = defineProps<{
@@ -29,14 +28,7 @@ const secretary = computed(() =>
 );
 const execRow = computed(() => [...vicePresidents.value, ...secretary.value]);
 const independents = computed(() => independentCoordinators(props.members));
-
-const branches = computed(() =>
-  ORG_BRANCHES.map((branch) => ({
-    ...branch,
-    leads: membersWithRoles(props.members, branch.leadRoles),
-    coordinators: membersWithRoles(props.members, branch.coordinatorRoles),
-  })).filter((branch) => branch.leads.length > 0 || branch.coordinators.length > 0)
-);
+const branches = computed(() => buildOrgBranches(props.members));
 
 const hasChart = computed(
   () =>
