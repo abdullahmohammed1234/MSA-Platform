@@ -859,6 +859,10 @@ class CheckoutService
 
         $payment->provider_checkout_id = $session->checkoutId;
         $payment->provider_order_id = $session->providerOrderId;
+        if ($session->providerOrderId) {
+            $order->provider_order_id = $session->providerOrderId;
+            $order->save();
+        }
         $payment->checkout_url = $session->checkoutUrl;
         $payment->checkout_expires_at = now()->addMinutes(max(15, $ttlMinutes));
         $payment->source_channel = \App\Ems\Enums\PaymentSourceChannel::Online->value;

@@ -39,6 +39,7 @@ export interface EmsAttendee {
   payment_uuid?: string | null;
   order_uuid?: string | null;
   source_channel?: string | null;
+  source_channel_label?: string | null;
 }
 
 export interface EmsCheckIn {

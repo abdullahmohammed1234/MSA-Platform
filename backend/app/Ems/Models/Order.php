@@ -39,6 +39,7 @@ class Order extends Model
         'currency',
         'status',
         'source_channel',
+        'provider_order_id',
         'completed_at',
         'cancelled_at',
         'failed_at',

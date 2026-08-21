@@ -49,6 +49,9 @@ class AttendeeResource extends JsonResource
             'payment_uuid' => $payment?->uuid,
             'order_uuid' => $this->order?->uuid,
             'source_channel' => $payment?->source_channel ?? ($this->order?->source_channel),
+            'source_channel_label' => \App\Ems\Enums\PaymentSourceChannel::tryFrom(
+                (string) ($payment?->source_channel ?? $this->order?->source_channel ?? '')
+            )?->label(),
             'check_in_status' => $checkInStatus->value,
             'check_in_status_label' => $checkInStatus->label(),
             'check_in_at' => $checkIn?->checked_in_at?->toIso8601String(),

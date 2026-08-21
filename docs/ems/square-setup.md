@@ -157,6 +157,10 @@ updates that object. It does not create a second item.
 
 Free ticket types are not published to Square Catalog.
 
+**Catalog sync is not Square Online Store publishing.** Upserting an EMS ticket type creates or updates a Square Catalog item/variation. It does **not** make that item visible on https://sfu-msa-store.square.site/. Online visibility, fulfillment (pickup/shipping), and storefront merchandising are configured in the Square Dashboard.
+
+The Square Online Store product must be the **same Catalog Variation** stored in `ems_square_catalog_mappings.square_catalog_variation_id`. Do not duplicate the item for the storefront.
+
 ## 6.1 Catalog Custom Attribute Provisioning
 
 EMS identifies its own Square Catalog objects with three seller-scoped Catalog
@@ -282,6 +286,56 @@ If attendee identity is missing, EMS uses a labeled **Walk-in** attendee
 with empty email. Multiple walk-ins by the same staff member are allowed.
 
 Unmapped POS sales stay unmatched and are not turned into EMS tickets.
+
+## 9.1 Square Online Store
+
+Storefront:
+
+```
+https://sfu-msa-store.square.site/
+```
+
+This is **not** EMS Payment Links (section 7) and **not** Square POS (section 9).
+
+```
+EMS Ticket Type
+    ↓
+Square Catalog Variation  (EMS sync)
+    ↓
+Square Dashboard — publish to Square Online Store
+    ↓
+Customer purchase on sfu-msa-store.square.site
+    ↓
+Square Payment (application_details.square_product = ONLINE_STORE)
+    ↓
+EMS payment.created / payment.updated (or hourly reconciliation)
+    ↓
+GET /v2/orders/{order_id}
+    ↓
+line_items[].catalog_object_id → EMS mapping
+    ↓
+Capacity check
+    ↓
+EMS order + one registration per ticket type
+    ↓
+QR tickets + confirmation email
+```
+
+Rules:
+
+- EMS does **not** automatically publish Catalog items to Square Online.
+- The storefront item must use the EMS-mapped Catalog Variation ID. Name/SKU/price matching is never used.
+- Only **captured** payments (`COMPLETED` or `PAID`) create tickets. `PENDING` and `APPROVED` do not.
+- Unmapped merchandise stays unmatched. Reconciliation can ingest later once a mapping exists.
+- Capacity is enforced. Oversell is not created; the webhook stays unmatched for manual handling. EMS does not auto-refund.
+- Mixed ticket types create **one EMS order** and **one registration per ticket type**. Tickets never inherit the last line's type.
+- Duplicate webhooks, `payment.created` + `payment.updated`, and reconciliation converge on **one EMS sale** per Square order.
+- Channel is `square_online_store` (not POS / not walk-in). Buyer email from Square is used when present.
+- Refunds (`refund.created` / `refund.updated`) synchronize after successful ingestion, matched by Square payment ID.
+
+Required webhook events for this flow: `payment.created`, `payment.updated`, plus refunds. `order.created` / `order.updated` may look up tenders and ingest only after a captured payment exists; they never create a registration from an unpaid order.
+
+Production also needs `EMS_PAYMENTS_ENABLED=true`, `EMS_NOTIFICATIONS_ENABLED=true`, `SQUARE_ENVIRONMENT=production`, and queue workers for `ems-payments` and `ems-notifications`.
 
 ## 10. Terminal workflow
 

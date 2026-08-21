@@ -161,7 +161,8 @@ class SquareWebhookService
             }
 
             $record->status = WebhookEventStatus::Unmatched->value;
-            $record->failure_reason = 'No EMS mapping for this Square event.';
+            $record->failure_reason = $record->failure_reason
+                ?: 'No EMS mapping for this Square event.';
             $record->save();
 
             Log::channel((string) config('ems.logging.channel', 'ems'))
@@ -239,11 +240,30 @@ class SquareWebhookService
 
             $squarePayment = data_get($payload, 'data.object.payment');
             if (is_array($squarePayment)) {
-                return $this->pos->ingestPayment($squarePayment);
+                $ingested = $this->pos->ingestPayment($squarePayment);
+                $this->rememberIngestFailure($record);
+
+                return $ingested;
+            }
+
+            if (str_starts_with($eventType, 'order.')) {
+                $ingested = $this->pos->ingestFromOrderWebhook($payload);
+                $this->rememberIngestFailure($record);
+
+                return $ingested;
             }
         }
 
         return null;
+    }
+
+    private function rememberIngestFailure(WebhookEvent $record): void
+    {
+        $reason = $this->pos->lastUnmatchedReason();
+        if ($reason) {
+            $record->failure_reason = $reason;
+            $record->save();
+        }
     }
 
     /**

@@ -846,6 +846,47 @@ class EmsSquareIntegrationOverhaulTest extends EmsTestCase
         $this->assertSame(RegistrationStatus::Confirmed, $registration->status);
         $this->assertSame(1, $registration->tickets()->count());
         $this->assertSame('pos', Payment::query()->first()->source_channel);
+        $this->assertSame('square_pos', $registration->metadata['source']);
+        $this->assertTrue((bool) $registration->metadata['walk_in']);
+    }
+
+    public function test_pos_approved_payment_still_ingests(): void
+    {
+        $event = $this->openEvent();
+        $ticketType = TicketType::factory()->paid(15)->create(['event_id' => $event->id, 'name' => 'Approved POS']);
+        SquareCatalogMapping::query()->create([
+            'event_id' => $event->id,
+            'ticket_type_id' => $ticketType->id,
+            'square_catalog_item_id' => 'ITEM_POS_APPR',
+            'square_catalog_variation_id' => 'VAR_POS_APPR',
+            'sync_status' => SquareCatalogSyncStatus::Synced->value,
+            'ems_managed' => true,
+        ]);
+
+        Http::fake([
+            '*/v2/orders/sq_pos_appr_order' => Http::response([
+                'order' => [
+                    'id' => 'sq_pos_appr_order',
+                    'line_items' => [['catalog_object_id' => 'VAR_POS_APPR', 'quantity' => '1']],
+                ],
+            ], 200),
+        ]);
+
+        $this->postWebhook([
+            'event_id' => 'evt_pos_appr',
+            'type' => 'payment.updated',
+            'data' => ['object' => ['payment' => [
+                'id' => 'sq_pos_appr_pay',
+                'status' => 'APPROVED',
+                'order_id' => 'sq_pos_appr_order',
+                'amount_money' => ['amount' => 1500, 'currency' => 'CAD'],
+                'application_details' => ['square_product' => 'SQUARE_POS'],
+            ]]],
+        ])->assertOk();
+
+        $this->assertSame(1, Registration::query()->count());
+        $this->assertSame(1, Ticket::query()->count());
+        $this->assertSame('pos', Payment::query()->first()->source_channel);
     }
 
     public function test_pos_sale_without_mapping_does_not_create_ticket(): void

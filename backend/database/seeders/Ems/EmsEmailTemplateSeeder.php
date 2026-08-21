@@ -12,7 +12,8 @@ class EmsEmailTemplateSeeder extends Seeder
     {
         $placeholders = [
             'attendee_name', 'event_name', 'event_date', 'event_time', 'event_location',
-            'ticket_type', 'registration_number', 'ticket_number', 'qr_code',
+            'ticket_type', 'registration_number', 'ticket_number', 'ticket_codes', 'ticket_count',
+            'qr_code', 'ticket_list_html', 'ticket_list_text',
             'ticket_download_link', 'event_details_link', 'order_number',
             'amount_paid', 'currency', 'payment_reference', 'square_transaction_reference',
             'refund_amount', 'change_summary', 'feedback_link', 'organizer_name',
@@ -42,8 +43,8 @@ class EmsEmailTemplateSeeder extends Seeder
                 'name' => 'Registration Confirmation',
                 'category' => 'registration',
                 'subject' => 'Registration confirmed — {{ event_name }}',
-                'body_html' => '<p>Assalamu alaikum {{ attendee_name }},</p><p>Your registration <strong>{{ registration_number }}</strong> for <strong>{{ event_name }}</strong> is confirmed.</p><p>Date: {{ event_date }}<br>Time: {{ event_time }}<br>Location: {{ event_location }}<br>Ticket: {{ ticket_type }}</p><p><a href="{{ ticket_download_link }}">Download your ticket</a> · <a href="{{ event_details_link }}">Event details</a></p><p><img src="{{ qr_code }}" alt="QR code" width="180" height="180" /></p>',
-                'body_text' => "Assalamu alaikum {{ attendee_name }},\n\nYour registration {{ registration_number }} for {{ event_name }} is confirmed.\nDate: {{ event_date }}\nTime: {{ event_time }}\nLocation: {{ event_location }}\nTicket: {{ ticket_download_link }}",
+                'body_html' => '<p>Assalamu alaikum {{ attendee_name }},</p><p>Your registration <strong>{{ registration_number }}</strong> for <strong>{{ event_name }}</strong> is confirmed.</p><p>Date: {{ event_date }}<br>Time: {{ event_time }}<br>Location: {{ event_location }}<br>Ticket type: {{ ticket_type }}<br>Tickets: {{ ticket_count }}</p><p><a href="{{ event_details_link }}">Event details</a></p>{{ ticket_list_html }}',
+                'body_text' => "Assalamu alaikum {{ attendee_name }},\n\nYour registration {{ registration_number }} for {{ event_name }} is confirmed.\nDate: {{ event_date }}\nTime: {{ event_time }}\nLocation: {{ event_location }}\nTicket type: {{ ticket_type }}\nTickets ({{ ticket_count }}):\n{{ ticket_list_text }}",
             ],
             [
                 'key' => NotificationType::TicketEmail->value,

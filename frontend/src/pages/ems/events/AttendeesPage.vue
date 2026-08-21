@@ -68,6 +68,7 @@ const sourceOptions = [
   { value: 'ems', label: 'EMS' },
   { value: 'imported', label: 'Imported' },
   { value: 'walk_in', label: 'Walk-ins' },
+  { value: 'square_online_store', label: 'Square Online Store' },
 ];
 
 const sortOptions = [
@@ -267,7 +268,7 @@ watch([registrationStatus, paymentStatus, checkInStatus, source, sortBy, sortDir
                 {{ new Date(row.check_in_at).toLocaleString() }}
               </div>
             </td>
-            <td class="px-3 py-3 capitalize">{{ row.registration_source.replace('_', '-') }}</td>
+            <td class="px-3 py-3 capitalize">{{ row.source_channel_label || row.registration_source.replaceAll('_', ' ') }}</td>
             <td class="px-3 py-3 text-right">
               <Button
                 v-if="canUndoCheckIn && row.check_in_status === 'checked_in'"

@@ -146,6 +146,12 @@ class AttendeeService
                 $query->where('metadata->source', 'imported');
             } elseif ($source === 'walk_in') {
                 $query->where('metadata->source', 'walk_in');
+            } elseif ($source === 'square_online_store') {
+                $query->where(function (Builder $q) {
+                    $q->where('metadata->source', 'square_online_store')
+                        ->orWhereHas('order', fn (Builder $o) => $o->where('source_channel', 'square_online_store'))
+                        ->orWhereHas('payments', fn (Builder $p) => $p->where('source_channel', 'square_online_store'));
+                });
             } elseif ($source === 'ems') {
                 $query->where(function (Builder $q) {
                     $q->whereNull('metadata->source')

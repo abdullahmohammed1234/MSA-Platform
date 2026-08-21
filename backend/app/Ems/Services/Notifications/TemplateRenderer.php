@@ -81,9 +81,12 @@ class TemplateRenderer
             'registration_number' => (string) ($registration?->reference ?? ''),
             'ticket_number' => (string) ($firstTicket?->code ?? ''),
             'ticket_codes' => implode(', ', $ticketCodes),
+            'ticket_count' => (string) $tickets->count(),
             'qr_code' => $qrUrl,
             'qr_code_url' => $qrUrl,
             'ticket_download_link' => $ticketUrl,
+            'ticket_list_html' => $this->ticketListHtml($tickets),
+            'ticket_list_text' => $this->ticketListText($tickets),
             'event_details_link' => $event ? $this->eventPublicUrl($event) : '',
             'feedback_link' => $event ? $this->feedbackUrl($event) : '',
             'order_number' => (string) ($order?->reference ?? ''),
@@ -127,6 +130,42 @@ class TemplateRenderer
         $base = rtrim((string) config('ems.public.frontend_url'), '/');
 
         return $base . '/tickets/' . $ticket->code;
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, mixed>  $tickets
+     */
+    private function ticketListHtml($tickets): string
+    {
+        $html = '';
+        foreach ($tickets as $ticket) {
+            if (! $ticket instanceof Ticket) {
+                continue;
+            }
+            $url = e($this->ticketUrl($ticket));
+            $qr = e($this->ticketQrUrl($ticket));
+            $code = e((string) $ticket->code);
+            $html .= '<p style="margin:16px 0 8px;">Ticket <strong>'.$code.'</strong> — <a href="'.$url.'">View / download ticket</a></p>'
+                .'<p style="margin:0 0 16px;"><img src="'.$qr.'" alt="QR code '.$code.'" width="180" height="180" /></p>';
+        }
+
+        return $html;
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, mixed>  $tickets
+     */
+    private function ticketListText($tickets): string
+    {
+        $lines = [];
+        foreach ($tickets as $ticket) {
+            if (! $ticket instanceof Ticket) {
+                continue;
+            }
+            $lines[] = 'Ticket '.$ticket->code.': '.$this->ticketUrl($ticket);
+        }
+
+        return implode("\n", $lines);
     }
 
     private function ticketQrUrl(Ticket $ticket): string

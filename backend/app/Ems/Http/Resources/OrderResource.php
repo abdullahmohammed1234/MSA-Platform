@@ -22,6 +22,7 @@ class OrderResource extends JsonResource
             'total_amount' => (float) $this->total_amount,
             'currency' => $this->currency,
             'source_channel' => $this->source_channel,
+            'source_channel_label' => \App\Ems\Enums\PaymentSourceChannel::tryFrom((string) $this->source_channel)?->label() ?? $this->source_channel,
             'buyer_name' => $this->buyer_name,
             'buyer_email' => $this->buyer_email,
             'completed_at' => $this->completed_at?->toIso8601String(),
