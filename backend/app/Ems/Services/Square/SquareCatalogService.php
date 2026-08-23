@@ -8,6 +8,8 @@ use App\Ems\Models\Event;
 use App\Ems\Models\SquareCatalogMapping;
 use App\Ems\Models\SquareSyncCursor;
 use App\Ems\Models\TicketType;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response as HttpResponse;
@@ -46,47 +48,52 @@ class SquareCatalogService
     public function syncTicketType(TicketType $ticketType, bool $archive = false): SquareCatalogMapping
     {
         $ticketType->loadMissing('event');
-        $mapping = $this->mappingFor($ticketType);
 
-        if (! $this->square->enabled()) {
-            $mapping->sync_status = SquareCatalogSyncStatus::NotSynced;
-            $mapping->last_error = 'Square payments are not enabled.';
-            $mapping->save();
+        // Serialize concurrent syncs for the same ticket type so two workers
+        // cannot build divergent payloads under overlapping conditions.
+        return DB::transaction(function () use ($ticketType, $archive): SquareCatalogMapping {
+            $mapping = $this->mappingFor($ticketType, lock: true);
 
-            return $mapping;
-        }
+            if (! $this->square->enabled()) {
+                $mapping->sync_status = SquareCatalogSyncStatus::NotSynced;
+                $mapping->last_error = 'Square payments are not enabled.';
+                $mapping->save();
 
-        if ((float) $ticketType->price <= 0 && ! $mapping->square_catalog_variation_id) {
-            $mapping->sync_status = SquareCatalogSyncStatus::NotSynced;
-            $mapping->last_error = 'Free ticket types are not published to Square Catalog.';
-            $mapping->save();
-
-            return $mapping;
-        }
-
-        try {
-            $this->ensureCustomAttributeDefinitions();
-
-            if ($archive || ! $ticketType->is_active) {
-                return $this->archiveVariation($mapping, $ticketType);
+                return $mapping;
             }
 
-            return $this->upsertWithDefinitionRetry($mapping, $ticketType);
-        } catch (\Throwable $e) {
-            $mapping->sync_status = SquareCatalogSyncStatus::Failed;
-            $mapping->last_error = Str::limit($e->getMessage(), 500, '');
-            $mapping->retry_count = (int) $mapping->retry_count + 1;
-            $mapping->save();
+            if ((float) $ticketType->price <= 0 && ! $mapping->square_catalog_variation_id) {
+                $mapping->sync_status = SquareCatalogSyncStatus::NotSynced;
+                $mapping->last_error = 'Free ticket types are not published to Square Catalog.';
+                $mapping->save();
 
-            Log::channel((string) config('ems.logging.channel', 'ems'))
-                ->error('ems.square.catalog.sync_failed', [
-                    'ticket_type_uuid' => $ticketType->uuid,
-                    'event_uuid' => $ticketType->event?->uuid,
-                    'error' => $e->getMessage(),
-                ]);
+                return $mapping;
+            }
 
-            return $mapping;
-        }
+            try {
+                $this->ensureCustomAttributeDefinitions();
+
+                if ($archive || ! $ticketType->is_active) {
+                    return $this->archiveVariation($mapping, $ticketType);
+                }
+
+                return $this->upsertWithDefinitionRetry($mapping, $ticketType);
+            } catch (\Throwable $e) {
+                $mapping->sync_status = SquareCatalogSyncStatus::Failed;
+                $mapping->last_error = Str::limit($e->getMessage(), 500, '');
+                $mapping->retry_count = (int) $mapping->retry_count + 1;
+                $mapping->save();
+
+                Log::channel((string) config('ems.logging.channel', 'ems'))
+                    ->error('ems.square.catalog.sync_failed', [
+                        'ticket_type_uuid' => $ticketType->uuid,
+                        'event_uuid' => $ticketType->event?->uuid,
+                        'error' => $e->getMessage(),
+                    ]);
+
+                return $mapping;
+            }
+        });
     }
 
     public function pullRemoteChanges(): int
@@ -203,22 +210,65 @@ class SquareCatalogService
         return $mapping->fresh();
     }
 
-    public function mappingFor(TicketType $ticketType): SquareCatalogMapping
+    public function mappingFor(TicketType $ticketType, bool $lock = false): SquareCatalogMapping
     {
-        $existing = SquareCatalogMapping::query()->where('ticket_type_id', $ticketType->id)->first();
+        $existing = $this->findMapping($ticketType->id, $lock);
         if ($existing) {
             return $existing;
         }
 
-        $mapping = new SquareCatalogMapping();
-        $mapping->event_id = $ticketType->event_id;
-        $mapping->ticket_type_id = $ticketType->id;
-        $mapping->square_location_id = $this->square->locationId() ?: null;
-        $mapping->sync_status = SquareCatalogSyncStatus::Pending;
-        $mapping->ems_managed = true;
-        $mapping->save();
+        try {
+            $mapping = new SquareCatalogMapping();
+            $mapping->event_id = $ticketType->event_id;
+            $mapping->ticket_type_id = $ticketType->id;
+            $mapping->square_location_id = $this->square->locationId() ?: null;
+            $mapping->sync_status = SquareCatalogSyncStatus::Pending;
+            $mapping->ems_managed = true;
+            $mapping->save();
 
-        return $mapping;
+            return $lock ? ($this->findMapping($ticketType->id, true) ?? $mapping) : $mapping;
+        } catch (QueryException $e) {
+            // Concurrent first-sync create races on ticket_type_id unique.
+            $existing = $this->findMapping($ticketType->id, $lock);
+            if ($existing) {
+                return $existing;
+            }
+
+            throw $e;
+        }
+    }
+
+    /**
+     * Square Catalog Batch Upsert idempotency key for one logical mutation.
+     *
+     * The key is derived from the exact batches payload so:
+     * - identical retries reuse the same key (Square-safe)
+     * - any body change (attrs, version, price, structure) gets a new key
+     */
+    public static function idempotencyKeyForUpsert(string $ticketTypeUuid, array $batches): string
+    {
+        return 'ems-cat-' . $ticketTypeUuid . '-' . substr(self::payloadHash($batches), 0, 16);
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $batches
+     */
+    public static function payloadHash(array $batches): string
+    {
+        return hash(
+            'sha256',
+            json_encode($batches, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)
+        );
+    }
+
+    private function findMapping(int $ticketTypeId, bool $lock = false): ?SquareCatalogMapping
+    {
+        $query = SquareCatalogMapping::query()->where('ticket_type_id', $ticketTypeId);
+        if ($lock) {
+            $query->lockForUpdate();
+        }
+
+        return $query->first();
     }
 
     public function findByVariationId(string $variationId): ?SquareCatalogMapping
@@ -263,6 +313,7 @@ class SquareCatalogService
         $varClientId = $mapping->square_catalog_variation_id ?: '#ems-var-' . $ticketType->uuid;
 
         $objects = [];
+        $existingVersion = $mapping->catalog_variation_version;
 
         if (! $itemId) {
             $objects[] = [
@@ -281,7 +332,6 @@ class SquareCatalogService
             ];
         } else {
             $existingVar = null;
-            $existingVersion = $mapping->catalog_variation_version;
             if ($mapping->square_catalog_variation_id) {
                 try {
                     $retrieved = $this->square->get('/v2/catalog/object/' . urlencode($mapping->square_catalog_variation_id));
@@ -301,13 +351,25 @@ class SquareCatalogService
             );
         }
 
-        $idempotency = 'ems-cat-' . $ticketType->uuid . '-' . substr(sha1(
-            $ticketType->name . '|' . $ticketType->price . '|' . ($ticketType->is_active ? '1' : '0') . '|' . ($mapping->square_catalog_variation_id ?? '')
-        ), 0, 12);
+        $batches = [['objects' => $objects]];
+        $payloadHash = self::payloadHash($batches);
+        $idempotency = self::idempotencyKeyForUpsert($ticketType->uuid, $batches);
+
+        Log::channel((string) config('ems.logging.channel', 'ems'))
+            ->info('ems.square.catalog.upsert_attempt', [
+                'ticket_type_uuid' => $ticketType->uuid,
+                'event_uuid' => $event->uuid,
+                'mutation_id' => substr($payloadHash, 0, 16),
+                'idempotency_key' => $idempotency,
+                'payload_hash' => $payloadHash,
+                'object_count' => count($objects),
+                'has_variation_id' => (bool) $mapping->square_catalog_variation_id,
+                'catalog_variation_version' => $existingVersion,
+            ]);
 
         $response = $this->square->post('/v2/catalog/batch-upsert', [
             'idempotency_key' => $idempotency,
-            'batches' => [['objects' => $objects]],
+            'batches' => $batches,
         ], $idempotency);
 
         $idMap = [];
@@ -354,6 +416,9 @@ class SquareCatalogService
             ->info('ems.square.catalog.synced', [
                 'ticket_type_uuid' => $ticketType->uuid,
                 'event_uuid' => $event->uuid,
+                'mutation_id' => substr($payloadHash, 0, 16),
+                'idempotency_key' => $idempotency,
+                'payload_hash' => $payloadHash,
                 'square_item_id' => $mapping->square_catalog_item_id,
                 'square_variation_id' => $mapping->square_catalog_variation_id,
             ]);

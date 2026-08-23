@@ -118,6 +118,7 @@ class SquareClient
                     'method' => $method,
                     'path' => $path,
                     'status' => $response->status(),
+                    'idempotency_key' => $idempotencyKey,
                     'body' => $this->safeBody($response->json()),
                 ]);
 
