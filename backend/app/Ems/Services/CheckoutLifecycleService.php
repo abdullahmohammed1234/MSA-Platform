@@ -2,7 +2,6 @@
 
 namespace App\Ems\Services;
 
-use App\Ems\Enums\OrderStatus;
 use App\Ems\Enums\PaymentStatus;
 use App\Ems\Exceptions\EmsException;
 use App\Ems\Models\Event;
@@ -78,9 +77,31 @@ class CheckoutLifecycleService
             return $payment;
         }
 
+        if ($payment->provider_payment_id) {
+            try {
+                $remote = $this->providers->default()->retrievePayment($payment);
+                if (($remote['status'] ?? null) === PaymentStatus::Paid->value) {
+                    Log::channel((string) config('ems.logging.channel', 'ems'))
+                        ->info('ems.payments.cancel_fulfilled_captured_payment', [
+                            'payment_uuid' => $payment->uuid,
+                            'provider_payment_id' => $payment->provider_payment_id,
+                        ]);
+
+                    return $this->fulfillment->markPaid($payment, $remote);
+                }
+            } catch (\Throwable $e) {
+                Log::channel((string) config('ems.logging.channel', 'ems'))
+                    ->warning('ems.payments.cancel_provider_lookup_failed', [
+                        'payment_uuid' => $payment->uuid,
+                        'provider_payment_id' => $payment->provider_payment_id,
+                        'error' => $e->getMessage(),
+                    ]);
+            }
+        }
+
         $this->providers->default()->deletePaymentLink($payment->provider_checkout_id);
 
-        return $this->fulfillment->markCancelled($payment, $reason);
+        return $this->fulfillment->markCancelled($payment, $reason, buyerInitiated: true);
     }
 
     public function expireStale(): int
@@ -96,23 +117,37 @@ class CheckoutLifecycleService
         foreach ($expired as $payment) {
             try {
                 if ($payment->provider_payment_id) {
-                    $remote = $this->providers->default()->retrievePayment($payment);
-                    if (($remote['status'] ?? null) === PaymentStatus::Paid->value) {
-                        $this->fulfillment->markPaid($payment, $remote);
-                        $count++;
-                        continue;
+                    try {
+                        $remote = $this->providers->default()->retrievePayment($payment);
+                        if (($remote['status'] ?? null) === PaymentStatus::Paid->value) {
+                            $this->fulfillment->markPaid($payment, $remote);
+                            $count++;
+                            continue;
+                        }
+                    } catch (\Throwable) {
+                        // Fall through to abandon when Square lookup fails.
                     }
                 }
-            } catch (\Throwable) {
-                // Fall through to abandon.
-            }
 
-            $this->providers->default()->deletePaymentLink($payment->provider_checkout_id);
+                $this->providers->default()->deletePaymentLink($payment->provider_checkout_id);
 
-            $locked = Payment::query()->whereKey($payment->id)->first();
-            if ($locked && in_array($locked->status, [PaymentStatus::Pending, PaymentStatus::Processing], true)) {
-                $this->fulfillment->markAbandoned($locked, 'Checkout expired before payment was completed.');
-                $count++;
+                $locked = Payment::query()->whereKey($payment->id)->first();
+                if ($locked && in_array($locked->status, [PaymentStatus::Pending, PaymentStatus::Processing], true)) {
+                    $this->fulfillment->markAbandoned($locked, 'Checkout expired before payment was completed.');
+                    $count++;
+                }
+            } catch (\Throwable $e) {
+                $payment->loadMissing('order');
+
+                Log::channel((string) config('ems.logging.channel', 'ems'))
+                    ->error('ems.payments.expire_failed', [
+                        'payment_uuid' => $payment->uuid,
+                        'payment_id' => $payment->id,
+                        'order_uuid' => $payment->order?->uuid,
+                        'order_id' => $payment->order_id,
+                        'event_id' => $payment->order?->event_id,
+                        'error' => $e->getMessage(),
+                    ]);
             }
         }
 

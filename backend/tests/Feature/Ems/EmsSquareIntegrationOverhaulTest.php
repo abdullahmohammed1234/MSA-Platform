@@ -760,6 +760,464 @@ class EmsSquareIntegrationOverhaulTest extends EmsTestCase
         $this->assertSame(0, $ticket->fresh()->quantity_sold);
     }
 
+    public function test_cancel_pending_checkout_after_soft_deleted_event_completes_without_type_error(): void
+    {
+        $event = $this->openEvent();
+        $ticket = TicketType::factory()->paid(15)->limited(5)->create(['event_id' => $event->id]);
+
+        Http::fake([
+            '*/v2/catalog/*' => Http::response(['objects' => []], 200),
+            '*/v2/online-checkout/payment-links' => Http::response([
+                'payment_link' => [
+                    'id' => 'plink_soft_del_cancel',
+                    'url' => 'https://square.test/checkout/soft-del-cancel',
+                    'order_id' => 'sq_order_soft_del_cancel',
+                ],
+            ], 200),
+            '*/v2/online-checkout/payment-links/*' => Http::response([], 200),
+        ]);
+
+        $this->postJson($this->publicUrl("events/{$event->slug}/checkout"), [
+            'first_name' => 'Omar',
+            'last_name' => 'Hassan',
+            'email' => 'omar-soft@example.com',
+            'ticket_type_id' => $ticket->uuid,
+        ])->assertCreated();
+
+        $this->assertSame(1, $ticket->fresh()->quantity_sold);
+
+        $payment = Payment::query()->firstOrFail();
+        $order = Order::query()->firstOrFail();
+        $registration = Registration::query()->firstOrFail();
+
+        $event->delete();
+        $this->assertSoftDeleted('ems_events', ['id' => $event->id]);
+        $this->assertNull($order->fresh()->event);
+
+        app(CheckoutLifecycleService::class)->cancel($payment->fresh(), 'Checkout cancelled after event soft delete.');
+
+        $this->assertSame(PaymentStatus::Cancelled, $payment->fresh()->status);
+        $this->assertSame(OrderStatus::Cancelled, $order->fresh()->status);
+        $this->assertSame(RegistrationStatus::Cancelled, $registration->fresh()->status);
+        $this->assertSame(0, $ticket->fresh()->quantity_sold);
+        $this->assertTrue((bool) data_get($payment->fresh()->metadata, 'inventory_released'));
+    }
+
+    public function test_expire_abandoned_checkout_after_soft_deleted_event_completes_without_type_error(): void
+    {
+        $event = $this->openEvent();
+        $ticket = TicketType::factory()->paid(15)->limited(3)->create(['event_id' => $event->id]);
+
+        Http::fake([
+            '*/v2/catalog/*' => Http::response(['objects' => []], 200),
+            '*/v2/online-checkout/payment-links' => Http::response([
+                'payment_link' => [
+                    'id' => 'plink_soft_del_expire',
+                    'url' => 'https://square.test/checkout/soft-del-expire',
+                    'order_id' => 'sq_order_soft_del_expire',
+                ],
+            ], 200),
+            '*/v2/online-checkout/payment-links/*' => Http::response([], 200),
+        ]);
+
+        $this->postJson($this->publicUrl("events/{$event->slug}/checkout"), [
+            'first_name' => 'Sara',
+            'last_name' => 'Khan',
+            'email' => 'sara-soft@example.com',
+            'ticket_type_id' => $ticket->uuid,
+        ])->assertCreated();
+
+        Payment::query()->update(['checkout_expires_at' => now()->subMinute()]);
+        $event->delete();
+
+        $count = app(CheckoutLifecycleService::class)->expireStale();
+
+        $this->assertSame(1, $count);
+        $this->assertSame(PaymentStatus::Abandoned, Payment::query()->first()->status);
+        $this->assertSame(OrderStatus::Cancelled, Order::query()->first()->status);
+        $this->assertSame(RegistrationStatus::Cancelled, Registration::query()->first()->status);
+        $this->assertSame(0, $ticket->fresh()->quantity_sold);
+    }
+
+    public function test_cancel_pending_checkout_on_active_event_still_promotes_waitlist(): void
+    {
+        $event = $this->openEvent([
+            'capacity' => 1,
+            'waitlist_enabled' => true,
+        ]);
+        $ticket = TicketType::factory()->paid(20)->limited(5)->create(['event_id' => $event->id]);
+
+        Http::fake([
+            '*/v2/catalog/*' => Http::response(['objects' => []], 200),
+            '*/v2/online-checkout/payment-links' => Http::response([
+                'payment_link' => [
+                    'id' => 'plink_waitlist_cancel',
+                    'url' => 'https://square.test/checkout/waitlist-cancel',
+                    'order_id' => 'sq_order_waitlist_cancel',
+                ],
+            ], 200),
+            '*/v2/online-checkout/payment-links/*' => Http::response([], 200),
+        ]);
+
+        $this->postJson($this->publicUrl("events/{$event->slug}/checkout"), [
+            'first_name' => 'Holder',
+            'last_name' => 'Guest',
+            'email' => 'holder@example.com',
+            'ticket_type_id' => $ticket->uuid,
+        ])->assertCreated();
+
+        $this->postJson($this->publicUrl("events/{$event->slug}/waitlist"), [
+            'first_name' => 'Wait',
+            'last_name' => 'Guest',
+            'email' => 'waitlisted@example.com',
+        ])->assertCreated();
+
+        $waitEntry = \App\Ems\Models\WaitlistEntry::query()->firstOrFail();
+        $this->assertSame(\App\Ems\Enums\WaitlistStatus::Waiting, $waitEntry->status);
+
+        $order = Order::query()->firstOrFail();
+        $this->postJson($this->publicUrl("events/{$event->slug}/checkout/cancel"), [
+            'email' => 'holder@example.com',
+            'order_uuid' => $order->uuid,
+        ])->assertOk();
+
+        $this->assertSame(\App\Ems\Enums\WaitlistStatus::Promoted, $waitEntry->fresh()->status);
+        $this->assertSame(RegistrationStatus::Cancelled, Registration::query()->where('attendee_email', 'holder@example.com')->first()->status);
+        $this->assertSame(0, $ticket->fresh()->quantity_sold);
+    }
+
+    public function test_cancel_then_stale_completed_webhook_does_not_resurrect_checkout(): void
+    {
+        $event = $this->openEvent();
+        $ticket = TicketType::factory()->paid(15)->limited(5)->create(['event_id' => $event->id]);
+
+        Http::fake([
+            '*/v2/catalog/*' => Http::response(['objects' => []], 200),
+            '*/v2/online-checkout/payment-links' => Http::response([
+                'payment_link' => [
+                    'id' => 'plink_stale_cancel',
+                    'url' => 'https://square.test/checkout/stale-cancel',
+                    'order_id' => 'sq_order_stale_cancel',
+                ],
+            ], 200),
+            '*/v2/online-checkout/payment-links/*' => Http::response([], 200),
+        ]);
+
+        $this->postJson($this->publicUrl("events/{$event->slug}/checkout"), [
+            'first_name' => 'Omar',
+            'last_name' => 'Hassan',
+            'email' => 'omar-stale@example.com',
+            'ticket_type_id' => $ticket->uuid,
+        ])->assertCreated();
+
+        $order = Order::query()->firstOrFail();
+        $payment = Payment::query()->firstOrFail();
+        $registration = Registration::query()->firstOrFail();
+
+        $this->postJson($this->publicUrl("events/{$event->slug}/checkout/cancel"), [
+            'email' => 'omar-stale@example.com',
+            'order_uuid' => $order->uuid,
+        ])->assertOk();
+
+        $payment = $payment->fresh();
+        $this->assertSame(PaymentStatus::Cancelled, $payment->status);
+        $this->assertSame(RegistrationStatus::Cancelled, $registration->fresh()->status);
+        $this->assertSame(0, $ticket->fresh()->quantity_sold);
+        $this->assertNotEmpty($payment->metadata['buyer_cancelled_at'] ?? null);
+        $this->assertTrue($payment->wasBuyerCancelled());
+
+        $this->postWebhook([
+            'event_id' => 'evt_stale_after_cancel',
+            'type' => 'payment.updated',
+            'data' => ['object' => ['payment' => [
+                'id' => 'sq_pay_stale_after_cancel',
+                'status' => 'COMPLETED',
+                'order_id' => $payment->provider_order_id,
+                'amount_money' => ['amount' => 1500, 'currency' => 'CAD'],
+                'reference_id' => $order->reference,
+            ]]],
+        ])->assertOk();
+
+        $payment = $payment->fresh();
+        $this->assertSame(PaymentStatus::Cancelled, $payment->status);
+        $this->assertSame(RegistrationStatus::Cancelled, $registration->fresh()->status);
+        $this->assertSame(0, Ticket::query()->count());
+        $this->assertSame(0, $ticket->fresh()->quantity_sold);
+        $this->assertCount(1, $payment->metadata['stale_captures_after_buyer_cancel'] ?? []);
+        $this->assertSame(
+            'sq_pay_stale_after_cancel',
+            $payment->metadata['stale_captures_after_buyer_cancel'][0]['square_payment_id'] ?? null
+        );
+    }
+
+    public function test_duplicate_completed_webhook_after_buyer_cancel_is_idempotent(): void
+    {
+        [$event, $ticketType, $order, $registration, $payment] = $this->pendingCheckout();
+
+        app(CheckoutLifecycleService::class)->cancel(
+            $payment->fresh(),
+            'Checkout cancelled by buyer.'
+        );
+
+        $payload = [
+            'event_id' => 'evt_dup_stale_cancel',
+            'type' => 'payment.updated',
+            'data' => ['object' => ['payment' => [
+                'id' => 'sq_pay_dup_stale',
+                'status' => 'COMPLETED',
+                'order_id' => $payment->provider_order_id,
+                'amount_money' => ['amount' => 1500, 'currency' => 'CAD'],
+                'reference_id' => $order->reference,
+            ]]],
+        ];
+
+        $this->postWebhook($payload)->assertOk();
+        $this->postWebhook(array_merge($payload, ['event_id' => 'evt_dup_stale_cancel_2']))->assertOk();
+
+        $payment = $payment->fresh();
+        $this->assertSame(PaymentStatus::Cancelled, $payment->status);
+        $this->assertSame(0, Ticket::query()->count());
+        $this->assertCount(1, $payment->metadata['stale_captures_after_buyer_cancel'] ?? []);
+    }
+
+    public function test_cancel_fulfills_when_square_payment_already_captured(): void
+    {
+        Bus::fake();
+        $event = $this->openEvent();
+        $ticket = TicketType::factory()->paid(15)->create(['event_id' => $event->id]);
+
+        Http::fake([
+            '*/v2/catalog/*' => Http::response(['objects' => []], 200),
+            '*/v2/online-checkout/payment-links' => Http::response([
+                'payment_link' => [
+                    'id' => 'plink_already_paid',
+                    'url' => 'https://square.test/checkout/already-paid',
+                    'order_id' => 'sq_order_already_paid',
+                ],
+            ], 200),
+            '*/v2/online-checkout/payment-links/*' => Http::response([], 200),
+            '*/v2/payments/sq_pay_already_captured' => Http::response([
+                'payment' => [
+                    'id' => 'sq_pay_already_captured',
+                    'status' => 'COMPLETED',
+                    'order_id' => 'sq_order_already_paid',
+                    'amount_money' => ['amount' => 1500, 'currency' => 'CAD'],
+                ],
+            ], 200),
+        ]);
+
+        $this->postJson($this->publicUrl("events/{$event->slug}/checkout"), [
+            'first_name' => 'Amina',
+            'last_name' => 'Ali',
+            'email' => 'amina-paid@example.com',
+            'ticket_type_id' => $ticket->uuid,
+        ])->assertCreated();
+
+        $payment = Payment::query()->firstOrFail();
+        $payment->provider_payment_id = 'sq_pay_already_captured';
+        $payment->save();
+
+        $order = Order::query()->firstOrFail();
+        $this->postJson($this->publicUrl("events/{$event->slug}/checkout/cancel"), [
+            'email' => 'amina-paid@example.com',
+            'order_uuid' => $order->uuid,
+        ])->assertOk();
+
+        $this->assertSame(PaymentStatus::Paid, $payment->fresh()->status);
+        $this->assertSame(RegistrationStatus::Confirmed, Registration::query()->first()->status);
+        $this->assertSame(1, Ticket::query()->count());
+        $this->assertNull($payment->fresh()->metadata['buyer_cancelled_at'] ?? null);
+        Bus::assertDispatched(QueueRegistrationConfirmation::class);
+    }
+
+    public function test_abandoned_checkout_can_still_be_fulfilled_by_completed_webhook(): void
+    {
+        Bus::fake();
+        [$event, $ticketType, $order, $registration, $payment] = $this->pendingCheckout();
+
+        Http::fake([
+            '*/v2/online-checkout/payment-links/*' => Http::response([], 200),
+        ]);
+
+        $payment->checkout_expires_at = now()->subMinute();
+        $payment->provider_checkout_id = 'plink_abandoned_recover';
+        $payment->save();
+
+        $count = app(CheckoutLifecycleService::class)->expireStale();
+        $this->assertSame(1, $count);
+
+        $payment = $payment->fresh();
+        $this->assertSame(PaymentStatus::Abandoned, $payment->status);
+        $this->assertFalse($payment->wasBuyerCancelled());
+
+        $this->postWebhook([
+            'event_id' => 'evt_abandoned_recover',
+            'type' => 'payment.updated',
+            'data' => ['object' => ['payment' => [
+                'id' => 'sq_pay_abandoned_recover',
+                'status' => 'COMPLETED',
+                'order_id' => $payment->provider_order_id,
+                'amount_money' => ['amount' => 1500, 'currency' => 'CAD'],
+                'reference_id' => $order->reference,
+            ]]],
+        ])->assertOk();
+
+        $this->assertSame(PaymentStatus::Paid, $payment->fresh()->status);
+        $this->assertSame(RegistrationStatus::Confirmed, $registration->fresh()->status);
+        $this->assertSame(1, Ticket::query()->where('registration_id', $registration->id)->count());
+        Bus::assertDispatched(QueueRegistrationConfirmation::class);
+    }
+
+    public function test_buyer_cancelled_reconciliation_does_not_create_orphan_processing_payment(): void
+    {
+        Bus::fake();
+        [$event, $ticketType, $order, $registration, $payment] = $this->pendingCheckout();
+
+        Http::fake([
+            '*/v2/online-checkout/payment-links/*' => Http::response([], 200),
+        ]);
+
+        app(CheckoutLifecycleService::class)->cancel($payment->fresh(), 'Checkout cancelled by buyer.');
+
+        $payment = $payment->fresh();
+        $this->assertSame(PaymentStatus::Cancelled, $payment->status);
+        $this->assertTrue($payment->wasBuyerCancelled());
+
+        $squarePayment = [
+            'id' => 'sq_rec_stale_cancel_pay',
+            'status' => 'COMPLETED',
+            'order_id' => $payment->provider_order_id,
+            'amount_money' => ['amount' => 1500, 'currency' => 'CAD'],
+            'created_at' => now()->toRfc3339String(),
+        ];
+
+        Http::fake([
+            '*/v2/catalog/search' => Http::response(['objects' => []], 200),
+            '*/v2/payments*' => Http::response(['payments' => [$squarePayment]], 200),
+        ]);
+
+        app(SquareReconciliationService::class)->reconcile();
+
+        $this->assertSame(1, Payment::query()->count());
+        $this->assertSame(PaymentStatus::Cancelled, $payment->fresh()->status);
+        $this->assertSame(RegistrationStatus::Cancelled, $registration->fresh()->status);
+        $this->assertSame(0, Ticket::query()->count());
+        $this->assertCount(1, $payment->fresh()->metadata['stale_captures_after_buyer_cancel'] ?? []);
+        $this->assertSame(
+            'sq_rec_stale_cancel_pay',
+            $payment->fresh()->metadata['stale_captures_after_buyer_cancel'][0]['square_payment_id'] ?? null
+        );
+        $this->assertSame(
+            'square_reconciliation',
+            $payment->fresh()->metadata['stale_captures_after_buyer_cancel'][0]['source'] ?? null
+        );
+        Bus::assertNotDispatched(QueueRegistrationConfirmation::class);
+    }
+
+    public function test_buyer_cancelled_reconciliation_is_idempotent(): void
+    {
+        [$event, $ticketType, $order, $registration, $payment] = $this->pendingCheckout();
+
+        Http::fake([
+            '*/v2/online-checkout/payment-links/*' => Http::response([], 200),
+        ]);
+
+        app(CheckoutLifecycleService::class)->cancel($payment->fresh(), 'Checkout cancelled by buyer.');
+
+        $squarePayment = [
+            'id' => 'sq_rec_stale_cancel_idem',
+            'status' => 'COMPLETED',
+            'order_id' => $payment->provider_order_id,
+            'amount_money' => ['amount' => 1500, 'currency' => 'CAD'],
+            'created_at' => now()->toRfc3339String(),
+        ];
+
+        Http::fake([
+            '*/v2/catalog/search' => Http::response(['objects' => []], 200),
+            '*/v2/payments*' => Http::response(['payments' => [$squarePayment]], 200),
+        ]);
+
+        app(SquareReconciliationService::class)->reconcile();
+        app(SquareReconciliationService::class)->reconcile();
+
+        $payment = $payment->fresh();
+        $this->assertSame(1, Payment::query()->count());
+        $this->assertSame(1, Registration::query()->count());
+        $this->assertSame(0, Ticket::query()->count());
+        $this->assertSame(PaymentStatus::Cancelled, $payment->status);
+        $this->assertCount(1, $payment->metadata['stale_captures_after_buyer_cancel'] ?? []);
+    }
+
+    public function test_buyer_cancelled_reconciliation_does_not_fulfill(): void
+    {
+        Bus::fake();
+        [$event, $ticketType, $order, $registration, $payment] = $this->pendingCheckout();
+
+        Http::fake([
+            '*/v2/online-checkout/payment-links/*' => Http::response([], 200),
+        ]);
+
+        app(CheckoutLifecycleService::class)->cancel($payment->fresh(), 'Checkout cancelled by buyer.');
+
+        Http::fake([
+            '*/v2/catalog/search' => Http::response(['objects' => []], 200),
+            '*/v2/payments*' => Http::response(['payments' => [[
+                'id' => 'sq_rec_stale_cancel_guard',
+                'status' => 'COMPLETED',
+                'order_id' => $payment->provider_order_id,
+                'amount_money' => ['amount' => 1500, 'currency' => 'CAD'],
+                'created_at' => now()->toRfc3339String(),
+            ]]], 200),
+        ]);
+
+        app(SquareReconciliationService::class)->reconcile();
+
+        $this->assertSame(PaymentStatus::Cancelled, $payment->fresh()->status);
+        $this->assertSame(RegistrationStatus::Cancelled, $registration->fresh()->status);
+        $this->assertSame(0, Ticket::query()->count());
+        Bus::assertNotDispatched(QueueRegistrationConfirmation::class);
+    }
+
+    public function test_abandoned_checkout_can_still_be_fulfilled_by_reconciliation(): void
+    {
+        Bus::fake();
+        [$event, $ticketType, $order, $registration, $payment] = $this->pendingCheckout();
+
+        Http::fake([
+            '*/v2/online-checkout/payment-links/*' => Http::response([], 200),
+        ]);
+
+        $payment->checkout_expires_at = now()->subMinute();
+        $payment->provider_checkout_id = 'plink_abandoned_rec';
+        $payment->save();
+
+        app(CheckoutLifecycleService::class)->expireStale();
+
+        $payment = $payment->fresh();
+        $this->assertSame(PaymentStatus::Abandoned, $payment->status);
+        $this->assertFalse($payment->wasBuyerCancelled());
+
+        Http::fake([
+            '*/v2/catalog/search' => Http::response(['objects' => []], 200),
+            '*/v2/payments*' => Http::response(['payments' => [[
+                'id' => 'sq_rec_abandoned_pay',
+                'status' => 'COMPLETED',
+                'order_id' => $payment->provider_order_id,
+                'amount_money' => ['amount' => 1500, 'currency' => 'CAD'],
+                'created_at' => now()->toRfc3339String(),
+                'reference_id' => $order->reference,
+            ]]], 200),
+        ]);
+
+        app(SquareReconciliationService::class)->reconcile();
+
+        $this->assertSame(1, Payment::query()->count());
+        $this->assertSame(PaymentStatus::Paid, $payment->fresh()->status);
+        $this->assertSame(RegistrationStatus::Confirmed, $registration->fresh()->status);
+        $this->assertSame(1, Ticket::query()->count());
+        Bus::assertDispatched(QueueRegistrationConfirmation::class);
+    }
+
     public function test_replayed_payment_webhook_does_not_duplicate_tickets(): void
     {
         [$event, $ticketType, $order, $registration, $payment] = $this->pendingCheckout();

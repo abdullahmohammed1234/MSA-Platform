@@ -57,7 +57,7 @@ enum PaymentStatus: string
             self::Paid => [self::Refunded, self::PartiallyRefunded],
             self::PartiallyRefunded => [self::Refunded],
             self::Abandoned => [self::Paid, self::Cancelled],
-            self::Cancelled => [self::Paid],
+            self::Cancelled => [],
             self::Failed, self::Refunded => [],
         };
     }

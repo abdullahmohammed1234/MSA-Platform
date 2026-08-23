@@ -49,12 +49,21 @@ class PaymentFulfillmentService
                 return $locked->fresh(['order.registrations.tickets', 'registration']);
             }
 
+            if ($locked->status === PaymentStatus::Cancelled && $locked->wasBuyerCancelled()) {
+                Log::channel((string) config('ems.logging.channel', 'ems'))
+                    ->warning('ems.payments.paid_blocked_buyer_cancelled', [
+                        'payment_uuid' => $locked->uuid,
+                        'provider_payment_id' => $providerData['provider_payment_id'] ?? $locked->provider_payment_id,
+                    ]);
+
+                return $locked->fresh(['order.registrations.tickets', 'registration']);
+            }
+
             if (! $locked->status->canTransitionTo(PaymentStatus::Paid)
                 && ! in_array($locked->status, [
                     PaymentStatus::Authorized,
                     PaymentStatus::Processing,
                     PaymentStatus::Abandoned,
-                    PaymentStatus::Cancelled,
                 ], true)
             ) {
                 throw InvalidPaymentTransitionException::make(
@@ -186,9 +195,9 @@ class PaymentFulfillmentService
         });
     }
 
-    public function markCancelled(Payment $payment, ?string $reason = null): Payment
+    public function markCancelled(Payment $payment, ?string $reason = null, bool $buyerInitiated = false): Payment
     {
-        return DB::transaction(function () use ($payment, $reason): Payment {
+        return DB::transaction(function () use ($payment, $reason, $buyerInitiated): Payment {
             /** @var Payment $locked */
             $locked = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
 
@@ -198,6 +207,13 @@ class PaymentFulfillmentService
 
             $locked->status = PaymentStatus::Cancelled;
             $locked->failure_reason = $reason;
+
+            if ($buyerInitiated) {
+                $metadata = $locked->metadata ?? [];
+                $metadata['buyer_cancelled_at'] = now()->toIso8601String();
+                $locked->metadata = $metadata;
+            }
+
             $locked->save();
 
             $this->releasePendingOrder($locked, OrderStatus::Cancelled);
@@ -205,6 +221,7 @@ class PaymentFulfillmentService
             Log::channel((string) config('ems.logging.channel', 'ems'))
                 ->info('ems.payments.cancelled', [
                     'payment_uuid' => $locked->uuid,
+                    'buyer_initiated' => $buyerInitiated,
                 ]);
 
             return $locked->fresh();
@@ -237,6 +254,76 @@ class PaymentFulfillmentService
                 ->info('ems.payments.abandoned', [
                     'payment_uuid' => $locked->uuid,
                 ]);
+
+            return $locked->fresh();
+        });
+    }
+
+    /**
+     * Record Square capture evidence for a buyer-cancelled checkout without fulfilling.
+     *
+     * Used by webhooks and scheduled Square reconciliation when money was captured
+     * after the attendee explicitly cancelled.
+     */
+    public function recordStaleCaptureAfterBuyerCancel(
+        Payment $payment,
+        ?string $squarePaymentId = null,
+        ?string $squareOrderId = null,
+        ?string $webhookEventId = null,
+        ?string $source = null,
+    ): Payment {
+        return DB::transaction(function () use (
+            $payment,
+            $squarePaymentId,
+            $squareOrderId,
+            $webhookEventId,
+            $source,
+        ): Payment {
+            /** @var Payment $locked */
+            $locked = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
+
+            if ($locked->status !== PaymentStatus::Cancelled || ! $locked->wasBuyerCancelled()) {
+                return $locked;
+            }
+
+            $metadata = $locked->metadata ?? [];
+            $staleCaptures = $metadata['stale_captures_after_buyer_cancel'] ?? [];
+
+            foreach ($staleCaptures as $row) {
+                if (! is_array($row)) {
+                    continue;
+                }
+                if ($squarePaymentId !== null && ($row['square_payment_id'] ?? null) === $squarePaymentId) {
+                    return $locked;
+                }
+            }
+
+            $staleCaptures[] = array_filter([
+                'square_payment_id' => $squarePaymentId,
+                'square_order_id' => $squareOrderId,
+                'reported_at' => now()->toIso8601String(),
+                'webhook_event_id' => $webhookEventId,
+                'source' => $source,
+            ], fn ($value) => $value !== null);
+
+            $metadata['stale_captures_after_buyer_cancel'] = $staleCaptures;
+            $locked->metadata = $metadata;
+            $locked->save();
+
+            Log::channel((string) config('ems.logging.channel', 'ems'))
+                ->warning('ems.payments.stale_capture_after_buyer_cancel', [
+                    'payment_uuid' => $locked->uuid,
+                    'payment_id' => $locked->id,
+                    'order_uuid' => $locked->order?->uuid,
+                    'registration_id' => $locked->registration_id,
+                    'square_payment_id' => $squarePaymentId,
+                    'square_order_id' => $squareOrderId,
+                    'webhook_event_id' => $webhookEventId,
+                    'source' => $source,
+                    'ems_status' => $locked->status->value,
+                ]);
+
+            ReconcilePaymentJob::dispatch($locked->id);
 
             return $locked->fresh();
         });
@@ -336,6 +423,23 @@ class PaymentFulfillmentService
             }
         }
 
-        $this->waitlists->promoteAvailable($orderLocked->event);
+        // Soft-deleted events resolve as null via the Eloquent relationship.
+        // Inventory release already completed above; waitlist promotion is only
+        // appropriate for still-active events.
+        $event = $orderLocked->event;
+        if ($event === null) {
+            Log::channel((string) config('ems.logging.channel', 'ems'))
+                ->info('ems.waitlist.promotion_skipped_missing_event', [
+                    'payment_uuid' => $payment->uuid,
+                    'payment_id' => $payment->id,
+                    'order_uuid' => $orderLocked->uuid,
+                    'order_id' => $orderLocked->id,
+                    'event_id' => $orderLocked->event_id,
+                ]);
+
+            return;
+        }
+
+        $this->waitlists->promoteAvailable($event);
     }
 }

@@ -471,4 +471,114 @@ class EmsPublicEventsTest extends EmsTestCase
         $this->assertEquals(25, $response->json('data.0.pending_checkout.amount'));
         $this->assertSame(2, $response->json('data.0.pending_checkout.checkout_version'));
     }
+
+    public function test_user_can_cancel_registration_after_event_soft_deleted(): void
+    {
+        $user = $this->emsUser(\App\Ems\Support\EmsRoles::ATTENDEE);
+        $event = $this->publicEvent();
+        $ticketType = TicketType::factory()->free()->create([
+            'event_id' => $event->id,
+            'quantity_sold' => 1,
+        ]);
+
+        $registration = Registration::factory()->create([
+            'event_id' => $event->id,
+            'user_id' => $user->id,
+            'ticket_type_id' => $ticketType->id,
+            'attendee_name' => $user->name,
+            'attendee_email' => $user->email,
+            'status' => 'confirmed',
+            'quantity' => 1,
+        ]);
+        $ticket = Ticket::factory()->forRegistration($registration)->create([
+            'code' => 'MSA-SOFTDEL',
+            'qr_payload' => 'MSA-SOFTDEL',
+            'status' => TicketStatus::Issued->value,
+        ]);
+
+        $event->delete();
+        $this->assertNull($registration->fresh()->event);
+
+        $response = $this->actingAsEms($user)
+            ->postJson($this->url("public/registrations/{$registration->uuid}/cancel"));
+
+        $response->assertOk();
+        $this->assertSame('cancelled', $response->json('data.status'));
+        $this->assertSame(TicketStatus::Revoked, $ticket->fresh()->status);
+        $this->assertSame(0, $ticketType->fresh()->quantity_sold);
+    }
+
+    public function test_my_tickets_pending_checkout_can_be_cancelled_via_checkout_cancel(): void
+    {
+        config([
+            'ems.payments.enabled' => true,
+            'ems.payments.square.access_token' => 'test-token',
+            'ems.payments.square.location_id' => 'LOCATION_TEST',
+            'ems.payments.square.environment' => 'sandbox',
+        ]);
+
+        \Illuminate\Support\Facades\Http::fake([
+            '*/v2/online-checkout/payment-links/*' => \Illuminate\Support\Facades\Http::response([], 200),
+        ]);
+
+        $user = $this->emsUser(\App\Ems\Support\EmsRoles::ATTENDEE);
+        $event = $this->publicEvent();
+        $ticketType = TicketType::factory()->paid(25)->create([
+            'event_id' => $event->id,
+            'quantity_sold' => 1,
+        ]);
+        $order = Order::factory()->create([
+            'event_id' => $event->id,
+            'user_id' => $user->id,
+            'buyer_email' => $user->email,
+            'buyer_name' => $user->name,
+            'total_amount' => 25,
+            'status' => \App\Ems\Enums\OrderStatus::Pending,
+        ]);
+        $registration = Registration::factory()->create([
+            'event_id' => $event->id,
+            'user_id' => $user->id,
+            'order_id' => $order->id,
+            'ticket_type_id' => $ticketType->id,
+            'attendee_name' => $user->name,
+            'attendee_email' => $user->email,
+            'status' => RegistrationStatus::AwaitingPayment,
+            'type' => 'paid',
+            'quantity' => 1,
+            'amount_due' => 25,
+            'confirmed_at' => null,
+        ]);
+        Payment::query()->create([
+            'order_id' => $order->id,
+            'registration_id' => $registration->id,
+            'amount' => 25,
+            'currency' => 'CAD',
+            'provider' => 'square',
+            'status' => PaymentStatus::Processing->value,
+            'provider_checkout_id' => 'plink_my_tickets_cancel',
+            'checkout_url' => 'https://square.test/pay/my-tickets',
+            'checkout_version' => 1,
+            'checkout_expires_at' => now()->addHours(2),
+        ]);
+
+        $tickets = $this->actingAsEms($user)->getJson($this->url('public/my-tickets'));
+        $tickets->assertOk();
+        $this->assertSame('awaiting_payment', $tickets->json('data.0.status'));
+        $this->assertSame($order->uuid, $tickets->json('data.0.pending_checkout.order_uuid'));
+
+        $cancel = $this->postJson($this->publicUrl("events/{$event->slug}/checkout/cancel"), [
+            'email' => $user->email,
+            'order_uuid' => $order->uuid,
+        ]);
+        $cancel->assertOk();
+
+        $this->assertSame(PaymentStatus::Cancelled, Payment::query()->first()->status);
+        $this->assertSame(RegistrationStatus::Cancelled, $registration->fresh()->status);
+        $this->assertSame(0, $ticketType->fresh()->quantity_sold);
+
+        $refreshed = $this->actingAsEms($user)->getJson($this->url('public/my-tickets'));
+        $refreshed->assertOk();
+        $this->assertSame('cancelled', $refreshed->json('data.0.status'));
+        $this->assertNull($refreshed->json('data.0.pending_checkout'));
+    }
 }

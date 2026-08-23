@@ -15,6 +15,7 @@ use App\Ems\Http\Controllers\V1\OrderController;
 use App\Ems\Http\Controllers\V1\PaymentController;
 use App\Ems\Http\Controllers\V1\Public\PublicEventController;
 use App\Ems\Http\Controllers\V1\RegistrationController;
+use App\Ems\Http\Controllers\V1\StaleCaptureController;
 use App\Ems\Http\Controllers\V1\TicketTypeController;
 use App\Ems\Http\Controllers\V1\EventTemplateController;
 use App\Ems\Http\Controllers\V1\EventSeriesController;
@@ -226,6 +227,15 @@ Route::middleware(['auth:sanctum', 'throttle:' . config('ems.route.throttle', 'e
         Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
         Route::get('/payments/{payment}', [PaymentController::class, 'show'])->name('payments.show');
         Route::post('/payments/{payment}/refund', [PaymentController::class, 'refund'])->name('payments.refund');
+
+        Route::get('/stale-captures', [StaleCaptureController::class, 'index'])->name('stale-captures.index');
+        Route::get('/stale-captures/{payment}/{squarePaymentId}', [StaleCaptureController::class, 'show'])
+            ->name('stale-captures.show');
+        Route::post('/stale-captures/{payment}/{squarePaymentId}/refund', [StaleCaptureController::class, 'refund'])
+            ->name('stale-captures.refund');
+        Route::post('/stale-captures/{payment}/{squarePaymentId}/resolve', [StaleCaptureController::class, 'resolve'])
+            ->name('stale-captures.resolve');
+
         Route::get('/registrations/{registration}', [RegistrationController::class, 'show'])
             ->name('registrations.show');
 

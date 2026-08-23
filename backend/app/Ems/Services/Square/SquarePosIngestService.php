@@ -319,6 +319,26 @@ class SquarePosIngestService
             return $this->fulfillExistingIfSettled($already, $squarePayment, $channel, $status);
         }
 
+        if ($existingSale->status === PaymentStatus::Cancelled
+            && $existingSale->wasBuyerCancelled()
+            && $this->isSettledStatus($status, $channel)
+        ) {
+            return $this->fulfillment->recordStaleCaptureAfterBuyerCancel(
+                $existingSale,
+                $paymentId !== '' ? $paymentId : null,
+                $existingSale->provider_order_id ? (string) $existingSale->provider_order_id : null,
+                source: 'square_reconciliation',
+            );
+        }
+
+        if ($existingSale->status === PaymentStatus::Abandoned
+            && $this->isSettledStatus($status, $channel)
+            && ($existingSale->provider_payment_id === null
+                || (string) $existingSale->provider_payment_id === $paymentId)
+        ) {
+            return $this->fulfillExistingIfSettled($existingSale, $squarePayment, $channel, $status);
+        }
+
         $this->logChannel($channel, 'duplicate', [
             'square_payment_id' => $paymentId,
             'square_order_id' => $existingSale->provider_order_id,

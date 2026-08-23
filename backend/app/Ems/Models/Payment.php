@@ -111,6 +111,82 @@ class Payment extends Model
         return false;
     }
 
+    public function wasBuyerCancelled(): bool
+    {
+        return filled(data_get($this->metadata, 'buyer_cancelled_at'));
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function staleCaptureEntries(): array
+    {
+        $entries = $this->metadata['stale_captures_after_buyer_cancel'] ?? [];
+
+        return array_values(array_filter($entries, fn ($row) => is_array($row)));
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function findStaleCaptureEntry(?string $squarePaymentId): ?array
+    {
+        if ($squarePaymentId === null || $squarePaymentId === '') {
+            return null;
+        }
+
+        foreach ($this->staleCaptureEntries() as $entry) {
+            if (($entry['square_payment_id'] ?? null) === $squarePaymentId) {
+                return $entry;
+            }
+        }
+
+        return null;
+    }
+
+    public function staleCaptureResolutionStatus(array $entry): string
+    {
+        $status = (string) data_get($entry, 'resolution.status', '');
+
+        return $status !== '' ? $status : 'unresolved';
+    }
+
+    public function isStaleCaptureResolved(array $entry): bool
+    {
+        return ! in_array($this->staleCaptureResolutionStatus($entry), ['unresolved', ''], true);
+    }
+
+    /**
+     * @param  callable(array<string, mixed>): array<string, mixed>  $mutator
+     */
+    public function updateStaleCaptureEntry(string $squarePaymentId, callable $mutator): bool
+    {
+        $metadata = $this->metadata ?? [];
+        $entries = $metadata['stale_captures_after_buyer_cancel'] ?? [];
+        $updated = false;
+
+        foreach ($entries as $index => $entry) {
+            if (! is_array($entry)) {
+                continue;
+            }
+            if (($entry['square_payment_id'] ?? null) !== $squarePaymentId) {
+                continue;
+            }
+            $entries[$index] = $mutator($entry);
+            $updated = true;
+            break;
+        }
+
+        if (! $updated) {
+            return false;
+        }
+
+        $metadata['stale_captures_after_buyer_cancel'] = $entries;
+        $this->metadata = $metadata;
+
+        return true;
+    }
+
     /**
      * @return \Illuminate\Database\Eloquent\Relations\HasMany<SquareRefund, $this>
      */

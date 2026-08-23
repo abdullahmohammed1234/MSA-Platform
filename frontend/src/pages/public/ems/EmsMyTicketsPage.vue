@@ -26,6 +26,14 @@ const isCancelling = ref(false);
 const registrationToCancel = ref<PublicRegistration | null>(null);
 const showCancelConfirm = ref(false);
 
+const isCancellingPending = ref(false);
+const pendingPaymentToCancel = ref<{
+  kind: 'registration' | 'local';
+  registration?: PublicRegistration;
+  local?: StoredPendingCheckout;
+} | null>(null);
+const showCancelPendingConfirm = ref(false);
+
 const registrationToHide = ref<PublicRegistration | null>(null);
 const pendingToHide = ref<StoredPendingCheckout | null>(null);
 const showHideConfirm = ref(false);
@@ -100,6 +108,74 @@ const confirmCancel = (reg: PublicRegistration) => {
   registrationToCancel.value = reg;
   showCancelConfirm.value = true;
 };
+
+function canCancelPendingRegistration(reg: PublicRegistration): boolean {
+  return (
+    reg.status === 'awaiting_payment' &&
+    Boolean(reg.event?.slug) &&
+    Boolean(reg.attendee_email) &&
+    Boolean(reg.pending_checkout?.order_uuid)
+  );
+}
+
+function canCancelLocalPending(item: StoredPendingCheckout): boolean {
+  return Boolean(item.slug && item.email && item.order_uuid);
+}
+
+function confirmCancelPendingRegistration(reg: PublicRegistration) {
+  pendingPaymentToCancel.value = { kind: 'registration', registration: reg };
+  showCancelPendingConfirm.value = true;
+}
+
+function confirmCancelLocalPending(item: StoredPendingCheckout) {
+  pendingPaymentToCancel.value = { kind: 'local', local: item };
+  showCancelPendingConfirm.value = true;
+}
+
+function pendingCancelLabel(): string {
+  const target = pendingPaymentToCancel.value;
+  if (target?.kind === 'registration') {
+    return target.registration?.event?.name ?? 'this event';
+  }
+  return target?.local?.event_name ?? 'this event';
+}
+
+async function executeCancelPendingPayment() {
+  const target = pendingPaymentToCancel.value;
+  if (!target || isCancellingPending.value) return;
+
+  const slug =
+    target.kind === 'registration'
+      ? target.registration?.event?.slug
+      : target.local?.slug;
+  const email =
+    target.kind === 'registration'
+      ? target.registration?.attendee_email
+      : target.local?.email;
+  const orderUuid =
+    target.kind === 'registration'
+      ? target.registration?.pending_checkout?.order_uuid
+      : target.local?.order_uuid;
+
+  if (!slug || !email || !orderUuid) {
+    toast.error('Missing checkout details. Return to the event page to cancel.');
+    return;
+  }
+
+  isCancellingPending.value = true;
+  try {
+    await publicEventsService.cancelCheckout(slug, email, orderUuid);
+    pendingCheckoutStorage.remove(slug);
+    toast.success('Pending payment cancelled.');
+    showCancelPendingConfirm.value = false;
+    pendingPaymentToCancel.value = null;
+    await load();
+  } catch (err) {
+    toast.error(err instanceof EmsApiError ? err.message : 'Failed to cancel pending payment.');
+  } finally {
+    isCancellingPending.value = false;
+  }
+}
 
 const HIDEABLE_EVENT_STATUSES = new Set(['cancelled', 'completed', 'archived']);
 
@@ -304,6 +380,15 @@ function payLocalPending(item: StoredPendingCheckout) {
                   Review Details
                 </RouterLink>
                 <button
+                  v-if="canCancelLocalPending(item)"
+                  type="button"
+                  class="block w-full text-center border border-red-200 text-red-600 hover:bg-red-50 py-2.5 px-4 rounded-xl text-[10px] font-extrabold uppercase tracking-widest transition-all cursor-pointer"
+                  :disabled="isCancellingPending"
+                  @click="confirmCancelLocalPending(item)"
+                >
+                  Cancel Pending Payment
+                </button>
+                <button
                   type="button"
                   class="block w-full text-center border border-neutral-ivory text-neutral-black/55 hover:text-secondary hover:border-secondary/30 py-2.5 px-4 rounded-xl text-[10px] font-extrabold uppercase tracking-widest transition-all cursor-pointer"
                   @click="confirmHidePending(item)"
@@ -401,6 +486,15 @@ function payLocalPending(item: StoredPendingCheckout) {
                     Review Details
                   </RouterLink>
                   <button
+                    v-if="canCancelPendingRegistration(reg)"
+                    type="button"
+                    class="block w-full text-center border border-red-200 text-red-600 hover:bg-red-50 py-2.5 px-4 rounded-xl text-[10px] font-extrabold uppercase tracking-widest transition-all cursor-pointer disabled:opacity-60"
+                    :disabled="isCancellingPending"
+                    @click="confirmCancelPendingRegistration(reg)"
+                  >
+                    Cancel Pending Payment
+                  </button>
+                  <button
                     v-if="canHideRegistration(reg)"
                     type="button"
                     class="block w-full text-center border border-neutral-ivory text-neutral-black/55 hover:text-secondary hover:border-secondary/30 py-2.5 px-4 rounded-xl text-[10px] font-extrabold uppercase tracking-widest transition-all cursor-pointer inline-flex items-center justify-center gap-1.5"
@@ -485,6 +579,45 @@ function payLocalPending(item: StoredPendingCheckout) {
           >
             <Loader2 v-if="isCancelling" class="h-3.5 w-3.5 animate-spin" />
             Yes, Cancel Booking
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cancel pending payment confirmation -->
+    <div
+      v-if="showCancelPendingConfirm"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-primary/20 backdrop-blur-sm"
+    >
+      <div class="bg-white rounded-3xl border border-neutral-ivory p-6 sm:p-8 max-w-md w-full shadow-2xl">
+        <div class="flex items-center gap-3 text-secondary mb-4">
+          <ShieldAlert class="h-6 w-6 shrink-0" />
+          <h3 class="font-display text-xl font-bold">Cancel Pending Payment?</h3>
+        </div>
+        <p class="text-sm text-neutral-black/60 leading-relaxed">
+          This cancels your unpaid checkout for
+          <strong class="text-neutral-black">{{ pendingCancelLabel() }}</strong>.
+          The pending registration will be cancelled, your reserved spot will be released, and you will not be able to continue with this checkout.
+          No payment was taken, so nothing will be refunded.
+        </p>
+
+        <div class="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            :disabled="isCancellingPending"
+            class="px-4 py-2 border border-neutral-ivory hover:bg-neutral-background text-neutral-black rounded-xl text-[10px] font-extrabold uppercase tracking-widest transition-all cursor-pointer"
+            @click="showCancelPendingConfirm = false; pendingPaymentToCancel = null"
+          >
+            Keep Checkout
+          </button>
+          <button
+            type="button"
+            :disabled="isCancellingPending"
+            class="px-4 py-2 bg-secondary text-white hover:bg-secondary/90 rounded-xl text-[10px] font-extrabold uppercase tracking-widest transition-all inline-flex items-center gap-2 cursor-pointer disabled:opacity-60"
+            @click="executeCancelPendingPayment"
+          >
+            <Loader2 v-if="isCancellingPending" class="h-3.5 w-3.5 animate-spin" />
+            Yes, Cancel Payment
           </button>
         </div>
       </div>

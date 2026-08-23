@@ -235,7 +235,7 @@ class SquareWebhookService
             $payment = $this->resolvePayment($parsed, $payload);
 
             if ($payment !== null) {
-                return $this->fulfillExisting($payment, $parsed, $eventType);
+                return $this->fulfillExisting($payment, $parsed, $eventType, $record);
             }
 
             $squarePayment = data_get($payload, 'data.object.payment');
@@ -269,7 +269,7 @@ class SquareWebhookService
     /**
      * @param  array<string, mixed>  $parsed
      */
-    private function fulfillExisting(Payment $payment, array $parsed, string $eventType): Payment
+    private function fulfillExisting(Payment $payment, array $parsed, string $eventType, WebhookEvent $record): Payment
     {
         $status = $parsed['payment_status'] ?? null;
 
@@ -292,7 +292,7 @@ class SquareWebhookService
         }
 
         return match ($status) {
-            PaymentStatus::Paid->value => $this->fulfillment->markPaid($payment, $parsed),
+            PaymentStatus::Paid->value => $this->applyPaidFromWebhook($payment, $parsed, $record),
             PaymentStatus::Failed->value => $this->fulfillment->markFailed(
                 $payment,
                 'Provider reported payment failure.',
@@ -304,6 +304,26 @@ class SquareWebhookService
             ),
             default => $payment,
         };
+    }
+
+    /**
+     * @param  array<string, mixed>  $parsed
+     */
+    private function applyPaidFromWebhook(Payment $payment, array $parsed, WebhookEvent $record): Payment
+    {
+        $payment->refresh();
+
+        if ($payment->status === PaymentStatus::Cancelled && $payment->wasBuyerCancelled()) {
+            return $this->fulfillment->recordStaleCaptureAfterBuyerCancel(
+                $payment,
+                isset($parsed['provider_payment_id']) ? (string) $parsed['provider_payment_id'] : null,
+                isset($parsed['provider_order_id']) ? (string) $parsed['provider_order_id'] : null,
+                webhookEventId: $record->event_id,
+                source: 'square_webhook',
+            );
+        }
+
+        return $this->fulfillment->markPaid($payment, $parsed);
     }
 
     /**

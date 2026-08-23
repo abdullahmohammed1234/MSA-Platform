@@ -396,7 +396,11 @@ class PublicEventController extends EmsController
                     ['idempotency_suffix' => 'user_cancel', 'force' => true]
                 );
 
-            app(\App\Ems\Services\WaitlistService::class)->promoteAvailable($reg->event);
+            // Soft-deleted events resolve as null; skip waitlist promotion.
+            $event = $reg->event;
+            if ($event !== null) {
+                app(\App\Ems\Services\WaitlistService::class)->promoteAvailable($event);
+            }
         });
 
         return ApiResponse::success(

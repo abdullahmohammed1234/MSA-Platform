@@ -138,6 +138,18 @@ const emsRoutes: Array<RouteRecordRaw> = [
         meta: { title: 'Feedback & Surveys', emsPermissions: EMS_PERMISSIONS.EVENTS_VIEW },
       },
       {
+        path: 'stale-captures',
+        name: 'ems-stale-captures',
+        component: () => import('@/pages/ems/StaleCapturesPage.vue'),
+        meta: { title: 'Stale Captures', emsPermissions: EMS_PERMISSIONS.PAYMENTS_REFUND },
+      },
+      {
+        path: 'stale-captures/:paymentUuid/:squarePaymentId',
+        name: 'ems-stale-capture-detail',
+        component: () => import('@/pages/ems/StaleCaptureDetailPage.vue'),
+        meta: { title: 'Stale Capture Detail', emsPermissions: EMS_PERMISSIONS.PAYMENTS_REFUND },
+      },
+      {
         // Reachable without an EMS grant, otherwise the guard's redirect loops.
         path: 'unauthorized',
         name: 'ems-unauthorized',

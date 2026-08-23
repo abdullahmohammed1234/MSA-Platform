@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  ShieldAlert,
   ShieldCheck,
   Tags,
   TrendingUp,
@@ -85,6 +86,12 @@ const navigation = computed(() =>
       to: { name: 'ems-analytics' },
       icon: TrendingUp,
       permission: EMS_PERMISSIONS.ANALYTICS_VIEW,
+    },
+    {
+      label: 'Stale Captures',
+      to: { name: 'ems-stale-captures' },
+      icon: ShieldAlert,
+      permission: EMS_PERMISSIONS.PAYMENTS_REFUND,
     },
     {
       label: 'Roles & Permissions',
