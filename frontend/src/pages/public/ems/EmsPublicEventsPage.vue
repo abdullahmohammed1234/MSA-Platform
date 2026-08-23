@@ -200,7 +200,7 @@ function capacityLabel(event: PublicEvent): string {
 </script>
 
 <template>
-  <div class="min-h-screen bg-neutral-background pb-24">
+  <div class="min-h-screen max-w-full overflow-x-clip bg-neutral-background pb-24">
     <!-- --- Large Interactive Hero: next upcoming event + countdown --- -->
     <section class="relative min-h-[80vh] flex items-center pt-28 pb-16 overflow-hidden bg-primary">
       <div class="absolute inset-0 z-0">
@@ -235,39 +235,39 @@ function capacityLabel(event: PublicEvent): string {
                 </h1>
               </ScrollReveal>
 
-              <ScrollReveal v-if="heroEvent.short_description" :delay="0.25">
-                <p class="text-base sm:text-lg text-white/70 max-w-lg leading-relaxed mx-auto sm:mx-0 font-light">
+              <ScrollReveal v-if="heroEvent.short_description" :delay="0.25" width="100%">
+                <p class="text-base sm:text-lg text-white/70 max-w-lg leading-relaxed mx-auto sm:mx-0 font-light break-words">
                   {{ heroEvent.short_description }}
                 </p>
               </ScrollReveal>
 
               <ScrollReveal :delay="0.35" width="100%">
-                <div class="flex flex-wrap justify-center sm:justify-start gap-6 items-center pt-2">
-                  <div class="flex items-center gap-3.5 text-white text-left">
+                <div class="flex flex-wrap justify-center sm:justify-start gap-x-6 gap-y-4 items-start pt-2">
+                  <div class="flex items-center gap-3.5 text-white text-left min-w-0 max-w-full">
                     <div class="p-3 bg-white/10 rounded-[1.25rem] border border-white/10 shrink-0">
                       <CalendarDays :size="18" class="text-accent-gold" />
                     </div>
-                    <div>
+                    <div class="min-w-0">
                       <div class="text-[9px] uppercase tracking-widest text-white/45 font-bold">Date</div>
-                      <div class="text-sm sm:text-base font-extrabold">{{ formatDateRange(heroEvent.start_at, heroEvent.end_at) }}</div>
+                      <div class="text-sm sm:text-base font-extrabold break-words">{{ formatDateRange(heroEvent.start_at, heroEvent.end_at) }}</div>
                     </div>
                   </div>
-                  <div class="flex items-center gap-3.5 text-white text-left">
+                  <div class="flex items-center gap-3.5 text-white text-left min-w-0 max-w-full">
                     <div class="p-3 bg-white/10 rounded-[1.25rem] border border-white/10 shrink-0">
                       <Clock :size="18" class="text-accent-gold" />
                     </div>
-                    <div>
+                    <div class="min-w-0">
                       <div class="text-[9px] uppercase tracking-widest text-white/45 font-bold">Time</div>
-                      <div class="text-sm sm:text-base font-extrabold">{{ formatTimeRange(heroEvent.start_at, heroEvent.end_at) }}</div>
+                      <div class="text-sm sm:text-base font-extrabold break-words">{{ formatTimeRange(heroEvent.start_at, heroEvent.end_at) }}</div>
                     </div>
                   </div>
-                  <div v-if="heroEvent.location" class="flex items-center gap-3.5 text-white text-left">
+                  <div v-if="heroEvent.location" class="flex items-center gap-3.5 text-white text-left min-w-0 max-w-full">
                     <div class="p-3 bg-white/10 rounded-[1.25rem] border border-white/10 shrink-0">
                       <MapPin :size="18" class="text-accent-gold" />
                     </div>
-                    <div>
+                    <div class="min-w-0">
                       <div class="text-[9px] uppercase tracking-widest text-white/45 font-bold">Location</div>
-                      <div class="text-sm sm:text-base font-extrabold">{{ heroEvent.location }}</div>
+                      <div class="text-sm sm:text-base font-extrabold break-words">{{ heroEvent.location }}</div>
                     </div>
                   </div>
                 </div>
@@ -295,16 +295,16 @@ function capacityLabel(event: PublicEvent): string {
               </ScrollReveal>
             </div>
 
-            <aside class="w-full max-w-sm mx-auto sm:max-w-md xl:mx-0 xl:w-80 xl:flex-shrink-0 xl:pt-2">
-              <div class="bg-white/5 backdrop-blur-md border border-white/15 p-8 xl:p-10 rounded-[2rem] xl:rounded-[2.5rem] text-center space-y-8 shadow-2xl">
+            <aside class="w-full max-w-sm mx-auto sm:max-w-md xl:mx-0 xl:w-80 xl:flex-shrink-0 xl:pt-2 min-w-0">
+              <div class="bg-white/5 backdrop-blur-md border border-white/15 p-5 sm:p-8 xl:p-10 rounded-[2rem] xl:rounded-[2.5rem] text-center space-y-6 sm:space-y-8 shadow-2xl">
                 <h3 class="text-white text-[10px] uppercase tracking-[0.25em] font-extrabold font-sans">
                   {{ heroStarted ? 'Started' : 'Starting In' }}
                 </h3>
 
-                <div class="grid grid-cols-4 gap-3">
+                <div class="grid grid-cols-4 gap-1.5 sm:gap-3">
                   <div v-for="[unit, val] in Object.entries(timeLeft)" :key="unit" class="flex flex-col items-center min-w-0">
-                    <span class="text-2xl xl:text-3xl font-display font-extrabold text-accent-gold tabular-nums">{{ val.toString().padStart(2, '0') }}</span>
-                    <span class="text-[9px] uppercase tracking-[0.2em] text-white/55 mt-1 font-bold">{{ unit }}</span>
+                    <span class="text-xl sm:text-2xl xl:text-3xl font-display font-extrabold text-accent-gold tabular-nums">{{ val.toString().padStart(2, '0') }}</span>
+                    <span class="text-[8px] sm:text-[9px] uppercase tracking-[0.15em] sm:tracking-[0.2em] text-white/55 mt-1 font-bold truncate max-w-full">{{ unit }}</span>
                   </div>
                 </div>
               </div>
@@ -312,18 +312,18 @@ function capacityLabel(event: PublicEvent): string {
           </div>
         </template>
 
-        <div v-else class="space-y-6 text-center sm:text-left">
+        <div v-else class="space-y-6 text-center sm:text-left min-w-0">
           <ScrollReveal direction="up">
             <div class="inline-flex items-center gap-2.5 px-4.5 py-2 bg-white/10 backdrop-blur border border-white/15 rounded-full text-accent-gold text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.2em] mb-2 mx-auto sm:mx-0">
               <CalendarDays :size="14" /> Events Calendar
             </div>
           </ScrollReveal>
-          <ScrollReveal :delay="0.2">
-            <h1 class="text-4xl sm:text-6xl md:text-7xl font-display font-black text-white leading-[0.95] tracking-tight">
+          <ScrollReveal :delay="0.2" width="100%">
+            <h1 class="text-4xl sm:text-6xl md:text-7xl font-display font-black text-white leading-[0.95] tracking-tight break-words">
               Community <span class="italic font-serif text-accent-gold">Events</span> at SFU
             </h1>
           </ScrollReveal>
-          <ScrollReveal :delay="0.3">
+          <ScrollReveal :delay="0.3" width="100%">
             <p class="text-base sm:text-lg text-white/70 max-w-lg leading-relaxed mx-auto sm:mx-0 font-light">
               Discover lectures, socials, fundraisers, and community gatherings. Register for free events and receive your ticket instantly.
             </p>
@@ -332,16 +332,16 @@ function capacityLabel(event: PublicEvent): string {
       </div>
     </section>
 
-    <div class="sticky top-20 z-40 bg-neutral-background/95 backdrop-blur-md border-b border-neutral-ivory/60">
-      <div class="container-custom py-5 flex items-center gap-3 sm:gap-4">
+    <div class="sticky top-20 z-40 max-w-full overflow-x-clip bg-neutral-background/95 backdrop-blur-md border-b border-neutral-ivory/60">
+      <div class="container-custom py-4 sm:py-5 flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
         <div
-          class="min-w-0 flex-1 flex items-center gap-2 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+          class="min-w-0 w-full md:flex-1 flex items-center gap-2 overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
         >
           <button
             v-for="chip in categoryChips"
             :key="chip.value"
             type="button"
-            class="flex-shrink-0 h-11 px-5 rounded-full text-[10px] font-extrabold uppercase tracking-widest transition cursor-pointer border"
+            class="flex-shrink-0 h-11 px-4 sm:px-5 rounded-full text-[10px] font-extrabold uppercase tracking-widest transition cursor-pointer border"
             :class="chip.value === 'all'
               ? (selectedCategory === chip.value
                 ? 'bg-primary text-white border-primary'
@@ -354,24 +354,27 @@ function capacityLabel(event: PublicEvent): string {
           </button>
         </div>
 
-        <div class="relative w-44 sm:w-56 md:w-64 shrink-0">
-          <Search class="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-black/30 pointer-events-none" :size="16" />
-          <input
-            v-model="search"
-            type="search"
-            placeholder="Search events..."
-            class="w-full h-11 pl-11 pr-4 bg-white border border-neutral-ivory rounded-2xl text-xs focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary"
-            aria-label="Search events"
-          />
-        </div>
+        <div class="flex items-center gap-2 sm:gap-3 min-w-0 w-full md:w-auto md:shrink-0">
+          <div class="relative min-w-0 flex-1 md:w-56 lg:w-64 md:flex-none">
+            <Search class="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-black/30 pointer-events-none" :size="16" />
+            <input
+              v-model="search"
+              type="search"
+              placeholder="Search events..."
+              class="w-full h-11 pl-11 pr-4 bg-white border border-neutral-ivory rounded-2xl text-xs focus:outline-none focus:ring-4 focus:ring-primary/5 focus:border-primary"
+              aria-label="Search events"
+            />
+          </div>
 
-        <RouterLink
-          :to="EMS_PUBLIC_CALENDAR_PATH"
-          class="inline-flex items-center gap-2 h-11 px-5 shrink-0 rounded-2xl bg-primary text-white text-[10px] font-extrabold uppercase tracking-widest hover:bg-secondary transition"
-        >
-          <CalendarDays :size="14" />
-          <span class="hidden sm:inline">Calendar view</span>
-        </RouterLink>
+          <RouterLink
+            :to="EMS_PUBLIC_CALENDAR_PATH"
+            class="inline-flex items-center justify-center gap-2 h-11 w-11 sm:w-auto sm:px-5 shrink-0 rounded-2xl bg-primary text-white text-[10px] font-extrabold uppercase tracking-widest hover:bg-secondary transition"
+            aria-label="Calendar view"
+          >
+            <CalendarDays :size="14" />
+            <span class="hidden sm:inline">Calendar view</span>
+          </RouterLink>
+        </div>
       </div>
     </div>
 
@@ -389,10 +392,10 @@ function capacityLabel(event: PublicEvent): string {
             v-for="item in savedCheckouts"
             :key="item.order_uuid"
             :to="emsPublicEventPath(item.slug)"
-            class="flex items-center justify-between gap-3 rounded-2xl bg-white/80 px-4 py-3 text-sm hover:bg-white"
+            class="flex items-center justify-between gap-3 rounded-2xl bg-white/80 px-4 py-3 text-sm hover:bg-white min-w-0"
           >
-            <span class="font-semibold text-primary">{{ item.event_name }}</span>
-            <span class="text-xs font-bold uppercase tracking-widest text-amber-800">Complete payment</span>
+            <span class="font-semibold text-primary min-w-0 truncate">{{ item.event_name }}</span>
+            <span class="text-xs font-bold uppercase tracking-widest text-amber-800 shrink-0">Complete payment</span>
           </RouterLink>
         </div>
       </div>
@@ -439,7 +442,7 @@ function capacityLabel(event: PublicEvent): string {
           <article
             v-for="event in events"
             :key="event.uuid"
-            class="group flex flex-col overflow-hidden rounded-[1.75rem] border border-neutral-ivory bg-white hover:border-primary/20 hover:shadow-lg transition cursor-pointer"
+            class="group flex min-w-0 flex-col overflow-hidden rounded-[1.75rem] border border-neutral-ivory bg-white hover:border-primary/20 hover:shadow-lg transition cursor-pointer"
             @click="openEvent(event.slug)"
           >
             <div class="relative h-40 bg-gradient-to-br from-primary to-primary-light overflow-hidden">
@@ -451,22 +454,22 @@ function capacityLabel(event: PublicEvent): string {
                 loading="lazy"
               />
               <div class="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent" />
-              <div class="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2">
+              <div class="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2 min-w-0">
                 <span
                   v-if="event.category"
-                  class="text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded-full"
+                  class="text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded-full truncate max-w-[55%]"
                   :style="categorySolidStyle(event.category.color)"
                 >
                   {{ event.category.name }}
                 </span>
-                <span class="text-[10px] font-bold uppercase tracking-wider text-accent-gold bg-primary/80 px-3 py-1 rounded-full">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-accent-gold bg-primary/80 px-3 py-1 rounded-full truncate max-w-[45%] shrink-0">
                   {{ event.registration_label }}
                 </span>
               </div>
             </div>
 
-            <div class="flex flex-1 flex-col p-5 gap-3">
-              <h2 class="font-display text-xl font-bold text-neutral-black leading-snug group-hover:text-primary transition">
+            <div class="flex flex-1 flex-col p-5 gap-3 min-w-0">
+              <h2 class="font-display text-xl font-bold text-neutral-black leading-snug group-hover:text-primary transition break-words">
                 {{ event.name }}
               </h2>
               <p v-if="event.short_description" class="text-sm text-neutral-black/55 line-clamp-2">
