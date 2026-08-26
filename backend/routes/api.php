@@ -385,9 +385,14 @@ Route::prefix('v1')->group(function () {
         Route::get('/cms/media', [\App\Http\Controllers\Admin\CMS\MediaController::class, 'index'])
             ->middleware('permission:manage_media')
             ->name('api.admin.cms.media.index');
+        // Library uploads: only from the CMS Media admin page.
         Route::post('/cms/media', [\App\Http\Controllers\Admin\CMS\MediaController::class, 'store'])
-            ->middleware('permission:manage_media|manage_team|manage_announcements|manage_events|manage_resources|manage_homepage')
+            ->middleware('permission:manage_media')
             ->name('api.admin.cms.media.store');
+        // Contextual image uploads (event banners, homepage, etc.) — URL only, not library.
+        Route::post('/cms/assets/upload', [\App\Http\Controllers\Admin\CMS\MediaController::class, 'uploadAsset'])
+            ->middleware('permission:manage_media|manage_team|manage_announcements|manage_events|manage_resources|manage_homepage|manage_courses')
+            ->name('api.admin.cms.assets.upload');
         Route::delete('/cms/media/{uuid}', [\App\Http\Controllers\Admin\CMS\MediaController::class, 'destroy'])
             ->middleware('permission:manage_media')
             ->name('api.admin.cms.media.destroy');

@@ -252,6 +252,18 @@ export const cmsService = {
     return response.data.media;
   },
 
+  /** Upload an image for forms outside the media library (returns URL only). */
+  async uploadAsset(file: File): Promise<{ success: boolean; message: string; url: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await client.post('/admin/cms/assets/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
   async getMediaCategories(): Promise<MediaCategory[]> {
     const response = await client.get('/admin/cms/media/categories');
     return response.data.categories ?? [];

@@ -56,8 +56,8 @@ const uploadFile = async (file: File) => {
   isUploading.value = true;
   uploadError.value = null;
   try {
-    const media = await cmsService.uploadMedia(file);
-    setValue(toStorableImagePath(media.url) || media.url);
+    const result = await cmsService.uploadAsset(file);
+    setValue(toStorableImagePath(result.url) || result.url);
   } catch (err: any) {
     uploadError.value = err?.response?.data?.message || 'Failed to upload image. Please try again.';
   } finally {

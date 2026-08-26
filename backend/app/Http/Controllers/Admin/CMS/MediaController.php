@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin\CMS;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\CMS\UploadAssetRequest;
 use App\Http\Requests\CMS\UploadMediaRequest;
 use App\Services\CMS\MediaService;
 use Illuminate\Http\JsonResponse;
@@ -38,6 +39,21 @@ class MediaController extends Controller
             'success' => true,
             'message' => 'File uploaded successfully.',
             'media' => $media,
+        ], 201);
+    }
+
+    /**
+     * Upload an image for forms outside the media library (event banners, etc.).
+     * Returns a public URL only — does not create a media-library entry.
+     */
+    public function uploadAsset(UploadAssetRequest $request): JsonResponse
+    {
+        $url = $this->service->storeAsset($request->file('file'));
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Image uploaded successfully.',
+            'url' => $url,
         ], 201);
     }
 

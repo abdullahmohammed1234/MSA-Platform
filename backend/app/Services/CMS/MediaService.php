@@ -35,20 +35,7 @@ class MediaService
      */
     public function upload(UploadedFile $file, ?int $userId, array $meta = []): Media
     {
-        $extension = strtolower($file->getClientOriginalExtension());
-        $extension = preg_replace('/[^a-z0-9]/', '', $extension) ?: 'bin';
-
-        $originalBase = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-        $safeName = Str::slug($originalBase);
-        if ($safeName === '') {
-            $safeName = 'media';
-        }
-
-        // Never use user-provided display names as filesystem paths.
-        $storedFilename = $safeName.'-'.time().'-'.Str::lower(Str::random(6)).'.'.$extension;
-
-        $filepath = $file->storeAs('uploads', $storedFilename, 'public');
-        $url = Storage::disk('public')->url($filepath);
+        [$filepath, $url, $extension] = $this->storeUploadedFile($file, 'uploads');
 
         $displayName = isset($meta['display_name']) ? trim((string) $meta['display_name']) : '';
         $displayName = $displayName !== '' ? $displayName : null;
@@ -77,6 +64,40 @@ class MediaService
         Cache::forget('website_media');
 
         return $media;
+    }
+
+    /**
+     * Store an image for contextual forms (event banners, etc.) without
+     * creating a CMS media-library row.
+     */
+    public function storeAsset(UploadedFile $file): string
+    {
+        [, $url] = $this->storeUploadedFile($file, 'uploads');
+
+        return $url;
+    }
+
+    /**
+     * @return array{0: string, 1: string, 2: string} filepath, url, extension
+     */
+    protected function storeUploadedFile(UploadedFile $file, string $directory): array
+    {
+        $extension = strtolower($file->getClientOriginalExtension());
+        $extension = preg_replace('/[^a-z0-9]/', '', $extension) ?: 'bin';
+
+        $originalBase = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $safeName = Str::slug($originalBase);
+        if ($safeName === '') {
+            $safeName = 'media';
+        }
+
+        // Never use user-provided display names as filesystem paths.
+        $storedFilename = $safeName.'-'.time().'-'.Str::lower(Str::random(6)).'.'.$extension;
+
+        $filepath = $file->storeAs($directory, $storedFilename, 'public');
+        $url = Storage::disk('public')->url($filepath);
+
+        return [$filepath, $url, $extension];
     }
 
     public function delete(Media $media, ?int $userId): bool

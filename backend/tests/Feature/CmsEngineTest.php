@@ -608,4 +608,63 @@ class CmsEngineTest extends TestCase
             'filename' => 'team-member.jpg',
         ]);
     }
+
+    /** @test */
+    public function contextual_asset_upload_does_not_create_media_library_record()
+    {
+        Storage::fake('public');
+
+        $file = UploadedFile::fake()->create('event-banner.jpg', 100, 'image/jpeg');
+
+        $this->postJson(route('api.admin.cms.assets.upload'), [
+            'file' => $file,
+        ])->assertStatus(401);
+
+        $this->actingAs($this->normalUser)
+            ->postJson(route('api.admin.cms.assets.upload'), [
+                'file' => $file,
+            ])
+            ->assertStatus(403);
+
+        $response = $this->actingAs($this->adminUser)
+            ->postJson(route('api.admin.cms.assets.upload'), [
+                'file' => $file,
+            ])
+            ->assertStatus(201)
+            ->assertJsonPath('success', true);
+
+        $url = $response->json('url');
+        $this->assertNotNull($url);
+        $this->assertNull($response->json('media'));
+
+        $pathParts = explode('/storage/', $url);
+        $filepath = end($pathParts);
+        Storage::disk('public')->assertExists($filepath);
+
+        $this->assertDatabaseMissing('media', [
+            'filename' => 'event-banner.jpg',
+        ]);
+        $this->assertDatabaseCount('media', 0);
+    }
+
+    /** @test */
+    public function media_library_upload_still_creates_media_record()
+    {
+        Storage::fake('public');
+
+        $file = UploadedFile::fake()->create('gallery-photo.jpg', 100, 'image/jpeg');
+
+        $this->actingAs($this->adminUser)
+            ->postJson(route('api.admin.cms.media.store'), [
+                'file' => $file,
+                'display_name' => 'Gallery Photo',
+            ])
+            ->assertStatus(201)
+            ->assertJsonPath('media.display_name', 'Gallery Photo');
+
+        $this->assertDatabaseHas('media', [
+            'filename' => 'gallery-photo.jpg',
+            'display_name' => 'Gallery Photo',
+        ]);
+    }
 }
