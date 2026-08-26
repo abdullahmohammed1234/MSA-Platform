@@ -36,40 +36,7 @@ export interface Announcement {
   updated_at?: string;
 }
 
-export interface Event {
-  id?: number;
-  uuid: string;
-  title: string;
-  description: string;
-  location: string;
-  date: string;
-  time: string;
-  start_date: string;
-  end_date: string | null;
-  registration_url: string | null;
-  image: string | null;
-  category: string;
-  status: 'draft' | 'published' | 'archived';
-  spots_left: number;
-  featured: boolean;
-  registration_deadline: string | null;
-  registrations_count?: number;
-  created_at?: string;
-  updated_at?: string;
-}
 
-export interface EventRegistration {
-  uuid: string;
-  first_name: string;
-  last_name: string;
-  full_name: string;
-  email: string;
-  phone?: string | null;
-  student_id?: string | null;
-  status: string;
-  checked_in_at?: string | null;
-  registered_at: string;
-}
 
 export interface TeamMember {
   id?: number;

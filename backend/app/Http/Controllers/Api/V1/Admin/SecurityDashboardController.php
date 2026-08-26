@@ -75,9 +75,9 @@ class SecurityDashboardController extends Controller
             'db_status' => $dbStatus,
             'failed_jobs' => $failedJobsCount,
             'active_sessions' => $activeSessions,
-            'app_debug' => env('APP_DEBUG', true) ? 'Warning: Enabled' : 'Secure: Disabled',
-            'app_env' => env('APP_ENV', 'production'),
-            'https_enforced' => env('FORCE_HTTPS', false) || $request->secure() ? 'Enabled' : 'Disabled',
+            'app_debug' => config('app.debug') ? 'Warning: Enabled' : 'Secure: Disabled',
+            'app_env' => config('app.env', 'production'),
+            'https_enforced' => config('app.force_https', false) || $request->secure() ? 'Enabled' : 'Disabled',
         ];
 
         // 5. Chart dataset mapping (Mon-Sun coordinates)

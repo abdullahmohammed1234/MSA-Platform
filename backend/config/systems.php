@@ -1,0 +1,164 @@
+<?php
+
+return [
+    /*
+    |--------------------------------------------------------------------------
+    | Systems Control Plane — Canonical Registry (Phase 7)
+    |--------------------------------------------------------------------------
+    |
+    | Single source of truth for what appears in MSA Admin → Systems.
+    | Per-app ownership contracts remain in config/cms.php, dams.php, ems.php.
+    | Do not invent a second competing registry elsewhere.
+    |
+    */
+    'cache_ttl_seconds' => (int) env('SYSTEMS_HEALTH_CACHE_TTL', 45),
+
+    'version' => env('APP_VERSION', env('SYSTEMS_PLATFORM_VERSION', 'unknown')),
+    'build_id' => env('BUILD_ID', null),
+    'commit_sha' => env('COMMIT_SHA', null),
+
+    'applications' => [
+        'main-website' => [
+            'id' => 'main-website',
+            'name' => 'Main Website',
+            'description' => 'Public website presentation. Consumes CMS content and EMS events; does not own either.',
+            'type' => 'application',
+            'url' => '/',
+            'admin_path' => '/admin/systems/main-website',
+            'version' => env('MAIN_WEBSITE_VERSION', '2.0.0'),
+            'dependencies' => [
+                'platform-auth',
+                'database',
+                'cms-content-apis',
+                'ems-event-apis',
+                'storage',
+            ],
+            'owns' => ['public_presentation'],
+            'does_not_own' => ['cms_content', 'ems_events', 'academy_data'],
+        ],
+        'cms' => [
+            'id' => 'cms',
+            'name' => 'Content Management System',
+            'description' => 'Owns website content: homepage, announcements, team, resources, and media.',
+            'type' => 'application',
+            'url' => '/cms',
+            'admin_path' => '/admin/systems/cms',
+            'version' => env('CMS_VERSION', '1.0.0'),
+            'dependencies' => [
+                'platform-auth',
+                'database',
+                'storage',
+                'queues',
+            ],
+            'owns' => [
+                'homepage_sections',
+                'announcements',
+                'team_members',
+                'resources',
+                'media',
+            ],
+            'does_not_own' => ['ems_events', 'courses', 'users'],
+        ],
+        'dawah-academy' => [
+            'id' => 'dawah-academy',
+            'name' => 'Dawah Academy',
+            'description' => 'Learner-facing Academy experience. Consumes Academy data and published CMS resources.',
+            'type' => 'application',
+            'url' => '/academy',
+            'admin_path' => '/admin/systems/dawah-academy',
+            'version' => env('DAWAH_ACADEMY_VERSION', '1.5.0'),
+            'dependencies' => [
+                'platform-auth',
+                'database',
+                'cms-resources',
+                'academy-shared-schema',
+            ],
+            'owns' => ['learner_experience'],
+            'does_not_own' => ['academy_administration', 'cms_content', 'ems_events'],
+            'notes' => 'Learner app may be feature-flagged (VITE_ACADEMY_ENABLED).',
+        ],
+        'dams' => [
+            'id' => 'dams',
+            'name' => 'Dawah Academy Management System',
+            'description' => 'Owns Academy administration over the shared Academy schema. Not the learner app.',
+            'type' => 'application',
+            'url' => '/dams',
+            'admin_path' => '/admin/systems/dams',
+            'version' => env('DAMS_VERSION', '1.0.0'),
+            'dependencies' => [
+                'platform-auth',
+                'database',
+                'storage',
+                'queues',
+                'academy-shared-schema',
+            ],
+            'owns' => [
+                'courses_admin',
+                'quizzes_admin',
+                'students_admin',
+                'mentors_admin',
+                'progress_admin',
+            ],
+            'does_not_own' => ['learner_runtime', 'cms_media', 'users_identity'],
+        ],
+        'ems' => [
+            'id' => 'ems',
+            'name' => 'Event Management System',
+            'description' => 'Authoritative owner of events, registrations, tickets, and check-ins.',
+            'type' => 'application',
+            'url' => '/ems',
+            'admin_path' => '/admin/systems/ems',
+            'version' => env('EMS_VERSION', '1.0.0'),
+            'dependencies' => [
+                'platform-auth',
+                'database',
+                'storage',
+                'queues',
+                'email',
+            ],
+            'owns' => ['ems_events', 'registrations', 'tickets', 'check_ins'],
+            'does_not_own' => ['cms_content', 'legacy_cms_events', 'academy_data'],
+        ],
+    ],
+
+    'platform_services' => [
+        'queues' => [
+            'id' => 'queues',
+            'name' => 'Queues',
+            'description' => 'Laravel queue workers and failed job monitoring.',
+            'type' => 'platform_service',
+            'admin_path' => '/admin/system/queues',
+            'required_permission' => 'view_queue_status',
+        ],
+        'database' => [
+            'id' => 'database',
+            'name' => 'Database',
+            'description' => 'Primary application database connectivity.',
+            'type' => 'platform_service',
+            'admin_path' => null,
+        ],
+        'email' => [
+            'id' => 'email',
+            'name' => 'Email',
+            'description' => 'Platform mail transport configuration.',
+            'type' => 'platform_service',
+            'admin_path' => null,
+        ],
+        'storage' => [
+            'id' => 'storage',
+            'name' => 'Storage',
+            'description' => 'Shared public disk / object storage connectivity.',
+            'type' => 'platform_service',
+            'admin_path' => null,
+        ],
+    ],
+
+    'security' => [
+        'id' => 'security-center',
+        'name' => 'Security Center',
+        'description' => 'Platform security dashboard and audit visibility.',
+        'type' => 'security',
+        'admin_path' => '/admin/security',
+        'required_permission' => 'view_security',
+    ],
+];

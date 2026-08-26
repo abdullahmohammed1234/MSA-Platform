@@ -1,5 +1,10 @@
 import type { RouteRecordRaw } from 'vue-router'
 
+/**
+ * MSA Platform Admin routes.
+ * CMS → /cms (Phase 4). DAMS Academy admin → /dams (Phase 5).
+ * Legacy /admin/academy/* and desks redirect to DAMS equivalents.
+ */
 const adminRoutes: Array<RouteRecordRaw> = [
   {
     path: '/admin/login',
@@ -27,224 +32,118 @@ const adminRoutes: Array<RouteRecordRaw> = [
         component: () => import('@/pages/admin/Permissions.vue'),
         meta: { permissions: 'manage_permissions' }
       },
-      // CMS Engine Routes
+      // CMS Engine — extracted to /cms
+      { path: 'cms', redirect: '/cms' },
+      { path: 'cms/homepage', redirect: '/cms/homepage' },
+      { path: 'cms/announcements', redirect: '/cms/announcements' },
+      { path: 'cms/team', redirect: '/cms/team' },
+      { path: 'cms/resources', redirect: '/cms/resources' },
+      { path: 'cms/media', redirect: '/cms/media' },
+
+      // Systems control plane (Phase 7–8)
       {
-        path: 'cms',
-        name: 'admin-cms-dashboard',
-        component: () => import('@/pages/admin/cms/Dashboard.vue'),
-        meta: { permissions: 'view_analytics' }
-      },
-      {
-        path: 'cms/homepage',
-        name: 'admin-cms-homepage',
-        component: () => import('@/pages/admin/cms/HomepageCms.vue'),
-        meta: { permissions: 'manage_homepage' }
-      },
-      {
-        path: 'cms/announcements',
-        name: 'admin-cms-announcements',
-        component: () => import('@/pages/admin/cms/AnnouncementsCms.vue'),
-        meta: { permissions: 'manage_announcements' }
-      },
-      {
-        path: 'systems/ems',
-        name: 'admin-systems-ems',
-        component: () => import('@/pages/admin/system/EmsSystemPage.vue'),
+        path: 'systems',
+        name: 'admin-systems',
+        component: () => import('@/pages/admin/system/SystemsPage.vue'),
         meta: { permissions: 'system.view' }
+      },
+      {
+        path: 'systems/services/:serviceId',
+        name: 'admin-systems-service',
+        component: () => import('@/pages/admin/system/SystemPlatformServiceDetailPage.vue'),
+        meta: { permissions: 'system.view' }
+      },
+      // Unified application detail (registry-driven)
+      {
+        path: 'systems/cms',
+        name: 'admin-systems-cms',
+        component: () => import('@/pages/admin/system/SystemApplicationDetailPage.vue'),
+        meta: { permissions: 'system.view', systemId: 'cms' }
+      },
+      {
+        path: 'systems/dams',
+        name: 'admin-systems-dams',
+        component: () => import('@/pages/admin/system/SystemApplicationDetailPage.vue'),
+        meta: { permissions: 'system.view', systemId: 'dams' }
       },
       {
         path: 'systems/main-website',
         name: 'admin-systems-main-website',
-        component: () => import('@/pages/admin/system/MainWebsiteSystemPage.vue'),
-        meta: { permissions: 'system.view' }
+        component: () => import('@/pages/admin/system/SystemApplicationDetailPage.vue'),
+        meta: { permissions: 'system.view', systemId: 'main-website' }
       },
       {
         path: 'systems/dawah-academy',
         name: 'admin-systems-dawah-academy',
-        component: () => import('@/pages/admin/system/DawahAcademySystemPage.vue'),
+        component: () => import('@/pages/admin/system/SystemApplicationDetailPage.vue'),
+        meta: { permissions: 'system.view', systemId: 'dawah-academy' }
+      },
+      {
+        path: 'systems/ems',
+        name: 'admin-systems-ems',
+        component: () => import('@/pages/admin/system/SystemApplicationDetailPage.vue'),
+        meta: { permissions: 'system.view', systemId: 'ems' }
+      },
+      // Legacy operations consoles (advanced) — not the primary Systems detail
+      {
+        path: 'systems/ems/console',
+        name: 'admin-systems-ems-console',
+        component: () => import('@/pages/admin/system/EmsSystemPage.vue'),
         meta: { permissions: 'system.view' }
       },
       {
-        path: 'cms/team',
-        name: 'admin-cms-team',
-        component: () => import('@/pages/admin/cms/TeamCms.vue'),
-        meta: { permissions: 'manage_team' }
+        path: 'systems/main-website/console',
+        name: 'admin-systems-main-website-console',
+        component: () => import('@/pages/admin/system/MainWebsiteSystemPage.vue'),
+        meta: { permissions: 'system.view' }
       },
       {
-        path: 'cms/resources',
-        name: 'admin-cms-resources',
-        component: () => import('@/pages/admin/cms/ResourcesCms.vue'),
-        meta: { permissions: 'manage_resources' }
+        path: 'systems/dawah-academy/console',
+        name: 'admin-systems-dawah-academy-console',
+        component: () => import('@/pages/admin/system/DawahAcademySystemPage.vue'),
+        meta: { permissions: 'system.view' }
       },
-      {
-        path: 'cms/media',
-        name: 'admin-cms-media',
-        component: () => import('@/pages/admin/cms/MediaCms.vue'),
-        meta: { permissions: 'manage_media' }
-      },
-      // Academy Admin Routes
-      {
-        path: 'achievements',
-        name: 'admin-achievements',
-        component: () => import('@/pages/admin/academy/AchievementsAdmin.vue'),
-        meta: { permissions: 'manage_achievements' }
-      },
-      {
-        path: 'badges',
-        name: 'admin-badges',
-        component: () => import('@/pages/admin/academy/BadgesAdmin.vue'),
-        meta: { permissions: 'manage_badges' }
-      },
-      {
-        path: 'learning-paths',
-        name: 'admin-learning-paths',
-        component: () => import('@/pages/admin/academy/LearningPathsAdmin.vue'),
-        meta: { permissions: 'manage_learning_paths' }
-      },
-      {
-        path: 'academy/dashboard',
-        name: 'admin-academy-dashboard',
-        component: () => import('@/pages/admin/academy/Dashboard.vue'),
-        meta: { permissions: 'view_analytics' }
-      },
+
+      // Platform user management (NOT DAMS)
       {
         path: 'academy/user-management',
         name: 'admin-academy-user-management',
         component: () => import('@/pages/admin/academy/UserManagement.vue'),
         meta: { permissions: 'manage_users' }
       },
-      {
-        path: 'academy/announcements',
-        name: 'admin-academy-announcements',
-        component: () => import('@/pages/admin/academy/AnnouncementManagement.vue'),
-        meta: { permissions: 'manage_announcements' }
-      },
-      {
-        path: 'academy/reports',
-        name: 'admin-academy-reports',
-        component: () => import('@/pages/admin/academy/AdminReports.vue'),
-        meta: { permissions: 'view_analytics' }
-      },
-      {
-        path: 'academy/volunteer-analytics',
-        name: 'admin-academy-volunteer-analytics',
-        component: () => import('@/pages/admin/academy/VolunteerAnalytics.vue'),
-        meta: { permissions: 'view_analytics' }
-      },
-      {
-        path: 'academy/live-admin',
-        name: 'admin-academy-live-admin',
-        component: () => import('@/pages/admin/academy/LiveAdminSection.vue'),
-        meta: { permissions: 'manage_notifications' }
-      },
-      {
-        path: 'academy/quiz-management',
-        name: 'admin-academy-quiz-management',
-        component: () => import('@/pages/admin/academy/QuizManagement.vue'),
-        meta: { permissions: 'manage_quizzes' }
-      },
-      {
-        path: 'academy/mentor-management',
-        name: 'admin-academy-mentor-management',
-        component: () => import('@/pages/admin/academy/MentorManagement.vue'),
-        meta: { permissions: 'manage_mentors' }
-      },
-      {
-        path: 'academy/courses',
-        name: 'admin-academy-courses',
-        component: () => import('@/pages/admin/academy/Courses.vue'),
-        meta: { permissions: 'manage_courses' }
-      },
-      {
-        path: 'academy/courses/create',
-        name: 'admin-academy-courses-create',
-        component: () => import('@/pages/admin/academy/CourseCreate.vue'),
-        meta: { permissions: 'manage_courses' }
-      },
+      // CMS announcements — Phase 4 rehome
+      { path: 'academy/announcements', redirect: '/cms/announcements' },
+
+      // DAMS redirects (Academy administration extracted)
+      { path: 'achievements', redirect: '/dams/achievements' },
+      { path: 'badges', redirect: '/dams/badges' },
+      { path: 'learning-paths', redirect: '/dams/learning-paths' },
+      { path: 'academy/dashboard', redirect: '/dams' },
+      { path: 'academy/reports', redirect: '/dams/reports' },
+      { path: 'academy/volunteer-analytics', redirect: '/dams/volunteer-analytics' },
+      { path: 'academy/live-admin', redirect: '/dams/live-admin' },
+      { path: 'academy/quiz-management', redirect: '/dams/quiz-management' },
+      { path: 'academy/mentor-management', redirect: '/dams/mentor-management' },
+      { path: 'academy/courses', redirect: '/dams/courses' },
+      { path: 'academy/courses/create', redirect: '/dams/courses/create' },
       {
         path: 'academy/courses/:id/edit',
-        name: 'admin-academy-courses-edit',
-        component: () => import('@/pages/admin/academy/CourseEdit.vue'),
-        meta: { permissions: 'manage_courses' }
+        redirect: (to) => `/dams/courses/${to.params.id}/edit`,
       },
-      {
-        path: 'academy/modules',
-        name: 'admin-academy-modules',
-        component: () => import('@/pages/admin/academy/Modules.vue'),
-        meta: { permissions: 'manage_modules' }
-      },
-      {
-        path: 'academy/lessons',
-        name: 'admin-academy-lessons',
-        component: () => import('@/pages/admin/academy/Lessons.vue'),
-        meta: { permissions: 'manage_lessons' }
-      },
-      {
-        path: 'academy/quizzes',
-        name: 'admin-academy-quizzes',
-        component: () => import('@/pages/admin/academy/Quizzes.vue'),
-        meta: { permissions: 'manage_quizzes' }
-      },
-      {
-        path: 'academy/question-bank',
-        name: 'admin-academy-question-bank',
-        component: () => import('@/pages/admin/academy/QuestionBank.vue'),
-        meta: { permissions: 'manage_quizzes' }
-      },
-      {
-        path: 'academy/quiz-builder',
-        name: 'admin-academy-quiz-builder',
-        component: () => import('@/pages/admin/academy/QuizBuilder.vue'),
-        meta: { permissions: 'manage_quizzes' }
-      },
-      {
-        path: 'academy/students',
-        name: 'admin-academy-students',
-        component: () => import('@/pages/admin/academy/Students.vue'),
-        meta: { permissions: 'manage_students' }
-      },
-      {
-        path: 'academy/mentors',
-        name: 'admin-academy-mentors',
-        component: () => import('@/pages/admin/academy/Mentors.vue'),
-        meta: { permissions: 'manage_mentors' }
-      },
-      {
-        path: 'academy/assignments',
-        name: 'admin-academy-assignments',
-        component: () => import('@/pages/admin/academy/Assignments.vue'),
-        meta: { permissions: 'manage_mentors' }
-      },
-      {
-        path: 'academy/progress',
-        name: 'admin-academy-progress',
-        component: () => import('@/pages/admin/academy/Progress.vue'),
-        meta: { permissions: 'view_progress' }
-      },
-      {
-        path: 'academy/analytics',
-        name: 'admin-academy-analytics',
-        component: () => import('@/pages/admin/academy/Analytics.vue'),
-        meta: { permissions: 'view_analytics' }
-      },
-      {
-        path: 'academy/audit',
-        name: 'admin-academy-audit',
-        component: () => import('@/pages/admin/academy/ActivityLogsAudit.vue'),
-        meta: { permissions: 'view_analytics' }
-      },
-      {
-        path: 'academy/moderation',
-        name: 'admin-academy-moderation',
-        component: () => import('@/pages/admin/academy/DiscussionModeration.vue'),
-        meta: { permissions: 'view_analytics' }
-      },
-      {
-        path: 'academy/settings',
-        name: 'admin-academy-settings',
-        component: () => import('@/pages/admin/academy/AdminSettings.vue'),
-        meta: { permissions: 'manage_settings' }
-      },
+      { path: 'academy/modules', redirect: '/dams/modules' },
+      { path: 'academy/lessons', redirect: '/dams/lessons' },
+      { path: 'academy/quizzes', redirect: '/dams/quizzes' },
+      { path: 'academy/question-bank', redirect: '/dams/question-bank' },
+      { path: 'academy/quiz-builder', redirect: '/dams/quiz-builder' },
+      { path: 'academy/students', redirect: '/dams/students' },
+      { path: 'academy/mentors', redirect: '/dams/mentors' },
+      { path: 'academy/assignments', redirect: '/dams/assignments' },
+      { path: 'academy/progress', redirect: '/dams/progress' },
+      { path: 'academy/analytics', redirect: '/dams/analytics' },
+      { path: 'academy/audit', redirect: '/dams/audit' },
+      { path: 'academy/moderation', redirect: '/dams/moderation' },
+      { path: 'academy/settings', redirect: '/dams/settings' },
+
       {
         path: 'analytics',
         name: 'admin-analytics',

@@ -26,9 +26,9 @@ const formatTime = (timeStr: string) => {
 };
 
 const quickActions = [
-  { label: 'Edit Homepage Section', path: '/admin/cms/homepage', color: 'text-primary bg-primary/5 border-primary/20', icon: FileText },
-  { label: 'Create Announcement', path: '/admin/cms/announcements', color: 'text-secondary bg-secondary/5 border-secondary/20', icon: Plus },
-  { label: 'Upload Media File', path: '/admin/cms/media', color: 'text-primary-light bg-primary-light/5 border-primary-light/20', icon: Image },
+  { label: 'Edit Homepage Section', path: '/cms/homepage', color: 'text-primary bg-primary/5 border-primary/20', icon: FileText },
+  { label: 'Create Announcement', path: '/cms/announcements', color: 'text-secondary bg-secondary/5 border-secondary/20', icon: Plus },
+  { label: 'Upload Media File', path: '/cms/media', color: 'text-primary-light bg-primary-light/5 border-primary-light/20', icon: Image },
 ];
 </script>
 

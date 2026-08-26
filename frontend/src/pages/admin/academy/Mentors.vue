@@ -133,7 +133,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useAdminMentorsStore } from '@/stores/admin/academy/mentors';
+import { useAdminMentorsStore } from '@/stores/dams/mentors';
 
 const store = useAdminMentorsStore();
 

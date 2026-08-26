@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { useAdminMentorsStore } from '@/stores/admin/academy/mentors';
+import { useAdminMentorsStore } from '@/stores/dams/mentors';
 import { Users, RefreshCw } from 'lucide-vue-next';
 
 const mentorsStore = useAdminMentorsStore();
@@ -10,8 +10,8 @@ const loadMentors = async () => {
   await mentorsStore.fetchMentors();
 };
 
-const filteredMentors = () => mentorsStore.mentors.filter((mentor) =>
-  [mentor.name, mentor.email].some((field) => field.toLowerCase().includes(search.value.toLowerCase()))
+const filteredMentors = () => mentorsStore.mentors.filter((mentor: any) =>
+  [mentor.name, mentor.email].some((field) => (field || '').toLowerCase().includes(search.value.toLowerCase()))
 );
 
 onMounted(loadMentors);
@@ -44,9 +44,9 @@ onMounted(loadMentors);
             <span class="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold uppercase tracking-wide text-primary">{{ mentor.students_count }} learners</span>
           </div>
           <div class="mt-4 flex flex-wrap gap-2">
-            <router-link to="/admin/academy/assignments" class="rounded-xl border border-neutral-ivory px-3 py-2 text-sm hover:bg-neutral-background transition">Assignments</router-link>
-            <router-link to="/admin/academy/students" class="rounded-xl border border-neutral-ivory px-3 py-2 text-sm hover:bg-neutral-background transition">Students</router-link>
-            <router-link to="/admin/academy/progress" class="rounded-xl border border-neutral-ivory px-3 py-2 text-sm hover:bg-neutral-background transition">Progress</router-link>
+            <router-link to="/dams/assignments" class="rounded-xl border border-neutral-ivory px-3 py-2 text-sm hover:bg-neutral-background transition">Assignments</router-link>
+            <router-link to="/dams/students" class="rounded-xl border border-neutral-ivory px-3 py-2 text-sm hover:bg-neutral-background transition">Students</router-link>
+            <router-link to="/dams/progress" class="rounded-xl border border-neutral-ivory px-3 py-2 text-sm hover:bg-neutral-background transition">Progress</router-link>
           </div>
         </article>
       </div>

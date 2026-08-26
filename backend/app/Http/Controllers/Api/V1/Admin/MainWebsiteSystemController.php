@@ -7,12 +7,12 @@ namespace App\Http\Controllers\Api\V1\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\CMS\Announcement;
-use App\Models\CMS\Event;
-use App\Models\CMS\EventRegistration;
 use App\Models\CMS\Media;
 use App\Models\CMS\Resource;
 use App\Models\CMS\TeamMember;
 use App\Models\NewsletterSubscriber;
+use App\Ems\Models\Event as EmsEvent;
+use App\Ems\Models\Registration as EmsRegistration;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -157,8 +157,10 @@ class MainWebsiteSystemController extends Controller
                 'resources' => Resource::count(),
                 'media_assets' => Media::count(),
                 'subscribers' => NewsletterSubscriber::count(),
-                'events' => Event::count(),
-                'rsvps' => EventRegistration::count()
+                // Main Website consumes EMS events (Phase 6) — not legacy CMS events table
+                'events' => EmsEvent::count(),
+                'rsvps' => EmsRegistration::count(),
+                'events_source' => 'ems',
             ]
         ]);
     }

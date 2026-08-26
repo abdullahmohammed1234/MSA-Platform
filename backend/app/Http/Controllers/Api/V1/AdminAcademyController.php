@@ -883,7 +883,7 @@ class AdminAcademyController extends Controller
 
     public function indexQuestions(Request $request, QuestionBankService $service): JsonResponse
     {
-        if (!auth()->user()->hasPermission('manage_quizzes') && !auth()->user()->hasPermission('manage_question_bank')) {
+        if (!auth()->user()->hasPermission('manage_quizzes')) {
             return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
         }
 
@@ -905,7 +905,7 @@ class AdminAcademyController extends Controller
 
     public function indexStudents(Request $request, StudentManagementService $service): JsonResponse
     {
-        if (!auth()->user()->hasPermission('manage_students') && !auth()->user()->hasPermission('manage_volunteers')) {
+        if (!auth()->user()->hasPermission('manage_students')) {
             return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
         }
 
@@ -925,7 +925,7 @@ class AdminAcademyController extends Controller
 
     public function showStudent(User $student, StudentManagementService $service): JsonResponse
     {
-        if (!auth()->user()->hasPermission('manage_students') && !auth()->user()->hasPermission('manage_volunteers')) {
+        if (!auth()->user()->hasPermission('manage_students')) {
             return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
         }
 
@@ -939,7 +939,7 @@ class AdminAcademyController extends Controller
 
     public function suspendStudent(User $student, StudentManagementService $service): JsonResponse
     {
-        if (!auth()->user()->hasPermission('manage_students') && !auth()->user()->hasPermission('manage_volunteers')) {
+        if (!auth()->user()->hasPermission('manage_students')) {
             return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
         }
 
@@ -957,7 +957,7 @@ class AdminAcademyController extends Controller
 
     public function reactivateStudent(User $student, StudentManagementService $service): JsonResponse
     {
-        if (!auth()->user()->hasPermission('manage_students') && !auth()->user()->hasPermission('manage_volunteers')) {
+        if (!auth()->user()->hasPermission('manage_students')) {
             return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
         }
 
@@ -1011,7 +1011,7 @@ class AdminAcademyController extends Controller
 
     public function indexAssignments(Request $request, MentorAssignmentService $service): JsonResponse
     {
-        if (!auth()->user()->hasPermission('manage_mentors') && !auth()->user()->hasPermission('assign_mentors')) {
+        if (!auth()->user()->hasPermission('manage_mentors')) {
             return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
         }
 
@@ -1030,7 +1030,7 @@ class AdminAcademyController extends Controller
 
     public function storeAssignment(Request $request, MentorAssignmentService $service): JsonResponse
     {
-        if (!auth()->user()->hasPermission('manage_mentors') && !auth()->user()->hasPermission('assign_mentors')) {
+        if (!auth()->user()->hasPermission('manage_mentors')) {
             return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
         }
 
@@ -1057,7 +1057,7 @@ class AdminAcademyController extends Controller
 
     public function destroyAssignment(int $mentorId, int $studentId, MentorAssignmentService $service): JsonResponse
     {
-        if (!auth()->user()->hasPermission('manage_mentors') && !auth()->user()->hasPermission('assign_mentors')) {
+        if (!auth()->user()->hasPermission('manage_mentors')) {
             return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
         }
 
@@ -1071,7 +1071,7 @@ class AdminAcademyController extends Controller
 
     public function bulkAssign(Request $request, MentorAssignmentService $service): JsonResponse
     {
-        if (!auth()->user()->hasPermission('manage_mentors') && !auth()->user()->hasPermission('assign_mentors')) {
+        if (!auth()->user()->hasPermission('manage_mentors')) {
             return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
         }
 
@@ -1094,7 +1094,7 @@ class AdminAcademyController extends Controller
 
     public function indexProgress(Request $request, ProgressManagementService $service): JsonResponse
     {
-        if (!auth()->user()->hasPermission('view_progress') && !auth()->user()->hasPermission('view_student_progress')) {
+        if (!auth()->user()->hasPermission('view_progress')) {
             return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
         }
 

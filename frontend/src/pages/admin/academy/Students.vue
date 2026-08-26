@@ -154,7 +154,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useAdminStudentsStore } from '@/stores/admin/academy/students';
+import { useAdminStudentsStore } from '@/stores/dams/students';
 
 const store = useAdminStudentsStore();
 

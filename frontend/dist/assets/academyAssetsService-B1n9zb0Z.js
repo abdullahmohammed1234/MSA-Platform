@@ -1,0 +1,1 @@
+import{t as e}from"./api-7M9YWvHU.js";var t={async uploadImage(t){let n=new FormData;return n.append(`file`,t),(await e.post(`/admin/academy/assets/upload`,n,{headers:{"Content-Type":`multipart/form-data`}})).data}};export{t};

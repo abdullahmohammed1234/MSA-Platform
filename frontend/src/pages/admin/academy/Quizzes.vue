@@ -10,7 +10,7 @@
       </div>
       <div class="flex items-center gap-3">
         <router-link 
-          to="/admin/academy/question-bank"
+          to="/dams/question-bank"
           class="px-4 py-2 text-xs font-semibold rounded-lg bg-neutral-background border border-neutral-ivory hover:bg-neutral-background text-neutral-black transition"
         >
           📂 Question Bank
@@ -62,7 +62,7 @@
             </td>
             <td class="p-4 text-right space-x-2">
               <router-link 
-                :to="`/admin/academy/quiz-builder?quiz_id=${quiz.id}`"
+                :to="`/dams/quiz-builder?quiz_id=${quiz.id}`"
                 class="px-2.5 py-1 text-xs font-semibold rounded bg-neutral-background hover:bg-neutral-background text-neutral-black border border-neutral-ivory/60"
               >
                 🛠️ Builder
@@ -145,8 +145,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { useAdminQuizzesStore } from '@/stores/admin/academy/quizzes';
-import { useAdminCoursesStore } from '@/stores/admin/academy/courses';
+import { useAdminQuizzesStore } from '@/stores/dams/quizzes';
+import { useAdminCoursesStore } from '@/stores/dams/courses';
 const store = useAdminQuizzesStore();
 const coursesStore = useAdminCoursesStore();
 
@@ -180,7 +180,7 @@ const loadQuizzes = async () => {
 };
 
 const getCourseTitle = (courseId: number) => {
-  const c = coursesStore.courses.find((x) => x.id === courseId);
+  const c = coursesStore.courses.find((x: any) => x.id === courseId);
   return c ? c.title : `Course #${courseId}`;
 };
 

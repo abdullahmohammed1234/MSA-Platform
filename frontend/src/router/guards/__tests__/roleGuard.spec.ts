@@ -122,6 +122,38 @@ describe('roleGuard Router Guard', () => {
     expect(roleGuard(to)).toBe(true);
   });
 
+  it('should deny director and dawah-coordinator for requiresStudent (aligned with API)', () => {
+    (useAuthStore as any).mockReturnValue({
+      isAuthenticated: true,
+      isPrivilegedAdmin: false,
+      isAdmin: false,
+      isMentor: false,
+      isVolunteer: false,
+      isDirector: true,
+      isDawahCoordinator: false,
+      roles: ['director'],
+    });
+
+    const to = {
+      matched: [{ meta: { requiresStudent: true } }],
+    } as any;
+
+    expect(roleGuard(to)).toEqual({ name: 'home' });
+
+    (useAuthStore as any).mockReturnValue({
+      isAuthenticated: true,
+      isPrivilegedAdmin: false,
+      isAdmin: false,
+      isMentor: false,
+      isVolunteer: false,
+      isDirector: false,
+      isDawahCoordinator: true,
+      roles: ['dawah-coordinator'],
+    });
+
+    expect(roleGuard(to)).toEqual({ name: 'home' });
+  });
+
   it('should redirect unauthenticated users to home for requiresStudent routes', () => {
     (useAuthStore as any).mockReturnValue({
       isAuthenticated: false,

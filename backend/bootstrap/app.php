@@ -12,6 +12,19 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // cPanel / reverse proxies: trust X-Forwarded-* so $request->ip(),
+        // secure(), rate limits, and HSTS behave correctly in production.
+        // Override via TRUSTED_PROXIES (comma-separated IPs) if locking down.
+        $trusted = env('TRUSTED_PROXIES', '*');
+        $middleware->trustProxies(
+            at: $trusted === '*' ? '*' : array_values(array_filter(array_map('trim', explode(',', (string) $trusted)))),
+            headers: \Illuminate\Http\Request::HEADER_X_FORWARDED_FOR
+                | \Illuminate\Http\Request::HEADER_X_FORWARDED_HOST
+                | \Illuminate\Http\Request::HEADER_X_FORWARDED_PORT
+                | \Illuminate\Http\Request::HEADER_X_FORWARDED_PROTO
+                | \Illuminate\Http\Request::HEADER_X_FORWARDED_AWS_ELB
+        );
+
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
         $middleware->append(\App\Http\Middleware\PerformanceMonitoringMiddleware::class);
         $middleware->alias([

@@ -47,108 +47,68 @@ const adminItems = computed(() => {
     }
   }
 
-  // Academy Admin Group
-  const academyAdminChildren = [];
-  if (isSuper || authStore.permissions.includes('view_analytics')) {
-    academyAdminChildren.push({ label: 'Academy Dashboard', path: '/admin/academy/dashboard', icon: 'dashboard' });
-    academyAdminChildren.push({ label: 'Academy Analytics', path: '/admin/academy/analytics', icon: 'trending-up' });
-    academyAdminChildren.push({ label: 'Volunteer Analytics', path: '/admin/academy/volunteer-analytics', icon: 'trending-up' });
-    academyAdminChildren.push({ label: 'Discussion Moderation', path: '/admin/academy/moderation', icon: 'message-square' });
-    academyAdminChildren.push({ label: 'Activity Logs', path: '/admin/academy/audit', icon: 'file-text' });
-  }
   if (isSuper || authStore.permissions.includes('manage_users')) {
-    academyAdminChildren.push({ label: 'User Management', path: '/admin/academy/user-management', icon: 'users' });
-  }
-  if (isSuper || authStore.permissions.includes('manage_announcements')) {
-    academyAdminChildren.push({ label: 'Announcements', path: '/admin/academy/announcements', icon: 'megaphone' });
-  }
-  if (isSuper || authStore.permissions.includes('view_analytics')) {
-    academyAdminChildren.push({ label: 'Reports', path: '/admin/academy/reports', icon: 'file-text' });
-  }
-  if (isSuper || authStore.permissions.includes('manage_learning_paths')) {
-    academyAdminChildren.push({ label: 'Learning Paths', path: '/admin/learning-paths', icon: 'layers' });
-  }
-  if (isSuper || authStore.permissions.includes('manage_courses')) {
-    academyAdminChildren.push({ label: 'Courses Desk', path: '/admin/academy/courses', icon: 'book' });
-  }
-  if (isSuper || authStore.permissions.includes('manage_modules')) {
-    academyAdminChildren.push({ label: 'Modules Desk', path: '/admin/academy/modules', icon: 'layers' });
-  }
-  if (isSuper || authStore.permissions.includes('manage_lessons')) {
-    academyAdminChildren.push({ label: 'Lessons Desk', path: '/admin/academy/lessons', icon: 'file' });
-  }
-  if (isSuper || authStore.permissions.includes('manage_quizzes')) {
-    academyAdminChildren.push({ label: 'Quiz Management', path: '/admin/academy/quiz-management', icon: 'quiz' });
-    academyAdminChildren.push({ label: 'Exams Desk', path: '/admin/academy/quizzes', icon: 'quiz' });
-    academyAdminChildren.push({ label: 'Question Bank', path: '/admin/academy/question-bank', icon: 'server' });
-  }
-  if (isSuper || authStore.permissions.includes('manage_students')) {
-    academyAdminChildren.push({ label: 'Students Roster', path: '/admin/academy/students', icon: 'users' });
-  }
-  if (isSuper || authStore.permissions.includes('manage_mentors')) {
-    academyAdminChildren.push({ label: 'Mentor Management', path: '/admin/academy/mentor-management', icon: 'users' });
-    academyAdminChildren.push({ label: 'Mentors Desk', path: '/admin/academy/mentors', icon: 'users' });
-    academyAdminChildren.push({ label: 'Assignments Desk', path: '/admin/academy/assignments', icon: 'key' });
-  }
-  if (isSuper || authStore.permissions.includes('view_progress')) {
-    academyAdminChildren.push({ label: 'Learner Progress', path: '/admin/academy/progress', icon: 'trending-up' });
-  }
-  if (isSuper || authStore.permissions.includes('manage_achievements')) {
-    academyAdminChildren.push({ label: 'Achievements', path: '/admin/achievements', icon: 'star' });
-  }
-  if (isSuper || authStore.permissions.includes('manage_badges')) {
-    academyAdminChildren.push({ label: 'Badges', path: '/admin/badges', icon: 'award' });
-  }
-  if (isSuper || authStore.permissions.includes('manage_settings')) {
-    academyAdminChildren.push({ label: 'Academy Settings', path: '/admin/academy/settings', icon: 'settings' });
+    adminGroup.push({ label: 'User Management', path: '/admin/academy/user-management', icon: 'users' });
   }
 
-  if (isSuper || authStore.permissions.includes('manage_notifications')) {
-    academyAdminChildren.push({ label: 'Live Admin Section', path: '/admin/academy/live-admin', icon: 'bell' });
+  // Applications: open shells — not embedded inside MSA Admin (Phase 4–5, Phase 10)
+  const appChildren: Array<{ label: string; path: string; icon: string }> = [];
+  if (
+    isSuper ||
+    authStore.permissions.includes('view_analytics') ||
+    authStore.permissions.includes('manage_homepage') ||
+    authStore.permissions.includes('manage_announcements') ||
+    authStore.permissions.includes('manage_team') ||
+    authStore.permissions.includes('manage_resources') ||
+    authStore.permissions.includes('manage_media')
+  ) {
+    appChildren.push({ label: 'Open CMS', path: '/cms', icon: 'book' });
   }
-
-  if (academyAdminChildren.length > 0) {
+  if (
+    isSuper ||
+    authStore.permissions.includes('view_analytics') ||
+    authStore.permissions.includes('manage_courses') ||
+    authStore.permissions.includes('manage_modules') ||
+    authStore.permissions.includes('manage_lessons') ||
+    authStore.permissions.includes('manage_quizzes') ||
+    authStore.permissions.includes('manage_learning_paths') ||
+    authStore.permissions.includes('manage_mentors') ||
+    authStore.permissions.includes('manage_students') ||
+    authStore.permissions.includes('view_progress') ||
+    authStore.permissions.includes('manage_achievements') ||
+    authStore.permissions.includes('manage_badges') ||
+    authStore.permissions.includes('manage_settings') ||
+    authStore.permissions.includes('manage_notifications')
+  ) {
+    appChildren.push({ label: 'Open DAMS', path: '/dams', icon: 'layers' });
+  }
+  if (
+    isSuper ||
+    authStore.permissions.includes('system.view') ||
+    authStore.permissions.includes('events.view') ||
+    authStore.permissions.includes('events.view_all') ||
+    authStore.permissions.includes('events.create')
+  ) {
+    appChildren.push({ label: 'Open EMS', path: '/ems', icon: 'calendar' });
+  }
+  if (appChildren.length > 0) {
     items.push({
-      label: 'Academy Admin',
+      label: 'Applications',
       path: '#',
-      children: academyAdminChildren
+      children: appChildren,
     });
   }
 
-  // CMS Content Management Group
-  const cmsChildren = [];
+  const systemChildren: Array<{ label: string; path: string; icon: string }> = [];
 
-  if (isSuper || authStore.permissions.includes('view_analytics')) {
-    cmsChildren.push({ label: 'CMS Dashboard', path: '/admin/cms', icon: 'dashboard' });
+  if (authStore.permissions.includes('system.view') || isSuper) {
+    systemChildren.push({ label: 'Systems Overview', path: '/admin/systems', icon: 'dashboard' });
+    systemChildren.push({ label: 'Main Website', path: '/admin/systems/main-website', icon: 'home' });
+    systemChildren.push({ label: 'Content Management System', path: '/admin/systems/cms', icon: 'file' });
+    systemChildren.push({ label: 'Dawah Academy', path: '/admin/systems/dawah-academy', icon: 'book' });
+    systemChildren.push({ label: 'Dawah Academy Management (DAMS)', path: '/admin/systems/dams', icon: 'layers' });
+    systemChildren.push({ label: 'Event Management System', path: '/admin/systems/ems', icon: 'calendar' });
   }
-  if (isSuper || authStore.permissions.includes('manage_homepage')) {
-    cmsChildren.push({ label: 'Homepage Sections', path: '/admin/cms/homepage', icon: 'home' });
-  }
-  if (isSuper || authStore.permissions.includes('manage_announcements')) {
-    cmsChildren.push({ label: 'Announcements', path: '/admin/cms/announcements', icon: 'file' });
-  }
-  if (isSuper || authStore.permissions.includes('manage_team')) {
-    cmsChildren.push({ label: 'Team Members', path: '/admin/cms/team', icon: 'users' });
-  }
-  if (isSuper || authStore.permissions.includes('manage_resources')) {
-    cmsChildren.push({ label: 'Resources Library', path: '/admin/cms/resources', icon: 'book' });
-  }
-  if (isSuper || authStore.permissions.includes('manage_media')) {
-    cmsChildren.push({ label: 'Media Library', path: '/admin/cms/media', icon: 'image' });
-  }
-
-  if (cmsChildren.length > 0) {
-    items.push({
-      label: 'CMS Content',
-      path: '#',
-      children: cmsChildren
-    });
-  }
-
-  const systemChildren = [
-    { label: 'Main Website', path: '/admin/systems/main-website', icon: 'home' },
-    { label: 'Dawah Academy', path: '/admin/systems/dawah-academy', icon: 'book' },
-  ];
 
   if (authStore.permissions.includes('view_queue_status') || isSuper) {
     systemChildren.push({ label: 'Platform Queues', path: '/admin/system/queues', icon: 'server' });
@@ -158,15 +118,13 @@ const adminItems = computed(() => {
     systemChildren.push({ label: 'Security Center', path: '/admin/security', icon: 'shield' });
   }
 
-  if (authStore.permissions.includes('system.view') || isSuper) {
-    systemChildren.push({ label: 'Event Management System', path: '/admin/systems/ems', icon: 'calendar' });
+  if (systemChildren.length > 0) {
+    items.push({
+      label: 'System',
+      path: '#',
+      children: systemChildren
+    });
   }
-
-  items.push({
-    label: 'System',
-    path: '#',
-    children: systemChildren
-  });
 
   return items;
 });

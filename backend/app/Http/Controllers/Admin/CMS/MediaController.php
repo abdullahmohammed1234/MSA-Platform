@@ -43,8 +43,10 @@ class MediaController extends Controller
     }
 
     /**
-     * Upload an image for forms outside the media library (event banners, etc.).
+     * Upload a CMS-owned contextual image (homepage, announcements, team forms).
      * Returns a public URL only — does not create a media-library entry.
+     *
+     * Course/Academy assets must use POST /admin/academy/assets/upload.
      */
     public function uploadAsset(UploadAssetRequest $request): JsonResponse
     {
@@ -54,6 +56,7 @@ class MediaController extends Controller
             'success' => true,
             'message' => 'Image uploaded successfully.',
             'url' => $url,
+            'owner' => 'cms',
         ], 201);
     }
 

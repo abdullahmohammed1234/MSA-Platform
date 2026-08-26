@@ -99,11 +99,12 @@ Route::prefix('v1')->group(function () {
     Route::prefix('website')->group(function () {
         Route::get('/homepage', [WebsiteController::class, 'homepage'])->name('api.website.homepage');
         Route::get('/announcements', [WebsiteController::class, 'announcements'])->name('api.website.announcements');
-        Route::get('/events', [WebsiteController::class, 'events'])->name('api.website.events');
-        Route::get('/events/registrations', [WebsiteController::class, 'myEventRegistrations'])->name('api.website.events.registrations');
-        Route::get('/events/{eventId}', [WebsiteController::class, 'showEvent'])->name('api.website.events.show');
-        Route::post('/events/{eventId}/rsvp', [WebsiteController::class, 'submitEventRsvp'])->middleware('throttle:public_forms')->name('api.website.events.rsvp');
-        Route::delete('/events/{eventId}/rsvp', [WebsiteController::class, 'cancelEventRsvp'])->middleware('throttle:public_forms')->name('api.website.events.rsvp.cancel');
+        // Phase 9 — legacy CMS events retired (410 Gone). Main Website uses EMS /ems/public/events.
+        Route::get('/events', [WebsiteController::class, 'legacyCmsEventsRetired'])->name('api.website.events');
+        Route::get('/events/registrations', [WebsiteController::class, 'legacyCmsEventsRetired'])->name('api.website.events.registrations');
+        Route::get('/events/{eventId}', [WebsiteController::class, 'legacyCmsEventsRetired'])->name('api.website.events.show');
+        Route::post('/events/{eventId}/rsvp', [WebsiteController::class, 'legacyCmsEventsRetired'])->middleware('throttle:public_forms')->name('api.website.events.rsvp');
+        Route::delete('/events/{eventId}/rsvp', [WebsiteController::class, 'legacyCmsEventsRetired'])->middleware('throttle:public_forms')->name('api.website.events.rsvp.cancel');
         Route::get('/team', [WebsiteController::class, 'team'])->name('api.website.team');
         Route::get('/resources', [WebsiteController::class, 'resources'])->name('api.website.resources');
         Route::get('/media', [WebsiteController::class, 'media'])->name('api.website.media');
@@ -133,6 +134,11 @@ Route::prefix('v1')->group(function () {
             Route::post('/courses', [AdminAcademyController::class, 'storeCourse'])->middleware('permission:manage_courses')->name('api.admin.courses.store');
             Route::put('/courses/{course}', [AdminAcademyController::class, 'updateCourse'])->middleware('permission:manage_courses')->name('api.admin.courses.update');
             Route::delete('/courses/{course}', [AdminAcademyController::class, 'destroyCourse'])->middleware('permission:manage_courses')->name('api.admin.courses.destroy');
+
+            // DAMS/Academy-owned course assets (not CMS media)
+            Route::post('/assets/upload', [\App\Http\Controllers\Api\V1\Admin\AcademyAssetController::class, 'upload'])
+                ->middleware('permission:manage_courses')
+                ->name('api.admin.academy.assets.upload');
 
             Route::post('/modules', [AdminAcademyController::class, 'storeModule'])->middleware('permission:manage_modules')->name('api.admin.academy.modules.store');
             Route::put('/modules/{module}', [AdminAcademyController::class, 'updateModule'])->middleware('permission:manage_modules')->name('api.admin.academy.modules.update');
@@ -291,6 +297,16 @@ Route::prefix('v1')->group(function () {
             ->middleware('permission:manage_announcements')
             ->name('api.admin.cms.announcements.rollback');
 
+        // Systems control plane overview (Phase 7) — must stay before systems/* prefixes
+        Route::get('/systems', [\App\Http\Controllers\Api\V1\Admin\PlatformSystemsController::class, 'index'])
+            ->name('api.admin.systems.index');
+        Route::get('/systems/registry/{system}', [\App\Http\Controllers\Api\V1\Admin\PlatformSystemsController::class, 'show'])
+            ->name('api.admin.systems.registry.show');
+        Route::get('/systems/registry/{system}/health', [\App\Http\Controllers\Api\V1\Admin\PlatformSystemsController::class, 'health'])
+            ->name('api.admin.systems.registry.health');
+        Route::get('/systems/services/{service}', [\App\Http\Controllers\Api\V1\Admin\PlatformSystemsController::class, 'showService'])
+            ->name('api.admin.systems.services.show');
+
         // EMS Platform System Integration
         Route::prefix('systems/ems')->group(function () {
             Route::get('/', [\App\Http\Controllers\Api\V1\Admin\EmsSystemController::class, 'index']);
@@ -313,7 +329,21 @@ Route::prefix('v1')->group(function () {
             Route::put('/config', [\App\Http\Controllers\Api\V1\Admin\MainWebsiteSystemController::class, 'updateConfig']);
         });
 
-        // Dawah Academy System Integration
+        // CMS Application (Systems registry)
+        Route::prefix('systems/cms')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\V1\Admin\CmsSystemController::class, 'index']);
+            Route::get('/health', [\App\Http\Controllers\Api\V1\Admin\CmsSystemController::class, 'health']);
+            Route::get('/metrics', [\App\Http\Controllers\Api\V1\Admin\CmsSystemController::class, 'metrics']);
+        });
+
+        // DAMS Application (Systems registry) — distinct from learner Dawah Academy
+        Route::prefix('systems/dams')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\V1\Admin\DamsSystemController::class, 'index']);
+            Route::get('/health', [\App\Http\Controllers\Api\V1\Admin\DamsSystemController::class, 'health']);
+            Route::get('/metrics', [\App\Http\Controllers\Api\V1\Admin\DamsSystemController::class, 'metrics']);
+        });
+
+        // Dawah Academy System Integration (learner application registry)
         Route::prefix('systems/dawah-academy')->group(function () {
             Route::get('/', [\App\Http\Controllers\Api\V1\Admin\DawahAcademySystemController::class, 'index']);
             Route::get('/health', [\App\Http\Controllers\Api\V1\Admin\DawahAcademySystemController::class, 'health']);
@@ -389,9 +419,9 @@ Route::prefix('v1')->group(function () {
         Route::post('/cms/media', [\App\Http\Controllers\Admin\CMS\MediaController::class, 'store'])
             ->middleware('permission:manage_media')
             ->name('api.admin.cms.media.store');
-        // Contextual image uploads (event banners, homepage, etc.) — URL only, not library.
+        // Contextual CMS image uploads — CMS permissions only (not manage_courses).
         Route::post('/cms/assets/upload', [\App\Http\Controllers\Admin\CMS\MediaController::class, 'uploadAsset'])
-            ->middleware('permission:manage_media|manage_team|manage_announcements|manage_events|manage_resources|manage_homepage|manage_courses')
+            ->middleware('permission:manage_media|manage_team|manage_announcements|manage_events|manage_resources|manage_homepage')
             ->name('api.admin.cms.assets.upload');
         Route::delete('/cms/media/{uuid}', [\App\Http\Controllers\Admin\CMS\MediaController::class, 'destroy'])
             ->middleware('permission:manage_media')

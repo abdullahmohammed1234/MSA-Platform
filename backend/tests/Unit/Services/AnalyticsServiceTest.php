@@ -84,8 +84,7 @@ class AnalyticsServiceTest extends TestCase
         $this->analyticsService->trackCourseCompletion($user->id, 1);
         $this->analyticsService->trackQuizSubmission($user->id, 2, 85.0, true);
         $this->analyticsService->trackCertificateAward($user->id, 3);
-        $this->analyticsService->trackEventRegistration($user->id, 4);
 
-        Queue::assertPushed(\App\Jobs\Analytics\TrackEventJob::class, 5);
+        Queue::assertPushed(\App\Jobs\Analytics\TrackEventJob::class, 4);
     }
 }

@@ -149,11 +149,6 @@ trait HasRolesAndPermissions
         return $this->hasPermission('manage_certificates');
     }
 
-    public function canManageEvents(): bool
-    {
-        return $this->hasPermission('manage_events');
-    }
-
     public function canManageAnnouncements(): bool
     {
         return $this->hasPermission('manage_announcements');

@@ -3,7 +3,7 @@
     <!-- Breadcrumbs & Title -->
     <div>
       <div class="flex items-center gap-2 text-xs text-neutral-muted font-bold uppercase tracking-wider mb-2">
-        <router-link to="/admin/academy/courses" class="hover:text-neutral-muted transition">Courses</router-link>
+        <router-link to="/dams/courses" class="hover:text-neutral-muted transition">Courses</router-link>
         <span>/</span>
         <span class="text-neutral-muted">Create</span>
       </div>
@@ -101,7 +101,8 @@
         <label class="text-sm font-bold text-neutral-muted">Thumbnail</label>
         <ImageInput
           v-model="form.thumbnail"
-          hint="Upload an image from your device or paste a link."
+          :upload-fn="uploadCourseThumbnail"
+          hint="Upload an Academy-owned course image (not CMS media)."
           preview-class="max-h-40 max-w-xs object-cover"
         />
       </div>
@@ -109,7 +110,7 @@
       <!-- Submit & Cancel -->
       <div class="pt-4 border-t border-neutral-ivory flex items-center justify-end gap-3">
         <router-link 
-          to="/admin/academy/courses"
+          to="/dams/courses"
           class="px-4 py-2 text-sm font-semibold rounded-lg bg-neutral-background border border-neutral-ivory hover:bg-neutral-background text-neutral-muted transition"
         >
           Cancel
@@ -129,13 +130,16 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAdminCoursesStore } from '@/stores/admin/academy/courses';
+import { useAdminCoursesStore } from '@/stores/dams/courses';
 import ImageInput from '@/components/admin/ImageInput.vue';
+import academyAssetsService from '@/services/academy/academyAssetsService';
 
 const router = useRouter();
 const store = useAdminCoursesStore();
 
 const loading = ref(false);
+
+const uploadCourseThumbnail = (file: File) => academyAssetsService.uploadImage(file);
 
 const form = ref({
   title: '',
@@ -164,9 +168,9 @@ const handleSubmit = async () => {
     const created = await store.createCourse(data);
     // After creating, redirect to edit course to allow adding modules/lessons
     if (created && created.id) {
-      router.push(`/admin/academy/courses/${created.id}/edit`);
+      router.push(`/dams/courses/${created.id}/edit`);
     } else {
-      router.push('/admin/academy/courses');
+      router.push('/dams/courses');
     }
   } catch (err: any) {
     alert(err.message || 'Failed to create course.');

@@ -11,7 +11,7 @@
         </p>
       </div>
       <router-link 
-        to="/admin/academy/courses/create"
+        to="/dams/courses/create"
         class="inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-white bg-secondary hover:bg-secondary-light rounded-lg transition duration-200 shadow-lg shadow-soft"
       >
         ➕ Create Course
@@ -114,7 +114,7 @@
           <div class="mt-6 pt-4 border-t border-neutral-ivory/80 flex items-center justify-between gap-3">
             <div class="flex items-center gap-2">
               <router-link 
-                :to="`/admin/academy/courses/${course.id}/edit`"
+                :to="`/dams/courses/${course.id}/edit`"
                 class="px-3 py-1.5 text-xs font-bold rounded-lg bg-neutral-background hover:bg-neutral-background text-neutral-black transition"
               >
                 ✏️ Edit
@@ -151,7 +151,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useAdminCoursesStore } from '@/stores/admin/academy/courses';
+import { useAdminCoursesStore } from '@/stores/dams/courses';
 import { resolvePublicImagePath } from '@/constants/publicAssets';
 
 const store = useAdminCoursesStore();

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
-import { useAdminCoursesStore } from '@/stores/admin/academy/courses';
-import { useAdminStudentsStore } from '@/stores/admin/academy/students';
-import { useAdminMentorsStore } from '@/stores/admin/academy/mentors';
+import { useAdminCoursesStore } from '@/stores/dams/courses';
+import { useAdminStudentsStore } from '@/stores/dams/students';
+import { useAdminMentorsStore } from '@/stores/dams/mentors';
 import { BarChart3, Users, BookOpen, GraduationCap, RefreshCw } from 'lucide-vue-next';
 
 const coursesStore = useAdminCoursesStore();
@@ -17,7 +17,7 @@ const loadAnalytics = async () => {
   ]);
 };
 
-const publishedCourses = computed(() => coursesStore.courses.filter((course) => course.status === 'published'));
+const publishedCourses = computed(() => coursesStore.courses.filter((course: any) => course.status === 'published'));
 const courseCompletionSignal = computed(() => {
   if (studentsStore.students.length === 0) return 0;
   return Math.min(100, Math.round((mentorsStore.mentors.length / Math.max(studentsStore.students.length, 1)) * 100));
@@ -92,10 +92,10 @@ onMounted(loadAnalytics);
       <div class="rounded-2xl bg-white border border-neutral-ivory p-6">
         <h2 class="text-lg font-bold text-white">Operational shortcuts</h2>
         <div class="mt-4 space-y-2 text-sm">
-          <router-link to="/admin/academy/students" class="block rounded-xl bg-neutral-background/70 hover:bg-neutral-background px-4 py-3 text-neutral-black transition">Open student roster</router-link>
-          <router-link to="/admin/academy/mentors" class="block rounded-xl bg-neutral-background/70 hover:bg-neutral-background px-4 py-3 text-neutral-black transition">Open mentor desk</router-link>
-          <router-link to="/admin/academy/courses" class="block rounded-xl bg-neutral-background/70 hover:bg-neutral-background px-4 py-3 text-neutral-black transition">Open course desk</router-link>
-          <router-link to="/admin/academy/progress" class="block rounded-xl bg-neutral-background/70 hover:bg-neutral-background px-4 py-3 text-neutral-black transition">Open learner progress</router-link>
+          <router-link to="/dams/students" class="block rounded-xl bg-neutral-background/70 hover:bg-neutral-background px-4 py-3 text-neutral-black transition">Open student roster</router-link>
+          <router-link to="/dams/mentors" class="block rounded-xl bg-neutral-background/70 hover:bg-neutral-background px-4 py-3 text-neutral-black transition">Open mentor desk</router-link>
+          <router-link to="/dams/courses" class="block rounded-xl bg-neutral-background/70 hover:bg-neutral-background px-4 py-3 text-neutral-black transition">Open course desk</router-link>
+          <router-link to="/dams/progress" class="block rounded-xl bg-neutral-background/70 hover:bg-neutral-background px-4 py-3 text-neutral-black transition">Open learner progress</router-link>
         </div>
       </div>
     </div>

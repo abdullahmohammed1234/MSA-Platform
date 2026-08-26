@@ -15,7 +15,7 @@
         <div class="flex items-center justify-between border-b border-neutral-ivory pb-3">
           <h2 class="text-lg font-bold text-white">{{ course.title }}</h2>
           <router-link 
-            :to="`/admin/academy/courses/${course.id}/edit`"
+            :to="`/dams/courses/${course.id}/edit`"
             class="text-xs font-semibold text-secondary hover:text-secondary-light transition"
           >
             Manage Curriculum →
@@ -43,7 +43,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useAdminCoursesStore } from '@/stores/admin/academy/courses';
+import { useAdminCoursesStore } from '@/stores/dams/courses';
 import client from '@/services/api';
 
 const coursesStore = useAdminCoursesStore();

@@ -437,7 +437,7 @@ onMounted(() => {
               <div class="p-5 border border-neutral-ivory rounded-2xl shadow-soft">
                 <div class="text-[10px] font-black uppercase text-neutral-muted tracking-wider">Total Events</div>
                 <div class="text-3xl font-bold text-primary mt-2">{{ metricsData.events }}</div>
-                <div class="text-[10px] text-neutral-muted mt-2">CMS hosted public campus events</div>
+                <div class="text-[10px] text-neutral-muted mt-2">EMS public events consumed by Main Website</div>
               </div>
             </div>
           </div>

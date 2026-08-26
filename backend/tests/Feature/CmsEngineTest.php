@@ -6,7 +6,6 @@ use App\Models\User;
 use App\Models\Role;
 use App\Models\Permission;
 use App\Models\CMS\Announcement;
-use App\Models\CMS\Event;
 use App\Models\CMS\TeamMember;
 use App\Models\CMS\Resource;
 use App\Models\CMS\HomepageSection;
@@ -640,6 +639,7 @@ class CmsEngineTest extends TestCase
         $pathParts = explode('/storage/', $url);
         $filepath = end($pathParts);
         Storage::disk('public')->assertExists($filepath);
+        $this->assertStringContainsString('uploads/cms/', $filepath);
 
         $this->assertDatabaseMissing('media', [
             'filename' => 'event-banner.jpg',

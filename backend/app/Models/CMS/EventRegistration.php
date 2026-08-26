@@ -8,6 +8,10 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
 
+/**
+ * @deprecated Phase 9 — Legacy CMS RSVP table retained for archival only.
+ * Application code must not use this model. EMS owns registrations/tickets/check-ins.
+ */
 class EventRegistration extends Model
 {
     use HasFactory;

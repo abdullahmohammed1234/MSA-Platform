@@ -3,11 +3,11 @@
     <!-- Breadcrumbs -->
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2 text-xs text-neutral-muted font-bold uppercase tracking-wider">
-        <router-link to="/admin/academy/quizzes" class="hover:text-neutral-muted transition">Quizzes</router-link>
+        <router-link to="/dams/quizzes" class="hover:text-neutral-muted transition">Quizzes</router-link>
         <span>/</span>
         <span class="text-neutral-muted">Builder</span>
       </div>
-      <router-link to="/admin/academy/quizzes" class="text-xs font-bold text-neutral-muted hover:text-white transition">
+      <router-link to="/dams/quizzes" class="text-xs font-bold text-neutral-muted hover:text-white transition">
         ← Back to Quizzes
       </router-link>
     </div>
@@ -271,7 +271,7 @@ const loadQuizDetails = async () => {
 
   loading.value = true;
   try {
-    const response = await client.get(`/admin/academy/questions?quiz_id=${quizId}`);
+    const response = await client.get(`/dams/questions?quiz_id=${quizId}`);
     if (response.data.success) {
       quizQuestions.value = response.data.questions || [];
       // Re-order locally
@@ -279,7 +279,7 @@ const loadQuizDetails = async () => {
     }
 
     // Get course quizzes to identify the title
-    const coursesResponse = await client.get('/admin/academy/courses');
+    const coursesResponse = await client.get('/dams/courses');
     const courses = coursesResponse.data.courses || [];
     for (const c of courses) {
       const qResp = await client.get(`/academy/courses/${c.id}`);
@@ -300,7 +300,7 @@ const loadQuizDetails = async () => {
 
 const loadBankQuestions = async () => {
   try {
-    const response = await client.get('/admin/academy/questions');
+    const response = await client.get('/dams/questions');
     if (response.data.success) {
       const allQuestions = response.data.questions || [];
       const quizId = route.query.quiz_id;
@@ -315,7 +315,7 @@ const loadBankQuestions = async () => {
 const removeQuestion = async (id: number) => {
   if (confirm('Are you sure you want to remove this question? This deletes it permanently.')) {
     try {
-      await client.delete(`/admin/academy/questions/${id}`);
+      await client.delete(`/dams/questions/${id}`);
       await loadQuizDetails();
       await loadBankQuestions();
     } catch (e) {
@@ -336,7 +336,7 @@ const moveQuestion = async (index: number, direction: number) => {
   // Save ordering
   try {
     for (let i = 0; i < questions.length; i++) {
-      await client.put(`/admin/academy/questions/${questions[i].id}`, {
+      await client.put(`/dams/questions/${questions[i].id}`, {
         order: i + 1,
         quiz_id: route.query.quiz_id,
         type: questions[i].type,
@@ -370,7 +370,7 @@ const createAndAddQuestion = async () => {
   if (!quizId) return;
 
   try {
-    const response = await client.post('/admin/academy/questions', {
+    const response = await client.post('/dams/questions', {
       quiz_id: quizId,
       ...questionForm.value,
     });
@@ -390,7 +390,7 @@ const importQuestion = async (bq: any) => {
 
   // Simulate importing by cloning the question into this quiz
   try {
-    const response = await client.post('/admin/academy/questions', {
+    const response = await client.post('/dams/questions', {
       quiz_id: quizId,
       type: bq.type,
       question: bq.question,

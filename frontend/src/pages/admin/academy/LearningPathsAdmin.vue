@@ -61,7 +61,7 @@ onMounted(async () => {
 const loadPaths = async () => {
   isLoading.value = true;
   try {
-    const res = await client.get('/admin/academy/learning-paths');
+    const res = await client.get('/dams/learning-paths');
     paths.value = res.data.learning_paths || [];
   } catch (error) {
     console.error('Failed to load learning paths:', error);
@@ -116,10 +116,10 @@ const handlePathSubmit = async () => {
 
   try {
     if (isEditingPath.value && form.id) {
-      await client.put(`/admin/academy/learning-paths/${form.id}`, payload);
+      await client.put(`/dams/learning-paths/${form.id}`, payload);
       toast.success('Learning path updated successfully.');
     } else {
-      await client.post('/admin/academy/learning-paths', payload);
+      await client.post('/dams/learning-paths', payload);
       toast.success('Learning path created successfully.');
     }
     showPathModal.value = false;
@@ -132,7 +132,7 @@ const handlePathSubmit = async () => {
 const handleDeletePath = async (pathId: number, title: string) => {
   if (!confirm(`Delete learning path "${title}"? This cannot be undone.`)) return;
   try {
-    await client.delete(`/admin/academy/learning-paths/${pathId}`);
+    await client.delete(`/dams/learning-paths/${pathId}`);
     toast.success('Learning path deleted successfully.');
     if (selectedPathId.value === pathId) {
       selectedPathId.value = null;
@@ -148,7 +148,7 @@ const handleAssignCourse = async () => {
   if (!selectedPathId.value || !assignCourseId.value) return;
   assigning.value = true;
   try {
-    await client.post(`/admin/academy/learning-paths/${selectedPathId.value}/courses`, {
+    await client.post(`/dams/learning-paths/${selectedPathId.value}/courses`, {
       course_id: Number(assignCourseId.value)
     });
     toast.success('Course assigned to learning path successfully.');
@@ -165,7 +165,7 @@ const handleRemoveCourse = async (courseId: number, courseTitle: string) => {
   if (!selectedPathId.value) return;
   if (!confirm(`Remove course "${courseTitle}" from this learning path?`)) return;
   try {
-    await client.delete(`/admin/academy/learning-paths/${selectedPathId.value}/courses/${courseId}`);
+    await client.delete(`/dams/learning-paths/${selectedPathId.value}/courses/${courseId}`);
     toast.success('Course removed from learning path.');
     await loadPaths();
   } catch (error: any) {
@@ -190,7 +190,7 @@ const handleReorderCourse = async (direction: 'up' | 'down', index: number) => {
   }
 
   try {
-    await client.post(`/admin/academy/learning-paths/${selectedPathId.value}/courses/reorder`, {
+    await client.post(`/dams/learning-paths/${selectedPathId.value}/courses/reorder`, {
       course_ids: list.map(c => c.id)
     });
     toast.success('Course ordering saved successfully.');

@@ -19,8 +19,18 @@ import PublicButton from '@/components/shared/PublicButton.vue';
 import PublicCard from '@/components/shared/PublicCard.vue';
 import { usePrayerTimes, campusPrayerInfo, fallbackPrayerTimes, prayerTabs, jumuahSessions, type Campus, type PrayerTab } from '@/composables/usePrayerTimes';
 import { useSeo } from '@/composables/useSeo';
-import websiteService, { type EventItem } from '@/services/website/websiteService';
+import websiteService from '@/services/website/websiteService';
+import { publicEventsService } from '@/services/ems/publicEventsService';
 import { HERO_IMAGES, resolvePublicImagePath } from '@/constants/publicAssets';
+
+/** Homepage event cards — EMS is authoritative (Phase 6 cutover). */
+interface FeaturedEventCard {
+  id: string;
+  title: string;
+  image: string;
+  date: string;
+  href: string;
+}
 
 // SEO Settings
 useSeo({
@@ -41,16 +51,41 @@ const activeTimes = computed(() => {
   return campusTimes[selectedSchool.value] ?? fallbackPrayerTimes;
 });
 
-const featuredEvents = ref<EventItem[]>([]);
+const featuredEvents = ref<FeaturedEventCard[]>([]);
 const homepageData = ref<any>(null);
+
+const formatEventDate = (iso: string | null): string => {
+  if (!iso) return 'Date TBA';
+  try {
+    return new Date(iso).toLocaleDateString(undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  } catch {
+    return 'Date TBA';
+  }
+};
 
 onMounted(async () => {
   try {
-    const events = await websiteService.getEvents();
-    // Pick the first two events for showcase
-    featuredEvents.value = events.slice(0, 2);
+    // Main Website consumes EMS public events — not legacy CMS /website/events
+    const page = await publicEventsService.listEvents({
+      per_page: 2,
+      upcoming: true,
+      sort_by: 'start_at',
+      sort_direction: 'asc',
+    });
+    featuredEvents.value = page.items.map((event: any) => ({
+      id: event.uuid,
+      title: event.name,
+      image: event.banner_url || resolvePublicImagePath(HERO_IMAGES.foto2),
+      date: formatEventDate(event.start_at),
+      href: `/events/${event.slug}`,
+    }));
   } catch (err) {
-    console.error('Failed to load events for Home page:', err);
+    console.error('Failed to load EMS events for Home page:', err);
   }
 
   try {
@@ -383,7 +418,7 @@ const ctaBtnUrl = computed(() => homepageData.value?.cta?.button_url ?? '/contac
                  <div class="text-[10px] sm:text-xs font-bold text-accent-gold uppercase tracking-[0.2em]">{{ event.date }}</div>
                  <h3 class="text-2xl sm:text-3xl lg:text-4xl font-display font-extrabold text-white leading-tight">{{ event.title }}</h3>
               </div>
-              <router-link to="/events" class="absolute inset-0 z-10" />
+              <router-link :to="event.href" class="absolute inset-0 z-10" />
             </div>
          </ScrollReveal>
       </div>

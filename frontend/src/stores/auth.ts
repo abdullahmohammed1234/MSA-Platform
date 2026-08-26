@@ -48,8 +48,9 @@ export const useAuthStore = defineStore('auth', () => {
   const isMentor = computed(() => roles.value.includes('mentor') || isPrivilegedAdmin.value);
   const isVolunteer = computed(() => roles.value.includes('volunteer') || isPrivilegedAdmin.value);
   const isMember = computed(() => roles.value.includes('member'));
+  /** Learner Academy access — aligned with API role:volunteer|mentor|admin|super-admin */
   const canAccessAcademy = computed(
-    () => isAcademyEnabled && (isVolunteer.value || isMentor.value || isDirector.value || isDawahCoordinator.value)
+    () => isAcademyEnabled && (isVolunteer.value || isMentor.value || isPrivilegedAdmin.value)
   );
 
   const canManageCourses = computed(() => permissions.value.includes('manage_courses') || isPrivilegedAdmin.value);

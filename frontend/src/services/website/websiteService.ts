@@ -23,21 +23,6 @@ export interface MediaGalleryItem {
   mime_type?: string;
 }
 
-export interface EventItem {
-  id: string;
-  title: string;
-  date: string;
-  time: string;
-  location: string;
-  category: 'Jummah' | 'Social' | 'Lecture' | 'Workshop' | 'Charity' | 'Dinner';
-  image: string;
-  description: string;
-  spotsLeft: number;
-  featured?: boolean;
-  registrationDeadline: string;
-  startDate?: string;
-  endDate?: string;
-}
 
 export interface TeamMember {
   name: string;
@@ -95,57 +80,10 @@ export interface NewsletterSubscription {
   email: string;
 }
 
-export interface EventRsvpAttendee {
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-}
 
-export interface EventRsvpSubmission {
-  attendees: EventRsvpAttendee[];
-}
 
-export interface EventRegistrationResult {
-  registrationId: string;
-  name: string;
-  email: string;
-  phone: string;
-  status: string;
-  checkInCode: string;
-}
 
-export interface EventRsvpResponse {
-  success: boolean;
-  message: string;
-  spotsLeft?: number;
-  registrationId?: string;
-  registrationGroupId?: string;
-  registrations?: EventRegistrationResult[];
-}
 
-export interface EventRegistrationStatus {
-  eventId: string;
-  registrationId: string;
-  status?: string;
-  registeredAt?: string;
-  checkedInAt?: string;
-}
-
-const LOCAL_REGISTRATIONS_KEY = 'msa_event_registrations';
-
-function readLocalEventRegistrations(): EventRegistrationStatus[] {
-  try {
-    const raw = localStorage.getItem(LOCAL_REGISTRATIONS_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeLocalEventRegistrations(registrations: EventRegistrationStatus[]): void {
-  localStorage.setItem(LOCAL_REGISTRATIONS_KEY, JSON.stringify(registrations));
-}
 
 export const websiteService = {
   async getHomepageData(): Promise<any> {
@@ -165,25 +103,6 @@ export const websiteService = {
     }));
   },
 
-  async getEvents(): Promise<EventItem[]> {
-    const response = await api.get('/website/events');
-    return (response.data?.events ?? []).map((event: EventItem) => ({
-      ...event,
-      image: resolvePublicImagePath(event.image),
-    }));
-  },
-
-  async getEvent(eventId: string): Promise<EventItem> {
-    const response = await api.get(`/website/events/${eventId}`);
-    const event = response.data?.event;
-    if (!event) {
-      throw new Error('Event not found.');
-    }
-    return {
-      ...event,
-      image: resolvePublicImagePath(event.image),
-    };
-  },
 
   async getTeamMembers(): Promise<TeamMember[]> {
     try {
@@ -251,55 +170,6 @@ export const websiteService = {
     };
   },
 
-  async submitEventRsvp(eventId: string, data: EventRsvpSubmission): Promise<EventRsvpResponse> {
-    const response = await api.post(`/website/events/${eventId}/rsvp`, data);
-    return {
-      success: response.data?.success ?? true,
-      message: response.data?.message || 'Registration successful! Check your email for your QR code.',
-      spotsLeft: response.data?.spotsLeft,
-      registrationId: response.data?.registrationId,
-      registrationGroupId: response.data?.registrationGroupId,
-      registrations: response.data?.registrations ?? [],
-    };
-  },
-
-  async getMyEventRegistrations(): Promise<EventRegistrationStatus[]> {
-    const response = await api.get('/website/events/registrations');
-    return response.data?.registrations ?? [];
-  },
-
-  async cancelEventRsvp(
-    eventId: string,
-    registrationId?: string,
-    email?: string
-  ): Promise<EventRsvpResponse> {
-    const response = await api.delete(`/website/events/${eventId}/rsvp`, {
-      data: {
-        ...(registrationId ? { registrationId } : {}),
-        ...(email ? { email } : {}),
-      },
-    });
-    return {
-      success: response.data?.success ?? true,
-      message: response.data?.message || 'Your registration has been cancelled.',
-      spotsLeft: response.data?.spotsLeft,
-    };
-  },
-
-  saveLocalEventRegistration(registration: EventRegistrationStatus): void {
-    const existing = readLocalEventRegistrations().filter((item) => item.eventId !== registration.eventId);
-    writeLocalEventRegistrations([...existing, registration]);
-  },
-
-  removeLocalEventRegistration(eventId: string): void {
-    writeLocalEventRegistrations(
-      readLocalEventRegistrations().filter((item) => item.eventId !== eventId),
-    );
-  },
-
-  getLocalEventRegistrations(): EventRegistrationStatus[] {
-    return readLocalEventRegistrations();
-  },
 };
 
 export default websiteService;

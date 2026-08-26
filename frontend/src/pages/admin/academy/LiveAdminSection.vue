@@ -90,7 +90,7 @@ onMounted(loadLiveData);
         <h2 class="text-lg font-bold text-white">Live status</h2>
         <div class="mt-4 space-y-3 text-sm text-neutral-muted">
           <p>Queue processing, notification delivery, and report generation now share the same privileged admin access path.</p>
-          <router-link to="/admin/academy/reports" class="block rounded-xl bg-neutral-background/70 hover:bg-neutral-background px-4 py-3 text-neutral-black transition">Open reports desk</router-link>
+          <router-link to="/dams/reports" class="block rounded-xl bg-neutral-background/70 hover:bg-neutral-background px-4 py-3 text-neutral-black transition">Open reports desk</router-link>
           <router-link to="/admin/notifications" class="block rounded-xl bg-neutral-background/70 hover:bg-neutral-background px-4 py-3 text-neutral-black transition">Open notification center</router-link>
         </div>
       </div>

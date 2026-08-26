@@ -134,12 +134,13 @@ CMS is under Admin (same login):
 | `/admin/cms` | `view_analytics` | CMS dashboard stats |
 | `/admin/cms/homepage` | `manage_homepage` | Homepage sections & blocks |
 | `/admin/cms/announcements` | `manage_announcements` | Announcements |
-| `/admin/cms/events` | `manage_events` | Public events |
 | `/admin/cms/team` | `manage_team` | Team members |
 | `/admin/cms/resources` | `manage_resources` | Public resource library |
 | `/admin/cms/media` | `manage_media` | Media uploads |
 
-**Public API** (no auth): `GET /api/v1/website/homepage`, `/events`, `/announcements`, `/team`, `/resources`.
+Events are owned by **EMS** (`/ems`, permissions `events.*`). The legacy CMS `/admin/cms/events` UI and `/api/v1/website/events*` API are retired (Phase 9). Historical rows may remain in `events` / `event_registrations` for archive only.
+
+**Public API** (no auth): `GET /api/v1/website/homepage`, `/announcements`, `/team`, `/resources`. Public events: `GET /api/v1/ems/public/events`.
 
 ---
 
@@ -194,10 +195,24 @@ php artisan test
 
 ## Production deployment notes
 
-1. Build Vue frontend: `npm run build` → serve static files from `public/` or CDN.
-2. Point `VITE_API_URL` to production Laravel API.
-3. Run queue worker: `php artisan queue:work`.
-4. Seed permissions after deploy if needed: `php artisan db:seed --class=DatabaseSeeder`.
+Recommended order (existing production databases — no destructive reseeds):
+
+1. Build Vue frontend: `cd frontend && npm ci && npm run build` (`VITE_API_URL` / `VITE_ACADEMY_ENABLED=false`).
+2. Deploy backend code + `frontend/dist` (see `.cpanel.yml` rsync).
+3. Ensure production `.env`: `APP_DEBUG=false`, `APP_ENV=production`, `FORCE_HTTPS=true`, `SESSION_SECURE_COOKIE=true`, `QUEUE_CONNECTION=database`, `TRUSTED_PROXIES=*`, correct `FRONTEND_URL` / CORS / Sanctum domains.
+4. `composer install --optimize-autoloader --no-dev`
+5. `php artisan migrate --force` (safe; does **not** drop archived CMS `events` / `event_registrations`)
+6. `php artisan storage:link` (once)
+7. `php artisan config:cache && php artisan route:cache && php artisan view:cache && php artisan event:cache`  
+   Or run `backend/scripts/prepare-production.sh` / `.ps1`.
+8. Restart queue workers listening to **all** needed queues, e.g.  
+   `php artisan queue:work --queue=ems-payments,ems-notifications,ems-operations,high,default,low`
+9. Ensure cron: `* * * * * php artisan schedule:run`
+10. Smoke-test auth `/api/v1/auth/me`, Systems `/admin/systems`, public EMS events, CMS/DAMS/EMS shells.
+
+Permission sync on existing DBs (Phase 6+): prefer targeted seeders / role grants — **do not** blindly wipe production with full `DatabaseSeeder` unless intentional.
+
+Ops dependencies outside the repo: database backups, uploaded-file backups (`storage/` / public uploads), SMTP credentials, Square production keys.
 
 ---
 

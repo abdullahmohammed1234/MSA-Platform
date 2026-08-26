@@ -5,7 +5,6 @@ namespace Database\Seeders;
 use App\Models\CMS\HomepageSection;
 use App\Models\CMS\HomepageContentBlock;
 use App\Models\CMS\Announcement;
-use App\Models\CMS\Event;
 use App\Models\CMS\TeamMember;
 use App\Models\CMS\Resource;
 use Illuminate\Database\Seeder;
@@ -111,110 +110,6 @@ class CmsSeeder extends Seeder
 
         foreach ($announcements as $ann) {
             Announcement::create(array_merge($ann, ['uuid' => (string) Str::uuid()]));
-        }
-
-        // 3. Seed Events
-        $events = [
-            [
-                'title' => "The Heart's Journey: Spiritual Heights",
-                'description' => 'An evening dedicated to exploring the depths of spiritual growth and finding peace in a chaotic world. Featuring guest speakers and interactive reflection sessions.',
-                'location' => 'SFU Burnaby, WMC 3260',
-                'date' => '2026-06-15',
-                'time' => '6:00 PM - 8:30 PM',
-                'start_date' => '2026-06-15 18:00:00',
-                'end_date' => '2026-06-15 20:30:00',
-                'registration_url' => '/events',
-                'image' => 'https://images.unsplash.com/photo-1519751138087-5bf79df62d5b?auto=format&fit=crop&q=80',
-                'category' => 'Lecture',
-                'status' => 'published',
-                'spots_left' => 45,
-                'featured' => true,
-                'registration_deadline' => '2026-06-14',
-            ],
-            [
-                'title' => 'Weekly Friday Jummah Prayer',
-                'description' => 'Join our weekly congregation for Jummah prayer on campus. Multiple shifts available depending on room capacity.',
-                'location' => 'SFU Multi-Faith Centre / MBC',
-                'date' => 'Every Friday',
-                'time' => '1:30 PM',
-                'start_date' => '2026-06-12 13:30:00',
-                'end_date' => '2026-06-12 14:30:00',
-                'registration_url' => '/events',
-                'image' => 'https://images.unsplash.com/photo-1542810634-71277d95dcbb?auto=format&fit=crop&q=80',
-                'category' => 'Jummah',
-                'status' => 'published',
-                'spots_left' => 200,
-                'featured' => false,
-                'registration_deadline' => '2026-12-31',
-            ],
-            [
-                'title' => 'End of Semester Community Dinner',
-                'description' => "Celebrate your hard work this semester with a beautiful banquet dinner. Halal catering from Vancouver's finest vendors.",
-                'location' => 'Diamond Family Courtyard',
-                'date' => '2026-05-30',
-                'time' => '7:00 PM',
-                'start_date' => '2026-05-30 19:00:00',
-                'end_date' => '2026-05-30 22:00:00',
-                'registration_url' => '/events',
-                'image' => 'https://images.unsplash.com/photo-1566438480900-0609be27a4be?auto=format&fit=crop&q=80',
-                'category' => 'Dinner',
-                'status' => 'published',
-                'spots_left' => 12,
-                'featured' => false,
-                'registration_deadline' => '2026-05-28',
-            ],
-            [
-                'title' => 'Post-Midterm Game Night',
-                'description' => 'Unwind after exams with board games, pizza, and good company. Tournament brackets for FIFA and Super Smash Bros!',
-                'location' => 'Student Union Building (SUB)',
-                'date' => '2026-06-05',
-                'time' => '5:00 PM - 9:00 PM',
-                'start_date' => '2026-06-05 17:00:00',
-                'end_date' => '2026-06-05 21:00:00',
-                'registration_url' => '/events',
-                'image' => 'https://images.unsplash.com/photo-1523240715630-974bb7ad1582?auto=format&fit=crop&q=80',
-                'category' => 'Social',
-                'status' => 'published',
-                'spots_left' => 80,
-                'featured' => false,
-                'registration_deadline' => '2026-06-04',
-            ],
-            [
-                'title' => 'Ramadan Prep: Fiqh of Fasting',
-                'description' => 'Practical workshop on the essentials of fasting, health tips, and spiritual preparation for the upcoming holy month.',
-                'location' => 'Online (Zoom)',
-                'date' => '2026-07-20',
-                'time' => '5:30 PM',
-                'start_date' => '2026-07-20 17:30:00',
-                'end_date' => '2026-07-20 19:30:00',
-                'registration_url' => '/events',
-                'image' => 'https://images.unsplash.com/photo-1435527173128-983b87201f4d?auto=format&fit=crop&q=80',
-                'category' => 'Workshop',
-                'status' => 'published',
-                'spots_left' => 500,
-                'featured' => false,
-                'registration_deadline' => '2026-07-19',
-            ],
-            [
-                'title' => 'Charity Bake Sale for Relief',
-                'description' => 'Baking for a cause! All proceeds go towards international humanitarian relief efforts. Volunteers and bakers needed.',
-                'location' => 'Convocation Mall',
-                'date' => '2026-06-10',
-                'time' => '10:00 AM - 4:00 PM',
-                'start_date' => '2026-06-10 10:00:00',
-                'end_date' => '2026-06-10 16:00:00',
-                'registration_url' => '/events',
-                'image' => 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&q=80',
-                'category' => 'Charity',
-                'status' => 'published',
-                'spots_left' => 20,
-                'featured' => false,
-                'registration_deadline' => '2026-06-08',
-            ]
-        ];
-
-        foreach ($events as $event) {
-            Event::create(array_merge($event, ['uuid' => (string) Str::uuid()]));
         }
 
         // 4. Seed Team Members

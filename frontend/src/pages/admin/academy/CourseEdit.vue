@@ -3,12 +3,12 @@
     <!-- Breadcrumbs -->
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-2 text-xs text-neutral-muted font-bold uppercase tracking-wider">
-        <router-link to="/admin/academy/courses" class="hover:text-neutral-muted transition">Courses</router-link>
+        <router-link to="/dams/courses" class="hover:text-neutral-muted transition">Courses</router-link>
         <span>/</span>
         <span class="text-neutral-muted">Edit</span>
       </div>
       <router-link 
-        to="/admin/academy/courses"
+        to="/dams/courses"
         class="text-xs font-bold text-neutral-muted hover:text-white transition"
       >
         ← Back to Courses
@@ -120,7 +120,8 @@
             <label class="text-sm font-bold text-neutral-muted">Thumbnail</label>
             <ImageInput
               v-model="settingsForm.thumbnail"
-              hint="Upload an image from your device or paste a link."
+              :upload-fn="uploadCourseThumbnail"
+              hint="Upload an Academy-owned course image (not CMS media)."
               preview-class="max-h-40 max-w-xs object-cover"
             />
           </div>
@@ -318,13 +319,16 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { useAdminCoursesStore } from '@/stores/admin/academy/courses';
-import { useAdminLessonsStore } from '@/stores/admin/academy/lessons';
+import { useAdminCoursesStore } from '@/stores/dams/courses';
+import { useAdminLessonsStore } from '@/stores/dams/lessons';
 import ImageInput from '@/components/admin/ImageInput.vue';
+import academyAssetsService from '@/services/academy/academyAssetsService';
 
 const route = useRoute();
 const store = useAdminCoursesStore();
 const lessonsStore = useAdminLessonsStore();
+
+const uploadCourseThumbnail = (file: File) => academyAssetsService.uploadImage(file);
 
 const activeTab = ref('settings');
 

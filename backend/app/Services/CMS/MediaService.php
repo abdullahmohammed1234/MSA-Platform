@@ -35,7 +35,7 @@ class MediaService
      */
     public function upload(UploadedFile $file, ?int $userId, array $meta = []): Media
     {
-        [$filepath, $url, $extension] = $this->storeUploadedFile($file, 'uploads');
+        [$filepath, $url, $extension] = $this->storeUploadedFile($file, 'uploads/cms');
 
         $displayName = isset($meta['display_name']) ? trim((string) $meta['display_name']) : '';
         $displayName = $displayName !== '' ? $displayName : null;
@@ -67,12 +67,15 @@ class MediaService
     }
 
     /**
-     * Store an image for contextual forms (event banners, etc.) without
-     * creating a CMS media-library row.
+     * Store a CMS-owned contextual image (homepage, announcements, etc.)
+     * without creating a media-library row.
+     *
+     * New uploads use uploads/cms/. Legacy files under uploads/ remain valid.
+     * Academy/course assets must use AcademyAssetService — not this method.
      */
     public function storeAsset(UploadedFile $file): string
     {
-        [, $url] = $this->storeUploadedFile($file, 'uploads');
+        [, $url] = $this->storeUploadedFile($file, 'uploads/cms');
 
         return $url;
     }

@@ -1,6 +1,20 @@
 ---
 deployment:
   tasks:
+    # SFU MSA Platform — cPanel sync only (NOT full CI/CD).
+    # After sync, operators MUST run on the backend host (see
+    # docs/PRODUCTION_OPERATIONS_CHECKLIST.md and
+    # docs/PHASE_12_PRODUCTION_READINESS_IMPLEMENTATION_REPORT.md):
+    #   - php artisan migrate --force
+    #   - php artisan storage:link (once)
+    #   - php artisan config:cache && route:cache && view:cache && event:cache
+    #     (or scripts/prepare-production.sh|ps1)
+    #   - php artisan msa:production-check
+    #   - php artisan queue:restart
+    #   - queue:work --queue=ems-payments,ems-notifications,ems-operations,high,default,low
+    #   - cron: * * * * * cd /path/to/msa-backend && php artisan schedule:run
+    # Never: migrate:fresh / migrate:refresh on production.
+
     # 1. Sync the Laravel backend to a secure folder
     - /bin/mkdir -p /home2/sfums1d5/msa-backend
     - /bin/rsync -avz --exclude='node_modules' --exclude='.git' backend/ /home2/sfums1d5/msa-backend/

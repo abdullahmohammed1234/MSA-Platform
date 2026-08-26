@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { useAdminQuizzesStore } from '@/stores/admin/academy/quizzes';
-import { useAdminCoursesStore } from '@/stores/admin/academy/courses';
+import { useAdminQuizzesStore } from '@/stores/dams/quizzes';
+import { useAdminCoursesStore } from '@/stores/dams/courses';
 import { FileQuestion, RefreshCw, Trash2, PlusCircle } from 'lucide-vue-next';
 
 const quizzesStore = useAdminQuizzesStore();
@@ -15,7 +15,7 @@ const loadData = async () => {
   ]);
 };
 
-const filteredQuestions = () => quizzesStore.questions.filter((question) =>
+const filteredQuestions = () => quizzesStore.questions.filter((question: any) =>
   question.question.toLowerCase().includes(search.value.toLowerCase())
 );
 
@@ -42,8 +42,8 @@ onMounted(loadData);
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <div class="rounded-2xl border border-neutral-ivory bg-white p-5 shadow-soft"><p class="text-xs font-bold uppercase tracking-[0.18em] text-neutral-muted">Questions</p><p class="mt-2 text-3xl font-display font-bold text-primary">{{ quizzesStore.questions.length }}</p></div>
       <div class="rounded-2xl border border-neutral-ivory bg-white p-5 shadow-soft"><p class="text-xs font-bold uppercase tracking-[0.18em] text-neutral-muted">Courses</p><p class="mt-2 text-3xl font-display font-bold text-primary">{{ coursesStore.courses.length }}</p></div>
-      <div class="rounded-2xl border border-neutral-ivory bg-white p-5 shadow-soft"><p class="text-xs font-bold uppercase tracking-[0.18em] text-neutral-muted">Draft quizzes</p><p class="mt-2 text-3xl font-display font-bold text-primary">{{ quizzesStore.questions.filter((q) => q.quiz?.title).length }}</p></div>
-      <router-link to="/admin/academy/quiz-builder" class="rounded-2xl border border-neutral-ivory bg-white p-5 shadow-soft hover:bg-neutral-background transition"><p class="text-xs font-bold uppercase tracking-[0.18em] text-neutral-muted">Builder</p><div class="mt-2 text-lg font-semibold text-primary flex items-center gap-2"><PlusCircle class="h-4 w-4" /> Open builder</div></router-link>
+      <div class="rounded-2xl border border-neutral-ivory bg-white p-5 shadow-soft"><p class="text-xs font-bold uppercase tracking-[0.18em] text-neutral-muted">Draft quizzes</p><p class="mt-2 text-3xl font-display font-bold text-primary">{{ quizzesStore.questions.filter((q: any) => q.quiz?.title).length }}</p></div>
+      <router-link to="/dams/quiz-builder" class="rounded-2xl border border-neutral-ivory bg-white p-5 shadow-soft hover:bg-neutral-background transition"><p class="text-xs font-bold uppercase tracking-[0.18em] text-neutral-muted">Builder</p><div class="mt-2 text-lg font-semibold text-primary flex items-center gap-2"><PlusCircle class="h-4 w-4" /> Open builder</div></router-link>
     </div>
 
     <section class="rounded-2xl border border-neutral-ivory bg-white p-5 shadow-soft">

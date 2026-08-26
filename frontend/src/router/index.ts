@@ -4,6 +4,8 @@ import academyRoutes from './academy';
 import adminRoutes from './admin';
 import authRoutes from './auth';
 import emsRoutes from './ems';
+import cmsRoutes from './cms';
+import damsRoutes from './dams';
 import { useAuthStore } from '@/stores/auth';
 import { authGuard } from './guards/authGuard';
 import { guestGuard } from './guards/guestGuard';
@@ -19,6 +21,8 @@ const router = createRouter({
   routes: [
     ...publicRoutes,
     ...academyRoutes,
+    ...cmsRoutes,
+    ...damsRoutes,
     ...adminRoutes,
     ...emsRoutes,
     ...authRoutes,

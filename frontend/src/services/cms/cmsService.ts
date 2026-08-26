@@ -2,8 +2,6 @@ import client from '@/services/api';
 import type {
   CmsSection,
   Announcement,
-  Event,
-  EventRegistration,
   TeamMember,
   Resource,
   Media,
@@ -76,84 +74,7 @@ export const cmsService = {
     return response.data.announcement;
   },
 
-  // 4. Events
-  async getEvents(params: any = {}): Promise<PaginatedResponse<Event>> {
-    const response = await client.get('/admin/cms/events', { params });
-    return response.data;
-  },
-
-  async getEvent(uuid: string): Promise<Event> {
-    const response = await client.get(`/admin/cms/events/${uuid}`);
-    return response.data;
-  },
-
-  async createEvent(data: Partial<Event>): Promise<Event> {
-    const response = await client.post('/admin/cms/events', data);
-    return response.data.event;
-  },
-
-  async updateEvent(uuid: string, data: Partial<Event>): Promise<Event> {
-    const response = await client.put(`/admin/cms/events/${uuid}`, data);
-    return response.data.event;
-  },
-
-  async deleteEvent(uuid: string): Promise<void> {
-    await client.delete(`/admin/cms/events/${uuid}`);
-  },
-
-  async getEventRevisions(uuid: string): Promise<CmsRevision[]> {
-    const response = await client.get(`/admin/cms/events/${uuid}/revisions`);
-    return response.data.revisions;
-  },
-
-  async rollbackEvent(uuid: string, version: number): Promise<Event> {
-    const response = await client.post(`/admin/cms/events/${uuid}/rollback`, { version });
-    return response.data.event;
-  },
-
-  async getEventRegistrations(uuid: string, params: { page?: number; per_page?: number } = {}): Promise<PaginatedResponse<EventRegistration> & {
-    event: { uuid: string; title: string; spots_left: number; registrations_count: number };
-  }> {
-    const response = await client.get(`/admin/cms/events/${uuid}/registrations`, { params });
-    return response.data;
-  },
-
-  async checkInEventRegistration(code: string, eventUuid?: string): Promise<{
-    success: boolean;
-    message: string;
-    alreadyCheckedIn?: boolean;
-    eventUuid?: string;
-    registration?: {
-      uuid: string;
-      full_name: string;
-      email: string;
-      phone: string | null;
-      status: string;
-      checked_in_at: string | null;
-      event: { uuid: string | null; title: string | null };
-    };
-  }> {
-    const response = await client.post('/admin/cms/events/check-in', {
-      code,
-      eventUuid: eventUuid || undefined,
-    });
-    return response.data;
-  },
-
-  async getRecentEventCheckIns(params: { eventUuid?: string; limit?: number } = {}): Promise<Array<{
-    uuid: string;
-    full_name: string;
-    email: string;
-    phone: string | null;
-    status: string;
-    checked_in_at: string | null;
-    event: { uuid: string | null; title: string | null };
-  }>> {
-    const response = await client.get('/admin/cms/events/check-ins/recent', { params });
-    return response.data?.data ?? [];
-  },
-
-  // 5. Team Members
+  // 4. Team Members
   async getTeamMembers(params: any = {}): Promise<PaginatedResponse<TeamMember>> {
     const response = await client.get('/admin/cms/team', { params });
     return response.data;

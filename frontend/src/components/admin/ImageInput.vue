@@ -15,6 +15,11 @@ const props = withDefaults(defineProps<{
   accept?: string;
   /** External validation error to display. */
   error?: string;
+  /**
+   * Custom upload handler. Defaults to CMS contextual asset upload.
+   * Course forms must pass Academy/DAMS upload (academyAssetsService).
+   */
+  uploadFn?: (file: File) => Promise<{ url: string }>;
 }>(), {
   modelValue: '',
   label: '',
@@ -23,6 +28,7 @@ const props = withDefaults(defineProps<{
   previewClass: 'w-full max-h-40 object-cover',
   accept: 'image/*',
   error: '',
+  uploadFn: undefined,
 });
 
 const emit = defineEmits<{
@@ -56,7 +62,9 @@ const uploadFile = async (file: File) => {
   isUploading.value = true;
   uploadError.value = null;
   try {
-    const result = await cmsService.uploadAsset(file);
+    const result = props.uploadFn
+      ? await props.uploadFn(file)
+      : await cmsService.uploadAsset(file);
     setValue(toStorableImagePath(result.url) || result.url);
   } catch (err: any) {
     uploadError.value = err?.response?.data?.message || 'Failed to upload image. Please try again.';

@@ -197,8 +197,8 @@ onMounted(loadRoster);
           <div class="mt-4 space-y-2 text-sm">
             <router-link to="/admin/permissions" class="block rounded-xl bg-neutral-background/70 hover:bg-neutral-background px-4 py-3 text-neutral-black transition">Permissions matrix</router-link>
             <router-link to="/admin/roles" class="block rounded-xl bg-neutral-background/70 hover:bg-neutral-background px-4 py-3 text-neutral-black transition">Role definitions</router-link>
-            <router-link to="/admin/academy/students" class="block rounded-xl bg-neutral-background/70 hover:bg-neutral-background px-4 py-3 text-neutral-black transition">Student roster</router-link>
-            <router-link to="/admin/academy/mentors" class="block rounded-xl bg-neutral-background/70 hover:bg-neutral-background px-4 py-3 text-neutral-black transition">Mentor desk</router-link>
+            <router-link to="/dams/students" class="block rounded-xl bg-neutral-background/70 hover:bg-neutral-background px-4 py-3 text-neutral-black transition">Student roster (DAMS)</router-link>
+            <router-link to="/dams/mentors" class="block rounded-xl bg-neutral-background/70 hover:bg-neutral-background px-4 py-3 text-neutral-black transition">Mentor desk (DAMS)</router-link>
           </div>
         </div>
 

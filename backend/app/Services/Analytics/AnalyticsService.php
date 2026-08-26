@@ -123,18 +123,4 @@ class AnalyticsService
             'metadata' => $metadata,
         ]);
     }
-
-    public function trackEventRegistration(int $userId, int $eventId, ?string $sessionUuid = null, array $metadata = []): void
-    {
-        $this->track([
-            'user_id' => $userId,
-            'session_uuid' => $sessionUuid,
-            'module' => 'events',
-            'event_type' => 'conversion',
-            'event_name' => 'event_registered',
-            'entity_type' => 'App\Models\CMS\Event',
-            'entity_id' => $eventId,
-            'metadata' => $metadata,
-        ]);
-    }
 }

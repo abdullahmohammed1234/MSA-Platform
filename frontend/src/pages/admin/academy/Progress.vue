@@ -149,7 +149,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useAdminProgressStore } from '@/stores/admin/academy/progress';
+import { useAdminProgressStore } from '@/stores/dams/progress';
 import client from '@/services/api';
 
 const store = useAdminProgressStore();
@@ -168,10 +168,10 @@ const selectedRecord = ref<any>(null);
 
 const loadFilterOptions = async () => {
   try {
-    const courseResp = await client.get('/admin/academy/courses');
+    const courseResp = await client.get('/dams/courses');
     courses.value = courseResp.data.courses || [];
     
-    const mentorResp = await client.get('/admin/academy/mentors');
+    const mentorResp = await client.get('/dams/mentors');
     mentors.value = mentorResp.data.mentors || [];
   } catch (e) {
     // console.log(e);

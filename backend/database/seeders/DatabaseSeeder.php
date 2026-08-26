@@ -88,13 +88,16 @@ class DatabaseSeeder extends Seeder
             ['name' => 'Manage Certificates', 'slug' => 'manage_certificates', 'module' => 'Academy', 'description' => 'Configure and issue certificates.'],
             ['name' => 'Manage Volunteers', 'slug' => 'manage_volunteers', 'module' => 'Academy', 'description' => 'Track and manage volunteers.'],
             ['name' => 'Manage Mentors', 'slug' => 'manage_mentors', 'module' => 'Academy', 'description' => 'Appoint and assign mentors.'],
+            ['name' => 'Manage Students', 'slug' => 'manage_students', 'module' => 'Academy', 'description' => 'Manage Academy student roster, enrollment administration, and student access.'],
             ['name' => 'Manage Learning Paths', 'slug' => 'manage_learning_paths', 'module' => 'Academy', 'description' => 'Manage learning pathways.'],
             ['name' => 'View Progress', 'slug' => 'view_progress', 'module' => 'Academy', 'description' => 'View volunteer and course progress.'],
             ['name' => 'Manage Progress', 'slug' => 'manage_progress', 'module' => 'Academy', 'description' => 'Modify volunteer course progress manually.'],
             ['name' => 'Manage Discussions', 'slug' => 'manage_discussions', 'module' => 'Academy', 'description' => 'Moderate forum threads and review reported content.'],
 
             // Website Module
-            ['name' => 'Manage Events', 'slug' => 'manage_events', 'module' => 'Website', 'description' => 'Publish and edit public events.'],
+            // Website Module — manage_events is RETIRED as event ownership (Phase 9).
+            // EMS owns events via events.*. This slug remains only for CMS media-upload OR-chain compatibility.
+            ['name' => 'CMS Upload Access (legacy manage_events)', 'slug' => 'manage_events', 'module' => 'Website', 'description' => 'RETIRED as CMS event ownership (Phase 9). Does not grant EMS administration. Retained only as a legacy OR-chain slug for CMS contextual media uploads. EMS uses events.* permissions.'],
             ['name' => 'Manage Announcements', 'slug' => 'manage_announcements', 'module' => 'Website', 'description' => 'Manage homepage announcements.'],
             ['name' => 'Manage Resources', 'slug' => 'manage_resources', 'module' => 'Website', 'description' => 'Manage public library resources.'],
             ['name' => 'Manage Homepage', 'slug' => 'manage_homepage', 'module' => 'Website', 'description' => 'Manage homepage sections and content.'],
@@ -129,6 +132,13 @@ class DatabaseSeeder extends Seeder
                     'description' => $permData['description'],
                 ]
             );
+
+            // Keep seed metadata current (e.g. Phase 9 manage_events retirement text).
+            $permissions[$permData['slug']]->fill([
+                'name' => $permData['name'],
+                'module' => $permData['module'],
+                'description' => $permData['description'],
+            ])->save();
         }
 
         // 3. Map Permissions to Roles
@@ -141,7 +151,7 @@ class DatabaseSeeder extends Seeder
         // Admin Role mapping
         $adminPermissions = [
             'manage_users', 'manage_courses', 'manage_modules', 'manage_lessons', 'manage_quizzes',
-            'manage_certificates', 'manage_volunteers', 'manage_mentors', 'manage_learning_paths',
+            'manage_certificates', 'manage_volunteers', 'manage_mentors', 'manage_students', 'manage_learning_paths',
             'view_progress', 'manage_progress', 'manage_discussions',
             'manage_events', 'manage_announcements', 'manage_resources',
             'manage_homepage', 'manage_team', 'manage_media',
@@ -159,10 +169,10 @@ class DatabaseSeeder extends Seeder
             Permission::whereIn('slug', $directorPermissions)->pluck('id')->toArray()
         );
 
-        // Dawah Coordinator Role mapping
+        // Dawah Coordinator Role mapping (DAMS operator — not learner)
         $coordinatorPermissions = [
             'manage_courses', 'manage_modules', 'manage_lessons', 'manage_quizzes',
-            'manage_certificates', 'manage_volunteers', 'manage_mentors',
+            'manage_certificates', 'manage_volunteers', 'manage_mentors', 'manage_students',
             'manage_learning_paths', 'view_progress', 'manage_progress', 'manage_discussions',
             'view_analytics'
         ];
@@ -266,5 +276,8 @@ class DatabaseSeeder extends Seeder
 
         // 8. Seed the Event Management System (roles, permissions, categories)
         $this->call(EmsDatabaseSeeder::class);
+
+        // 9. Platform notification permissions + preference backfill
+        $this->call(NotificationSeeder::class);
     }
 }

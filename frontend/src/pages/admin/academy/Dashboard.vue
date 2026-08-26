@@ -57,28 +57,28 @@
         <h2 class="text-lg font-display font-semibold text-primary mb-4">Quick Administrator Actions</h2>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
           <router-link
-            to="/admin/academy/courses/create"
+            to="/dams/courses/create"
             class="flex flex-col items-center justify-center p-4 rounded-xl bg-neutral-background hover:bg-primary/5 border border-neutral-ivory hover:border-secondary transition text-center group"
           >
             <span class="p-2 bg-secondary/10 text-secondary rounded-lg group-hover:scale-110 transition duration-300">➕</span>
             <span class="text-sm font-semibold mt-3 text-primary group-hover:text-secondary">Create Course</span>
           </router-link>
           <router-link
-            to="/admin/academy/quizzes"
+            to="/dams/quizzes"
             class="flex flex-col items-center justify-center p-4 rounded-xl bg-neutral-background hover:bg-primary/5 border border-neutral-ivory hover:border-primary transition text-center group"
           >
             <span class="p-2 bg-primary/10 text-primary rounded-lg group-hover:scale-110 transition duration-300">❓</span>
             <span class="text-sm font-semibold mt-3 text-primary group-hover:text-primary-light">Create Quiz</span>
           </router-link>
           <router-link
-            to="/admin/academy/assignments"
+            to="/dams/assignments"
             class="flex flex-col items-center justify-center p-4 rounded-xl bg-neutral-background hover:bg-primary/5 border border-neutral-ivory hover:border-primary transition text-center group"
           >
             <span class="p-2 bg-primary/10 text-primary rounded-lg group-hover:scale-110 transition duration-300">🤝</span>
             <span class="text-sm font-semibold mt-3 text-primary group-hover:text-primary-light">Assign Mentor</span>
           </router-link>
           <router-link
-            to="/admin/academy/progress"
+            to="/dams/progress"
             class="flex flex-col items-center justify-center p-4 rounded-xl bg-neutral-background hover:bg-primary/5 border border-neutral-ivory hover:border-secondary transition text-center group"
           >
             <span class="p-2 bg-secondary/10 text-secondary rounded-lg group-hover:scale-110 transition duration-300">📊</span>
@@ -197,7 +197,7 @@ const fetchAnalytics = async () => {
   error.value = null;
 
   try {
-    const response = await client.get('/admin/academy/analytics');
+    const response = await client.get('/dams/analytics');
     if (response.data.success) {
       const summary = response.data.summary;
 

@@ -123,7 +123,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { useAdminAssignmentsStore } from '@/stores/admin/academy/assignments';
+import { useAdminAssignmentsStore } from '@/stores/dams/assignments';
 import client from '@/services/api';
 
 const store = useAdminAssignmentsStore();
@@ -143,10 +143,10 @@ const form = ref({
 
 const loadFormOptions = async () => {
   try {
-    const menResp = await client.get('/admin/academy/mentors');
+    const menResp = await client.get('/dams/mentors');
     mentors.value = menResp.data.mentors || [];
     
-    const stdResp = await client.get('/admin/academy/students');
+    const stdResp = await client.get('/dams/students');
     students.value = stdResp.data.students || [];
   } catch (e) {
     // console.log(e);

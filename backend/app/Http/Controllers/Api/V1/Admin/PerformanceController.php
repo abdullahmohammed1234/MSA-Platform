@@ -51,10 +51,10 @@ class PerformanceController extends Controller
         $cachedUrls = [
             '/api/v1/website/homepage',
             '/api/v1/website/announcements',
-            '/api/v1/website/events',
             '/api/v1/website/team',
             '/api/v1/website/resources',
             '/api/v1/website/sponsors',
+            '/api/v1/ems/public/events',
             '/api/v1/academy/courses'
         ];
 

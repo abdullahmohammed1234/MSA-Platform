@@ -37,14 +37,12 @@ export const roleGuard = (
     }
   }
 
+  // Canonical learner roles match API: volunteer|mentor|admin|super-admin
+  // (admin/super-admin already short-circuit via hasPrivilegedAdminAccess above)
   if (requiresStudent) {
     if (
-      !authStore.isAuthenticated || 
-      (!authStore.isVolunteer && 
-       !authStore.isMentor && 
-       !authStore.isDirector && 
-       !authStore.isDawahCoordinator && 
-       !authStore.isAdmin)
+      !authStore.isAuthenticated ||
+      (!authStore.isVolunteer && !authStore.isMentor && !authStore.isAdmin)
     ) {
       return { name: 'home' };
     }

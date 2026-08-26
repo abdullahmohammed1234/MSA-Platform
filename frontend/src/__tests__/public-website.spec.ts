@@ -57,8 +57,21 @@ describe('Website API Service', () => {
     await expect(websiteService.getAnnouncements()).rejects.toThrow('Network Error');
   });
 
-  it('should reject events requests when API is offline', async () => {
-    await expect(websiteService.getEvents()).rejects.toThrow('Network Error');
+  it('should not expose legacy CMS event client methods', () => {
+    expect(websiteService).not.toHaveProperty('getEvents');
+    expect(websiteService).not.toHaveProperty('getEvent');
+    expect(websiteService).not.toHaveProperty('submitEventRsvp');
+    expect(websiteService).not.toHaveProperty('cancelEventRsvp');
+    expect(websiteService).not.toHaveProperty('getMyEventRegistrations');
+  });
+
+  it('public events routes resolve to EMS pages', () => {
+    const parentRoute = publicRoutes.find(r => r.path === '/');
+    const children = parentRoute?.children || [];
+    const eventsRoute = children.find(c => c.path === 'events');
+    expect(eventsRoute?.component?.toString() ?? '').toMatch(/EmsPublicEventsPage|import\(/);
+    // Component is lazy-loaded; assert meta/title still present for SEO
+    expect(eventsRoute?.meta?.title).toBeTruthy();
   });
 
   it('should reject sponsors requests when API is offline', async () => {

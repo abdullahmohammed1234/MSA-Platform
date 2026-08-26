@@ -212,7 +212,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue';
-import { useAdminQuizzesStore } from '@/stores/admin/academy/quizzes';
+import { useAdminQuizzesStore } from '@/stores/dams/quizzes';
 
 const store = useAdminQuizzesStore();
 

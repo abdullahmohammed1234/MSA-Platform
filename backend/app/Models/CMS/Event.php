@@ -6,6 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * @deprecated Phase 9 — Legacy CMS event table retained for archival only.
+ * Application code must not use this model. EMS owns events (`App\Ems\Models\Event`).
+ * Tables `events` / `event_registrations` are intentionally not dropped.
+ */
 class Event extends Model
 {
     use HasFactory, SoftDeletes;
