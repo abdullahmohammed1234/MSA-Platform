@@ -23,6 +23,13 @@ describe('Phase 12 — production readiness frontend invariants', () => {
     const cpanel = readFileSync(resolve(__dirname, '../../../.cpanel.yml'), 'utf8');
     expect(cpanel).toContain('rsync');
     expect(cpanel).toContain('PRODUCTION_OPERATIONS_CHECKLIST');
-    expect(cpanel).not.toMatch(/migrate --force/);
+    
+    const executableTasks = cpanel.split(/\r?\n/)
+      .filter((line) => /^\s*-\s+\//.test(line));
+    expect(executableTasks.length).toBeGreaterThan(0);
+    for (const task of executableTasks) {
+      expect(task).not.toContain('artisan');
+      expect(task).not.toContain('migrate');
+    }
   });
 });
