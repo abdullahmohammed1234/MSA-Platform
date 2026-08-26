@@ -46,7 +46,7 @@ export const useAdminProgressStore = defineStore('adminProgress', {
       this.loading = true;
       this.error = null;
       try {
-        const response = await client.get('/admin/academy/progress', {
+        const response = await client.get('/dams/progress', {
           params: { ...filters, page, per_page: 10 },
         });
         if (response.data.success) {

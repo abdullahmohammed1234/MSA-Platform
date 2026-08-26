@@ -30,7 +30,7 @@ export const useAdminStudentsStore = defineStore('adminStudents', {
       this.loading = true;
       this.error = null;
       try {
-        const response = await client.get('/admin/academy/students', {
+        const response = await client.get('/dams/students', {
           params: { ...filters, page, per_page: 10 },
         });
         if (response.data.success) {
@@ -49,7 +49,7 @@ export const useAdminStudentsStore = defineStore('adminStudents', {
     async fetchStudentProfile(idOrUuid: string | number) {
       this.loading = true;
       try {
-        const response = await client.get(`/admin/academy/students/${idOrUuid}`);
+        const response = await client.get(`/dams/students/${idOrUuid}`);
         if (response.data.success) {
           this.currentStudent = response.data.student;
         }
@@ -62,7 +62,7 @@ export const useAdminStudentsStore = defineStore('adminStudents', {
 
     async suspendStudent(id: number) {
       try {
-        const response = await client.post(`/admin/academy/students/${id}/suspend`);
+        const response = await client.post(`/dams/students/${id}/suspend`);
         if (response.data.success) {
           const index = this.students.findIndex((s) => s.id === id);
           if (index !== -1) {
@@ -80,7 +80,7 @@ export const useAdminStudentsStore = defineStore('adminStudents', {
 
     async reactivateStudent(id: number) {
       try {
-        const response = await client.post(`/admin/academy/students/${id}/reactivate`);
+        const response = await client.post(`/dams/students/${id}/reactivate`);
         if (response.data.success) {
           const index = this.students.findIndex((s) => s.id === id);
           if (index !== -1) {

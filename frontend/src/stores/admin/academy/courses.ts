@@ -43,7 +43,7 @@ export const useAdminCoursesStore = defineStore('adminCourses', {
       this.loading = true;
       this.error = null;
       try {
-        const response = await client.get('/admin/academy/courses', {
+        const response = await client.get('/dams/courses', {
           params: { ...filters, page, per_page: 10 },
         });
         if (response.data.success) {
@@ -76,7 +76,7 @@ export const useAdminCoursesStore = defineStore('adminCourses', {
     async createCourse(data: Partial<Course>) {
       this.loading = true;
       try {
-        const response = await client.post('/admin/academy/courses', data);
+        const response = await client.post('/dams/courses', data);
         if (response.data.success) {
           this.courses.unshift(response.data.course);
           return response.data.course;
@@ -91,7 +91,7 @@ export const useAdminCoursesStore = defineStore('adminCourses', {
     async updateCourse(id: number, data: Partial<Course>) {
       this.loading = true;
       try {
-        const response = await client.put(`/admin/academy/courses/${id}`, data);
+        const response = await client.put(`/dams/courses/${id}`, data);
         if (response.data.success) {
           const index = this.courses.findIndex((c) => c.id === id);
           if (index !== -1) {
@@ -112,7 +112,7 @@ export const useAdminCoursesStore = defineStore('adminCourses', {
     async deleteCourse(id: number) {
       this.loading = true;
       try {
-        const response = await client.delete(`/admin/academy/courses/${id}`);
+        const response = await client.delete(`/dams/courses/${id}`);
         if (response.data.success) {
           this.courses = this.courses.filter((c) => c.id !== id);
           if (this.currentCourse && this.currentCourse.id === id) {
@@ -128,7 +128,7 @@ export const useAdminCoursesStore = defineStore('adminCourses', {
 
     async reorderModules(courseId: number, moduleIds: number[]) {
       try {
-        const response = await client.post(`/admin/academy/courses/${courseId}/modules/reorder`, {
+        const response = await client.post(`/dams/courses/${courseId}/modules/reorder`, {
           modules: moduleIds,
         });
         return response.data.success;

@@ -189,3 +189,16 @@ export interface LMSAnalytics {
     passing_rate: number;
   }>;
 }
+
+export interface DamsCurrentUser {
+  id: number;
+  uuid: string;
+  name: string;
+  email: string;
+  avatar: string | null;
+  is_active: boolean;
+  roles: Array<{ slug: string; name: string }>;
+  permissions: string[];
+  has_dams_access: boolean;
+  created_at?: string;
+}

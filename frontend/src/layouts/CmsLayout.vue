@@ -3,18 +3,21 @@ import { ref, onMounted, computed } from 'vue';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useToastStore, ToastContainer } from '@/components/feedback/toast';
 import { useAuthStore } from '@/stores/auth';
+import { useCmsAccessStore } from '@/stores/cms/cmsAccess';
 import NotificationBell from '@/components/notifications/NotificationBell.vue';
 
 const toast = useToastStore();
 const authStore = useAuthStore();
+const cmsAccess = useCmsAccessStore();
 const isSidebarCollapsed = ref(false);
 const adminName = ref('CMS Editor');
 
-onMounted(() => {
+onMounted(async () => {
   const storedName = localStorage.getItem('user_name');
   if (storedName) {
     adminName.value = storedName;
   }
+  await cmsAccess.resolve();
 });
 
 const cmsItems = computed(() => {
@@ -24,24 +27,36 @@ const cmsItems = computed(() => {
 
   const children: Array<{ label: string; path: string; icon: string }> = [];
 
-  if (isSuper || authStore.permissions.includes('view_analytics')) {
+  if (isSuper || cmsAccess.permissions.includes('view_analytics')) {
     children.push({ label: 'CMS Dashboard', path: '/cms', icon: 'dashboard' });
   }
-  if (isSuper || authStore.permissions.includes('manage_homepage')) {
+  if (isSuper || cmsAccess.permissions.includes('manage_homepage')) {
     children.push({ label: 'Homepage Sections', path: '/cms/homepage', icon: 'home' });
   }
-  if (isSuper || authStore.permissions.includes('manage_announcements')) {
+  if (isSuper || cmsAccess.permissions.includes('manage_announcements')) {
     children.push({ label: 'Announcements', path: '/cms/announcements', icon: 'file' });
   }
-  if (isSuper || authStore.permissions.includes('manage_team')) {
+  if (isSuper || cmsAccess.permissions.includes('manage_team')) {
     children.push({ label: 'Team Members', path: '/cms/team', icon: 'users' });
   }
-  if (isSuper || authStore.permissions.includes('manage_resources')) {
+  if (isSuper || cmsAccess.permissions.includes('manage_resources')) {
     children.push({ label: 'Resources Library', path: '/cms/resources', icon: 'book' });
   }
-  if (isSuper || authStore.permissions.includes('manage_media')) {
+  if (isSuper || cmsAccess.permissions.includes('manage_media')) {
     children.push({ label: 'Media Library', path: '/cms/media', icon: 'image' });
   }
+
+  const platformChildren = [];
+  const hasPlatformAdmin = isSuper ||
+    authStore.permissions.includes('manage_users') ||
+    authStore.permissions.includes('manage_roles') ||
+    authStore.permissions.includes('manage_permissions') ||
+    authStore.permissions.includes('system.view');
+
+  if (hasPlatformAdmin) {
+    platformChildren.push({ label: 'MSA Admin', path: '/admin', icon: 'dashboard' });
+  }
+  platformChildren.push({ label: 'Main Website', path: '/', icon: 'home' });
 
   return [
     {
@@ -52,10 +67,7 @@ const cmsItems = computed(() => {
     {
       label: 'Platform',
       path: '#',
-      children: [
-        { label: 'MSA Admin', path: '/admin', icon: 'dashboard' },
-        { label: 'Main Website', path: '/', icon: 'home' },
-      ],
+      children: platformChildren,
     },
   ];
 });

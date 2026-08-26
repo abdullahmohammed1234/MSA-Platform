@@ -15,6 +15,8 @@ import { verificationGuard } from './guards/verificationGuard';
 import { academyGuard } from './guards/academyGuard';
 import { publicAuthGuard } from './guards/publicAuthGuard';
 import { emsGuard } from './guards/emsGuard';
+import { cmsGuard } from './guards/cmsGuard';
+import { damsGuard } from './guards/damsGuard';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -78,6 +80,12 @@ router.beforeEach(async (to) => {
   // generic guards use.
   const emsResult = await emsGuard(to);
   if (emsResult !== true) return emsResult;
+
+  const cmsResult = await cmsGuard(to);
+  if (cmsResult !== true) return cmsResult;
+
+  const damsResult = await damsGuard(to);
+  if (damsResult !== true) return damsResult;
 
   const academyResult = academyGuard(to);
   if (academyResult !== true) return academyResult;

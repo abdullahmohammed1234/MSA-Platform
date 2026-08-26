@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { Motion } from '@motionone/vue';
 import type { NavbarProps } from './types';
 import { buttonHover } from '@/design-system/animations/hover';
+import { useAppAccess } from '@/composables/auth/useAppAccess';
 
 const props = withDefaults(defineProps<NavbarProps>(), {
   brandName: 'SFU MSA',
@@ -18,6 +19,7 @@ const emit = defineEmits<{
 
 const isMobileMenuOpen = ref(false);
 const isUserDropdownOpen = ref(false);
+const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasAdminAccess } = useAppAccess();
 
 const toggleMobileMenu = () => {
   isMobileMenuOpen.value = !isMobileMenuOpen.value;
@@ -133,16 +135,47 @@ const canAccessAcademy = computed(() => {
                 <span class="font-semibold text-neutral-black break-all">{{ user?.email }}</span>
               </div>
               <router-link
+                to="/my-tickets"
+                class="block px-4 py-2 text-sm text-neutral-black hover:bg-neutral-background transition-colors"
+                @click="isUserDropdownOpen = false"
+              >
+                My Tickets
+              </router-link>
+              <router-link
                 v-if="canAccessAcademy"
-                to="/academy/dashboard"
+                to="/academy"
                 class="block px-4 py-2 text-sm text-neutral-black hover:bg-neutral-background transition-colors"
                 @click="isUserDropdownOpen = false"
               >
                 Dawah Academy
               </router-link>
               <router-link
-                v-if="user?.role === 'admin'"
-                to="/admin/dashboard"
+                v-if="hasEmsAccess"
+                to="/ems"
+                class="block px-4 py-2 text-sm text-neutral-black hover:bg-neutral-background transition-colors"
+                @click="isUserDropdownOpen = false"
+              >
+                EMS
+              </router-link>
+              <router-link
+                v-if="hasCmsAccess"
+                to="/cms"
+                class="block px-4 py-2 text-sm text-neutral-black hover:bg-neutral-background transition-colors"
+                @click="isUserDropdownOpen = false"
+              >
+                CMS
+              </router-link>
+              <router-link
+                v-if="hasDamsAccess"
+                to="/dams"
+                class="block px-4 py-2 text-sm text-neutral-black hover:bg-neutral-background transition-colors"
+                @click="isUserDropdownOpen = false"
+              >
+                DAMS
+              </router-link>
+              <router-link
+                v-if="hasAdminAccess"
+                to="/admin"
                 class="block px-4 py-2 text-sm text-neutral-black hover:bg-neutral-background transition-colors"
                 @click="isUserDropdownOpen = false"
               >
@@ -226,16 +259,47 @@ const canAccessAcademy = computed(() => {
           </div>
           <div class="space-y-1">
             <router-link
+              to="/my-tickets"
+              class="block px-3 py-2 rounded-md text-base font-medium text-neutral-black hover:bg-neutral-background"
+              @click="isMobileMenuOpen = false"
+            >
+              My Tickets
+            </router-link>
+            <router-link
               v-if="canAccessAcademy"
-              to="/academy/dashboard"
+              to="/academy"
               class="block px-3 py-2 rounded-md text-base font-medium text-neutral-black hover:bg-neutral-background"
               @click="isMobileMenuOpen = false"
             >
               Dawah Academy
             </router-link>
             <router-link
-              v-if="user?.role === 'admin'"
-              to="/admin/dashboard"
+              v-if="hasEmsAccess"
+              to="/ems"
+              class="block px-3 py-2 rounded-md text-base font-medium text-neutral-black hover:bg-neutral-background"
+              @click="isMobileMenuOpen = false"
+            >
+              EMS
+            </router-link>
+            <router-link
+              v-if="hasCmsAccess"
+              to="/cms"
+              class="block px-3 py-2 rounded-md text-base font-medium text-neutral-black hover:bg-neutral-background"
+              @click="isMobileMenuOpen = false"
+            >
+              CMS
+            </router-link>
+            <router-link
+              v-if="hasDamsAccess"
+              to="/dams"
+              class="block px-3 py-2 rounded-md text-base font-medium text-neutral-black hover:bg-neutral-background"
+              @click="isMobileMenuOpen = false"
+            >
+              DAMS
+            </router-link>
+            <router-link
+              v-if="hasAdminAccess"
+              to="/admin"
               class="block px-3 py-2 rounded-md text-base font-medium text-neutral-black hover:bg-neutral-background"
               @click="isMobileMenuOpen = false"
             >

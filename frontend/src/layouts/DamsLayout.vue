@@ -3,18 +3,21 @@ import { ref, onMounted, computed } from 'vue';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useToastStore, ToastContainer } from '@/components/feedback/toast';
 import { useAuthStore } from '@/stores/auth';
+import { useDamsAccessStore } from '@/stores/dams/damsAccess';
 import NotificationBell from '@/components/notifications/NotificationBell.vue';
 
 const toast = useToastStore();
 const authStore = useAuthStore();
+const damsAccess = useDamsAccessStore();
 const isSidebarCollapsed = ref(false);
 const adminName = ref('DAMS Operator');
 
-onMounted(() => {
+onMounted(async () => {
   const storedName = localStorage.getItem('user_name');
   if (storedName) {
     adminName.value = storedName;
   }
+  await damsAccess.resolve();
 });
 
 const damsItems = computed(() => {
@@ -24,56 +27,81 @@ const damsItems = computed(() => {
 
   const children: Array<{ label: string; path: string; icon: string }> = [];
 
-  if (isSuper || authStore.permissions.includes('view_analytics')) {
+  if (isSuper || damsAccess.permissions.includes('view_analytics')) {
     children.push({ label: 'Dashboard', path: '/dams', icon: 'dashboard' });
     children.push({ label: 'Analytics', path: '/dams/analytics', icon: 'trending-up' });
     children.push({ label: 'Volunteer Analytics', path: '/dams/volunteer-analytics', icon: 'trending-up' });
     children.push({ label: 'Reports', path: '/dams/reports', icon: 'file-text' });
     children.push({ label: 'Activity Logs', path: '/dams/audit', icon: 'file-text' });
   }
-  if (isSuper || authStore.permissions.includes('manage_discussions')) {
+  if (isSuper || damsAccess.permissions.includes('manage_discussions')) {
     children.push({ label: 'Moderation', path: '/dams/moderation', icon: 'message-square' });
   }
-  if (isSuper || authStore.permissions.includes('manage_learning_paths')) {
+  if (isSuper || damsAccess.permissions.includes('manage_learning_paths')) {
     children.push({ label: 'Learning Paths', path: '/dams/learning-paths', icon: 'layers' });
   }
-  if (isSuper || authStore.permissions.includes('manage_courses')) {
+  if (isSuper || damsAccess.permissions.includes('manage_courses')) {
     children.push({ label: 'Courses', path: '/dams/courses', icon: 'book' });
   }
-  if (isSuper || authStore.permissions.includes('manage_modules')) {
+  if (isSuper || damsAccess.permissions.includes('manage_modules')) {
     children.push({ label: 'Modules', path: '/dams/modules', icon: 'layers' });
   }
-  if (isSuper || authStore.permissions.includes('manage_lessons')) {
+  if (isSuper || damsAccess.permissions.includes('manage_lessons')) {
     children.push({ label: 'Lessons', path: '/dams/lessons', icon: 'file' });
   }
-  if (isSuper || authStore.permissions.includes('manage_quizzes')) {
+  if (isSuper || damsAccess.permissions.includes('manage_quizzes')) {
     children.push({ label: 'Quiz Management', path: '/dams/quiz-management', icon: 'quiz' });
     children.push({ label: 'Quizzes', path: '/dams/quizzes', icon: 'quiz' });
     children.push({ label: 'Question Bank', path: '/dams/question-bank', icon: 'server' });
   }
-  if (isSuper || authStore.permissions.includes('manage_students')) {
+  if (isSuper || damsAccess.permissions.includes('manage_students')) {
     children.push({ label: 'Students', path: '/dams/students', icon: 'users' });
   }
-  if (isSuper || authStore.permissions.includes('manage_mentors')) {
+  if (isSuper || damsAccess.permissions.includes('manage_mentors')) {
     children.push({ label: 'Mentor Management', path: '/dams/mentor-management', icon: 'users' });
     children.push({ label: 'Mentors', path: '/dams/mentors', icon: 'users' });
     children.push({ label: 'Assignments', path: '/dams/assignments', icon: 'key' });
   }
-  if (isSuper || authStore.permissions.includes('view_progress')) {
+  if (isSuper || damsAccess.permissions.includes('view_progress')) {
     children.push({ label: 'Progress', path: '/dams/progress', icon: 'trending-up' });
   }
-  if (isSuper || authStore.permissions.includes('manage_achievements')) {
+  if (isSuper || damsAccess.permissions.includes('manage_achievements')) {
     children.push({ label: 'Achievements', path: '/dams/achievements', icon: 'star' });
   }
-  if (isSuper || authStore.permissions.includes('manage_badges')) {
+  if (isSuper || damsAccess.permissions.includes('manage_badges')) {
     children.push({ label: 'Badges', path: '/dams/badges', icon: 'award' });
   }
-  if (isSuper || authStore.permissions.includes('manage_settings')) {
+  if (isSuper || damsAccess.permissions.includes('manage_settings')) {
     children.push({ label: 'Settings', path: '/dams/settings', icon: 'settings' });
   }
-  if (isSuper || authStore.permissions.includes('manage_notifications')) {
+  if (isSuper || damsAccess.permissions.includes('manage_notifications')) {
     children.push({ label: 'Live Admin', path: '/dams/live-admin', icon: 'bell' });
   }
+
+  const platformChildren = [];
+  const hasPlatformAdmin = isSuper ||
+    authStore.permissions.includes('manage_users') ||
+    authStore.permissions.includes('manage_roles') ||
+    authStore.permissions.includes('manage_permissions') ||
+    authStore.permissions.includes('system.view');
+
+  if (hasPlatformAdmin) {
+    platformChildren.push({ label: 'MSA Admin', path: '/admin', icon: 'dashboard' });
+  }
+
+  const hasCmsAccess = isSuper ||
+    authStore.permissions.includes('manage_homepage') ||
+    authStore.permissions.includes('manage_announcements') ||
+    authStore.permissions.includes('manage_team') ||
+    authStore.permissions.includes('manage_resources') ||
+    authStore.permissions.includes('manage_media') ||
+    authStore.permissions.includes('view_analytics');
+
+  if (hasCmsAccess) {
+    platformChildren.push({ label: 'Open CMS', path: '/cms', icon: 'book' });
+  }
+
+  platformChildren.push({ label: 'Main Website', path: '/', icon: 'home' });
 
   return [
     {
@@ -84,11 +112,7 @@ const damsItems = computed(() => {
     {
       label: 'Platform',
       path: '#',
-      children: [
-        { label: 'MSA Admin', path: '/admin', icon: 'dashboard' },
-        { label: 'Open CMS', path: '/cms', icon: 'book' },
-        { label: 'Main Website', path: '/', icon: 'home' },
-      ],
+      children: platformChildren,
     },
   ];
 });

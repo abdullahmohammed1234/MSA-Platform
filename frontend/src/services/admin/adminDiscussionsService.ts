@@ -24,7 +24,7 @@ export interface ModerationThread {
 
 export const adminDiscussionsService = {
   async getThreads(): Promise<ModerationThread[]> {
-    const response = await client.get('/admin/academy/discussions/threads');
+    const response = await client.get('/dams/discussions/threads');
     const data = response.data;
     if (!data?.success) {
       throw new Error(data?.message || 'Failed to load discussion threads.');
@@ -33,7 +33,7 @@ export const adminDiscussionsService = {
   },
 
   async getReports(status = 'open'): Promise<Array<{ id: string; thread: ModerationThread | null }>> {
-    const response = await client.get('/admin/academy/discussions/reports', { params: { status } });
+    const response = await client.get('/dams/discussions/reports', { params: { status } });
     const data = response.data;
     if (!data?.success) {
       throw new Error(data?.message || 'Failed to load discussion reports.');
@@ -42,7 +42,7 @@ export const adminDiscussionsService = {
   },
 
   async resolveReport(reportId: string, status: 'resolved' | 'dismissed' = 'dismissed'): Promise<void> {
-    const response = await client.patch(`/admin/academy/discussions/reports/${reportId}/resolve`, { status });
+    const response = await client.patch(`/dams/discussions/reports/${reportId}/resolve`, { status });
     if (!response.data?.success) {
       throw new Error(response.data?.message || 'Failed to resolve report.');
     }

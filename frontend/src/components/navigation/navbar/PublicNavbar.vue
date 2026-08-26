@@ -13,6 +13,8 @@ import {
   X 
 } from 'lucide-vue-next';
 
+import { useAppAccess } from '@/composables/auth/useAppAccess';
+
 const navLinks = [
   { name: 'Home', href: '/' },
   { name: 'About', href: '/about' },
@@ -28,6 +30,7 @@ const navLinks = [
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasAdminAccess } = useAppAccess();
 
 function isNavActive(href: string): boolean {
   if (href === '/') return route.path === '/';
@@ -39,11 +42,6 @@ const scrolled = ref(false);
 
 const isAuthenticated = computed(() => authStore.isAuthenticated);
 const canAccessAcademy = computed(() => authStore.canAccessAcademy);
-const EMS_ROLES = ['super-admin', 'event-administrator', 'event-organizer', 'event-staff'];
-const hasEmsRole = computed(() => {
-  return authStore.user?.roles?.some(role => EMS_ROLES.includes(role)) ?? false;
-});
-const isAdminUser = computed(() => authStore.isPrivilegedAdmin);
 const showPublicAuth = computed(() => isPublicAuthEnabled);
 const isLoading = ref(false);
 
@@ -223,7 +221,7 @@ const handleLogout = async () => {
                 </router-link>
 
                 <router-link
-                  v-if="hasEmsRole"
+                  v-if="hasEmsAccess"
                   to="/ems"
                   class="flex items-center gap-2.5 px-4 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/70 hover:bg-neutral-background hover:text-primary transition-all"
                   @click="closeUserMenu"
@@ -231,11 +229,33 @@ const handleLogout = async () => {
                   <svg class="h-4 w-4 shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  EMS Portal
+                  EMS
                 </router-link>
 
                 <router-link
-                  v-if="isAdminUser"
+                  v-if="hasCmsAccess"
+                  to="/cms"
+                  class="flex items-center gap-2.5 px-4 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/70 hover:bg-neutral-background hover:text-primary transition-all"
+                  @click="closeUserMenu"
+                >
+                  <svg class="h-4 w-4 shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z" />
+                  </svg>
+                  CMS
+                </router-link>
+
+                <router-link
+                  v-if="hasDamsAccess"
+                  to="/dams"
+                  class="flex items-center gap-2.5 px-4 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/70 hover:bg-neutral-background hover:text-primary transition-all"
+                  @click="closeUserMenu"
+                >
+                  <BookOpen class="h-4 w-4 shrink-0 text-primary" />
+                  DAMS
+                </router-link>
+
+                <router-link
+                  v-if="hasAdminAccess"
                   to="/admin"
                   class="flex items-center gap-2.5 px-4 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/70 hover:bg-neutral-background hover:text-primary transition-all"
                   @click="closeUserMenu"
@@ -322,7 +342,7 @@ const handleLogout = async () => {
                 </router-link>
               </div>
 
-              <div v-if="!isLoading && isAuthenticated && hasEmsRole" class="mb-4">
+              <div v-if="!isLoading && isAuthenticated && hasEmsAccess" class="mb-4">
                 <router-link
                   to="/ems"
                   class="inline-flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest w-full justify-center"
@@ -331,11 +351,35 @@ const handleLogout = async () => {
                   <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  EMS Portal
+                  EMS
                 </router-link>
               </div>
 
-              <div v-if="!isLoading && isAuthenticated && isAdminUser" class="mb-4">
+              <div v-if="!isLoading && isAuthenticated && hasCmsAccess" class="mb-4">
+                <router-link
+                  to="/cms"
+                  class="inline-flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest w-full justify-center"
+                  @click="closeMenu"
+                >
+                  <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z" />
+                  </svg>
+                  CMS
+                </router-link>
+              </div>
+
+              <div v-if="!isLoading && isAuthenticated && hasDamsAccess" class="mb-4">
+                <router-link
+                  to="/dams"
+                  class="inline-flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest w-full justify-center"
+                  @click="closeMenu"
+                >
+                  <BookOpen class="h-3.5 w-3.5" />
+                  DAMS
+                </router-link>
+              </div>
+
+              <div v-if="!isLoading && isAuthenticated && hasAdminAccess" class="mb-4">
                 <router-link
                   to="/admin"
                   class="inline-flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest w-full justify-center"

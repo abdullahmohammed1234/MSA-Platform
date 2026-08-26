@@ -28,7 +28,7 @@ export const useAdminMentorsStore = defineStore('adminMentors', {
       this.loading = true;
       this.error = null;
       try {
-        const response = await client.get('/admin/academy/mentors', {
+        const response = await client.get('/dams/mentors', {
           params: { ...filters, page, per_page: 10 },
         });
         if (response.data.success) {
@@ -47,7 +47,7 @@ export const useAdminMentorsStore = defineStore('adminMentors', {
     async fetchMentorProfile(id: number) {
       this.loading = true;
       try {
-        const response = await client.get(`/admin/academy/mentors/${id}`);
+        const response = await client.get(`/dams/mentors/${id}`);
         if (response.data.success) {
           this.currentMentor = response.data.mentor;
         }

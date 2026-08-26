@@ -19,13 +19,19 @@ export default defineConfig({
       '@/types': fileURLToPath(new URL('./src/types', import.meta.url)),
       '@/design-system': fileURLToPath(new URL('./src/design-system', import.meta.url)),
       ...(isTest ? {
-        '@motionone/vue': fileURLToPath(new URL('./src/__tests__/motionStub.ts', import.meta.url))
+        '@motionone/vue': fileURLToPath(new URL('./src/__tests__/motionStub.ts', import.meta.url)),
+        '/logo.webp': fileURLToPath(new URL('./public/logo.webp', import.meta.url))
       } : {})
     }
   },
   test: {
     globals: true,
     environment: 'jsdom',
+    environmentOptions: {
+      jsdom: {
+        url: 'http://localhost/',
+      },
+    },
     exclude: ['node_modules', 'dist', '.idea', '.git', '.cache', 'e2e/**/*'],
     setupFiles: ['./src/__tests__/setup.ts'],
     coverage: {

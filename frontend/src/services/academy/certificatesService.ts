@@ -19,41 +19,41 @@ export const gamificationService = {
   },
 
   async getAchievementsAdmin(): Promise<Achievement[]> {
-    const response = await client.get('/admin/academy/achievements');
+    const response = await client.get('/dams/achievements');
     return response.data.achievements;
   },
 
   async createAchievement(data: Partial<Achievement>): Promise<Achievement> {
-    const response = await client.post('/admin/academy/achievements', data);
+    const response = await client.post('/dams/achievements', data);
     return response.data.achievement;
   },
 
   async updateAchievement(id: number, data: Partial<Achievement>): Promise<Achievement> {
-    const response = await client.put(`/admin/academy/achievements/${id}`, data);
+    const response = await client.put(`/dams/achievements/${id}`, data);
     return response.data.achievement;
   },
 
   async deleteAchievement(id: number): Promise<void> {
-    await client.delete(`/admin/academy/achievements/${id}`);
+    await client.delete(`/dams/achievements/${id}`);
   },
 
   async getBadgesAdmin(): Promise<Badge[]> {
-    const response = await client.get('/admin/academy/badges');
+    const response = await client.get('/dams/badges');
     return response.data.badges;
   },
 
   async createBadge(data: Partial<Badge>): Promise<Badge> {
-    const response = await client.post('/admin/academy/badges', data);
+    const response = await client.post('/dams/badges', data);
     return response.data.badge;
   },
 
   async updateBadge(id: number, data: Partial<Badge>): Promise<Badge> {
-    const response = await client.put(`/admin/academy/badges/${id}`, data);
+    const response = await client.put(`/dams/badges/${id}`, data);
     return response.data.badge;
   },
 
   async deleteBadge(id: number): Promise<void> {
-    await client.delete(`/admin/academy/badges/${id}`);
+    await client.delete(`/dams/badges/${id}`);
   },
 };
 

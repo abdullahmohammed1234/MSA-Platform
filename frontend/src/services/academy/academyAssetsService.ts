@@ -8,7 +8,7 @@ export const academyAssetsService = {
   async uploadImage(file: File): Promise<{ success: boolean; message: string; url: string; owner?: string }> {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await client.post('/admin/academy/assets/upload', formData, {
+    const response = await client.post('/dams/assets/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

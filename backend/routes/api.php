@@ -464,7 +464,6 @@ Route::prefix('v1')->group(function () {
     // 7. Analytics routes
     Route::post('/analytics/session', [AnalyticsController::class, 'syncSession'])->name('api.analytics.session');
     Route::post('/analytics/track', [AnalyticsController::class, 'track'])->name('api.analytics.track');
-    
     Route::prefix('analytics')->middleware('auth:sanctum')->group(function () {
         Route::get('/overview', [AnalyticsController::class, 'overview'])->name('api.analytics.overview');
         Route::get('/website', [AnalyticsController::class, 'website'])->name('api.analytics.website');
@@ -472,5 +471,185 @@ Route::prefix('v1')->group(function () {
         Route::get('/events', [AnalyticsController::class, 'events'])->name('api.analytics.events');
         Route::get('/reports', [AnalyticsController::class, 'reports'])->name('api.analytics.reports');
         Route::get('/export', [AnalyticsController::class, 'export'])->name('api.analytics.export');
+    });
+    
+    // 8. CMS App routes
+    Route::prefix('cms')->middleware(['auth:sanctum', 'throttle:admin_api'])->name('api.cms.')->group(function () {
+        Route::get('/users/me', [\App\Http\Controllers\Api\V1\CMSAccessController::class, 'me'])->name('me');
+
+        Route::get('/dashboard', [\App\Http\Controllers\Admin\CMS\CmsDashboardController::class, 'index'])
+            ->middleware('permission:view_analytics')
+            ->name('dashboard');
+
+        Route::get('/homepage', [\App\Http\Controllers\Admin\CMS\HomepageController::class, 'index'])
+            ->middleware('permission:manage_homepage')
+            ->name('homepage.index');
+        Route::put('/homepage/{key}', [\App\Http\Controllers\Admin\CMS\HomepageController::class, 'update'])
+            ->middleware('permission:manage_homepage')
+            ->name('homepage.update');
+
+        Route::get('/announcements', [\App\Http\Controllers\Admin\CMS\AnnouncementController::class, 'index'])
+            ->middleware('permission:manage_announcements')
+            ->name('announcements.index');
+        Route::post('/announcements', [\App\Http\Controllers\Admin\CMS\AnnouncementController::class, 'store'])
+            ->middleware('permission:manage_announcements')
+            ->name('announcements.store');
+        Route::get('/announcements/{uuid}', [\App\Http\Controllers\Admin\CMS\AnnouncementController::class, 'show'])
+            ->middleware('permission:manage_announcements')
+            ->name('announcements.show');
+        Route::put('/announcements/{uuid}', [\App\Http\Controllers\Admin\CMS\AnnouncementController::class, 'update'])
+            ->middleware('permission:manage_announcements')
+            ->name('announcements.update');
+        Route::delete('/announcements/{uuid}', [\App\Http\Controllers\Admin\CMS\AnnouncementController::class, 'destroy'])
+            ->middleware('permission:manage_announcements')
+            ->name('announcements.destroy');
+        Route::get('/announcements/{uuid}/revisions', [\App\Http\Controllers\Admin\CMS\AnnouncementController::class, 'revisions'])
+            ->middleware('permission:manage_announcements')
+            ->name('announcements.revisions');
+        Route::post('/announcements/{uuid}/rollback', [\App\Http\Controllers\Admin\CMS\AnnouncementController::class, 'rollback'])
+            ->middleware('permission:manage_announcements')
+            ->name('announcements.rollback');
+
+        Route::get('/team', [\App\Http\Controllers\Admin\CMS\TeamController::class, 'index'])
+            ->middleware('permission:manage_team')
+            ->name('team.index');
+        Route::post('/team', [\App\Http\Controllers\Admin\CMS\TeamController::class, 'store'])
+            ->middleware('permission:manage_team')
+            ->name('team.store');
+        Route::post('/team/upload', [\App\Http\Controllers\Admin\CMS\TeamController::class, 'uploadPhoto'])
+            ->middleware('permission:manage_team')
+            ->name('team.upload');
+        Route::post('/team/reorder', [\App\Http\Controllers\Admin\CMS\TeamController::class, 'reorder'])
+            ->middleware('permission:manage_team')
+            ->name('team.reorder');
+        Route::get('/team/{uuid}', [\App\Http\Controllers\Admin\CMS\TeamController::class, 'show'])
+            ->middleware('permission:manage_team')
+            ->name('team.show');
+        Route::put('/team/{uuid}', [\App\Http\Controllers\Admin\CMS\TeamController::class, 'update'])
+            ->middleware('permission:manage_team')
+            ->name('team.update');
+        Route::delete('/team/{uuid}', [\App\Http\Controllers\Admin\CMS\TeamController::class, 'destroy'])
+            ->middleware('permission:manage_team')
+            ->name('team.destroy');
+        Route::get('/team/{uuid}/revisions', [\App\Http\Controllers\Admin\CMS\TeamController::class, 'revisions'])
+            ->middleware('permission:manage_team')
+            ->name('team.revisions');
+        Route::post('/team/{uuid}/rollback', [\App\Http\Controllers\Admin\CMS\TeamController::class, 'rollback'])
+            ->middleware('permission:manage_team')
+            ->name('team.rollback');
+
+        Route::get('/resources', [\App\Http\Controllers\Admin\CMS\ResourceController::class, 'index'])
+            ->middleware('permission:manage_resources')
+            ->name('resources.index');
+        Route::post('/resources', [\App\Http\Controllers\Admin\CMS\ResourceController::class, 'store'])
+            ->middleware('permission:manage_resources')
+            ->name('resources.store');
+        Route::get('/resources/{uuid}', [\App\Http\Controllers\Admin\CMS\ResourceController::class, 'show'])
+            ->middleware('permission:manage_resources')
+            ->name('resources.show');
+        Route::put('/resources/{uuid}', [\App\Http\Controllers\Admin\CMS\ResourceController::class, 'update'])
+            ->middleware('permission:manage_resources')
+            ->name('resources.update');
+        Route::delete('/resources/{uuid}', [\App\Http\Controllers\Admin\CMS\ResourceController::class, 'destroy'])
+            ->middleware('permission:manage_resources')
+            ->name('resources.destroy');
+        Route::get('/resources/{uuid}/revisions', [\App\Http\Controllers\Admin\CMS\ResourceController::class, 'revisions'])
+            ->middleware('permission:manage_resources')
+            ->name('resources.revisions');
+        Route::post('/resources/{uuid}/rollback', [\App\Http\Controllers\Admin\CMS\ResourceController::class, 'rollback'])
+            ->middleware('permission:manage_resources')
+            ->name('resources.rollback');
+
+        Route::get('/media/categories', [\App\Http\Controllers\Admin\CMS\MediaCategoryController::class, 'index'])
+            ->middleware('permission:manage_media|manage_team|manage_announcements|manage_events|manage_resources|manage_homepage')
+            ->name('media.categories.index');
+        Route::post('/media/categories', [\App\Http\Controllers\Admin\CMS\MediaCategoryController::class, 'store'])
+            ->middleware('permission:manage_media')
+            ->name('media.categories.store');
+        Route::get('/media', [\App\Http\Controllers\Admin\CMS\MediaController::class, 'index'])
+            ->middleware('permission:manage_media')
+            ->name('media.index');
+        Route::post('/media', [\App\Http\Controllers\Admin\CMS\MediaController::class, 'store'])
+            ->middleware('permission:manage_media')
+            ->name('media.store');
+        Route::post('/assets/upload', [\App\Http\Controllers\Admin\CMS\MediaController::class, 'uploadAsset'])
+            ->middleware('permission:manage_media|manage_team|manage_announcements|manage_events|manage_resources|manage_homepage')
+            ->name('assets.upload');
+        Route::delete('/media/{uuid}', [\App\Http\Controllers\Admin\CMS\MediaController::class, 'destroy'])
+            ->middleware('permission:manage_media')
+            ->name('media.destroy');
+    });
+
+    // 9. DAMS App routes
+    Route::prefix('dams')->middleware(['auth:sanctum', 'throttle:admin_api'])->name('api.dams.')->group(function () {
+        Route::get('/users/me', [\App\Http\Controllers\Api\V1\DAMSAccessController::class, 'me'])->name('me');
+
+        Route::get('/analytics', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'analytics'])->middleware('permission:view_analytics')->name('analytics');
+
+        Route::get('/courses', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'indexCourses'])->middleware('permission:manage_courses')->name('courses.index');
+        Route::post('/courses', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'storeCourse'])->middleware('permission:manage_courses')->name('courses.store');
+        Route::put('/courses/{course}', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'updateCourse'])->middleware('permission:manage_courses')->name('courses.update');
+        Route::delete('/courses/{course}', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'destroyCourse'])->middleware('permission:manage_courses')->name('courses.destroy');
+
+        Route::post('/assets/upload', [\App\Http\Controllers\Api\V1\Admin\AcademyAssetController::class, 'upload'])
+            ->middleware('permission:manage_courses')
+            ->name('assets.upload');
+
+        Route::post('/modules', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'storeModule'])->middleware('permission:manage_modules')->name('modules.store');
+        Route::put('/modules/{module}', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'updateModule'])->middleware('permission:manage_modules')->name('modules.update');
+        Route::delete('/modules/{module}', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'destroyModule'])->middleware('permission:manage_modules')->name('modules.destroy');
+        Route::post('/courses/{courseId}/modules/reorder', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'reorderModules'])->middleware('permission:manage_modules')->name('modules.reorder');
+
+        Route::post('/lessons', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'storeLesson'])->middleware('permission:manage_lessons')->name('lessons.store');
+        Route::put('/lessons/{lesson}', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'updateLesson'])->middleware('permission:manage_lessons')->name('lessons.update');
+        Route::delete('/lessons/{lesson}', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'destroyLesson'])->middleware('permission:manage_lessons')->name('lessons.destroy');
+        Route::post('/modules/{moduleId}/lessons/reorder', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'reorderLessons'])->middleware('permission:manage_lessons')->name('lessons.reorder');
+
+        Route::get('/quizzes', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'indexQuizzes'])->middleware('permission:manage_quizzes')->name('quizzes.index');
+        Route::post('/quizzes', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'storeQuiz'])->middleware('permission:manage_quizzes')->name('quizzes.store');
+        Route::put('/quizzes/{quiz}', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'updateQuiz'])->middleware('permission:manage_quizzes')->name('quizzes.update');
+        Route::delete('/quizzes/{quiz}', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'destroyQuiz'])->middleware('permission:manage_quizzes')->name('quizzes.destroy');
+
+        Route::post('/questions', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'storeQuestion'])->middleware('permission:manage_quizzes')->name('questions.store');
+        Route::put('/questions/{question}', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'updateQuestion'])->middleware('permission:manage_quizzes')->name('questions.update');
+        Route::delete('/questions/{question}', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'destroyQuestion'])->middleware('permission:manage_quizzes')->name('questions.destroy');
+
+        Route::get('/learning-paths', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'indexLearningPaths'])->middleware('permission:manage_learning_paths')->name('learning-paths.index');
+        Route::post('/learning-paths', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'storeLearningPath'])->middleware('permission:manage_learning_paths')->name('learning-paths.store');
+        Route::put('/learning-paths/{learningPath}', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'updateLearningPath'])->middleware('permission:manage_learning_paths')->name('learning-paths.update');
+        Route::delete('/learning-paths/{learningPath}', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'destroyLearningPath'])->middleware('permission:manage_learning_paths')->name('learning-paths.destroy');
+        Route::post('/learning-paths/{learningPath}/courses', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'assignCourseToPath'])->middleware('permission:manage_learning_paths')->name('learning-paths.assign');
+        Route::delete('/learning-paths/{learningPath}/courses/{course}', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'removeCourseFromPath'])->middleware('permission:manage_learning_paths')->name('learning-paths.remove');
+        Route::post('/learning-paths/{learningPath}/courses/reorder', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'reorderCoursesInPath'])->middleware('permission:manage_learning_paths')->name('learning-paths.reorder');
+
+        Route::get('/achievements', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'indexAchievements'])->middleware('permission:manage_achievements')->name('achievements.index');
+        Route::post('/achievements', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'storeAchievement'])->middleware('permission:manage_achievements')->name('achievements.store');
+        Route::put('/achievements/{achievement}', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'updateAchievement'])->middleware('permission:manage_achievements')->name('achievements.update');
+        Route::delete('/achievements/{achievement}', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'destroyAchievement'])->middleware('permission:manage_achievements')->name('achievements.destroy');
+
+        Route::get('/badges', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'indexBadges'])->middleware('permission:manage_badges')->name('badges.index');
+        Route::post('/badges', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'storeBadge'])->middleware('permission:manage_badges')->name('badges.store');
+        Route::put('/badges/{badge}', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'updateBadge'])->middleware('permission:manage_badges')->name('badges.update');
+        Route::delete('/badges/{badge}', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'destroyBadge'])->middleware('permission:manage_badges')->name('badges.destroy');
+
+        Route::get('/questions', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'indexQuestions'])->middleware('permission:manage_quizzes')->name('questions.index');
+
+        Route::get('/students', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'indexStudents'])->middleware('permission:manage_students')->name('students.index');
+        Route::get('/students/{student}', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'showStudent'])->middleware('permission:manage_students')->name('students.show');
+        Route::post('/students/{student}/suspend', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'suspendStudent'])->middleware('permission:manage_students')->name('students.suspend');
+        Route::post('/students/{student}/reactivate', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'reactivateStudent'])->middleware('permission:manage_students')->name('students.reactivate');
+
+        Route::get('/mentors', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'indexMentors'])->middleware('permission:manage_mentors')->name('mentors.index');
+        Route::get('/mentors/{mentor}', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'showMentor'])->middleware('permission:manage_mentors')->name('mentors.show');
+        Route::get('/assignments', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'indexAssignments'])->middleware('permission:manage_mentors')->name('assignments.index');
+        Route::post('/assignments', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'storeAssignment'])->middleware('permission:manage_mentors')->name('assignments.store');
+        Route::post('/assignments/bulk', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'bulkAssign'])->middleware('permission:manage_mentors')->name('assignments.bulk');
+        Route::delete('/assignments/{mentorId}/{studentId}', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'destroyAssignment'])->middleware('permission:manage_mentors')->name('assignments.destroy');
+
+        Route::get('/progress', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'indexProgress'])->middleware('permission:view_progress')->name('progress.index');
+
+        Route::get('/discussions/reports', [\App\Http\Controllers\Api\V1\AdminDiscussionController::class, 'reports'])->middleware('permission:manage_discussions')->name('discussions.reports');
+        Route::get('/discussions/threads', [\App\Http\Controllers\Api\V1\AdminDiscussionController::class, 'threads'])->middleware('permission:manage_discussions')->name('discussions.threads');
+        Route::patch('/discussions/reports/{report}/resolve', [\App\Http\Controllers\Api\V1\AdminDiscussionController::class, 'resolve'])->middleware('permission:manage_discussions')->name('discussions.reports.resolve');
     });
 });

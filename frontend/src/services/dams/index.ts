@@ -14,5 +14,5 @@ export const DAMS_APP = {
   name: 'Dawah Academy Management System',
   slug: 'dams',
   frontendPath: '/dams',
-  apiPrefix: '/api/v1/admin/academy',
+  apiPrefix: '/api/v1/dams',
 } as const;

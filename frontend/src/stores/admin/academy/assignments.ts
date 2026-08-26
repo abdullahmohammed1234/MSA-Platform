@@ -40,7 +40,7 @@ export const useAdminAssignmentsStore = defineStore('adminAssignments', {
       this.loading = true;
       this.error = null;
       try {
-        const response = await client.get('/admin/academy/assignments', {
+        const response = await client.get('/dams/assignments', {
           params: { page, per_page: 10 },
         });
         if (response.data.success) {
@@ -59,7 +59,7 @@ export const useAdminAssignmentsStore = defineStore('adminAssignments', {
     async assignMentor(mentorId: number, studentId: number, notes?: string) {
       this.loading = true;
       try {
-        const response = await client.post('/admin/academy/assignments', {
+        const response = await client.post('/dams/assignments', {
           mentor_id: mentorId,
           student_id: studentId,
           notes,
@@ -78,7 +78,7 @@ export const useAdminAssignmentsStore = defineStore('adminAssignments', {
     async bulkAssign(mentorId: number, studentIds: number[]) {
       this.loading = true;
       try {
-        const response = await client.post('/admin/academy/assignments/bulk', {
+        const response = await client.post('/dams/assignments/bulk', {
           mentor_id: mentorId,
           student_ids: studentIds,
         });
@@ -93,7 +93,7 @@ export const useAdminAssignmentsStore = defineStore('adminAssignments', {
     async removeAssignment(mentorId: number, studentId: number) {
       this.loading = true;
       try {
-        const response = await client.delete(`/admin/academy/assignments/${mentorId}/${studentId}`);
+        const response = await client.delete(`/dams/assignments/${mentorId}/${studentId}`);
         if (response.data.success) {
           this.assignments = this.assignments.filter(
             (a) => !(a.mentor_id === mentorId && a.student_id === studentId)

@@ -53,7 +53,7 @@ export const useAdminQuizzesStore = defineStore('adminQuizzes', {
       this.loading = true;
       this.error = null;
       try {
-        const response = await client.get('/admin/academy/quizzes', {
+        const response = await client.get('/dams/quizzes', {
           params: { ...filters, page, per_page: 50 },
         });
         if (response.data.success) {
@@ -74,7 +74,7 @@ export const useAdminQuizzesStore = defineStore('adminQuizzes', {
       this.loading = true;
       this.error = null;
       try {
-        const response = await client.get('/admin/academy/questions', {
+        const response = await client.get('/dams/questions', {
           params: { ...filters, page, per_page: 15 },
         });
         if (response.data.success) {
@@ -93,7 +93,7 @@ export const useAdminQuizzesStore = defineStore('adminQuizzes', {
     async createQuiz(data: Partial<Quiz>) {
       this.loading = true;
       try {
-        const response = await client.post('/admin/academy/quizzes', data);
+        const response = await client.post('/dams/quizzes', data);
         return response.data.quiz;
       } catch (err: any) {
         throw new Error(err.response?.data?.message || 'Failed to create quiz.');
@@ -105,7 +105,7 @@ export const useAdminQuizzesStore = defineStore('adminQuizzes', {
     async updateQuiz(id: number, data: Partial<Quiz>) {
       this.loading = true;
       try {
-        const response = await client.put(`/admin/academy/quizzes/${id}`, data);
+        const response = await client.put(`/dams/quizzes/${id}`, data);
         return response.data.quiz;
       } catch (err: any) {
         throw new Error(err.response?.data?.message || 'Failed to update quiz.');
@@ -117,7 +117,7 @@ export const useAdminQuizzesStore = defineStore('adminQuizzes', {
     async deleteQuiz(id: number) {
       this.loading = true;
       try {
-        const response = await client.delete(`/admin/academy/quizzes/${id}`);
+        const response = await client.delete(`/dams/quizzes/${id}`);
         return response.data.success;
       } catch (err: any) {
         throw new Error(err.response?.data?.message || 'Failed to delete quiz.');
@@ -129,7 +129,7 @@ export const useAdminQuizzesStore = defineStore('adminQuizzes', {
     async createQuestion(data: Partial<Question>) {
       this.loading = true;
       try {
-        const response = await client.post('/admin/academy/questions', data);
+        const response = await client.post('/dams/questions', data);
         return response.data.question;
       } catch (err: any) {
         throw new Error(err.response?.data?.message || 'Failed to create question.');
@@ -141,7 +141,7 @@ export const useAdminQuizzesStore = defineStore('adminQuizzes', {
     async updateQuestion(id: number, data: Partial<Question>) {
       this.loading = true;
       try {
-        const response = await client.put(`/admin/academy/questions/${id}`, data);
+        const response = await client.put(`/dams/questions/${id}`, data);
         return response.data.question;
       } catch (err: any) {
         throw new Error(err.response?.data?.message || 'Failed to update question.');
@@ -153,7 +153,7 @@ export const useAdminQuizzesStore = defineStore('adminQuizzes', {
     async deleteQuestion(id: number) {
       this.loading = true;
       try {
-        const response = await client.delete(`/admin/academy/questions/${id}`);
+        const response = await client.delete(`/dams/questions/${id}`);
         return response.data.success;
       } catch (err: any) {
         throw new Error(err.response?.data?.message || 'Failed to delete question.');
