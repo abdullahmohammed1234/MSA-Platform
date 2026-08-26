@@ -240,5 +240,13 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(NotificationLog::class);
     }
+
+    /**
+     * Get the application access records for the user.
+     */
+    public function applicationAccess()
+    {
+        return $this->hasMany(ApplicationAccess::class);
+    }
 }
 

@@ -14,6 +14,8 @@ class UserResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $appAccessService = app(\App\Services\ApplicationAccessService::class);
+
         return [
             'id' => $this->id,
             'uuid' => $this->uuid,
@@ -28,6 +30,7 @@ class UserResource extends JsonResource
             'permissions' => $this->permissions->pluck('slug')->merge(
                 $this->roles->flatMap(fn($role) => $role->permissions->pluck('slug'))
             )->unique()->values()->toArray(),
+            'application_access' => $appAccessService->accessibleApplications($this->resource),
             'created_at' => $this->created_at?->toIso8601String(),
             'academy_onboarding_completed_at' => $this->academy_onboarding_completed_at?->toIso8601String(),
         ];

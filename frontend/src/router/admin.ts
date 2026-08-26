@@ -111,6 +111,12 @@ const adminRoutes: Array<RouteRecordRaw> = [
         component: () => import('@/pages/admin/academy/UserManagement.vue'),
         meta: { permissions: 'manage_users' }
       },
+      {
+        path: 'application-access',
+        name: 'admin-application-access',
+        component: () => import('@/pages/admin/ApplicationAccess.vue'),
+        meta: { permissions: 'manage_users' }
+      },
       // CMS announcements — Phase 4 rehome
       { path: 'academy/announcements', redirect: '/cms/announcements' },
 

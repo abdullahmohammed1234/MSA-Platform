@@ -51,7 +51,7 @@ class DAMSCurrentUserResource extends JsonResource
                 'name' => $role->name,
             ])->values()->all(),
             'permissions' => $damsPermissions,
-            'has_dams_access' => !empty($damsPermissions) || $isPrivileged,
+            'has_dams_access' => app(\App\Services\ApplicationAccessService::class)->canAccess($this->resource, 'dams'),
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }

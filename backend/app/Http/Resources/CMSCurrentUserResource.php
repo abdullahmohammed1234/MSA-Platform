@@ -43,7 +43,7 @@ class CMSCurrentUserResource extends JsonResource
                 'name' => $role->name,
             ])->values()->all(),
             'permissions' => $cmsPermissions,
-            'has_cms_access' => !empty($cmsPermissions) || $isPrivileged,
+            'has_cms_access' => app(\App\Services\ApplicationAccessService::class)->canAccess($this->resource, 'cms'),
             'created_at' => $this->created_at?->toIso8601String(),
         ];
     }

@@ -49,6 +49,7 @@ const adminItems = computed(() => {
 
   if (isSuper || authStore.permissions.includes('manage_users')) {
     adminGroup.push({ label: 'User Management', path: '/admin/academy/user-management', icon: 'users' });
+    adminGroup.push({ label: 'Application Access', path: '/admin/application-access', icon: 'key' });
   }
 
   // Applications: open shells — not embedded inside MSA Admin (Phase 4–5, Phase 10)

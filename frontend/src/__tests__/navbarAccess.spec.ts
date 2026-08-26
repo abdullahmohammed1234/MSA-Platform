@@ -282,5 +282,31 @@ describe('Navbar Unified Access and Launcher Tests', () => {
       expect(menuText).not.toContain('EMS');
       expect(menuText).not.toContain('Admin Portal');
     });
+
+    it('resolves launcher visibility using backend application_access dictionary when present', () => {
+      const authStore = useAuthStore();
+      authStore.token = 'custom-token';
+      authStore.user = {
+        id: 7,
+        uuid: 'custom-uuid',
+        name: 'Custom User',
+        email: 'custom@sfu.ca',
+        roles: ['member'],
+        permissions: [],
+        application_access: {
+          cms: { access: true, source: 'explicit' },
+          dams: { access: false, source: 'none' },
+          ems: { access: true, source: 'explicit' },
+          'admin-portal': { access: false, source: 'none' }
+        }
+      };
+
+      const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasAdminAccess } = useAppAccess();
+
+      expect(hasCmsAccess.value).toBe(true);
+      expect(hasDamsAccess.value).toBe(false);
+      expect(hasEmsAccess.value).toBe(true);
+      expect(hasAdminAccess.value).toBe(false);
+    });
   });
 });

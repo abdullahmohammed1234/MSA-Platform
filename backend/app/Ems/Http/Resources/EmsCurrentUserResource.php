@@ -44,7 +44,7 @@ class EmsCurrentUserResource extends JsonResource
             // True when the user holds any EMS capability at all. The frontend
             // uses this to decide between the EMS shell and the "no access"
             // screen, but every individual action is still enforced serverside.
-            'has_ems_access' => $emsPermissions !== [],
+            'has_ems_access' => app(\App\Services\ApplicationAccessService::class)->canAccess($this->resource, 'ems'),
 
             'created_at' => $this->created_at?->toIso8601String(),
         ];

@@ -14,6 +14,9 @@ export function useAppAccess() {
   });
 
   const hasCmsAccess = computed(() => {
+    if (authStore.user?.application_access?.cms) {
+      return authStore.user.application_access.cms.access;
+    }
     if (isSuperOrAdmin.value) return true;
     const cmsPermissions = [
       'manage_homepage',
@@ -30,6 +33,9 @@ export function useAppAccess() {
   });
 
   const hasDamsAccess = computed(() => {
+    if (authStore.user?.application_access?.dams) {
+      return authStore.user.application_access.dams.access;
+    }
     if (isSuperOrAdmin.value) return true;
     const damsPermissions = [
       'manage_courses',
@@ -54,12 +60,17 @@ export function useAppAccess() {
   });
 
   const hasEmsAccess = computed(() => {
+    if (authStore.user?.application_access?.ems) {
+      return authStore.user.application_access.ems.access;
+    }
     const EMS_ROLES = ['super-admin', 'event-administrator', 'event-organizer', 'event-staff'];
-    // EMS calculation uses existing EMS rules exactly, plus admin/super-admin bypass
     return (authStore.user?.roles?.some((role) => EMS_ROLES.includes(role)) ?? false) || isSuperOrAdmin.value;
   });
 
   const hasAdminAccess = computed(() => {
+    if (authStore.user?.application_access?.['admin-portal']) {
+      return authStore.user.application_access['admin-portal'].access;
+    }
     return isSuperOrAdmin.value;
   });
 

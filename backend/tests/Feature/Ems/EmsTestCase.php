@@ -51,6 +51,16 @@ abstract class EmsTestCase extends TestCase
             $user->roles()->syncWithoutDetaching([$role->id]);
         }
 
+        // Grant EMS access for EMS test suite (except for attendee role)
+        if ($roleSlug !== EmsRoles::ATTENDEE) {
+            \Illuminate\Support\Facades\DB::table('application_access')->insertOrIgnore([
+                'user_id' => $user->id,
+                'application' => 'ems',
+                'created_at' => now(),
+                'updated_at' => now()
+            ]);
+        }
+
         return $user->fresh();
     }
 

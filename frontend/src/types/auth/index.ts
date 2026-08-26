@@ -10,6 +10,10 @@ export interface User {
   email_verified_at: string | null;
   roles: string[];
   permissions: string[];
+  application_access?: Record<string, {
+    access: boolean;
+    source: 'privileged' | 'explicit' | 'role' | 'none';
+  }>;
   created_at: string;
   academy_onboarding_completed_at: string | null;
 }

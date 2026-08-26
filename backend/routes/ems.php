@@ -98,16 +98,25 @@ Route::prefix('public')
 Route::middleware(['auth:sanctum', 'throttle:' . config('ems.route.throttle', 'ems_api')])
     ->group(function (): void {
 
-        // --- Identity & access model -----------------------------------
-        Route::get('/users/me', [AccessController::class, 'me'])->name('me');
-        Route::get('/roles', [AccessController::class, 'roles'])->name('roles.index');
-        Route::get('/permissions', [AccessController::class, 'permissions'])->name('permissions.index');
-
         // --- User Tickets & Registrations -------------------------------
         Route::get('/public/my-tickets', [PublicEventController::class, 'myTickets'])
             ->name('public.my-tickets');
         Route::post('/public/registrations/{registration}/cancel', [PublicEventController::class, 'cancelRegistration'])
             ->name('public.registrations.cancel');
+
+        Route::get('/notification-preferences', [NotificationPreferenceController::class, 'show'])
+            ->name('notification-preferences.show');
+        Route::put('/notification-preferences', [NotificationPreferenceController::class, 'update'])
+            ->name('notification-preferences.update');
+        Route::patch('/notification-preferences', [NotificationPreferenceController::class, 'update']);
+
+        // --- Identity & access model (Open to check access status) ---
+        Route::get('/users/me', [AccessController::class, 'me'])->name('me');
+
+        // --- Operational EMS routes (Requires app.access:ems) ---
+        Route::middleware('app.access:ems')->group(function (): void {
+            Route::get('/roles', [AccessController::class, 'roles'])->name('roles.index');
+            Route::get('/permissions', [AccessController::class, 'permissions'])->name('permissions.index');
 
         // --- Dashboard --------------------------------------------------
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -217,11 +226,7 @@ Route::middleware(['auth:sanctum', 'throttle:' . config('ems.route.throttle', 'e
             ->name('email-templates.update');
         Route::patch('/email-templates/{template}', [EmailTemplateController::class, 'update']);
 
-        Route::get('/notification-preferences', [NotificationPreferenceController::class, 'show'])
-            ->name('notification-preferences.show');
-        Route::put('/notification-preferences', [NotificationPreferenceController::class, 'update'])
-            ->name('notification-preferences.update');
-        Route::patch('/notification-preferences', [NotificationPreferenceController::class, 'update']);
+
 
         // --- Orders / payments / registrations --------------------------
         Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
@@ -323,4 +328,5 @@ Route::middleware(['auth:sanctum', 'throttle:' . config('ems.route.throttle', 'e
             ->name('events.feedback.index');
         Route::post('/events/{event}/feedback', [FeedbackController::class, 'store'])
             ->name('events.feedback.store');
+        });
     });
