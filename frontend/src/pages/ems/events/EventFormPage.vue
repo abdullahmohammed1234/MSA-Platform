@@ -258,9 +258,9 @@ const cancel = () =>
         <ImageInput
           v-model="form.banner_url"
           label="Event Banner"
-          hint="Upload an image from your device or paste a link. Best ratio is 16:9."
+          hint="Upload an image from your device or paste a link. Landscape (16:9) works best; tall images are shown in full on the events page."
           placeholder="Paste an image link (https://...) or /Hero/photo.webp"
-          preview-class="w-full max-h-48 object-cover rounded-xl mt-2"
+          preview-class="w-full max-h-48 object-contain rounded-xl mt-2 bg-neutral-background"
           class="mb-6"
           :error="fieldError('banner_url')"
         />

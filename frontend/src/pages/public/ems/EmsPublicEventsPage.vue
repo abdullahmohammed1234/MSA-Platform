@@ -445,16 +445,25 @@ function capacityLabel(event: PublicEvent): string {
             class="group flex min-w-0 flex-col overflow-hidden rounded-[1.75rem] border border-neutral-ivory bg-white hover:border-primary/20 hover:shadow-lg transition cursor-pointer"
             @click="openEvent(event.slug)"
           >
-            <div class="relative h-40 bg-gradient-to-br from-primary to-primary-light overflow-hidden">
-              <img
-                v-if="event.banner_url"
-                :src="resolvePublicImagePath(event.banner_url)"
-                :alt="event.name"
-                class="h-full w-full object-cover opacity-90 group-hover:scale-105 transition duration-500"
-                loading="lazy"
-              />
-              <div class="absolute inset-0 bg-gradient-to-t from-primary/80 to-transparent" />
-              <div class="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2 min-w-0">
+            <div class="relative aspect-[16/10] bg-gradient-to-br from-primary to-primary-light overflow-hidden">
+              <template v-if="event.banner_url">
+                <!-- Blurred fill so non-matching ratios don't leave empty bars -->
+                <img
+                  :src="resolvePublicImagePath(event.banner_url)"
+                  alt=""
+                  aria-hidden="true"
+                  class="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl"
+                  loading="lazy"
+                />
+                <img
+                  :src="resolvePublicImagePath(event.banner_url)"
+                  :alt="event.name"
+                  class="relative z-[1] h-full w-full object-contain opacity-95 transition duration-500 group-hover:scale-[1.03]"
+                  loading="lazy"
+                />
+              </template>
+              <div class="absolute inset-0 z-[2] bg-gradient-to-t from-primary/80 via-primary/10 to-transparent" />
+              <div class="absolute bottom-3 left-3 right-3 z-[3] flex items-center justify-between gap-2 min-w-0">
                 <span
                   v-if="event.category"
                   class="text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded-full truncate max-w-[55%]"
