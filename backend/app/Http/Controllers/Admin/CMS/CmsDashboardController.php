@@ -13,7 +13,11 @@ class CmsDashboardController extends Controller
 {
     public function index(): JsonResponse
     {
-        $this->authorize('viewAny', Announcement::class); // Basic CMS authorize check
+        $hasCmsAccess = app(\App\Services\ApplicationAccessService::class)->canAccess(auth()->user(), 'cms');
+
+        if (!$hasCmsAccess) {
+            $this->authorize('viewAny', Announcement::class); // Basic CMS authorize check
+        }
 
         $stats = [
             'announcements' => [

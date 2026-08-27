@@ -25,7 +25,11 @@ class DashboardController extends EmsController
      */
     public function index(Request $request): JsonResponse
     {
-        $this->authorize('viewAny', Event::class);
+        $hasEmsAccess = app(\App\Services\ApplicationAccessService::class)->canAccess($request->user(), 'ems');
+
+        if (!$hasEmsAccess) {
+            $this->authorize('viewAny', Event::class);
+        }
 
         $user = $request->user();
 

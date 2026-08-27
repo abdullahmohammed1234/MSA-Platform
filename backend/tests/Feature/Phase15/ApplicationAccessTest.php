@@ -131,23 +131,25 @@ class ApplicationAccessTest extends TestCase
             ->getJson('/api/v1/cms/dashboard')
             ->assertStatus(403);
 
-        // Grant CMS access -> 200 (or whatever route code is, eg 403 from internal permission)
+        // Grant CMS access -> 200 (base dashboard is allowed by application access)
         $this->appAccessService->grant($this->normalUser, 'cms', $this->adminUser);
         
-        // Wait, since normalUser has CMS application access but no actual sub-permissions,
-        // it should get 403 from the permission middleware, NOT 403 from the app access middleware!
-        // The dashboard route has `permission:view_analytics`.
         $this->actingAs($this->normalUser)
             ->getJson('/api/v1/cms/dashboard')
-            ->assertStatus(403); // blocked by permission guard, which is correct
+            ->assertStatus(200);
 
-        // Let's grant a CMS permission
-        $viewAnalytics = Permission::create(['name' => 'View Analytics', 'slug' => 'view_analytics', 'module' => 'cms']);
-        $this->normalUser->permissions()->attach($viewAnalytics);
-
-        // Now they should pass both CMS app access and permission guard!
+        // But protected operations (e.g. managing team members) are still blocked by permission guard
         $this->actingAs($this->normalUser)
-            ->getJson('/api/v1/cms/dashboard')
+            ->getJson('/api/v1/cms/team')
+            ->assertStatus(403);
+
+        // Grant the CMS manage_team permission
+        $manageTeam = Permission::create(['name' => 'Manage Team', 'slug' => 'manage_team', 'module' => 'cms']);
+        $this->normalUser->permissions()->attach($manageTeam);
+
+        // Now they should pass the permission guard too!
+        $this->actingAs($this->normalUser)
+            ->getJson('/api/v1/cms/team')
             ->assertStatus(200);
     }
 

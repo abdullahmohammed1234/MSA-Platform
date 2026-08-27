@@ -136,7 +136,7 @@ Route::prefix('v1')->group(function () {
         
         // Admin Academy LMS routes
         Route::prefix('academy')->middleware('app.access:dams')->group(function () {
-            Route::get('/analytics', [AdminAcademyController::class, 'analytics'])->middleware('permission:view_analytics')->name('api.admin.academy.analytics');
+            Route::get('/analytics', [AdminAcademyController::class, 'analytics'])->name('api.admin.academy.analytics');
 
             Route::get('/courses', [AdminAcademyController::class, 'indexCourses'])->middleware('permission:manage_courses')->name('api.admin.courses.index');
             Route::post('/courses', [AdminAcademyController::class, 'storeCourse'])->middleware('permission:manage_courses')->name('api.admin.courses.store');
@@ -274,7 +274,6 @@ Route::prefix('v1')->group(function () {
         Route::middleware('app.access:cms')->group(function () {
             // CMS Dashboard
             Route::get('/cms/dashboard', [\App\Http\Controllers\Admin\CMS\CmsDashboardController::class, 'index'])
-                ->middleware('permission:view_analytics')
                 ->name('api.admin.cms.dashboard');
 
             // CMS Homepage
@@ -497,7 +496,6 @@ Route::prefix('v1')->group(function () {
 
         Route::middleware('app.access:cms')->group(function () {
             Route::get('/dashboard', [\App\Http\Controllers\Admin\CMS\CmsDashboardController::class, 'index'])
-                ->middleware('permission:view_analytics')
                 ->name('dashboard');
 
             Route::get('/homepage', [\App\Http\Controllers\Admin\CMS\HomepageController::class, 'index'])
@@ -605,7 +603,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/users/me', [\App\Http\Controllers\Api\V1\DAMSAccessController::class, 'me'])->name('me');
 
         Route::middleware('app.access:dams')->group(function () {
-            Route::get('/analytics', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'analytics'])->middleware('permission:view_analytics')->name('analytics');
+            Route::get('/analytics', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'analytics'])->name('analytics');
 
             Route::get('/courses', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'indexCourses'])->middleware('permission:manage_courses')->name('courses.index');
             Route::post('/courses', [\App\Http\Controllers\Api\V1\AdminAcademyController::class, 'storeCourse'])->middleware('permission:manage_courses')->name('courses.store');

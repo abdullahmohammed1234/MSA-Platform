@@ -464,8 +464,10 @@ class AdminAcademyController extends Controller
 
     public function analytics(): JsonResponse
     {
-        // Must have view_analytics/view_reports
-        if (!auth()->user()->hasPermission('view_analytics') && !auth()->user()->hasPermission('view_reports')) {
+        // Allowed if user has explicit DAMS application access or holds analytics permissions
+        $hasDamsAccess = app(\App\Services\ApplicationAccessService::class)->canAccess(auth()->user(), 'dams');
+
+        if (!$hasDamsAccess && !auth()->user()->hasPermission('view_analytics') && !auth()->user()->hasPermission('view_reports')) {
             return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
         }
 

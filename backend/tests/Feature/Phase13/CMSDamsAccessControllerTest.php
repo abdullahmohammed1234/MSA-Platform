@@ -206,4 +206,63 @@ class CMSDamsAccessControllerTest extends TestCase
             ->assertStatus(200) // The endpoint itself returns 200 but has_dams_access should be false
             ->assertJsonPath('data.has_dams_access', false);
     }
+
+    /**
+     * Test that explicit application access allows landing on base dashboards
+     * but denies access to protected operational endpoints without correct permissions.
+     */
+    public function test_explicit_application_access_allows_dashboard_but_denies_protected_rbac_operations(): void
+    {
+        // Create user with no roles/permissions
+        $user = User::factory()->create([
+            'email' => 'plain@phase13.test',
+            'name' => 'Plain User',
+            'is_active' => true,
+            'email_verified_at' => now(),
+        ]);
+
+        // Grant CMS and DAMS application access explicitly
+        $appAccessService = app(\App\Services\ApplicationAccessService::class);
+        $appAccessService->grant($user, 'cms');
+        $appAccessService->grant($user, 'dams');
+
+        // 1. Check DAMS: analytics dashboard loads, but course list is blocked
+        $this->actingAs($user)
+            ->getJson('/api/v1/dams/analytics')
+            ->assertStatus(200);
+
+        $this->actingAs($user)
+            ->getJson('/api/v1/dams/courses')
+            ->assertStatus(403);
+
+        // 2. Check CMS: dashboard loads, but announcements list is blocked
+        $this->actingAs($user)
+            ->getJson('/api/v1/cms/dashboard')
+            ->assertStatus(200);
+
+        $this->actingAs($user)
+            ->getJson('/api/v1/cms/announcements')
+            ->assertStatus(403);
+    }
+
+    /**
+     * Test that user without explicit access is denied from the base dashboard routes.
+     */
+    public function test_user_without_explicit_access_is_denied_from_dashboard(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'unauth-dash@phase13.test',
+            'name' => 'No Access User',
+            'is_active' => true,
+            'email_verified_at' => now(),
+        ]);
+
+        $this->actingAs($user)
+            ->getJson('/api/v1/dams/analytics')
+            ->assertStatus(403);
+
+        $this->actingAs($user)
+            ->getJson('/api/v1/cms/dashboard')
+            ->assertStatus(403);
+    }
 }
