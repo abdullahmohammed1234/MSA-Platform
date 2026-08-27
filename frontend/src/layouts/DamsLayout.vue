@@ -6,9 +6,12 @@ import { useAuthStore } from '@/stores/auth';
 import { useDamsAccessStore } from '@/stores/dams/damsAccess';
 import NotificationBell from '@/components/notifications/NotificationBell.vue';
 
+import { useAppAccess } from '@/composables/auth/useAppAccess';
+
 const toast = useToastStore();
 const authStore = useAuthStore();
 const damsAccess = useDamsAccessStore();
+const { hasCmsAccess, hasAdminAccess } = useAppAccess();
 const isSidebarCollapsed = ref(false);
 const adminName = ref('DAMS Operator');
 
@@ -79,25 +82,12 @@ const damsItems = computed(() => {
   }
 
   const platformChildren = [];
-  const hasPlatformAdmin = isSuper ||
-    authStore.permissions.includes('manage_users') ||
-    authStore.permissions.includes('manage_roles') ||
-    authStore.permissions.includes('manage_permissions') ||
-    authStore.permissions.includes('system.view');
 
-  if (hasPlatformAdmin) {
+  if (hasAdminAccess.value) {
     platformChildren.push({ label: 'MSA Admin', path: '/admin', icon: 'dashboard' });
   }
 
-  const hasCmsAccess = isSuper ||
-    authStore.permissions.includes('manage_homepage') ||
-    authStore.permissions.includes('manage_announcements') ||
-    authStore.permissions.includes('manage_team') ||
-    authStore.permissions.includes('manage_resources') ||
-    authStore.permissions.includes('manage_media') ||
-    authStore.permissions.includes('view_analytics');
-
-  if (hasCmsAccess) {
+  if (hasCmsAccess.value) {
     platformChildren.push({ label: 'Open CMS', path: '/cms', icon: 'book' });
   }
 

@@ -5,8 +5,11 @@ import { useToastStore, ToastContainer } from '@/components/feedback/toast';
 import { useAuthStore } from '@/stores/auth';
 import NotificationBell from '@/components/notifications/NotificationBell.vue';
 
+import { useAppAccess } from '@/composables/auth/useAppAccess';
+
 const toast = useToastStore();
 const authStore = useAuthStore();
+const { hasCmsAccess, hasDamsAccess, hasEmsAccess } = useAppAccess();
 const isSidebarCollapsed = ref(false);
 const adminName = ref('Platform Administrator');
 
@@ -54,42 +57,13 @@ const adminItems = computed(() => {
 
   // Applications: open shells — not embedded inside MSA Admin (Phase 4–5, Phase 10)
   const appChildren: Array<{ label: string; path: string; icon: string }> = [];
-  if (
-    isSuper ||
-    authStore.permissions.includes('view_analytics') ||
-    authStore.permissions.includes('manage_homepage') ||
-    authStore.permissions.includes('manage_announcements') ||
-    authStore.permissions.includes('manage_team') ||
-    authStore.permissions.includes('manage_resources') ||
-    authStore.permissions.includes('manage_media')
-  ) {
+  if (hasCmsAccess.value) {
     appChildren.push({ label: 'Open CMS', path: '/cms', icon: 'book' });
   }
-  if (
-    isSuper ||
-    authStore.permissions.includes('view_analytics') ||
-    authStore.permissions.includes('manage_courses') ||
-    authStore.permissions.includes('manage_modules') ||
-    authStore.permissions.includes('manage_lessons') ||
-    authStore.permissions.includes('manage_quizzes') ||
-    authStore.permissions.includes('manage_learning_paths') ||
-    authStore.permissions.includes('manage_mentors') ||
-    authStore.permissions.includes('manage_students') ||
-    authStore.permissions.includes('view_progress') ||
-    authStore.permissions.includes('manage_achievements') ||
-    authStore.permissions.includes('manage_badges') ||
-    authStore.permissions.includes('manage_settings') ||
-    authStore.permissions.includes('manage_notifications')
-  ) {
+  if (hasDamsAccess.value) {
     appChildren.push({ label: 'Open DAMS', path: '/dams', icon: 'layers' });
   }
-  if (
-    isSuper ||
-    authStore.permissions.includes('system.view') ||
-    authStore.permissions.includes('events.view') ||
-    authStore.permissions.includes('events.view_all') ||
-    authStore.permissions.includes('events.create')
-  ) {
+  if (hasEmsAccess.value) {
     appChildren.push({ label: 'Open EMS', path: '/ems', icon: 'calendar' });
   }
   if (appChildren.length > 0) {

@@ -52,7 +52,7 @@ export const emsGuard = async (
     return [];
   });
 
-  if (required.length > 0 && !access.canAny(required)) {
+  if (to.name !== 'ems-dashboard' && required.length > 0 && !access.canAny(required)) {
     return { name: 'ems-unauthorized', query: { from: to.fullPath } };
   }
 

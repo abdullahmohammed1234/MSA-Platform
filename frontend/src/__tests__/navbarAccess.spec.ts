@@ -75,7 +75,13 @@ describe('Navbar Unified Access and Launcher Tests', () => {
         name: 'CMS Editor',
         email: 'cms@sfu.ca',
         roles: ['member'],
-        permissions: ['manage_homepage'],
+        permissions: [],
+        application_access: {
+          cms: { access: true, source: 'explicit' },
+          dams: { access: false, source: 'none' },
+          ems: { access: false, source: 'none' },
+          'admin-portal': { access: false, source: 'none' }
+        }
       };
 
       const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasAdminAccess } = useAppAccess();
@@ -95,7 +101,13 @@ describe('Navbar Unified Access and Launcher Tests', () => {
         name: 'DAMS Operator',
         email: 'dams@sfu.ca',
         roles: ['volunteer'],
-        permissions: ['manage_courses'],
+        permissions: [],
+        application_access: {
+          cms: { access: false, source: 'none' },
+          dams: { access: true, source: 'explicit' },
+          ems: { access: false, source: 'none' },
+          'admin-portal': { access: false, source: 'none' }
+        }
       };
 
       const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasAdminAccess } = useAppAccess();
@@ -115,7 +127,13 @@ describe('Navbar Unified Access and Launcher Tests', () => {
         name: 'Multi Editor',
         email: 'multi@sfu.ca',
         roles: ['member'],
-        permissions: ['manage_media', 'manage_quizzes'],
+        permissions: [],
+        application_access: {
+          cms: { access: true, source: 'explicit' },
+          dams: { access: true, source: 'explicit' },
+          ems: { access: false, source: 'none' },
+          'admin-portal': { access: false, source: 'none' }
+        }
       };
 
       const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasAdminAccess } = useAppAccess();
@@ -136,6 +154,12 @@ describe('Navbar Unified Access and Launcher Tests', () => {
         email: 'ems@sfu.ca',
         roles: ['event-organizer'],
         permissions: [],
+        application_access: {
+          cms: { access: false, source: 'none' },
+          dams: { access: false, source: 'none' },
+          ems: { access: true, source: 'explicit' },
+          'admin-portal': { access: false, source: 'none' }
+        }
       };
 
       const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasAdminAccess } = useAppAccess();
@@ -223,7 +247,13 @@ describe('Navbar Unified Access and Launcher Tests', () => {
         name: 'CMS Editor',
         email: 'cms@sfu.ca',
         roles: ['member'],
-        permissions: ['manage_homepage'],
+        permissions: [],
+        application_access: {
+          cms: { access: true, source: 'explicit' },
+          dams: { access: false, source: 'none' },
+          ems: { access: false, source: 'none' },
+          'admin-portal': { access: false, source: 'none' }
+        }
       };
 
       const wrapper = mountNavbar();
@@ -246,7 +276,13 @@ describe('Navbar Unified Access and Launcher Tests', () => {
         name: 'DAMS Operator',
         email: 'dams@sfu.ca',
         roles: ['volunteer'],
-        permissions: ['manage_courses'],
+        permissions: [],
+        application_access: {
+          cms: { access: false, source: 'none' },
+          dams: { access: true, source: 'explicit' },
+          ems: { access: false, source: 'none' },
+          'admin-portal': { access: false, source: 'none' }
+        }
       };
 
       const wrapper = mountNavbar();

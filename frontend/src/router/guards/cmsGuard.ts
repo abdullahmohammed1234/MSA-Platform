@@ -36,7 +36,7 @@ export const cmsGuard = async (
     return [];
   });
 
-  if (required.length > 0 && !access.canAny(required)) {
+  if (to.name !== 'cms-dashboard' && required.length > 0 && !access.canAny(required)) {
     return { name: 'cms-unauthorized', query: { from: to.fullPath } };
   }
 

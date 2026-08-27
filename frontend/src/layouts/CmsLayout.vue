@@ -6,9 +6,12 @@ import { useAuthStore } from '@/stores/auth';
 import { useCmsAccessStore } from '@/stores/cms/cmsAccess';
 import NotificationBell from '@/components/notifications/NotificationBell.vue';
 
+import { useAppAccess } from '@/composables/auth/useAppAccess';
+
 const toast = useToastStore();
 const authStore = useAuthStore();
 const cmsAccess = useCmsAccessStore();
+const { hasAdminAccess } = useAppAccess();
 const isSidebarCollapsed = ref(false);
 const adminName = ref('CMS Editor');
 
@@ -47,13 +50,8 @@ const cmsItems = computed(() => {
   }
 
   const platformChildren = [];
-  const hasPlatformAdmin = isSuper ||
-    authStore.permissions.includes('manage_users') ||
-    authStore.permissions.includes('manage_roles') ||
-    authStore.permissions.includes('manage_permissions') ||
-    authStore.permissions.includes('system.view');
 
-  if (hasPlatformAdmin) {
+  if (hasAdminAccess.value) {
     platformChildren.push({ label: 'MSA Admin', path: '/admin', icon: 'dashboard' });
   }
   platformChildren.push({ label: 'Main Website', path: '/', icon: 'home' });

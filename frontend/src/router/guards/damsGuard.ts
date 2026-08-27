@@ -36,7 +36,7 @@ export const damsGuard = async (
     return [];
   });
 
-  if (required.length > 0 && !access.canAny(required)) {
+  if (to.name !== 'dams-dashboard' && required.length > 0 && !access.canAny(required)) {
     return { name: 'dams-unauthorized', query: { from: to.fullPath } };
   }
 
