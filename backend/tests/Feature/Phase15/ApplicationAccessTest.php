@@ -193,4 +193,120 @@ class ApplicationAccessTest extends TestCase
             'target_id' => $this->normalUser->id
         ]);
     }
+
+    /**
+     * Test Admin Portal access restrictions and persistence.
+     */
+    public function test_admin_portal_access_boundaries_and_persistence(): void
+    {
+        // Create an ordinary user (has no roles or permissions initially)
+        $user = User::factory()->create();
+
+        // 1. User without Admin application access is denied entry (TEST 1 / TEST 10)
+        // (Even if they are assigned an admin-related permission)
+        $manageUsersPermission = Permission::where('slug', 'manage_users')->first();
+        $user->permissions()->attach($manageUsersPermission);
+        
+        $this->assertFalse($this->appAccessService->canAccess($user, 'admin-portal'));
+
+        // Check using route middleware (TEST 10: RBAC role/permission alone is denied)
+        $this->actingAs($user)
+            ->getJson('/api/v1/admin/application-access') // Endpoint protected by app.access:admin-portal
+            ->assertStatus(403);
+
+        // 2. Granting Admin application access allows the user to enter Admin (TEST 2)
+        $this->appAccessService->grant($user, 'admin-portal', $this->adminUser);
+        $this->assertTrue($this->appAccessService->canAccess($user, 'admin-portal'));
+
+        $this->actingAs($user)
+            ->getJson('/api/v1/admin/application-access')
+            ->assertStatus(200);
+
+        // 3. Removing Admin application access prevents Admin access (TEST 3)
+        $this->appAccessService->revoke($user, 'admin-portal', $this->adminUser);
+        $this->assertFalse($this->appAccessService->canAccess($user, 'admin-portal'));
+
+        $this->actingAs($user)
+            ->getJson('/api/v1/admin/application-access')
+            ->assertStatus(403);
+
+        // 4. After removal, reloading/re-fetching application access does NOT restore access (TEST 4 / TEST 5 / TEST 6)
+        $apps = $this->appAccessService->accessibleApplications($user);
+        $this->assertFalse($apps['admin-portal']['access']);
+        $this->assertEquals('none', $apps['admin-portal']['source']);
+
+        // Check via Controller API to make sure UI gets correct persisted state (TEST 6)
+        $this->actingAs($this->adminUser)
+            ->getJson("/api/v1/admin/application-access/{$user->id}")
+            ->assertStatus(200)
+            ->assertJsonPath('application_access.admin-portal.access', false)
+            ->assertJsonPath('application_access.admin-portal.source', 'none');
+
+        // 5. The Superadmin can grant and revoke access via Controller API (TEST 7)
+        // Grant via API update:
+        $this->actingAs($this->adminUser)
+            ->putJson("/api/v1/admin/application-access/{$user->id}", [
+                'access' => [
+                    'main-website' => false,
+                    'cms' => false,
+                    'dawah-academy' => false,
+                    'dams' => false,
+                    'ems' => false,
+                    'admin-portal' => true
+                ]
+            ])
+            ->assertStatus(200)
+            ->assertJsonPath('application_access.admin-portal.access', true)
+            ->assertJsonPath('application_access.admin-portal.source', 'explicit');
+
+        // Confirm database record exists
+        $this->assertDatabaseHas('application_access', [
+            'user_id' => $user->id,
+            'application' => 'admin-portal'
+        ]);
+
+        // Revoke via API update:
+        $this->actingAs($this->adminUser)
+            ->putJson("/api/v1/admin/application-access/{$user->id}", [
+                'access' => [
+                    'main-website' => false,
+                    'cms' => false,
+                    'dawah-academy' => false,
+                    'dams' => false,
+                    'ems' => false,
+                    'admin-portal' => false
+                ]
+            ])
+            ->assertStatus(200)
+            ->assertJsonPath('application_access.admin-portal.access', false)
+            ->assertJsonPath('application_access.admin-portal.source', 'none');
+
+        // Confirm database record is deleted
+        $this->assertDatabaseMissing('application_access', [
+            'user_id' => $user->id,
+            'application' => 'admin-portal'
+        ]);
+
+        // 6. RBAC permissions continue to behave correctly (TEST 8)
+        // User with permission but no app access gets 403 on app routes
+        $this->actingAs($user)
+            ->getJson('/api/v1/admin/application-access')
+            ->assertStatus(403);
+
+        // Grant app access back
+        $this->appAccessService->grant($user, 'admin-portal', $this->adminUser);
+
+        // Now they have both app access AND manage_users permission, so they get 200
+        $this->actingAs($user)
+            ->getJson('/api/v1/admin/application-access')
+            ->assertStatus(200);
+
+        // Remove manage_users permission
+        $user->permissions()->detach($manageUsersPermission);
+
+        // They still have app access, but lack the permission, so they should fail the permission guard (TEST 8)
+        $this->actingAs($user)
+            ->getJson('/api/v1/admin/application-access')
+            ->assertStatus(403);
+    }
 }

@@ -39,7 +39,8 @@ const handleLogin = async () => {
       remember: rememberMe.value
     });
 
-    if (isAdminLogin.value && !authStore.isPrivilegedAdmin) {
+    const hasAdminAccess = authStore.isPrivilegedAdmin || (authStore.user?.application_access?.['admin-portal']?.access ?? false);
+    if (isAdminLogin.value && !hasAdminAccess) {
       await authStore.logout();
       formError.value = 'This login is for administrators only.';
       return;

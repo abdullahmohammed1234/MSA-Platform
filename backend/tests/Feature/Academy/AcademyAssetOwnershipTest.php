@@ -85,6 +85,11 @@ class AcademyAssetOwnershipTest extends TestCase
             'email_verified_at' => now(),
             'is_active' => true,
         ]);
+
+        // Grant explicit application access for testing independent gates
+        $appAccessService = app(\App\Services\ApplicationAccessService::class);
+        $appAccessService->grant($this->courseManager, 'dams');
+        $appAccessService->grant($this->cmsOnlyUser, 'cms');
     }
 
     /** @test */

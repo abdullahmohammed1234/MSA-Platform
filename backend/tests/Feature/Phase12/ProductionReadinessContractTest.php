@@ -65,6 +65,12 @@ class ProductionReadinessContractTest extends TestCase
             ?? Role::where('slug', 'ems-event-administrator')->first();
         $this->assertNotNull($emsRole);
         $this->emsUser = $this->user('ems@phase12.test', 'EMS', $emsRole);
+
+        // Grant explicit application access for testing independent gates
+        $appAccessService = app(\App\Services\ApplicationAccessService::class);
+        $appAccessService->grant($this->cmsUser, 'cms');
+        $appAccessService->grant($this->damsUser, 'dams');
+        $appAccessService->grant($this->emsUser, 'ems');
     }
 
     private function perm(string $slug, string $module): Permission
@@ -256,6 +262,7 @@ class ProductionReadinessContractTest extends TestCase
         $role = $this->role('sys-viewer', 'Sys Viewer');
         $role->permissions()->sync([$systemView->id]);
         $viewer = $this->user('sys@phase12.test', 'Sys', $role);
+        app(\App\Services\ApplicationAccessService::class)->grant($viewer, 'admin-portal');
 
         $services = $this->actingAs($viewer)
             ->getJson('/api/v1/admin/systems')
@@ -279,6 +286,7 @@ class ProductionReadinessContractTest extends TestCase
         $role = $this->role('sys-viewer-2', 'Sys Viewer 2');
         $role->permissions()->sync([$systemView->id]);
         $viewer = $this->user('sys2@phase12.test', 'Sys2', $role);
+        app(\App\Services\ApplicationAccessService::class)->grant($viewer, 'admin-portal');
 
         $services = $this->actingAs($viewer)
             ->getJson('/api/v1/admin/systems')

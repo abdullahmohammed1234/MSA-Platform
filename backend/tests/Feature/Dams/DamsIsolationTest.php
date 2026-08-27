@@ -100,6 +100,12 @@ class DamsIsolationTest extends TestCase
         $this->learner = $this->makeUser('learner@example.com', 'Learner', $volunteerRole);
         $this->adminUser = $this->makeUser('admin@example.com', 'Admin', $adminRole);
         $this->superAdminUser = $this->makeUser('super@example.com', 'Super Admin', $superRole);
+
+        // Grant explicit application access for testing independent gates
+        $appAccessService = app(\App\Services\ApplicationAccessService::class);
+        $appAccessService->grant($this->damsUser, 'dams');
+        $appAccessService->grant($this->cmsOnlyUser, 'cms');
+        $appAccessService->grant($this->emsOnlyUser, 'ems');
     }
 
     private function makePermission(string $slug, string $module): Permission
@@ -286,6 +292,7 @@ class DamsIsolationTest extends TestCase
 
         $viewer = $this->makeUser('sys@example.com', 'System Viewer', $this->makeRole('sys-viewer', 'System Viewer'));
         $viewer->roles()->first()->permissions()->attach($this->systemView);
+        app(\App\Services\ApplicationAccessService::class)->grant($viewer, 'admin-portal');
 
         $this->actingAs($viewer)
             ->getJson('/api/v1/admin/systems/dams')

@@ -40,6 +40,8 @@ class AdminDiscussionTest extends TestCase
         $user = User::factory()->create();
         $user->roles()->sync([$role->id]);
 
+        app(\App\Services\ApplicationAccessService::class)->grant($user, 'dams');
+
         return $user;
     }
 

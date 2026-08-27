@@ -29,6 +29,8 @@ class EmsAdminPortalIntegrationTest extends EmsTestCase
         $this->superAdmin = $this->emsUser(EmsRoles::SUPER_ADMIN);
         $this->eventAdmin = $this->emsUser(EmsRoles::EVENT_ADMINISTRATOR);
         $this->organizer = $this->emsUser(EmsRoles::EVENT_ORGANIZER);
+
+        app(\App\Services\ApplicationAccessService::class)->grant($this->eventAdmin, 'admin-portal');
     }
 
     /** @test */

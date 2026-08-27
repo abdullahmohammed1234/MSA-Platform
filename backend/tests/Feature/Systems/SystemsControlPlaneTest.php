@@ -68,6 +68,8 @@ class SystemsControlPlaneTest extends TestCase
         ]);
         $this->viewer->roles()->attach($viewerRole);
 
+        app(\App\Services\ApplicationAccessService::class)->grant($this->viewer, 'admin-portal');
+
         $this->denied = User::create([
             'uuid' => (string) Str::uuid(),
             'name' => 'CMS',

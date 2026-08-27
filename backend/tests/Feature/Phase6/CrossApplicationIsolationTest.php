@@ -89,6 +89,13 @@ class CrossApplicationIsolationTest extends TestCase
         $this->adminUser = $this->user('admin@example.com', 'Admin', $adminRole);
         $this->superAdminUser = $this->user('super@example.com', 'Super', $superRole);
         $this->emsUser = $this->user('ems@example.com', 'EMS', $emsRole);
+
+        // Grant explicit application access for testing independent gates
+        $appAccessService = app(\App\Services\ApplicationAccessService::class);
+        $appAccessService->grant($this->cmsUser, 'cms');
+        $appAccessService->grant($this->damsUser, 'dams');
+        $appAccessService->grant($this->platformUserManager, 'admin-portal');
+        $appAccessService->grant($this->emsUser, 'ems');
     }
 
     private function perm(string $slug, string $module): Permission
@@ -273,6 +280,7 @@ class CrossApplicationIsolationTest extends TestCase
         $viewer->roles()->first()->permissions()->attach(
             $this->perm('system.view', 'System')
         );
+        app(\App\Services\ApplicationAccessService::class)->grant($viewer, 'admin-portal');
 
         $this->actingAs($viewer)
             ->getJson('/api/v1/admin/systems/main-website/metrics')
@@ -300,6 +308,7 @@ class CrossApplicationIsolationTest extends TestCase
         $viewer->roles()->first()->permissions()->attach(
             $this->perm('system.view', 'System')
         );
+        app(\App\Services\ApplicationAccessService::class)->grant($viewer, 'admin-portal');
 
         foreach (['main-website', 'cms', 'dawah-academy', 'dams', 'ems'] as $slug) {
             $this->actingAs($viewer)

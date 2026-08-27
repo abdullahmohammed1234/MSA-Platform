@@ -43,6 +43,11 @@ class CMSDamsAccessControllerTest extends TestCase
             'is_active' => true,
             'email_verified_at' => now(),
         ]);
+
+        // Explicitly grant application access (independent gates)
+        $appAccessService = app(\App\Services\ApplicationAccessService::class);
+        $appAccessService->grant($this->cmsUser, 'cms');
+        $appAccessService->grant($this->damsUser, 'dams');
     }
 
     private function perm(string $slug, string $module): Permission
@@ -175,5 +180,30 @@ class CMSDamsAccessControllerTest extends TestCase
         $this->actingAs($this->cmsUser)
             ->getJson('/api/v1/dams/analytics')
             ->assertStatus(403);
+    }
+
+    /**
+     * Test CMS and DAMS access is denied if the user has the relevant roles/permissions
+     * but does NOT have explicit application access.
+     */
+    public function test_access_denied_without_explicit_application_access(): void
+    {
+        // 1. Create a user with cms-editor role but NO application access
+        $cmsRole = Role::where('slug', 'cms-editor')->first();
+        $unauthorizedCmsUser = $this->user('unauth-cms@phase13.test', 'CMS Unauthorized', $cmsRole);
+
+        $this->actingAs($unauthorizedCmsUser)
+            ->getJson('/api/v1/cms/users/me')
+            ->assertStatus(200) // The endpoint itself returns 200 but has_cms_access should be false
+            ->assertJsonPath('data.has_cms_access', false);
+
+        // 2. Create a user with dams-operator role but NO application access
+        $damsRole = Role::where('slug', 'dams-operator')->first();
+        $unauthorizedDamsUser = $this->user('unauth-dams@phase13.test', 'DAMS Unauthorized', $damsRole);
+
+        $this->actingAs($unauthorizedDamsUser)
+            ->getJson('/api/v1/dams/users/me')
+            ->assertStatus(200) // The endpoint itself returns 200 but has_dams_access should be false
+            ->assertJsonPath('data.has_dams_access', false);
     }
 }

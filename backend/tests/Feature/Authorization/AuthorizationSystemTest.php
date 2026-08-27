@@ -103,6 +103,7 @@ class AuthorizationSystemTest extends TestCase
     {
         $volunteer = User::where('email', 'volunteer@example.com')->first();
         $coordinator = User::where('email', 'coordinator@example.com')->first();
+        app(\App\Services\ApplicationAccessService::class)->grant($coordinator, 'dams');
 
         // Volunteer tries to create course (requires manage_courses permission)
         $response = $this->actingAs($volunteer)

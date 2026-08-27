@@ -72,6 +72,13 @@ class PlatformArchitectureContractTest extends TestCase
             ?? Role::where('slug', 'ems-event-administrator')->first();
         $this->assertNotNull($emsRole, 'EMS role seeder must provide an event administrator role');
         $this->emsUser = $this->user('ems@phase10.test', 'EMS', $emsRole);
+
+        // Grant explicit application access for testing independent gates
+        $appAccessService = app(\App\Services\ApplicationAccessService::class);
+        $appAccessService->grant($this->cmsUser, 'cms');
+        $appAccessService->grant($this->damsUser, 'dams');
+        $appAccessService->grant($this->platformUser, 'admin-portal');
+        $appAccessService->grant($this->emsUser, 'ems');
     }
 
     private function perm(string $slug, string $module): Permission

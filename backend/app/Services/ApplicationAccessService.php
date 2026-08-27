@@ -48,50 +48,8 @@ class ApplicationAccessService
         }
 
         // If no explicit record, check dynamic fallback logic (backward compatibility)
-        if ($application === 'cms') {
-            $cmsPermissions = ['manage_homepage', 'manage_announcements', 'manage_team', 'manage_resources', 'manage_media'];
-            foreach ($cmsPermissions as $p) {
-                if ($user->hasPermission($p)) {
-                    return true;
-                }
-            }
-        }
-
-        if ($application === 'dams') {
-            $damsPermissions = [
-                'manage_courses', 'manage_modules', 'manage_lessons', 'manage_quizzes',
-                'manage_learning_paths', 'manage_mentors', 'manage_students', 'view_progress',
-                'manage_achievements', 'manage_badges', 'manage_settings', 'manage_notifications',
-                'manage_discussions'
-            ];
-            foreach ($damsPermissions as $p) {
-                if ($user->hasPermission($p)) {
-                    return true;
-                }
-            }
-        }
-
-        if ($application === 'ems') {
-            if ($user->hasAnyRole(['event-administrator', 'event-organizer', 'event-staff']) ||
-                $user->hasPermission('system.view') ||
-                $user->hasPermission('events.view') ||
-                $user->hasPermission('events.create') ||
-                $user->hasPermission('events.view_all')) {
-                return true;
-            }
-        }
-
         if ($application === 'dawah-academy') {
             if ($user->hasAnyRole(['volunteer', 'mentor'])) {
-                return true;
-            }
-        }
-
-        if ($application === 'admin-portal') {
-            if ($user->hasPermission('system.view') ||
-                $user->hasPermission('manage_users') ||
-                $user->hasPermission('manage_roles') ||
-                $user->hasPermission('manage_permissions')) {
                 return true;
             }
         }
