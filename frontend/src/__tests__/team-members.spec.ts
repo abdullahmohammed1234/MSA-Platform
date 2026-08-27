@@ -98,4 +98,36 @@ describe('team org chart matching', () => {
       'SHARON DEO',
     ]);
   });
+
+  it('correctly maps unassigned Directors into dynamic branches', () => {
+    const roster = [
+      { name: 'John Doe', role: 'Director', dept: 'Directors', img: '/x.webp' },
+      { name: 'Jane Smith', role: 'Director of Outreach', dept: 'Directors', img: '/x.webp' },
+    ];
+
+    const branches = buildOrgBranches(roster);
+    expect(branches).toHaveLength(2);
+    
+    const branch1 = branches.find((b) => b.leads[0].name === 'John Doe');
+    expect(branch1?.label).toBe('Director');
+    expect(branch1?.leads[0].role).toBe('Director');
+    expect(branch1?.coordinators).toHaveLength(0);
+
+    const branch2 = branches.find((b) => b.leads[0].name === 'Jane Smith');
+    expect(branch2?.label).toBe('Outreach');
+    expect(branch2?.leads[0].role).toBe('Director of Outreach');
+  });
+
+  it('correctly categorizes unassigned Coordinators as independent coordinators', () => {
+    const roster = [
+      { name: 'Alice Johnson', role: 'Coordinator', dept: 'Coordinators', img: '/x.webp' },
+    ];
+
+    const branches = buildOrgBranches(roster);
+    expect(branches).toHaveLength(0);
+
+    const independents = independentCoordinators(roster);
+    expect(independents).toHaveLength(1);
+    expect(independents[0].name).toBe('Alice Johnson');
+  });
 });

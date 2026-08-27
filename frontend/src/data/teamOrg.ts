@@ -162,7 +162,7 @@ export function vicePresidentMembers(members: TeamMember[]): TeamMember[] {
 }
 
 export function buildOrgBranches(members: TeamMember[]) {
-  return ORG_BRANCHES.map((branch) => {
+  const branches = ORG_BRANCHES.map((branch) => {
     const leads = membersWithRoles(members, branch.leadRoles);
     const leadNames = new Set(leads.map((lead) => lead.name));
     const coordinators = membersWithRoles(members, branch.coordinatorRoles)
@@ -173,7 +173,51 @@ export function buildOrgBranches(members: TeamMember[]) {
       leads,
       coordinators,
     };
-  }).filter((branch) => branch.leads.length > 0 || branch.coordinators.length > 0);
+  });
+
+  const assignedNames = new Set<string>();
+  for (const b of branches) {
+    for (const l of b.leads) assignedNames.add(l.name);
+    for (const c of b.coordinators) assignedNames.add(c.name);
+  }
+
+  const president = membersMatching(members, EXEC_ROLES.president, EXEC_DEPTS.president);
+  for (const p of president) assignedNames.add(p.name);
+
+  const vicePres = vicePresidentMembers(members);
+  for (const vp of vicePres) assignedNames.add(vp.name);
+
+  const secretary = membersMatching(members, EXEC_ROLES.secretary, EXEC_DEPTS.secretary);
+  for (const s of secretary) assignedNames.add(s.name);
+
+  // Find remaining unassigned Directors
+  const unassignedDirectors = members.filter((member) => {
+    if (assignedNames.has(member.name)) return false;
+    const role = member.role.toLowerCase();
+    const dept = member.dept.toLowerCase();
+    return role.includes('director') || dept.includes('director') || dept === 'directors';
+  });
+
+  // Convert each unassigned Director into a dynamic branch card
+  const dynamicBranches = unassignedDirectors.map((director) => {
+    const label = director.role.toLowerCase() === 'director'
+      ? 'Director'
+      : director.role.replace(/^(Director\s+of\s+)/i, '');
+    const capitalizedLabel = label.charAt(0).toUpperCase() + label.slice(1);
+    
+    return {
+      id: `dynamic-${director.name.toLowerCase().replace(/\s+/g, '-')}`,
+      label: capitalizedLabel,
+      leadRoles: [director.role],
+      coordinatorRoles: [],
+      leads: [director],
+      coordinators: [],
+    };
+  });
+
+  return [...branches, ...dynamicBranches].filter(
+    (branch) => branch.leads.length > 0 || branch.coordinators.length > 0
+  );
 }
 
 function collectAssigned(members: TeamMember[]): Set<string> {

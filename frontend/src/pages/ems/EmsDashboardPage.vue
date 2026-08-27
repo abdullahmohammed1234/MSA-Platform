@@ -79,10 +79,10 @@ const cards = computed(() => {
         />
       </section>
 
-      <div class="mt-6 grid gap-6 lg:grid-cols-3">
+      <div class="mt-6 grid gap-6 lg:grid-cols-3 min-w-0 w-full">
         <!-- Upcoming events -->
         <section
-          class="rounded-2xl border border-neutral-ivory bg-white shadow-soft lg:col-span-2"
+          class="rounded-2xl border border-neutral-ivory bg-white shadow-soft lg:col-span-2 min-w-0 w-full"
           aria-labelledby="ems-upcoming-heading"
         >
           <div class="flex items-center justify-between border-b border-neutral-ivory px-5 py-4">
@@ -104,11 +104,11 @@ const cards = computed(() => {
             </div>
           </div>
 
-          <ul v-else-if="dashboard.upcomingEvents.length" class="divide-y divide-neutral-ivory">
-            <li v-for="event in dashboard.upcomingEvents" :key="event.uuid">
+          <ul v-else-if="dashboard.upcomingEvents.length" class="divide-y divide-neutral-ivory min-w-0 w-full">
+            <li v-for="event in dashboard.upcomingEvents" :key="event.uuid" class="min-w-0 w-full">
               <RouterLink
                 :to="{ name: 'ems-event-detail', params: { uuid: event.uuid } }"
-                class="block px-5 py-4 transition-colors hover:bg-neutral-background/60"
+                class="block px-5 py-4 transition-colors hover:bg-neutral-background/60 min-w-0 w-full"
               >
                 <div class="flex flex-wrap items-start justify-between gap-2">
                   <p class="min-w-0 flex-1 truncate text-sm font-bold text-neutral-black">
@@ -117,24 +117,26 @@ const cards = computed(() => {
                   <EmsStatusBadge :label="event.status_label" :tone="event.status_tone" size="sm" />
                 </div>
 
-                <dl class="mt-2 grid gap-x-6 gap-y-1 text-xs text-neutral-muted sm:grid-cols-2">
-                  <div class="flex gap-1.5">
+                <dl class="mt-2 grid gap-x-6 gap-y-1 text-xs text-neutral-muted sm:grid-cols-2 min-w-0 w-full">
+                  <div class="flex gap-1.5 min-w-0">
                     <dt class="sr-only">Date and time</dt>
-                    <dd>{{ formatDateRange(event.start_at, event.end_at) }} · {{ formatTimeRange(event.start_at, event.end_at) }}</dd>
+                    <dd class="truncate" :title="formatDateRange(event.start_at, event.end_at) + ' · ' + formatTimeRange(event.start_at, event.end_at)">
+                      {{ formatDateRange(event.start_at, event.end_at) }} · {{ formatTimeRange(event.start_at, event.end_at) }}
+                    </dd>
                   </div>
-                  <div class="flex gap-1.5">
+                  <div class="flex gap-1.5 min-w-0">
                     <dt class="sr-only">Location</dt>
-                    <dd class="truncate">{{ event.location || 'Location to be confirmed' }}</dd>
+                    <dd class="truncate" :title="event.location || 'Location to be confirmed'">{{ event.location || 'Location to be confirmed' }}</dd>
                   </div>
-                  <div class="flex gap-1.5">
+                  <div class="flex gap-1.5 min-w-0">
                     <dt class="sr-only">Organizer</dt>
-                    <dd class="truncate">
+                    <dd class="truncate" :title="event.organizer_name || event.organizer?.name || 'No organizer assigned'">
                       {{ event.organizer_name || event.organizer?.name || 'No organizer assigned' }}
                     </dd>
                   </div>
-                  <div v-if="event.category" class="flex gap-1.5">
+                  <div v-if="event.category" class="flex gap-1.5 min-w-0">
                     <dt class="sr-only">Category</dt>
-                    <dd>
+                    <dd class="min-w-0">
                       <EmsCategoryBadge :name="event.category.name" :color="event.category.color" />
                     </dd>
                   </div>
@@ -153,7 +155,7 @@ const cards = computed(() => {
 
         <!-- Recent activity -->
         <section
-          class="rounded-2xl border border-neutral-ivory bg-white shadow-soft"
+          class="rounded-2xl border border-neutral-ivory bg-white shadow-soft min-w-0 w-full"
           aria-labelledby="ems-activity-heading"
         >
           <div class="border-b border-neutral-ivory px-5 py-4">
@@ -166,20 +168,20 @@ const cards = computed(() => {
             <div v-for="row in 4" :key="row" class="h-3 animate-pulse rounded-full bg-neutral-ivory/70" />
           </div>
 
-          <ol v-else-if="dashboard.recentActivity.length" class="divide-y divide-neutral-ivory">
-            <li v-for="entry in dashboard.recentActivity" :key="entry.id" class="px-5 py-3">
-              <p class="text-xs text-neutral-black">
+          <ol v-else-if="dashboard.recentActivity.length" class="divide-y divide-neutral-ivory min-w-0 w-full">
+            <li v-for="entry in dashboard.recentActivity" :key="entry.id" class="px-5 py-3 min-w-0 w-full">
+              <p class="text-xs text-neutral-black break-words">
                 {{ entry.description ?? entry.action }}
               </p>
-              <p class="mt-1 flex items-center gap-2 text-[11px] text-neutral-muted">
-                <span>{{ entry.actor?.name ?? 'System' }}</span>
+              <p class="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-neutral-muted min-w-0">
+                <span class="truncate">{{ entry.actor?.name ?? 'System' }}</span>
                 <span aria-hidden="true">·</span>
-                <time :datetime="entry.created_at ?? undefined">
+                <time :datetime="entry.created_at ?? undefined" class="truncate">
                   {{ formatRelative(entry.created_at) }}
                 </time>
                 <span
                   v-if="entry.result !== 'success'"
-                  class="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-800"
+                  class="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-amber-800 shrink-0"
                 >
                   {{ entry.result }}
                 </span>
