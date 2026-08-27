@@ -111,11 +111,11 @@ const hasChart = computed(
         <p class="text-center text-[10px] font-black uppercase tracking-[0.35em] text-neutral-black/30 mb-10">
           Leads &amp; Teams
         </p>
-        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-8 xl:gap-4">
+        <div class="flex flex-wrap justify-center gap-8 xl:gap-4">
           <article
             v-for="branch in branches"
             :key="branch.id"
-            class="rounded-[2rem] border border-neutral-gray/15 bg-white/70 p-5 text-center shadow-soft"
+            class="w-full sm:w-[calc(50%-1rem)] xl:w-60 rounded-[2rem] border border-neutral-gray/15 bg-white/70 p-5 text-center shadow-soft"
           >
             <p class="text-[9px] font-black uppercase tracking-[0.28em] text-secondary mb-5">{{ branch.label }}</p>
 
