@@ -136,7 +136,7 @@ const handleLogout = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-neutral-background flex">
+  <div class="min-h-screen bg-neutral-background flex overflow-x-hidden">
     <ToastContainer />
 
     <!-- Mobile nav backdrop -->

@@ -43,25 +43,25 @@ onMounted(loadAnalytics);
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
       <div class="rounded-2xl bg-white border border-neutral-ivory p-5">
         <div class="text-xs uppercase tracking-[0.2em] text-neutral-muted font-bold">Students</div>
-        <div class="mt-2 text-3xl font-black text-white flex items-center gap-2"><Users class="h-5 w-5 text-secondary" />{{ studentsStore.students.length }}</div>
+        <div class="mt-2 text-3xl font-black text-primary flex items-center gap-2"><Users class="h-5 w-5 text-secondary" />{{ studentsStore.students.length }}</div>
       </div>
       <div class="rounded-2xl bg-white border border-neutral-ivory p-5">
         <div class="text-xs uppercase tracking-[0.2em] text-neutral-muted font-bold">Mentors</div>
-        <div class="mt-2 text-3xl font-black text-white flex items-center gap-2"><GraduationCap class="h-5 w-5 text-primary" />{{ mentorsStore.mentors.length }}</div>
+        <div class="mt-2 text-3xl font-black text-primary flex items-center gap-2"><GraduationCap class="h-5 w-5 text-primary" />{{ mentorsStore.mentors.length }}</div>
       </div>
       <div class="rounded-2xl bg-white border border-neutral-ivory p-5">
         <div class="text-xs uppercase tracking-[0.2em] text-neutral-muted font-bold">Published courses</div>
-        <div class="mt-2 text-3xl font-black text-white flex items-center gap-2"><BookOpen class="h-5 w-5 text-amber-400" />{{ publishedCourses.length }}</div>
+        <div class="mt-2 text-3xl font-black text-primary flex items-center gap-2"><BookOpen class="h-5 w-5 text-amber-400" />{{ publishedCourses.length }}</div>
       </div>
       <div class="rounded-2xl bg-white border border-neutral-ivory p-5">
         <div class="text-xs uppercase tracking-[0.2em] text-neutral-muted font-bold">Coverage signal</div>
-        <div class="mt-2 text-3xl font-black text-white flex items-center gap-2"><BarChart3 class="h-5 w-5 text-secondary" />{{ courseCompletionSignal }}%</div>
+        <div class="mt-2 text-3xl font-black text-primary flex items-center gap-2"><BarChart3 class="h-5 w-5 text-secondary" />{{ courseCompletionSignal }}%</div>
       </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div class="lg:col-span-2 rounded-2xl bg-white border border-neutral-ivory p-6">
-        <h2 class="text-lg font-bold text-white">Curriculum distribution</h2>
+        <h2 class="text-lg font-bold text-neutral-black">Curriculum distribution</h2>
         <p class="text-sm text-neutral-muted mt-1">Published curriculum readiness is based on live store counts and can be refined as backend analytics mature.</p>
 
         <div class="mt-6 space-y-4">
@@ -90,7 +90,7 @@ onMounted(loadAnalytics);
       </div>
 
       <div class="rounded-2xl bg-white border border-neutral-ivory p-6">
-        <h2 class="text-lg font-bold text-white">Operational shortcuts</h2>
+        <h2 class="text-lg font-bold text-neutral-black">Operational shortcuts</h2>
         <div class="mt-4 space-y-2 text-sm">
           <router-link to="/dams/students" class="block rounded-xl bg-neutral-background/70 hover:bg-neutral-background px-4 py-3 text-neutral-black transition">Open student roster</router-link>
           <router-link to="/dams/mentors" class="block rounded-xl bg-neutral-background/70 hover:bg-neutral-background px-4 py-3 text-neutral-black transition">Open mentor desk</router-link>

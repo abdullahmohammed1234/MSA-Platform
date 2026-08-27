@@ -13,6 +13,7 @@ const authStore = useAuthStore();
 const damsAccess = useDamsAccessStore();
 const { hasCmsAccess, hasAdminAccess } = useAppAccess();
 const isSidebarCollapsed = ref(false);
+const isMobileOpen = ref(false);
 const adminName = ref('DAMS Operator');
 
 onMounted(async () => {
@@ -122,14 +123,16 @@ const handleLogout = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen flex bg-neutral-background">
+  <div class="min-h-screen flex bg-neutral-background overflow-x-hidden">
     <ToastContainer />
 
     <Sidebar
       title="DAMS"
       :items="damsItems"
       :collapsed="isSidebarCollapsed"
+      :mobileOpen="isMobileOpen"
       @collapse="(val) => (isSidebarCollapsed = val)"
+      @closeMobile="isMobileOpen = false"
     >
       <template #dashboard>
         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -215,23 +218,34 @@ const handleLogout = async () => {
     </Sidebar>
 
     <div class="flex-1 flex flex-col min-w-0">
-      <header class="h-16 border-b border-neutral-ivory bg-white flex items-center justify-between px-6 shrink-0">
-        <div>
-          <p class="text-[10px] font-black uppercase tracking-widest text-primary/60">Dawah Academy Management System</p>
-          <p class="text-sm font-semibold text-neutral-black">{{ adminName }}</p>
+      <header class="h-16 border-b border-neutral-ivory bg-white flex items-center justify-between px-4 sm:px-6 shrink-0">
+        <div class="flex items-center min-w-0">
+          <button
+            @click="isMobileOpen = true"
+            class="lg:hidden p-2 mr-2.5 rounded-xl border border-neutral-ivory bg-white hover:bg-neutral-background text-primary transition shrink-0 cursor-pointer"
+            aria-label="Open menu"
+          >
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <div class="min-w-0">
+            <p class="text-[10px] font-black uppercase tracking-widest text-primary/60 truncate">Dawah Academy Management System</p>
+            <p class="text-sm font-semibold text-neutral-black truncate">{{ adminName }}</p>
+          </div>
         </div>
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 shrink-0">
           <NotificationBell />
           <button
             type="button"
-            class="text-xs font-bold uppercase tracking-wider text-secondary hover:underline"
+            class="text-xs font-bold uppercase tracking-wider text-secondary hover:underline cursor-pointer"
             @click="handleLogout"
           >
             Log out
           </button>
         </div>
       </header>
-      <main class="flex-1 overflow-auto p-6">
+      <main class="flex-1 overflow-auto p-4 sm:p-6">
         <router-view />
       </main>
     </div>

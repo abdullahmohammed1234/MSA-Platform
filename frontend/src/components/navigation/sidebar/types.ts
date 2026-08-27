@@ -12,4 +12,5 @@ export interface SidebarProps {
   subtitle?: string;
   logoSrc?: string;
   logoAlt?: string;
+  mobileOpen?: boolean;
 }

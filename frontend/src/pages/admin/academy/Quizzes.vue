@@ -50,7 +50,7 @@
         </thead>
         <tbody class="divide-y divide-neutral-ivory text-sm">
           <tr v-for="quiz in quizzes" :key="quiz.id" class="hover:bg-neutral-background/20 transition">
-            <td class="p-4 font-bold text-white">{{ quiz.title }}</td>
+            <td class="p-4 font-bold text-neutral-black">{{ quiz.title }}</td>
             <td class="p-4 text-neutral-muted">{{ getCourseTitle(quiz.course_id) }}</td>
             <td class="p-4 text-secondary font-semibold">{{ quiz.passing_score }}%</td>
             <td class="p-4 text-neutral-muted">{{ quiz.attempt_limit ? `${quiz.attempt_limit} max` : 'Unlimited' }}</td>
@@ -69,7 +69,7 @@
               </router-link>
               <button 
                 @click="openQuizModal(quiz)"
-                class="px-2 py-1 text-xs font-bold text-neutral-muted hover:text-white"
+                class="px-2 py-1 text-xs font-bold text-neutral-muted hover:text-primary"
               >
                 ✏️
               </button>
@@ -88,7 +88,7 @@
     <!-- Quiz Modal -->
     <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-background/70 backdrop-blur-sm">
       <div class="w-full max-w-md bg-white border border-neutral-ivory rounded-2xl p-6 shadow-2xl">
-        <h3 class="text-lg font-bold text-white mb-4">{{ editingQuizId ? 'Edit Quiz' : 'Create Quiz' }}</h3>
+        <h3 class="text-lg font-bold text-neutral-black mb-4">{{ editingQuizId ? 'Edit Quiz' : 'Create Quiz' }}</h3>
         <form @submit.prevent="saveQuiz" class="space-y-4">
           <div class="space-y-1">
             <label class="text-xs font-bold text-neutral-muted">Quiz Title *</label>

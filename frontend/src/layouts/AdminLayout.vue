@@ -11,6 +11,7 @@ const toast = useToastStore();
 const authStore = useAuthStore();
 const { hasCmsAccess, hasDamsAccess, hasEmsAccess } = useAppAccess();
 const isSidebarCollapsed = ref(false);
+const isMobileOpen = ref(false);
 const adminName = ref('Platform Administrator');
 
 onMounted(() => {
@@ -122,7 +123,7 @@ const handleLogout = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen flex bg-neutral-background">
+  <div class="min-h-screen flex bg-neutral-background overflow-x-hidden">
     <ToastContainer />
     
     <!-- Collapsible Sidebar from design system with custom icons -->
@@ -130,7 +131,9 @@ const handleLogout = async () => {
       title="MSA Admin"
       :items="adminItems"
       :collapsed="isSidebarCollapsed"
+      :mobileOpen="isMobileOpen"
       @collapse="(val) => isSidebarCollapsed = val"
+      @closeMobile="isMobileOpen = false"
     >
       <!-- Dashboard Icon Slot -->
       <template #dashboard>
@@ -274,9 +277,20 @@ const handleLogout = async () => {
     <!-- Content Area -->
     <div class="flex-grow flex flex-col min-w-0">
       <!-- Sticky header bar -->
-      <header class="h-16 border-b border-neutral-ivory bg-white/85 backdrop-blur-md flex items-center justify-between px-8 shadow-soft sticky top-0 z-20">
-        <span class="font-medium text-sm text-neutral-black">Admin Panel v2.0 &mdash; {{ adminName }}</span>
-        <div class="flex items-center gap-4">
+      <header class="h-16 border-b border-neutral-ivory bg-white/85 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 lg:px-8 shadow-soft sticky top-0 z-20">
+        <div class="flex items-center min-w-0">
+          <button
+            @click="isMobileOpen = true"
+            class="lg:hidden p-2 mr-2.5 rounded-xl border border-neutral-ivory bg-white hover:bg-neutral-background text-primary transition shrink-0 cursor-pointer"
+            aria-label="Open menu"
+          >
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <span class="font-medium text-sm text-neutral-black truncate">Admin Panel v2.0 &mdash; {{ adminName }}</span>
+        </div>
+        <div class="flex items-center gap-4 shrink-0">
           <NotificationBell />
           <button
             @click="handleLogout"
@@ -288,7 +302,7 @@ const handleLogout = async () => {
       </header>
       
       <!-- Main Content viewport -->
-      <main class="flex-grow p-6 sm:p-8 max-w-7xl w-full mx-auto">
+      <main class="flex-grow p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
         <router-view />
       </main>
     </div>

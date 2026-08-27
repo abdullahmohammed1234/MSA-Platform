@@ -79,7 +79,7 @@
           </thead>
           <tbody class="divide-y divide-neutral-ivory text-sm">
             <tr v-for="q in store.questions" :key="q.id" class="hover:bg-neutral-background/20 transition">
-              <td class="p-4 font-semibold text-white max-w-md truncate">{{ q.question }}</td>
+              <td class="p-4 font-semibold text-neutral-black max-w-md truncate">{{ q.question }}</td>
               <td class="p-4 capitalize text-neutral-muted">{{ q.type?.replace('_', ' ') }}</td>
               <td class="p-4 text-neutral-muted">{{ q.category || 'N/A' }}</td>
               <td class="p-4 text-neutral-muted capitalize">
@@ -122,7 +122,7 @@
     <!-- Question Modal -->
     <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-background/70 backdrop-blur-sm">
       <div class="w-full max-w-lg bg-white border border-neutral-ivory rounded-2xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
-        <h3 class="text-lg font-bold text-white mb-4">{{ editingQuestionId ? 'Edit Question' : 'Create Question' }}</h3>
+        <h3 class="text-lg font-bold text-neutral-black mb-4">{{ editingQuestionId ? 'Edit Question' : 'Create Question' }}</h3>
         <form @submit.prevent="saveQuestion" class="space-y-4">
           <div class="space-y-1">
             <label class="text-xs font-bold text-neutral-muted">Associated Quiz *</label>

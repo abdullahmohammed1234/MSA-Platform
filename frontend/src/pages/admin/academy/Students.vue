@@ -54,7 +54,7 @@
           </thead>
           <tbody class="divide-y divide-neutral-ivory text-sm">
             <tr v-for="std in store.students" :key="std.id" class="hover:bg-neutral-background/20 transition">
-              <td class="p-4 font-bold text-white flex items-center gap-3">
+              <td class="p-4 font-bold text-neutral-black flex items-center gap-3">
                 <div class="h-8 w-8 rounded-full bg-neutral-background flex items-center justify-center text-xs border border-neutral-ivory">
                   {{ std.name.charAt(0) }}
                 </div>
@@ -100,8 +100,8 @@
     <div v-if="showDetailModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-background/70 backdrop-blur-sm">
       <div class="w-full max-w-2xl bg-white border border-neutral-ivory rounded-2xl p-6 shadow-2xl max-h-[85vh] overflow-y-auto">
         <div class="flex items-center justify-between border-b border-neutral-ivory pb-4 mb-4">
-          <h3 class="text-lg font-bold text-white">Student Progress Profile</h3>
-          <button @click="showDetailModal = false" class="text-neutral-muted hover:text-white">✕</button>
+          <h3 class="text-lg font-bold text-neutral-black">Student Progress Profile</h3>
+          <button @click="showDetailModal = false" class="text-neutral-muted hover:text-primary">✕</button>
         </div>
 
         <div v-if="profileLoading" class="flex justify-center py-10">
@@ -115,7 +115,7 @@
               {{ store.currentStudent.name.charAt(0) }}
             </div>
             <div>
-              <h4 class="text-base font-extrabold text-white">{{ store.currentStudent.name }}</h4>
+              <h4 class="text-base font-extrabold text-neutral-black">{{ store.currentStudent.name }}</h4>
               <p class="text-xs text-neutral-muted">{{ store.currentStudent.email }}</p>
               <p class="text-[10px] text-neutral-muted mt-1">Status: {{ store.currentStudent.is_active ? 'Active User' : 'Suspended' }}</p>
             </div>
@@ -134,7 +134,7 @@
               class="p-4 rounded-xl bg-white/60 border border-neutral-ivory/80 space-y-2"
             >
               <div class="flex justify-between text-xs font-bold">
-                <span class="text-white">{{ enr.title }}</span>
+                <span class="text-neutral-black">{{ enr.title }}</span>
                 <span class="text-secondary">{{ enr.progress }}%</span>
               </div>
               <div class="w-full bg-neutral-background rounded-full h-2">

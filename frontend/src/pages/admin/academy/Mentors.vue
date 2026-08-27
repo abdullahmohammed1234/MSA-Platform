@@ -33,7 +33,7 @@
           </thead>
           <tbody class="divide-y divide-neutral-ivory text-sm">
             <tr v-for="men in store.mentors" :key="men.id" class="hover:bg-neutral-background/20 transition">
-              <td class="p-4 font-bold text-white flex items-center gap-3">
+              <td class="p-4 font-bold text-neutral-black flex items-center gap-3">
                 <div class="h-8 w-8 rounded-full bg-primary/10 border border-primary/20 text-primary flex items-center justify-center text-xs">
                   {{ men.name.charAt(0) }}
                 </div>
@@ -66,8 +66,8 @@
     <div v-if="showDetailModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-background/70 backdrop-blur-sm">
       <div class="w-full max-w-2xl bg-white border border-neutral-ivory rounded-2xl p-6 shadow-2xl max-h-[85vh] overflow-y-auto">
         <div class="flex items-center justify-between border-b border-neutral-ivory pb-4 mb-4">
-          <h3 class="text-lg font-bold text-white">Mentor Workload & Metrics</h3>
-          <button @click="showDetailModal = false" class="text-neutral-muted hover:text-white">✕</button>
+          <h3 class="text-lg font-bold text-neutral-black">Mentor Workload & Metrics</h3>
+          <button @click="showDetailModal = false" class="text-neutral-muted hover:text-primary">✕</button>
         </div>
 
         <div v-if="profileLoading" class="flex justify-center py-10">
@@ -81,11 +81,11 @@
               {{ store.currentMentor.name.charAt(0) }}
             </div>
             <div class="flex-1">
-              <h4 class="text-base font-extrabold text-white">{{ store.currentMentor.name }}</h4>
+              <h4 class="text-base font-extrabold text-neutral-black">{{ store.currentMentor.name }}</h4>
               <p class="text-xs text-neutral-muted">{{ store.currentMentor.email }}</p>
             </div>
             <div class="text-right">
-              <p class="text-xl font-black text-white">{{ store.currentMentor.assigned_count }} / {{ store.currentMentor.capacity }}</p>
+              <p class="text-xl font-black text-neutral-black">{{ store.currentMentor.assigned_count }} / {{ store.currentMentor.capacity }}</p>
               <p class="text-[10px] text-neutral-muted uppercase font-bold tracking-wider">Active Capacity</p>
             </div>
           </div>

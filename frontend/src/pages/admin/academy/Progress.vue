@@ -70,7 +70,7 @@
           <tbody class="divide-y divide-neutral-ivory text-sm">
             <tr v-for="rec in store.progressRecords" :key="rec.id" class="hover:bg-neutral-background/20 transition">
               <td class="p-4">
-                <p class="font-bold text-white">{{ rec.user?.name }}</p>
+                <p class="font-bold text-neutral-black">{{ rec.user?.name }}</p>
                 <p class="text-[10px] text-neutral-muted">{{ rec.user?.email }}</p>
               </td>
               <td class="p-4 text-neutral-muted font-semibold">{{ rec.course?.title }}</td>
@@ -120,14 +120,14 @@
     <div v-if="showInspectionModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-background/70 backdrop-blur-sm">
       <div class="w-full max-w-lg bg-white border border-neutral-ivory rounded-2xl p-6 shadow-2xl max-h-[80vh] overflow-y-auto">
         <div class="flex items-center justify-between border-b border-neutral-ivory pb-4 mb-4">
-          <h3 class="text-lg font-bold text-white">Lesson Completion Audit</h3>
-          <button @click="showInspectionModal = false" class="text-neutral-muted hover:text-white">✕</button>
+          <h3 class="text-lg font-bold text-neutral-black">Lesson Completion Audit</h3>
+          <button @click="showInspectionModal = false" class="text-neutral-muted hover:text-primary">✕</button>
         </div>
 
         <div v-if="selectedRecord" class="space-y-4">
           <div class="text-xs text-neutral-muted">
             Audit logs for <span class="text-secondary font-bold">{{ selectedRecord.user?.name }}</span> in
-            <span class="text-white font-bold">{{ selectedRecord.course?.title }}</span>
+            <span class="text-neutral-black font-bold">{{ selectedRecord.course?.title }}</span>
           </div>
 
           <!-- Simulation details of completed curriculum -->

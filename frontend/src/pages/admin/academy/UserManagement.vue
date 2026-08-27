@@ -116,19 +116,19 @@ onMounted(loadRoster);
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
       <div class="rounded-2xl bg-white border border-neutral-ivory p-5">
         <div class="text-xs uppercase tracking-[0.2em] text-neutral-muted font-bold">Admins</div>
-        <div class="mt-2 text-3xl font-black text-white">{{ roleCounts.Admin }}</div>
+        <div class="mt-2 text-3xl font-black text-primary">{{ roleCounts.Admin }}</div>
       </div>
       <div class="rounded-2xl bg-white border border-neutral-ivory p-5">
         <div class="text-xs uppercase tracking-[0.2em] text-neutral-muted font-bold">Mentors</div>
-        <div class="mt-2 text-3xl font-black text-white">{{ roleCounts.Mentor }}</div>
+        <div class="mt-2 text-3xl font-black text-primary">{{ roleCounts.Mentor }}</div>
       </div>
       <div class="rounded-2xl bg-white border border-neutral-ivory p-5">
         <div class="text-xs uppercase tracking-[0.2em] text-neutral-muted font-bold">Volunteers</div>
-        <div class="mt-2 text-3xl font-black text-white">{{ roleCounts.Volunteer }}</div>
+        <div class="mt-2 text-3xl font-black text-primary">{{ roleCounts.Volunteer }}</div>
       </div>
       <div class="rounded-2xl bg-white border border-neutral-ivory p-5">
         <div class="text-xs uppercase tracking-[0.2em] text-neutral-muted font-bold">Students</div>
-        <div class="mt-2 text-3xl font-black text-white">{{ roleCounts.Student }}</div>
+        <div class="mt-2 text-3xl font-black text-primary">{{ roleCounts.Student }}</div>
       </div>
     </div>
 
@@ -148,7 +148,7 @@ onMounted(loadRoster);
       <div class="lg:col-span-2 space-y-4">
         <div class="flex items-center justify-between">
           <div>
-            <h2 class="text-lg font-bold text-white flex items-center gap-2"><Users class="h-4 w-4 text-secondary" /> Roster</h2>
+            <h2 class="text-lg font-bold text-neutral-black flex items-center gap-2"><Users class="h-4 w-4 text-secondary" /> Roster</h2>
             <p class="text-sm text-neutral-muted">Combined view of staff and learners currently loaded in the admin store.</p>
           </div>
           <router-link to="/admin/roles" class="text-sm font-semibold text-secondary hover:text-secondary-light">Manage roles</router-link>
@@ -166,7 +166,7 @@ onMounted(loadRoster);
               </div>
               <div class="min-w-0">
                 <div class="flex items-center gap-2 flex-wrap">
-                  <span class="font-semibold text-white truncate">{{ entry.name }}</span>
+                  <span class="font-semibold text-neutral-black truncate">{{ entry.name }}</span>
                   <span class="text-[10px] uppercase tracking-[0.2em] px-2 py-0.5 rounded-full border border-neutral-ivory text-neutral-muted">{{ entry.role }}</span>
                 </div>
                 <p class="text-sm text-neutral-muted truncate">{{ entry.email }}</p>
@@ -193,7 +193,7 @@ onMounted(loadRoster);
 
       <div class="space-y-4">
         <div class="rounded-2xl bg-white border border-neutral-ivory p-5">
-          <h3 class="text-sm font-bold text-white flex items-center gap-2"><ShieldCheck class="h-4 w-4 text-secondary" /> Access shortcuts</h3>
+          <h3 class="text-sm font-bold text-neutral-black flex items-center gap-2"><ShieldCheck class="h-4 w-4 text-secondary" /> Access shortcuts</h3>
           <div class="mt-4 space-y-2 text-sm">
             <router-link to="/admin/permissions" class="block rounded-xl bg-neutral-background/70 hover:bg-neutral-background px-4 py-3 text-neutral-black transition">Permissions matrix</router-link>
             <router-link to="/admin/roles" class="block rounded-xl bg-neutral-background/70 hover:bg-neutral-background px-4 py-3 text-neutral-black transition">Role definitions</router-link>
@@ -203,7 +203,7 @@ onMounted(loadRoster);
         </div>
 
         <div class="rounded-2xl bg-white border border-neutral-ivory p-5">
-          <h3 class="text-sm font-bold text-white flex items-center gap-2"><GraduationCap class="h-4 w-4 text-primary" /> Privileged access</h3>
+          <h3 class="text-sm font-bold text-neutral-black flex items-center gap-2"><GraduationCap class="h-4 w-4 text-primary" /> Privileged access</h3>
           <p class="mt-3 text-sm text-neutral-muted">Admin and super-admin accounts now resolve to the same privileged access path across the dashboard, guards, and admin layouts.</p>
         </div>
       </div>
