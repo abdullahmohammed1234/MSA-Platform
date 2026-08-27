@@ -1,10 +1,8 @@
 import { computed } from 'vue';
 import { useAuthStore } from '@/stores/auth';
-import { useAuthorization } from './useAuthorization';
 
 export function useAppAccess() {
   const authStore = useAuthStore();
-  const { hasPermission } = useAuthorization();
 
   const isSuperOrAdmin = computed(() => {
     if (typeof authStore.isPrivilegedAdmin === 'boolean') {
