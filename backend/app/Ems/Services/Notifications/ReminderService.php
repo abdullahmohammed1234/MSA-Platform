@@ -163,55 +163,87 @@ class ReminderService
         $event = $reminder->event;
 
         if ($event === null || $event->start_at === null || $event->start_at->isPast()) {
-            $reminder->enabled = false;
-            $reminder->next_run_at = null;
-            $reminder->last_run_at = now();
-            $reminder->save();
+            DB::transaction(function () use ($reminder): void {
+                $locked = EventReminder::query()->whereKey($reminder->id)->lockForUpdate()->first();
+                if ($locked) {
+                    $locked->enabled = false;
+                    $locked->next_run_at = null;
+                    $locked->last_run_at = now();
+                    $locked->save();
+                }
+            });
 
+            return 0;
+        }
+
+        $shouldRun = DB::transaction(function () use ($reminder): bool {
+            $locked = EventReminder::query()->whereKey($reminder->id)->lockForUpdate()->first();
+            if ($locked === null || !$locked->enabled) {
+                return false;
+            }
+            $locked->enabled = false;
+            $locked->last_run_at = now();
+            $locked->next_run_at = null;
+            $locked->save();
+            return true;
+        });
+
+        if (!$shouldRun) {
             return 0;
         }
 
         $queued = 0;
 
-        DB::transaction(function () use ($reminder, $event, &$queued): void {
-            $registrations = $this->audienceQuery($event, $reminder->audience)->get();
+        $this->audienceQuery($event, $reminder->audience)
+            ->orderBy('ems_registrations.id')
+            ->chunkById(100, function ($registrations) use ($reminder, $event, &$queued): void {
+                foreach ($registrations as $registration) {
+                    try {
+                        DB::transaction(function () use ($reminder, $event, $registration, &$queued): void {
+                            $regLocked = Registration::query()->whereKey($registration->id)->lockForUpdate()->first();
+                            if ($regLocked === null) {
+                                return;
+                            }
 
-            foreach ($registrations as $registration) {
-                $exists = ReminderDispatch::query()
-                    ->where('reminder_id', $reminder->id)
-                    ->where('registration_id', $registration->id)
-                    ->exists();
+                            $exists = ReminderDispatch::query()
+                                ->where('reminder_id', $reminder->id)
+                                ->where('registration_id', $regLocked->id)
+                                ->exists();
 
-                if ($exists) {
-                    continue;
+                            if ($exists) {
+                                return;
+                            }
+
+                            $notification = $this->dispatcher->notifyRegistration(
+                                $regLocked,
+                                NotificationType::EventReminder->value,
+                                [
+                                    'template_key' => $reminder->template_key,
+                                    'idempotency_suffix' => 'reminder:' . $reminder->id,
+                                    'reminder_label' => $reminder->displayLabel(),
+                                ]
+                            );
+
+                            ReminderDispatch::query()->create([
+                                'reminder_id' => $reminder->id,
+                                'event_id' => $event->id,
+                                'registration_id' => $regLocked->id,
+                                'notification_id' => $notification->id,
+                                'dispatched_at' => now(),
+                            ]);
+
+                            $queued++;
+                        });
+                    } catch (\Throwable $e) {
+                        Log::channel((string) config('ems.logging.channel', 'ems'))
+                            ->error('ems.reminders.registration_failed', [
+                                'reminder_id' => $reminder->id,
+                                'registration_id' => $registration->id,
+                                'error' => $e->getMessage(),
+                            ]);
+                    }
                 }
-
-                $notification = $this->dispatcher->notifyRegistration(
-                    $registration,
-                    NotificationType::EventReminder->value,
-                    [
-                        'template_key' => $reminder->template_key,
-                        'idempotency_suffix' => 'reminder:' . $reminder->id,
-                        'reminder_label' => $reminder->displayLabel(),
-                    ]
-                );
-
-                ReminderDispatch::query()->create([
-                    'reminder_id' => $reminder->id,
-                    'event_id' => $event->id,
-                    'registration_id' => $registration->id,
-                    'notification_id' => $notification->id,
-                    'dispatched_at' => now(),
-                ]);
-
-                $queued++;
-            }
-
-            $reminder->last_run_at = now();
-            $reminder->next_run_at = null;
-            $reminder->enabled = false;
-            $reminder->save();
-        });
+            });
 
         Log::channel((string) config('ems.logging.channel', 'ems'))
             ->info('ems.reminders.executed', [

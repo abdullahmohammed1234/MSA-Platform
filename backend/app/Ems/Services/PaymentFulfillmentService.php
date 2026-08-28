@@ -42,6 +42,8 @@ class PaymentFulfillmentService
     public function markPaid(Payment $payment, array $providerData = []): Payment
     {
         return DB::transaction(function () use ($payment, $providerData): Payment {
+            $this->acquireCanonicalLocks($payment);
+
             /** @var Payment $locked */
             $locked = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
 
@@ -161,6 +163,8 @@ class PaymentFulfillmentService
     public function markFailed(Payment $payment, ?string $reason = null, array $providerData = []): Payment
     {
         return DB::transaction(function () use ($payment, $reason, $providerData): Payment {
+            $this->acquireCanonicalLocks($payment);
+
             /** @var Payment $locked */
             $locked = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
 
@@ -198,6 +202,8 @@ class PaymentFulfillmentService
     public function markCancelled(Payment $payment, ?string $reason = null, bool $buyerInitiated = false): Payment
     {
         return DB::transaction(function () use ($payment, $reason, $buyerInitiated): Payment {
+            $this->acquireCanonicalLocks($payment);
+
             /** @var Payment $locked */
             $locked = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
 
@@ -231,6 +237,8 @@ class PaymentFulfillmentService
     public function markAbandoned(Payment $payment, ?string $reason = null): Payment
     {
         return DB::transaction(function () use ($payment, $reason): Payment {
+            $this->acquireCanonicalLocks($payment);
+
             /** @var Payment $locked */
             $locked = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
 
@@ -360,6 +368,11 @@ class PaymentFulfillmentService
         $this->tickets->issueFor($registration->fresh());
 
         RegistrationCreated::dispatch($registration->fresh(['tickets', 'event']), $registration->user);
+        
+        // Send critical registration confirmation email immediately (SMTP executes after transaction commits)
+        app(\App\Ems\Services\Notifications\EventCommunicationService::class)->sendRegistrationBundle($registration, true);
+        
+        // Dispatch queue job as a backup/retry mechanism
         QueueRegistrationConfirmation::dispatch($registration->id, true);
 
         Log::channel((string) config('ems.logging.channel', 'ems'))
@@ -441,5 +454,40 @@ class PaymentFulfillmentService
         }
 
         $this->waitlists->promoteAvailable($event);
+    }
+
+    /**
+     * Locks Event, TicketTypes, Order, and Registrations in the strict canonical order
+     * to eliminate lock-ordering deadlocks against waitlist promotions.
+     */
+    private function acquireCanonicalLocks(Payment $payment): void
+    {
+        $payment->loadMissing(['order.registrations', 'registration']);
+        $order = $payment->order;
+
+        $eventId = $order?->event_id ?? $payment->registration?->event_id;
+        if ($eventId) {
+            \App\Ems\Models\Event::query()->whereKey($eventId)->lockForUpdate()->first();
+        }
+
+        $ticketTypeIds = [];
+        if ($order) {
+            $ticketTypeIds = $order->registrations->pluck('ticket_type_id')->filter()->unique()->sort()->values()->all();
+        } elseif ($payment->registration?->ticket_type_id) {
+            $ticketTypeIds = [$payment->registration->ticket_type_id];
+        }
+        foreach ($ticketTypeIds as $typeId) {
+            TicketType::query()->whereKey($typeId)->lockForUpdate()->first();
+        }
+
+        if ($order) {
+            Order::query()->whereKey($order->id)->lockForUpdate()->first();
+            $regIds = $order->registrations->pluck('id')->sort()->values()->all();
+            foreach ($regIds as $regId) {
+                Registration::query()->whereKey($regId)->lockForUpdate()->first();
+            }
+        } elseif ($payment->registration_id) {
+            Registration::query()->whereKey($payment->registration_id)->lockForUpdate()->first();
+        }
     }
 }

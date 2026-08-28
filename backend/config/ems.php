@@ -200,6 +200,16 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Waitlist Settings
+    |--------------------------------------------------------------------------
+    */
+
+    'waitlist' => [
+        'promotion_expiry_hours' => (int) env('EMS_WAITLIST_EXPIRY_HOURS', 24),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Storage (future media / ticket assets)
     |--------------------------------------------------------------------------
     */
@@ -223,6 +233,8 @@ return [
         'max_retries' => (int) env('EMS_NOTIFICATIONS_MAX_RETRIES', 3),
         'process_due_every_minutes' => (int) env('EMS_NOTIFICATIONS_PROCESS_EVERY', 1),
         'default_reminders_enabled' => (bool) env('EMS_DEFAULT_REMINDERS_ENABLED', false),
+        'bcc_archive_address' => env('EMS_MAIL_BCC_ARCHIVE'),
+        'admin_alert_recipients' => env('EMS_MAIL_ADMIN_ALERT_RECIPIENTS'),
     ],
 
 ];

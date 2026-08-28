@@ -49,6 +49,10 @@ const reminderForm = ref<ReminderPayload>({
 });
 const isSavingReminder = ref(false);
 
+const page = ref(1);
+const lastPage = ref(1);
+const total = ref(0);
+
 const toneForStatus = (status: string): EventStatusTone => {
   if (status === 'sent') return 'success';
   if (status === 'failed') return 'danger';
@@ -97,13 +101,18 @@ const load = async () => {
       await events.fetchOne(uuid.value);
     }
     summary.value = await notificationsService.getSummary(uuid.value);
-    const page = await notificationsService.list(uuid.value, {
+    const result = await notificationsService.list(uuid.value, {
       status: statusFilter.value || undefined,
       type: typeFilter.value || undefined,
       search: search.value || undefined,
+      page: page.value,
       per_page: 25,
     });
-    notifications.value = page.items;
+    notifications.value = result.items;
+    page.value = result.pagination.current_page;
+    lastPage.value = result.pagination.last_page;
+    total.value = result.pagination.total;
+
     reminders.value = await notificationsService.listReminders(uuid.value);
   } catch (caught) {
     const err = handle(caught, { silent: true });
@@ -183,8 +192,14 @@ const removeReminder = async (reminder: EmsEventReminder) => {
 };
 
 onMounted(load);
-watch(uuid, load);
-watch([statusFilter, typeFilter], load);
+watch(uuid, () => {
+  page.value = 1;
+  void load();
+});
+watch([statusFilter, typeFilter], () => {
+  page.value = 1;
+  void load();
+});
 </script>
 
 <template>
@@ -280,7 +295,7 @@ watch([statusFilter, typeFilter], load);
                   No notifications yet.
                 </td>
               </tr>
-              <tr
+               <tr
                 v-for="row in notifications"
                 :key="row.uuid"
                 class="border-b border-neutral-ivory/70 last:border-0"
@@ -290,14 +305,29 @@ watch([statusFilter, typeFilter], load);
                   <p class="text-xs text-neutral-muted">
                     {{ row.registration?.reference || row.registration?.attendee_name || '—' }}
                   </p>
+                  <p v-if="row.provider_message_id" class="mt-1 text-[10px] text-neutral-muted font-mono truncate" :title="row.provider_message_id">
+                    Msg ID: {{ row.provider_message_id }}
+                  </p>
+                  <p v-if="row.error" class="mt-1 text-[11px] text-red-600 max-w-[200px] truncate" :title="row.error">
+                    Error: {{ row.error }}
+                  </p>
                 </td>
                 <td class="px-4 py-3 text-neutral-muted">{{ row.type }}</td>
                 <td class="px-4 py-3">
                   <EmsStatusBadge :label="row.status" :tone="toneForStatus(row.status)" />
+                  <div v-if="row.queue_status" class="mt-1 text-[10px] text-neutral-muted uppercase tracking-wider">
+                    Queue: {{ row.queue_status }}
+                  </div>
                 </td>
                 <td class="px-4 py-3 max-w-[220px] truncate">{{ row.subject }}</td>
                 <td class="px-4 py-3 text-xs text-neutral-muted">
-                  {{ row.sent_at ? new Date(row.sent_at).toLocaleString() : '—' }}
+                  <div>{{ row.sent_at ? new Date(row.sent_at).toLocaleString() : (row.last_attempt_at ? new Date(row.last_attempt_at).toLocaleString() : '—') }}</div>
+                  <div v-if="row.retry_count > 0" class="text-[10px] text-neutral-muted">
+                    Retry attempts: {{ row.retry_count }}
+                  </div>
+                  <div v-if="row.alert_sent_at" class="text-[10px] text-red-600 font-medium">
+                    Admin alerted: Yes
+                  </div>
                 </td>
                 <td class="px-4 py-3 text-right">
                   <Button
@@ -312,6 +342,12 @@ watch([statusFilter, typeFilter], load);
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <div v-if="lastPage > 1" class="mt-4 flex items-center justify-between">
+          <Button variant="outline" size="sm" :disabled="page <= 1" @click="page -= 1; load()">Previous</Button>
+          <span class="text-xs text-neutral-muted">Page {{ page }} of {{ lastPage }}</span>
+          <Button variant="outline" size="sm" :disabled="page >= lastPage" @click="page += 1; load()">Next</Button>
         </div>
       </section>
 

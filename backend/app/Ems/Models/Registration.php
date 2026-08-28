@@ -57,6 +57,7 @@ class Registration extends Model
         'metadata',
         'promo_code_id',
         'discount_amount',
+        'promoted_expires_at',
     ];
 
     protected function casts(): array
@@ -73,6 +74,7 @@ class Registration extends Model
             'metadata' => 'array',
             'promo_code_id' => 'integer',
             'discount_amount' => 'decimal:2',
+            'promoted_expires_at' => 'datetime',
         ];
     }
 

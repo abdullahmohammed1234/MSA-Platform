@@ -360,6 +360,14 @@ class PublicEventController extends EmsController
             throw new NotFoundHttpException('Registration not found.');
         }
 
+        if ($reg->type->requiresPayment() || (float) $reg->amount_due > 0.0) {
+            throw new \App\Ems\Exceptions\EmsException(
+                'Paid registrations cannot be cancelled online. Please contact the event organizer to request a cancellation and refund.',
+                ['registration' => ['Paid registrations cannot be cancelled online.']],
+                Response::HTTP_FORBIDDEN
+            );
+        }
+
         if ($reg->status === \App\Ems\Enums\RegistrationStatus::Cancelled) {
             return ApiResponse::success(
                 new \App\Ems\Http\Resources\Public\PublicRegistrationResource($reg),
@@ -368,43 +376,70 @@ class PublicEventController extends EmsController
         }
 
         \Illuminate\Support\Facades\DB::transaction(function () use ($reg): void {
-            $reg->status = \App\Ems\Enums\RegistrationStatus::Cancelled;
-            $reg->cancelled_at = now();
-            $reg->save();
+            // 1. Lock Event first to preserve canonical lock ordering (include soft-deleted events)
+            $event = \App\Ems\Models\Event::query()->withTrashed()->whereKey($reg->event_id)->lockForUpdate()->firstOrFail();
 
-            $reg->tickets()->update([
+            // 2. Lock WaitlistEntry if waitlisted
+            if ($reg->status === \App\Ems\Enums\RegistrationStatus::Waitlisted) {
+                $entry = \App\Ems\Models\WaitlistEntry::query()
+                    ->where('registration_id', $reg->id)
+                    ->where('status', \App\Ems\Enums\WaitlistStatus::Waiting->value)
+                    ->lockForUpdate()
+                    ->first();
+                if ($entry !== null) {
+                    $entry->status = \App\Ems\Enums\WaitlistStatus::Left;
+                    $entry->left_at = now();
+                    $entry->save();
+                }
+            }
+
+            // 3. Lock TicketType
+            if ($reg->ticket_type_id) {
+                \App\Ems\Models\TicketType::query()
+                    ->whereKey($reg->ticket_type_id)
+                    ->lockForUpdate()
+                    ->first();
+            }
+
+            // 4. Lock Registration
+            $regLocked = \App\Ems\Models\Registration::query()->whereKey($reg->id)->lockForUpdate()->firstOrFail();
+
+            if ($regLocked->status === \App\Ems\Enums\RegistrationStatus::Cancelled) {
+                return;
+            }
+
+            $regLocked->status = \App\Ems\Enums\RegistrationStatus::Cancelled;
+            $regLocked->cancelled_at = now();
+            $regLocked->save();
+
+            $regLocked->tickets()->update([
                 'status' => \App\Ems\Enums\TicketStatus::Revoked->value,
                 'revoked_at' => now(),
             ]);
 
-            if ($reg->ticket_type_id) {
+            if ($regLocked->ticket_type_id) {
                 $ticketType = \App\Ems\Models\TicketType::query()
-                    ->whereKey($reg->ticket_type_id)
-                    ->lockForUpdate()
+                    ->whereKey($regLocked->ticket_type_id)
                     ->first();
 
                 if ($ticketType !== null) {
-                    $ticketType->quantity_sold = max(0, $ticketType->quantity_sold - $reg->quantity);
+                    $ticketType->quantity_sold = max(0, $ticketType->quantity_sold - $regLocked->quantity);
                     $ticketType->save();
                 }
             }
 
             app(\App\Ems\Contracts\EventNotificationDispatcher::class)
                 ->notifyRegistration(
-                    $reg,
+                    $regLocked,
                     \App\Ems\Enums\NotificationType::RegistrationCancelled->value,
                     ['idempotency_suffix' => 'user_cancel', 'force' => true]
                 );
 
-            // Soft-deleted events resolve as null; skip waitlist promotion.
-            $event = $reg->event;
-            if ($event !== null) {
-                app(\App\Ems\Services\WaitlistService::class)->promoteAvailable($event);
-            }
+            app(\App\Ems\Services\WaitlistService::class)->promoteAvailable($event);
         });
 
         return ApiResponse::success(
-            new \App\Ems\Http\Resources\Public\PublicRegistrationResource($reg->fresh(['event', 'tickets', 'ticketType'])),
+            new \App\Ems\Http\Resources\Public\PublicRegistrationResource($reg->fresh(['event', 'ticketType', 'tickets', 'order'])),
             'Registration cancelled successfully.'
         );
     }

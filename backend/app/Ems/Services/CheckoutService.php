@@ -182,6 +182,7 @@ class CheckoutService
             $registration->load(['tickets.event.category', 'event.category', 'event.organizer', 'ticketType', 'order']);
 
             RegistrationCreated::dispatch($registration, $user);
+            app(\App\Ems\Services\Notifications\EventCommunicationService::class)->sendRegistrationBundle($registration);
             QueueRegistrationConfirmation::dispatch($registration->id);
 
             Log::channel((string) config('ems.logging.channel', 'ems'))
@@ -373,6 +374,7 @@ class CheckoutService
                 $registration->load(['tickets.event.category', 'event.category', 'event.organizer', 'ticketType', 'order']);
 
                 RegistrationCreated::dispatch($registration, $user);
+                app(\App\Ems\Services\Notifications\EventCommunicationService::class)->sendRegistrationBundle($registration);
                 QueueRegistrationConfirmation::dispatch($registration->id);
 
                 return [

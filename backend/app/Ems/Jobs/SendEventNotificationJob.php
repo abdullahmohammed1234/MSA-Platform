@@ -28,6 +28,7 @@ class SendEventNotificationJob implements ShouldQueue
 
     public function __construct(public readonly int $notificationId)
     {
+        $this->afterCommit = true;
         $this->onQueue((string) config('ems.notifications.queue', 'ems-notifications'));
     }
 
@@ -43,33 +44,53 @@ class SendEventNotificationJob implements ShouldQueue
         }
 
         /** @var EventNotification|null $notification */
-        $notification = EventNotification::query()->find($this->notificationId);
+        $notification = \Illuminate\Support\Facades\DB::transaction(function () {
+            $locked = EventNotification::query()
+                ->whereKey($this->notificationId)
+                ->lockForUpdate()
+                ->first();
+
+            if ($locked === null) {
+                return null;
+            }
+
+            if ($locked->status === NotificationStatus::Sent || $locked->status === NotificationStatus::Cancelled) {
+                return null;
+            }
+
+            if (blank($locked->recipient_email)) {
+                $locked->markFailed('Missing recipient email.', false);
+                return null;
+            }
+
+            // Concurrency protection: skip if another worker is already processing first attempt
+            if ($locked->queue_status === 'processing' && $this->attempts() === 1) {
+                Log::channel((string) config('ems.logging.channel', 'ems'))
+                    ->warning('ems.notifications.concurrent_processing_ignored', [
+                        'notification_uuid' => $locked->uuid,
+                    ]);
+                return null;
+            }
+
+            $locked->last_attempt_at = now();
+            $locked->queue_status = 'processing';
+            $locked->save();
+
+            return $locked;
+        });
 
         if ($notification === null) {
             return;
         }
 
-        if ($notification->status === NotificationStatus::Sent) {
-            return;
-        }
-
-        if ($notification->status === NotificationStatus::Cancelled) {
-            return;
-        }
-
-        if (blank($notification->recipient_email)) {
-            $notification->markFailed('Missing recipient email.', false);
-
-            return;
-        }
-
-        $notification->last_attempt_at = now();
-        $notification->queue_status = 'processing';
-        $notification->save();
-
         try {
-            Mail::to($notification->recipient_email)
+            $sentMessage = Mail::to($notification->recipient_email)
                 ->send(new EventNotificationMail($notification));
+
+            $messageId = $sentMessage?->getMessageId();
+            if ($messageId) {
+                $notification->provider_message_id = $messageId;
+            }
 
             $notification->markSent();
 
@@ -78,6 +99,7 @@ class SendEventNotificationJob implements ShouldQueue
                     'notification_uuid' => $notification->uuid,
                     'type' => $notification->type,
                     'event_id' => $notification->event_id,
+                    'provider_message_id' => $messageId,
                 ]);
         } catch (Throwable $e) {
             $notification->markFailed($e->getMessage());
@@ -89,6 +111,8 @@ class SendEventNotificationJob implements ShouldQueue
                     'retry_count' => $notification->retry_count,
                     'attempt' => $this->attempts(),
                 ]);
+
+            app(\App\Ems\Services\Notifications\NotificationFailureAlertService::class)->sendAlert($notification, $e->getMessage());
 
             throw $e;
         }
@@ -102,12 +126,15 @@ class SendEventNotificationJob implements ShouldQueue
             return;
         }
 
-        $notification->markFailed($e?->getMessage() ?? 'Permanent delivery failure.', false);
+        $errorMsg = $e?->getMessage() ?? 'Permanent delivery failure.';
+        $notification->markFailed($errorMsg, false);
 
         Log::channel((string) config('ems.logging.channel', 'ems'))
             ->error('ems.notifications.permanently_failed', [
                 'notification_uuid' => $notification->uuid,
                 'type' => $notification->type,
             ]);
+
+        app(\App\Ems\Services\Notifications\NotificationFailureAlertService::class)->sendAlert($notification, $errorMsg);
     }
 }

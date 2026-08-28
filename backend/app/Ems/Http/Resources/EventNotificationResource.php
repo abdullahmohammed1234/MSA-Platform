@@ -29,6 +29,8 @@ class EventNotificationResource extends JsonResource
             'last_attempt_at' => $this->last_attempt_at?->toIso8601String(),
             'sent_at' => $this->sent_at?->toIso8601String(),
             'failed_at' => $this->failed_at?->toIso8601String(),
+            'alert_sent_at' => $this->alert_sent_at?->toIso8601String(),
+            'provider_message_id' => $this->provider_message_id,
             'created_at' => $this->created_at?->toIso8601String(),
             'registration' => $this->whenLoaded('registration', fn () => [
                 'uuid' => $this->registration?->uuid,

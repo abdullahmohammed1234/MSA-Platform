@@ -82,7 +82,7 @@ class SquareWebhookService
             $record->event_id = $eventId;
             $record->event_type = $eventType;
             $record->status = WebhookEventStatus::Received->value;
-            $record->payload = $this->redactPayload($payload);
+            $record->payload = $payload;
             $record->save();
 
             return $record;
@@ -139,6 +139,8 @@ class SquareWebhookService
             $record->refresh();
 
             if ($this->normalizeStatus($record->status) === WebhookEventStatus::Processed) {
+                $record->payload = $this->redactPayload($record->payload);
+                $record->save();
                 return $payment ?? ($record->payment_id ? Payment::query()->find($record->payment_id) : null);
             }
 
@@ -148,9 +150,10 @@ class SquareWebhookService
                 $record->order_id = $payment->order_id;
                 $record->processed_at = now();
                 $record->failure_reason = null;
+                $record->payload = $this->redactPayload($payload);
                 $record->save();
 
-                Log::channel((string) config('ems.logging.channel', 'ems'))
+                 Log::channel((string) config('ems.logging.channel', 'ems'))
                     ->info('ems.webhooks.square.processed', [
                         'event_id' => $record->event_id,
                         'event_type' => $eventType,
@@ -163,6 +166,7 @@ class SquareWebhookService
             $record->status = WebhookEventStatus::Unmatched->value;
             $record->failure_reason = $record->failure_reason
                 ?: 'No EMS mapping for this Square event.';
+            $record->payload = $this->redactPayload($payload);
             $record->save();
 
             Log::channel((string) config('ems.logging.channel', 'ems'))
@@ -175,6 +179,7 @@ class SquareWebhookService
         } catch (\Throwable $e) {
             $record->status = WebhookEventStatus::Failed->value;
             $record->failure_reason = mb_substr($e->getMessage(), 0, 500);
+            $record->payload = $this->redactPayload($payload);
             $record->save();
 
             Log::channel((string) config('ems.logging.channel', 'ems'))
@@ -482,6 +487,38 @@ class SquareWebhookService
         $redacted = $payload;
         unset($redacted['merchant_id']);
 
+        $piiFields = [
+            'buyer_email_address',
+            'buyer_phone_number',
+            'customer_id',
+            'email_address',
+            'phone_number',
+            'given_name',
+            'family_name',
+            'cardholder_name',
+        ];
+
+        $this->redactKeysRecursive($redacted, $piiFields);
+
+        if (isset($redacted['data']['object']['payment'])) {
+            unset($redacted['data']['object']['payment']['billing_address']);
+            unset($redacted['data']['object']['payment']['shipping_address']);
+            if (isset($redacted['data']['object']['payment']['card_details']['card'])) {
+                unset($redacted['data']['object']['payment']['card_details']['card']['cardholder_name']);
+            }
+        }
+
         return $redacted;
+    }
+
+    private function redactKeysRecursive(array &$array, array $keys): void
+    {
+        foreach ($array as $key => &$value) {
+            if (in_array($key, $keys, true)) {
+                $value = '[REDACTED]';
+            } elseif (is_array($value)) {
+                $this->redactKeysRecursive($value, $keys);
+            }
+        }
     }
 }

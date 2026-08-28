@@ -51,12 +51,32 @@ class QueuedEventNotificationDispatcher implements EventNotificationDispatcher
             ?? sprintf('%s:%s:%s', $notificationType->value, $registration->id, $payload['idempotency_suffix'] ?? 'default');
 
         if (! $force) {
-            $existing = EventNotification::query()
-                ->where('idempotency_key', $idempotency)
-                ->first();
+            $result = \Illuminate\Support\Facades\DB::transaction(function () use ($idempotency, $scheduledAt) {
+                $row = EventNotification::query()
+                    ->where('idempotency_key', $idempotency)
+                    ->lockForUpdate()
+                    ->first();
 
-            if ($existing !== null) {
-                return $existing;
+                $updated = false;
+                if ($row !== null) {
+                    if ($row->status === NotificationStatus::Failed) {
+                        $row->status = NotificationStatus::Pending;
+                        $row->queue_status = 'pending';
+                        $row->error = null;
+                        $row->failed_at = null;
+                        $row->scheduled_at = $scheduledAt ?? now();
+                        $row->save();
+                        $updated = true;
+                    }
+                }
+                return ['row' => $row, 'updated' => $updated];
+            });
+
+            if ($result['row'] !== null) {
+                if ($result['updated']) {
+                    $this->queueIfDue($result['row']);
+                }
+                return $result['row'];
             }
         } else {
             $idempotency .= ':resend:' . now()->timestamp . ':' . uniqid();
@@ -101,6 +121,107 @@ class QueuedEventNotificationDispatcher implements EventNotificationDispatcher
             ]);
 
         $this->queueIfDue($notification);
+
+        return $notification;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    public function notifyRegistrationImmediately(
+        Registration $registration,
+        string $type,
+        array $payload = []
+    ): EventNotification {
+        $notificationType = NotificationType::tryFrom($type) ?? NotificationType::RegistrationConfirmed;
+        $force = (bool) ($payload['force'] ?? false);
+        $skipPreference = (bool) ($payload['skip_preference_check'] ?? false);
+
+        $registration->loadMissing(['event.organizer', 'ticketType', 'tickets', 'order', 'settledPayment', 'user']);
+
+        if (! $skipPreference && ! $this->preferences->allows($notificationType, $registration)) {
+            return $this->cancelledStub($registration, $notificationType, 'Suppressed by notification preferences.');
+        }
+
+        $idempotency = $payload['idempotency_key']
+            ?? sprintf('%s:%s:%s', $notificationType->value, $registration->id, $payload['idempotency_suffix'] ?? 'default');
+
+        if (! $force) {
+            $result = \Illuminate\Support\Facades\DB::transaction(function () use ($idempotency) {
+                $row = EventNotification::query()
+                    ->where('idempotency_key', $idempotency)
+                    ->lockForUpdate()
+                    ->first();
+
+                $updated = false;
+                if ($row !== null) {
+                    if ($row->status === NotificationStatus::Failed) {
+                        $row->status = NotificationStatus::Pending;
+                        $row->queue_status = 'pending';
+                        $row->error = null;
+                        $row->failed_at = null;
+                        $row->scheduled_at = now();
+                        $row->save();
+                        $updated = true;
+                    }
+                }
+                return ['row' => $row, 'updated' => $updated];
+            });
+
+            if ($result['row'] !== null) {
+                if ($result['updated']) {
+                    if (blank($result['row']->recipient_email)) {
+                        $result['row']->markFailed('Missing recipient email.', false);
+                    } else {
+                        $this->triggerImmediateSend($result['row']);
+                    }
+                }
+                return $result['row'];
+            }
+        } else {
+            $idempotency .= ':resend:' . now()->timestamp . ':' . uniqid();
+        }
+
+        $templateKey = (string) ($payload['template_key'] ?? $notificationType->value);
+        $rendered = $this->renderer->render($templateKey, $payload, $registration);
+
+        $notification = new EventNotification();
+        $notification->event_id = $registration->event_id;
+        $notification->registration_id = $registration->id;
+        $notification->order_id = $registration->order_id;
+        $notification->payment_id = $payload['payment_id'] ?? $registration->settledPayment?->id;
+        $notification->ticket_id = $payload['ticket_id'] ?? $registration->tickets->first()?->id;
+        $notification->user_id = $registration->user_id;
+        $notification->recipient_email = $registration->attendee_email;
+        $notification->channel = NotificationChannel::Mail;
+        $notification->type = $notificationType->value;
+        $notification->template_key = $rendered['template_key'];
+        $notification->idempotency_key = $idempotency;
+        $notification->subject = $rendered['subject'];
+        $notification->body = $rendered['body_text'];
+        $notification->status = NotificationStatus::Pending;
+        $notification->scheduled_at = now();
+        $notification->payload = array_merge($payload, [
+            'body_html' => $rendered['body_html'],
+            'body_text' => $rendered['body_text'],
+            'ticket_codes' => $registration->tickets->pluck('code')->values()->all(),
+        ]);
+        $notification->save();
+
+        Log::channel((string) config('ems.logging.channel', 'ems'))
+            ->info('ems.notifications.created_immediate', [
+                'notification_uuid' => $notification->uuid,
+                'type' => $notification->type,
+                'event_id' => $notification->event_id,
+                'registration_id' => $registration->id,
+            ]);
+
+        if (blank($notification->recipient_email)) {
+            $notification->markFailed('Missing recipient email.', false);
+            return $notification;
+        }
+
+        $this->triggerImmediateSend($notification);
 
         return $notification;
     }
@@ -187,21 +308,32 @@ class QueuedEventNotificationDispatcher implements EventNotificationDispatcher
 
     public function retry(EventNotification $notification): EventNotification
     {
-        $notification->status = NotificationStatus::Pending;
-        $notification->queue_status = 'retrying';
-        $notification->error = null;
-        $notification->failed_at = null;
-        $notification->scheduled_at = now();
-        $notification->save();
+        return \Illuminate\Support\Facades\DB::transaction(function () use ($notification) {
+            $locked = EventNotification::query()
+                ->whereKey($notification->id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $this->queueIfDue($notification);
+            if ($locked->status !== NotificationStatus::Failed) {
+                return $locked;
+            }
 
-        Log::channel((string) config('ems.logging.channel', 'ems'))
-            ->info('ems.notifications.manual_retry', [
-                'notification_uuid' => $notification->uuid,
-            ]);
+            $locked->status = NotificationStatus::Pending;
+            $locked->queue_status = 'retrying';
+            $locked->error = null;
+            $locked->failed_at = null;
+            $locked->scheduled_at = now();
+            $locked->save();
 
-        return $notification->fresh();
+            $this->queueIfDue($locked);
+
+            Log::channel((string) config('ems.logging.channel', 'ems'))
+                ->info('ems.notifications.manual_retry', [
+                    'notification_uuid' => $locked->uuid,
+                ]);
+
+            return $locked;
+        });
     }
 
     private function cancelledStub(
@@ -230,5 +362,40 @@ class QueuedEventNotificationDispatcher implements EventNotificationDispatcher
         $notification->save();
 
         return $notification;
+    }
+
+    private function triggerImmediateSend(EventNotification $notification): void
+    {
+        // Synchronous immediate dispatch registered after transaction commit
+        \Illuminate\Support\Facades\DB::afterCommit(function () use ($notification) {
+            try {
+                $sentMessage = \Illuminate\Support\Facades\Mail::to($notification->recipient_email)
+                    ->send(new \App\Ems\Mail\EventNotificationMail($notification));
+
+                $messageId = $sentMessage?->getMessageId();
+                if ($messageId) {
+                    $notification->provider_message_id = $messageId;
+                }
+
+                $notification->markSent();
+
+                Log::channel((string) config('ems.logging.channel', 'ems'))
+                    ->info('ems.notifications.sent_immediate', [
+                        'notification_uuid' => $notification->uuid,
+                        'provider_message_id' => $messageId,
+                    ]);
+            } catch (\Throwable $e) {
+                $notification->markFailed($e->getMessage());
+
+                Log::channel((string) config('ems.logging.channel', 'ems'))
+                    ->error('ems.notifications.failed_immediate', [
+                        'notification_uuid' => $notification->uuid,
+                        'error' => $e->getMessage(),
+                    ]);
+
+                // Alert Super Admins asynchronously/safely using the failure alert service
+                app(NotificationFailureAlertService::class)->sendAlert($notification, $e->getMessage());
+            }
+        });
     }
 }

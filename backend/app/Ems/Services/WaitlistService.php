@@ -2,6 +2,7 @@
 
 namespace App\Ems\Services;
 
+use App\Ems\Contracts\TicketIssuer;
 use App\Ems\Enums\RegistrationStatus;
 use App\Ems\Enums\WaitlistStatus;
 use App\Ems\Exceptions\EmsException;
@@ -21,6 +22,7 @@ class WaitlistService
     public function __construct(
         private readonly TicketCodeGenerator $codes,
         private readonly EventCommunicationService $communications,
+        private readonly TicketIssuer $tickets,
     ) {
     }
 
@@ -119,6 +121,10 @@ class WaitlistService
     public function leave(Event $event, string $entryUuid, ?string $email = null): void
     {
         DB::transaction(function () use ($event, $entryUuid, $email): void {
+            // 1. Lock Event first to preserve canonical lock ordering
+            Event::query()->withTrashed()->whereKey($event->id)->lockForUpdate()->first();
+
+            // 2. Lock WaitlistEntry
             $entry = WaitlistEntry::query()
                 ->where('event_id', $event->id)
                 ->where('uuid', $entryUuid)
@@ -141,13 +147,21 @@ class WaitlistService
             $entry->left_at = now();
             $entry->save();
 
-            if ($entry->registration) {
-                $entry->registration->status = RegistrationStatus::Cancelled;
-                $entry->registration->cancelled_at = now();
-                $entry->registration->save();
-                $this->communications->sendWaitlistRemoved(
-                    $entry->registration->loadMissing(['event', 'ticketType', 'tickets', 'order'])
-                );
+            // 3. Lock Registration
+            if ($entry->registration_id) {
+                $registration = Registration::query()
+                    ->whereKey($entry->registration_id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($registration && $registration->status !== RegistrationStatus::Cancelled) {
+                    $registration->status = RegistrationStatus::Cancelled;
+                    $registration->cancelled_at = now();
+                    $registration->save();
+                    $this->communications->sendWaitlistRemoved(
+                        $registration->loadMissing(['event', 'ticketType', 'tickets', 'order'])
+                    );
+                }
             }
 
             $this->resequence($event);
@@ -168,9 +182,9 @@ class WaitlistService
         $promoted = 0;
 
         DB::transaction(function () use ($event, &$promoted): void {
-            $locked = Event::query()->whereKey($event->id)->lockForUpdate()->firstOrFail();
+            $locked = Event::query()->withTrashed()->whereKey($event->id)->lockForUpdate()->firstOrFail();
 
-            if (! $locked->waitlist_enabled) {
+            if ($locked->trashed() || ! $locked->waitlist_enabled) {
                 return;
             }
 
@@ -181,19 +195,36 @@ class WaitlistService
                 ->get();
 
             foreach ($entries as $entry) {
-                if (! $locked->hasAvailableCapacity($entry->quantity)) {
-                    break;
-                }
-
+                $ticketType = null;
                 if ($entry->ticket_type_id) {
                     $ticketType = TicketType::query()
                         ->whereKey($entry->ticket_type_id)
                         ->lockForUpdate()
                         ->first();
+                }
 
-                    if ($ticketType !== null && ! $ticketType->hasAvailableQuantity($entry->quantity)) {
-                        continue;
-                    }
+                $registration = null;
+                if ($entry->registration_id) {
+                    $registration = Registration::query()
+                        ->whereKey($entry->registration_id)
+                        ->lockForUpdate()
+                        ->first();
+                }
+
+                if ($registration === null || $registration->status !== RegistrationStatus::Waitlisted) {
+                    // Stale entry: registration was cancelled, soft-deleted, or changed status.
+                    $entry->status = WaitlistStatus::Left;
+                    $entry->left_at = now();
+                    $entry->save();
+                    continue;
+                }
+
+                if (! $locked->hasAvailableCapacity($entry->quantity)) {
+                    break;
+                }
+
+                if ($ticketType !== null && ! $ticketType->hasAvailableQuantity($entry->quantity)) {
+                    continue;
                 }
 
                 $entry->status = WaitlistStatus::Promoted;
@@ -201,21 +232,31 @@ class WaitlistService
                 $entry->notified_at = now();
                 $entry->save();
 
-                if ($entry->registration) {
-                    // Leave as waitlisted→pending so a later checkout can confirm.
-                    // Full auto-register for free seats when no payment needed.
-                    $registration = $entry->registration;
-                    $ticketType = $entry->ticketType;
+                if ($ticketType === null || $ticketType->isFree()) {
+                    $registration->status = RegistrationStatus::Confirmed;
+                    $registration->confirmed_at = now();
+                    $registration->waitlist_position = null;
+                    $registration->save();
 
-                    if ($ticketType === null || $ticketType->isFree()) {
-                        $registration->status = RegistrationStatus::Pending;
-                        $registration->waitlist_position = null;
-                        $registration->save();
-                    } else {
-                        $registration->status = RegistrationStatus::Pending;
-                        $registration->waitlist_position = null;
-                        $registration->save();
+                    if ($ticketType !== null) {
+                        $ticketType->quantity_sold = (int) $ticketType->quantity_sold + $entry->quantity;
+                        $ticketType->save();
                     }
+
+                    $this->tickets->issueFor($registration);
+
+                    \App\Ems\Events\RegistrationCreated::dispatch($registration, auth()->user());
+
+                    $this->communications->sendRegistrationBundle(
+                        $registration->loadMissing(['event', 'ticketType', 'tickets', 'order'])
+                    );
+                } else {
+                    $expiryHours = (int) config('ems.waitlist.promotion_expiry_hours', 24);
+
+                    $registration->status = RegistrationStatus::Pending;
+                    $registration->waitlist_position = null;
+                    $registration->promoted_expires_at = now()->addHours($expiryHours);
+                    $registration->save();
 
                     $this->communications->sendWaitlistPromoted(
                         $registration->loadMissing(['event', 'ticketType', 'tickets', 'order'])
@@ -237,6 +278,70 @@ class WaitlistService
         });
 
         return $promoted;
+    }
+
+    public function expireStale(): int
+    {
+        $expiredCount = 0;
+
+        $staleRegistrations = Registration::query()
+            ->where('status', RegistrationStatus::Pending->value)
+            ->whereNotNull('promoted_expires_at')
+            ->where('promoted_expires_at', '<=', now())
+            ->get();
+
+        foreach ($staleRegistrations as $reg) {
+            DB::transaction(function () use ($reg, &$expiredCount): void {
+                // 1. Lock Event first (Canonical order)
+                $event = Event::query()->withTrashed()->whereKey($reg->event_id)->lockForUpdate()->first();
+                if ($event === null) {
+                    return;
+                }
+
+                // 2. Lock WaitlistEntry second (Canonical order)
+                $entry = WaitlistEntry::query()
+                    ->where('registration_id', $reg->id)
+                    ->lockForUpdate()
+                    ->first();
+
+                // 3. Lock Registration third (Canonical order)
+                $registration = Registration::query()
+                    ->whereKey($reg->id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($registration && $registration->status === RegistrationStatus::Pending) {
+                    $registration->status = RegistrationStatus::Cancelled;
+                    $registration->cancelled_at = now();
+                    $registration->promoted_expires_at = null;
+                    $registration->save();
+
+                    if ($entry) {
+                        $entry->status = WaitlistStatus::Expired;
+                        $entry->left_at = now();
+                        $entry->save();
+                    }
+
+                    $this->resequence($event);
+
+                    $this->communications->sendWaitlistRemoved(
+                        $registration->loadMissing(['event', 'ticketType', 'tickets', 'order'])
+                    );
+
+                    $this->promoteAvailable($event);
+
+                    $expiredCount++;
+
+                    Log::channel((string) config('ems.logging.channel', 'ems'))
+                        ->info('ems.waitlist.promoted_expired', [
+                            'registration_uuid' => $registration->uuid,
+                            'event_uuid' => $event->uuid,
+                        ]);
+                }
+            });
+        }
+
+        return $expiredCount;
     }
 
     private function resequence(Event $event): void

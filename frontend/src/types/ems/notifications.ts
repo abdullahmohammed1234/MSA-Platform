@@ -36,6 +36,8 @@ export interface EmsEventNotification {
   last_attempt_at: string | null;
   sent_at: string | null;
   failed_at: string | null;
+  alert_sent_at: string | null;
+  provider_message_id: string | null;
   created_at: string | null;
   registration?: {
     uuid: string;

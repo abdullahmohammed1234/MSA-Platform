@@ -19,14 +19,11 @@ class EventCommunicationService
     ) {
     }
 
-    /**
-     * Registration confirmation + ticket + QR (+ payment confirmation when paid).
-     */
     public function sendRegistrationBundle(Registration $registration, bool $includePayment = false): void
     {
         $registration->loadMissing(['event', 'tickets', 'ticketType', 'order', 'settledPayment']);
 
-        $this->dispatcher->notifyRegistration(
+        $this->dispatcher->notifyRegistrationImmediately(
             $registration,
             NotificationType::RegistrationConfirmed->value,
             ['idempotency_suffix' => 'confirm']
@@ -40,7 +37,7 @@ class EventCommunicationService
         }
 
         Log::channel((string) config('ems.logging.channel', 'ems'))
-            ->info('ems.notifications.registration_bundle_queued', [
+            ->info('ems.notifications.registration_bundle_dispatched', [
                 'registration_uuid' => $registration->uuid,
             ]);
     }

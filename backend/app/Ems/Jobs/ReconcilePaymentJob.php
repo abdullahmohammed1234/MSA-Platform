@@ -16,6 +16,7 @@ class ReconcilePaymentJob implements ShouldQueue
 
     public function __construct(public readonly int $paymentId)
     {
+        $this->afterCommit = true;
         $this->onQueue((string) config('ems.payments.queue', 'ems-payments'));
     }
 

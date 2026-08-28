@@ -143,48 +143,64 @@ class AttendeeImportService
 
     public function processImport(AttendeeImport $import): AttendeeImport
     {
-        $event = $import->event()->firstOrFail();
-        $mapping = $import->column_mapping ?? [];
-        $validRows = $import->summary['valid_rows'] ?? [];
+        try {
+            $event = $import->event()->firstOrFail();
+            $mapping = $import->column_mapping ?? [];
+            $validRows = $import->summary['valid_rows'] ?? [];
 
-        if ($validRows === [] && ! empty($import->summary['stored_path'])) {
-            $absolute = Storage::disk(config('ems.storage.disk', 'local'))
-                ->path($import->summary['stored_path']);
-            $rows = $this->readPath($absolute);
-            $validated = $this->validateRows($event, $rows, $mapping);
-            $validRows = $validated['valid'];
-        }
+            if ($validRows === [] && ! empty($import->summary['stored_path'])) {
+                $absolute = Storage::disk(config('ems.storage.disk', 'local'))
+                    ->path($import->summary['stored_path']);
+                $rows = $this->readPath($absolute);
+                $validated = $this->validateRows($event, $rows, $mapping);
+                $validRows = $validated['valid'];
+            }
 
-        $imported = 0;
-        $failed = [];
+            $imported = 0;
+            $failed = [];
 
-        DB::transaction(function () use ($event, $import, $validRows, &$imported, &$failed) {
-            foreach ($validRows as $row) {
+            $chunks = array_chunk($validRows, 25);
+            foreach ($chunks as $chunk) {
                 try {
-                    $this->importRow($event, $import, $row);
-                    $imported++;
+                    $chunkImported = 0;
+                    DB::transaction(function () use ($event, $import, $chunk, &$chunkImported) {
+                        foreach ($chunk as $row) {
+                            $this->importRow($event, $import, $row);
+                            $chunkImported++;
+                        }
+                    });
+                    $imported += $chunkImported;
                 } catch (\Throwable $e) {
-                    $failed[] = [
-                        'row' => $row['row_number'] ?? null,
-                        'email' => $row['email'] ?? null,
-                        'error' => $e->getMessage(),
-                    ];
+                    foreach ($chunk as $row) {
+                        $failed[] = [
+                            'row' => $row['row_number'] ?? null,
+                            'email' => $row['email'] ?? null,
+                            'error' => 'Chunk import failed: ' . $e->getMessage(),
+                        ];
+                    }
                 }
             }
-        });
 
-        $summary = $import->summary ?? [];
-        $summary['imported'] = $imported;
-        $summary['import_failures'] = $failed;
-        $import->summary = $summary;
-        $import->status = AttendeeImportStatus::Completed;
-        $import->completed_at = now();
-        $import->error_message = $failed === [] ? null : 'Some rows failed during import.';
-        $import->save();
+            $summary = $import->summary ?? [];
+            $summary['imported'] = $imported;
+            $summary['import_failures'] = $failed;
+            $import->summary = $summary;
+            $import->status = AttendeeImportStatus::Completed;
+            $import->completed_at = now();
+            $import->error_message = $failed === [] ? null : 'Some rows failed during import.';
+            $import->save();
 
-        AttendeesImported::dispatch($import, $import->importer);
+            AttendeesImported::dispatch($import, $import->importer);
 
-        return $import->fresh();
+            return $import->fresh();
+        } finally {
+            if (! empty($import->summary['stored_path'])) {
+                $disk = config('ems.storage.disk', 'local');
+                if (Storage::disk($disk)->exists($import->summary['stored_path'])) {
+                    Storage::disk($disk)->delete($import->summary['stored_path']);
+                }
+            }
+        }
     }
 
     /**

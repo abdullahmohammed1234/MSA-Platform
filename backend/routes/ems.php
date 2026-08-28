@@ -232,6 +232,8 @@ Route::middleware(['auth:sanctum', 'throttle:' . config('ems.route.throttle', 'e
         Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
         Route::get('/payments/{payment}', [PaymentController::class, 'show'])->name('payments.show');
         Route::post('/payments/{payment}/refund', [PaymentController::class, 'refund'])->name('payments.refund');
+        Route::post('/payments/{payment}/fulfill', [PaymentController::class, 'fulfill'])->name('payments.fulfill');
+        Route::post('/payments/{payment}/reconcile', [PaymentController::class, 'reconcile'])->name('payments.reconcile');
 
         Route::get('/stale-captures', [StaleCaptureController::class, 'index'])->name('stale-captures.index');
         Route::get('/stale-captures/{payment}/{squarePaymentId}', [StaleCaptureController::class, 'show'])

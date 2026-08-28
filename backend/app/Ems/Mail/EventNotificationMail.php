@@ -26,8 +26,15 @@ class EventNotificationMail extends Mailable
         $fromAddress = (string) config('ems.notifications.from_address', config('mail.from.address'));
         $fromName = (string) config('ems.notifications.from_name', config('mail.from.name'));
 
+        $bccAddress = config('ems.notifications.bcc_archive_address');
+        $bcc = null;
+        if ($bccAddress && $this->notification->type === 'registration_confirmed') {
+            $bcc = [$bccAddress];
+        }
+
         return new Envelope(
             from: new Address($fromAddress, $fromName),
+            bcc: $bcc,
             subject: (string) ($this->notification->subject ?: 'MSA Event Notification'),
         );
     }

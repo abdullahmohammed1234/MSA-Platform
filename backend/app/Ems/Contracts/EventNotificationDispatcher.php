@@ -35,4 +35,15 @@ interface EventNotificationDispatcher
      * @return int  the number of notifications queued
      */
     public function broadcastToEvent(Event $event, string $type, array $payload = []): int;
+
+    /**
+     * Send a registration confirmation message immediately (synchronously after commit).
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    public function notifyRegistrationImmediately(
+        Registration $registration,
+        string $type,
+        array $payload = []
+    ): EventNotification;
 }

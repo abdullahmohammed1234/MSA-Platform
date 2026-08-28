@@ -22,6 +22,7 @@ class QueueRegistrationConfirmation implements ShouldQueue
         public readonly int $registrationId,
         public readonly bool $includePayment = false,
     ) {
+        $this->afterCommit = true;
         $this->onQueue((string) config('ems.notifications.queue', 'ems-notifications'));
     }
 
