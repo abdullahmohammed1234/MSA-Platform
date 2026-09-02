@@ -25,6 +25,16 @@ export const notificationsService = {
     return toPaginated(envelope.data, envelope.meta);
   },
 
+  async listAll(
+    params: Record<string, unknown> = {}
+  ): Promise<EmsPaginated<EmsEventNotification>> {
+    const envelope = await emsHttp.getWithMeta<EmsEventNotification[]>(
+      '/notifications',
+      params
+    );
+    return toPaginated(envelope.data, envelope.meta);
+  },
+
   getOne(notificationUuid: string): Promise<EmsEventNotification> {
     return emsHttp.get(`/notifications/${notificationUuid}`);
   },
@@ -38,6 +48,10 @@ export const notificationsService = {
 
   retry(eventUuid: string, notificationUuid: string): Promise<EmsEventNotification> {
     return emsHttp.post(`/events/${eventUuid}/notifications/${notificationUuid}/retry`);
+  },
+
+  retryGlobal(notificationUuid: string): Promise<EmsEventNotification> {
+    return emsHttp.post(`/notifications/${notificationUuid}/retry`);
   },
 
   listReminders(eventUuid: string): Promise<EmsEventReminder[]> {

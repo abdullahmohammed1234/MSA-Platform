@@ -79,5 +79,39 @@ class NotificationHistoryService
                 'resendable' => in_array($t, NotificationType::resendable(), true),
             ], NotificationType::cases()),
         ];
+     }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     */
+    public function paginateAll(array $filters = []): LengthAwarePaginator
+    {
+        $perPage = max(1, min((int) ($filters['per_page'] ?? 20), 100));
+
+        $query = EventNotification::query()
+            ->with([
+                'registration:id,uuid,reference,attendee_name,attendee_email',
+                'event:id,uuid,name'
+            ])
+            ->orderByDesc('id');
+
+        if (! empty($filters['type'])) {
+            $query->where('type', $filters['type']);
+        }
+
+        if (! empty($filters['status'])) {
+            $query->where('status', $filters['status']);
+        }
+
+        if (! empty($filters['search'])) {
+            $search = '%' . trim((string) $filters['search']) . '%';
+            $query->where(function ($q) use ($search): void {
+                $q->where('recipient_email', 'like', $search)
+                    ->orWhere('subject', 'like', $search)
+                    ->orWhere('type', 'like', $search);
+            });
+        }
+
+        return $query->paginate($perPage);
     }
 }

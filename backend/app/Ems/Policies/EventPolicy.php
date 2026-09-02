@@ -103,6 +103,11 @@ class EventPolicy
             && $this->inScope($user, $event);
     }
 
+    public function viewAnyNotifications(User $user): bool
+    {
+        return $user->hasPermission(EmsPermissions::NOTIFICATIONS_VIEW);
+    }
+
     public function viewNotifications(User $user, Event $event): bool
     {
         return $user->hasPermission(EmsPermissions::NOTIFICATIONS_VIEW)

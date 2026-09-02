@@ -215,8 +215,12 @@ Route::middleware(['auth:sanctum', 'throttle:' . config('ems.route.throttle', 'e
         Route::delete('/events/{event}/reminders/{reminder}', [EventReminderController::class, 'destroy'])
             ->name('events.reminders.destroy');
 
+        Route::get('/notifications', [EventNotificationController::class, 'all'])
+            ->name('notifications.all');
         Route::get('/notifications/{notification}', [EventNotificationController::class, 'show'])
             ->name('notifications.show');
+        Route::post('/notifications/{notification}/retry', [EventNotificationController::class, 'retryGlobal'])
+            ->name('notifications.retryGlobal');
 
         Route::get('/email-templates', [EmailTemplateController::class, 'index'])
             ->name('email-templates.index');

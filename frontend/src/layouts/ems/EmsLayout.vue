@@ -15,6 +15,7 @@ import {
   Percent,
   LayoutTemplate,
   MessageSquare,
+  Mail,
 } from 'lucide-vue-next';
 import { ToastContainer, useToastStore } from '@/components/feedback/toast';
 import { useAuthStore } from '@/stores/auth';
@@ -74,6 +75,12 @@ const navigation = computed(() =>
       to: { name: 'ems-feedback' },
       icon: MessageSquare,
       permission: EMS_PERMISSIONS.EVENTS_VIEW,
+    },
+    {
+      label: 'Communications',
+      to: { name: 'ems-communications' },
+      icon: Mail,
+      permission: EMS_PERMISSIONS.NOTIFICATIONS_VIEW,
     },
     {
       label: 'Categories',

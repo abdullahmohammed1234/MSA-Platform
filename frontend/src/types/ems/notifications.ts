@@ -45,6 +45,10 @@ export interface EmsEventNotification {
     attendee_name: string;
     attendee_email: string;
   } | null;
+  event?: {
+    uuid: string;
+    name: string;
+  } | null;
   event_uuid?: string | null;
 }
 

@@ -132,6 +132,12 @@ const emsRoutes: Array<RouteRecordRaw> = [
         meta: { title: 'Event Templates', emsPermissions: EMS_PERMISSIONS.EVENTS_VIEW },
       },
       {
+        path: 'communications',
+        name: 'ems-communications',
+        component: () => import('@/pages/ems/GlobalNotificationsPage.vue'),
+        meta: { title: 'Communications', emsPermissions: EMS_PERMISSIONS.NOTIFICATIONS_VIEW },
+      },
+      {
         path: 'feedback',
         name: 'ems-feedback',
         component: () => import('@/pages/ems/FeedbackPage.vue'),

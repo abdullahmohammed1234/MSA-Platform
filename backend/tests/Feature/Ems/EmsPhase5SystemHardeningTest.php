@@ -687,4 +687,217 @@ class EmsPhase5SystemHardeningTest extends EmsTestCase
         // Verify that the SendEventNotificationJob was dispatched to the queue
         Queue::assertPushed(SendEventNotificationJob::class);
     }
+
+    protected function createNotification(array $attributes = []): EventNotification
+    {
+        $notification = new EventNotification();
+        $notification->event_id = $attributes['event_id'] ?? null;
+        $notification->registration_id = $attributes['registration_id'] ?? null;
+        $notification->type = $attributes['type'] ?? NotificationType::RegistrationConfirmed->value;
+        $notification->channel = \App\Ems\Enums\NotificationChannel::Mail;
+        $notification->recipient_email = $attributes['recipient_email'] ?? 'test@example.com';
+        $notification->subject = 'Test Subject';
+        $notification->body = 'Test Body';
+        $notification->status = $attributes['status'] ?? NotificationStatus::Pending->value;
+        $notification->idempotency_key = $attributes['idempotency_key'] ?? (string) Str::uuid();
+        $notification->error = $attributes['error'] ?? null;
+        $notification->retry_count = $attributes['retry_count'] ?? 0;
+        $notification->save();
+
+        return $notification;
+    }
+
+    public function test_free_registration_succeeds_and_sends_immediate_email_without_queue(): void
+    {
+        Mail::fake();
+        Queue::fake();
+
+        $event = Event::factory()->create([
+            'status' => EventStatus::RegistrationOpen->value,
+            'capacity' => 100,
+            'is_public' => true,
+        ]);
+        $ticketType = TicketType::factory()->create([
+            'event_id' => $event->id,
+            'price' => 0.00,
+            'quantity' => 100,
+            'quantity_sold' => 0,
+        ]);
+
+        $response = $this->postJson(route('api.ems.public.events.register', $event->slug), [
+            'first_name' => 'Free',
+            'last_name' => 'Attendee',
+            'email' => 'free@example.com',
+            'ticket_type_uuid' => $ticketType->uuid,
+            'quantity' => 1,
+        ]);
+
+        $response->assertStatus(201);
+
+        $registration = Registration::query()
+            ->where('attendee_email', 'free@example.com')
+            ->firstOrFail();
+
+        // Verify synchronous mail dispatch post-commit
+        Mail::assertSent(EventNotificationMail::class, function ($mail) use ($registration) {
+            return $mail->hasTo($registration->attendee_email);
+        });
+
+        // Verify ledger marked as Sent
+        $notification = EventNotification::query()
+            ->where('registration_id', $registration->id)
+            ->firstOrFail();
+        $this->assertEquals(NotificationStatus::Sent->value, $notification->status->value);
+
+        // Verify queue job backup was dispatched
+        Queue::assertPushed(QueueRegistrationConfirmation::class);
+    }
+
+    public function test_queue_backup_idempotency_behavior(): void
+    {
+        Mail::fake();
+        
+        $event = Event::factory()->create([
+            'status' => EventStatus::RegistrationOpen->value,
+            'capacity' => 100,
+        ]);
+        $ticketType = TicketType::factory()->create([
+            'event_id' => $event->id,
+            'price' => 0.00,
+            'quantity' => 100,
+            'quantity_sold' => 0,
+        ]);
+
+        // Scenario 1: Immediate send succeeded (status = Sent)
+        $registration1 = Registration::factory()->create([
+            'event_id' => $event->id,
+            'ticket_type_id' => $ticketType->id,
+            'status' => RegistrationStatus::Confirmed->value,
+            'attendee_email' => 'success@example.com',
+        ]);
+        $notification1 = $this->createNotification([
+            'event_id' => $event->id,
+            'registration_id' => $registration1->id,
+            'type' => NotificationType::RegistrationConfirmed->value,
+            'recipient_email' => $registration1->attendee_email,
+            'status' => NotificationStatus::Sent->value,
+            'idempotency_key' => 'registration_confirmed:' . $registration1->id . ':confirm',
+        ]);
+
+        Mail::fake(); // Reset Mail assertions
+        
+        $job1 = new QueueRegistrationConfirmation($registration1->id);
+        $job1->handle(app(EventCommunicationService::class));
+
+        // Since it was already Sent, handle should not trigger another send (idempotent)
+        Mail::assertNothingSent();
+
+        // Scenario 2: Immediate send failed (status = Failed)
+        $registration2 = Registration::factory()->create([
+            'event_id' => $event->id,
+            'ticket_type_id' => $ticketType->id,
+            'status' => RegistrationStatus::Confirmed->value,
+            'attendee_email' => 'failed@example.com',
+        ]);
+        $notification2 = $this->createNotification([
+            'event_id' => $event->id,
+            'registration_id' => $registration2->id,
+            'type' => NotificationType::RegistrationConfirmed->value,
+            'recipient_email' => $registration2->attendee_email,
+            'status' => NotificationStatus::Failed->value,
+            'idempotency_key' => 'registration_confirmed:' . $registration2->id . ':confirm',
+        ]);
+
+        $job2 = new QueueRegistrationConfirmation($registration2->id);
+        $job2->handle(app(EventCommunicationService::class));
+
+        // Since status was Failed, the backup job must retry and send email
+        Mail::assertSent(EventNotificationMail::class, function ($mail) use ($registration2) {
+            return $mail->hasTo($registration2->attendee_email);
+        });
+
+        $this->assertEquals(NotificationStatus::Sent->value, $notification2->fresh()->status->value);
+    }
+
+    public function test_global_notification_ledger_list_and_filters(): void
+    {
+        $admin = $this->emsUser(EmsRoles::EVENT_ADMINISTRATOR);
+        $staff = $this->emsUser(EmsRoles::EVENT_STAFF);
+
+        $event = Event::factory()->create();
+        $notification1 = $this->createNotification([
+            'event_id' => $event->id,
+            'recipient_email' => 'user1@example.com',
+            'status' => NotificationStatus::Sent->value,
+            'type' => NotificationType::RegistrationConfirmed->value,
+        ]);
+        $notification2 = $this->createNotification([
+            'event_id' => $event->id,
+            'recipient_email' => 'user2@example.com',
+            'status' => NotificationStatus::Failed->value,
+            'type' => NotificationType::PaymentConfirmation->value,
+        ]);
+
+        // Unauthorized user is blocked
+        $this->actingAsEms($staff)
+            ->getJson(route('api.ems.notifications.all'))
+            ->assertStatus(403);
+
+        // Authorized user can list all
+        $response = $this->actingAsEms($admin)
+            ->getJson(route('api.ems.notifications.all'))
+            ->assertStatus(200);
+
+        $response->assertJsonCount(2, 'data');
+
+        // Apply filters
+        $this->actingAsEms($admin)
+            ->getJson(route('api.ems.notifications.all', ['status' => 'failed']))
+            ->assertStatus(200)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.uuid', $notification2->uuid);
+
+        $this->actingAsEms($admin)
+            ->getJson(route('api.ems.notifications.all', ['search' => 'user1']))
+            ->assertStatus(200)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.uuid', $notification1->uuid);
+    }
+
+    public function test_global_notification_retry(): void
+    {
+        Mail::fake();
+
+        $admin = $this->emsUser(EmsRoles::EVENT_ADMINISTRATOR);
+        $staff = $this->emsUser(EmsRoles::EVENT_STAFF);
+
+        $event = Event::factory()->create();
+
+        $notification = $this->createNotification([
+            'event_id' => $event->id,
+            'recipient_email' => 'retry@example.com',
+            'status' => NotificationStatus::Failed->value,
+            'type' => NotificationType::RegistrationConfirmed->value,
+            'error' => 'Previous SMTP failure',
+            'retry_count' => 0,
+        ]);
+
+        // Unauthorized user cannot retry
+        $this->actingAsEms($staff)
+            ->postJson(route('api.ems.notifications.retryGlobal', $notification->uuid))
+            ->assertStatus(403);
+
+        // Authorized user can trigger retry
+        $this->actingAsEms($admin)
+            ->postJson(route('api.ems.notifications.retryGlobal', $notification->uuid))
+            ->assertStatus(200);
+
+        // Verify it was resent synchronously and error cleared
+        $this->assertEquals(NotificationStatus::Sent->value, $notification->fresh()->status->value);
+        $this->assertNull($notification->fresh()->error);
+
+        Mail::assertSent(EventNotificationMail::class, function ($mail) {
+            return $mail->hasTo('retry@example.com');
+        });
+    }
 }

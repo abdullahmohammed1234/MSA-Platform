@@ -106,4 +106,35 @@ class EventNotificationController extends EmsController
             'Notification queued for retry.'
         );
     }
+
+    public function all(Request $request): JsonResponse
+    {
+        $this->authorize('viewAnyNotifications', Event::class);
+
+        $paginator = $this->history->paginateAll($request->query());
+
+        return ApiResponse::paginated(
+            $paginator,
+            'All notifications retrieved.',
+            EventNotificationResource::class
+        );
+    }
+
+    public function retryGlobal(Request $request, EventNotification $notification): JsonResponse
+    {
+        if ($notification->event !== null) {
+            $this->authorize('sendNotifications', $notification->event);
+        } else {
+            if (! $request->user()->hasPermission(\App\Ems\Support\EmsPermissions::NOTIFICATIONS_SEND)) {
+                abort(403, 'Unauthorized.');
+            }
+        }
+
+        $retried = $this->dispatcher->retry($notification);
+
+        return ApiResponse::success(
+            new EventNotificationResource($retried),
+            'Notification queued for retry.'
+        );
+    }
 }

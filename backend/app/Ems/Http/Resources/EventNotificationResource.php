@@ -38,6 +38,10 @@ class EventNotificationResource extends JsonResource
                 'attendee_name' => $this->registration?->attendee_name,
                 'attendee_email' => $this->registration?->attendee_email,
             ]),
+            'event' => $this->whenLoaded('event', fn () => [
+                'uuid' => $this->event?->uuid,
+                'name' => $this->event?->name,
+            ]),
             'event_uuid' => $this->whenLoaded('event', fn () => $this->event?->uuid),
         ];
     }
