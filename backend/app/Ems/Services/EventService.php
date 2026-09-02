@@ -89,8 +89,14 @@ class EventService
         $event = DB::transaction(function () use ($data, $actor): Event {
             $event = new Event();
 
+            $isManualMode = ($data['slug_mode'] ?? null) === 'manual'
+                || (array_key_exists('slug', $data) && filled($data['slug']) && $data['slug'] !== Str::slug($data['name']));
+
             $event->fill($this->attributesFrom($data));
-            $event->slug = $this->uniqueSlug($data['slug'] ?? $data['name']);
+            $event->is_slug_custom = $isManualMode;
+            $event->slug = $this->uniqueSlug(
+                ($isManualMode && filled($data['slug'] ?? null)) ? $data['slug'] : $data['name']
+            );
             $event->timezone = $data['timezone'] ?? config('ems.defaults.timezone');
 
             // New events always start in draft; status only moves through the
@@ -103,7 +109,18 @@ class EventService
             $event->created_by = $actor->id;
             $event->updated_by = $actor->id;
 
-            $event->save();
+            try {
+                $event->save();
+            } catch (\Illuminate\Database\QueryException $e) {
+                if ($e->getCode() === '23000' || str_contains($e->getMessage(), 'slug')) {
+                    throw new \App\Ems\Exceptions\EmsException(
+                        'Another event already uses this slug.',
+                        ['slug' => ['This slug is already taken.']],
+                        \Symfony\Component\HttpFoundation\Response::HTTP_UNPROCESSABLE_ENTITY
+                    );
+                }
+                throw $e;
+            }
 
             return $event;
         });
@@ -125,14 +142,37 @@ class EventService
         unset($data['notify_audience']);
 
         DB::transaction(function () use ($event, $data, $actor): void {
+            $resetRequested = ! empty($data['reset_slug']) || ($data['slug_mode'] ?? null) === 'auto';
+            $manualRequested = ($data['slug_mode'] ?? null) === 'manual';
+            $customSlugProvided = array_key_exists('slug', $data) && filled($data['slug']);
+
             $event->fill($this->attributesFrom($data));
 
-            if (array_key_exists('slug', $data) && filled($data['slug']) && $data['slug'] !== $event->slug) {
-                $event->slug = $this->uniqueSlug($data['slug'], $event->id);
+            if ($resetRequested) {
+                $event->is_slug_custom = false;
+                $event->slug = $this->uniqueSlug($event->name, $event->id);
+            } elseif ($manualRequested || ($customSlugProvided && $data['slug'] !== $event->slug)) {
+                $event->is_slug_custom = true;
+                $targetSlug = $customSlugProvided ? $data['slug'] : $event->slug;
+                $event->slug = $this->uniqueSlug($targetSlug, $event->id);
+            } elseif (! $event->is_slug_custom && array_key_exists('name', $data) && $event->isDirty('name')) {
+                $event->slug = $this->uniqueSlug($event->name, $event->id);
             }
 
             $event->updated_by = $actor->id;
-            $event->save();
+
+            try {
+                $event->save();
+            } catch (\Illuminate\Database\QueryException $e) {
+                if ($e->getCode() === '23000' || str_contains($e->getMessage(), 'slug')) {
+                    throw new \App\Ems\Exceptions\EmsException(
+                        'Another event already uses this slug.',
+                        ['slug' => ['This slug is already taken.']],
+                        \Symfony\Component\HttpFoundation\Response::HTTP_UNPROCESSABLE_ENTITY
+                    );
+                }
+                throw $e;
+            }
         });
 
         // Audit which fields actually moved, not which ones were submitted.

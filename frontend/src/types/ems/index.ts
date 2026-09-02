@@ -137,6 +137,8 @@ export interface Event {
   uuid: string;
   name: string;
   slug: string;
+  is_slug_custom?: boolean;
+  slug_mode?: 'auto' | 'manual';
   short_description: string | null;
   description: string | null;
   banner_url?: string | null;
@@ -273,6 +275,8 @@ export interface EventListFilters {
 export interface EventPayload {
   name: string;
   slug?: string | null;
+  slug_mode?: 'auto' | 'manual';
+  reset_slug?: boolean;
   short_description?: string | null;
   description?: string | null;
   banner_url?: string | null;

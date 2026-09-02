@@ -103,6 +103,7 @@ export interface PublicRegistration {
   uuid: string;
   status: string;
   status_label: string;
+  is_active?: boolean;
   type: string;
   attendee_name: string;
   attendee_email: string;

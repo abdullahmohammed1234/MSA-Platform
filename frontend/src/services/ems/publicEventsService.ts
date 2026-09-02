@@ -89,8 +89,8 @@ export const publicEventsService = {
     return emsHttp.get<PublicTicket>(`/public/tickets/${encodeURIComponent(code)}`);
   },
 
-  async getMyTickets(): Promise<PublicRegistration[]> {
-    return emsHttp.get<PublicRegistration[]>('/public/my-tickets');
+  async getMyTickets(params?: { active_only?: boolean }): Promise<PublicRegistration[]> {
+    return emsHttp.get<PublicRegistration[]>('/public/my-tickets', compact(params || {}));
   },
 
   async cancelRegistration(uuid: string): Promise<PublicRegistration> {

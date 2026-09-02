@@ -330,6 +330,13 @@ class PublicEventController extends EmsController
                 $query->where('user_id', $user->id)
                     ->orWhere('attendee_email', $user->email);
             })
+            ->when($request->boolean('active_only'), function ($query): void {
+                $query->whereIn('status', [
+                    \App\Ems\Enums\RegistrationStatus::Confirmed->value,
+                    \App\Ems\Enums\RegistrationStatus::AwaitingPayment->value,
+                    \App\Ems\Enums\RegistrationStatus::Waitlisted->value,
+                ]);
+            })
             ->with(['event.category', 'tickets', 'ticketType', 'order.latestPayment'])
             ->orderBy('created_at', 'desc')
             ->get();
@@ -360,11 +367,11 @@ class PublicEventController extends EmsController
             throw new NotFoundHttpException('Registration not found.');
         }
 
-        if ($reg->type->requiresPayment() || (float) $reg->amount_due > 0.0) {
+        if ($reg->status === \App\Ems\Enums\RegistrationStatus::Refunded) {
             throw new \App\Ems\Exceptions\EmsException(
-                'Paid registrations cannot be cancelled online. Please contact the event organizer to request a cancellation and refund.',
-                ['registration' => ['Paid registrations cannot be cancelled online.']],
-                Response::HTTP_FORBIDDEN
+                'This registration has already been refunded and cannot be cancelled.',
+                ['registration' => ['This registration has already been refunded.']],
+                Response::HTTP_CONFLICT
             );
         }
 
@@ -372,6 +379,14 @@ class PublicEventController extends EmsController
             return ApiResponse::success(
                 new \App\Ems\Http\Resources\Public\PublicRegistrationResource($reg),
                 'Registration is already cancelled.'
+            );
+        }
+
+        if ($reg->type->requiresPayment() || (float) $reg->amount_due > 0.0) {
+            throw new \App\Ems\Exceptions\EmsException(
+                'Paid registrations cannot be cancelled online. Please contact the event organizer to request a cancellation and refund.',
+                ['registration' => ['Paid registrations cannot be cancelled online.']],
+                Response::HTTP_FORBIDDEN
             );
         }
 
@@ -403,6 +418,14 @@ class PublicEventController extends EmsController
 
             // 4. Lock Registration
             $regLocked = \App\Ems\Models\Registration::query()->whereKey($reg->id)->lockForUpdate()->firstOrFail();
+
+            if ($regLocked->status === \App\Ems\Enums\RegistrationStatus::Refunded) {
+                throw new \App\Ems\Exceptions\EmsException(
+                    'This registration has already been refunded and cannot be cancelled.',
+                    ['registration' => ['This registration has already been refunded.']],
+                    Response::HTTP_CONFLICT
+                );
+            }
 
             if ($regLocked->status === \App\Ems\Enums\RegistrationStatus::Cancelled) {
                 return;

@@ -54,8 +54,11 @@ async function load() {
 onMounted(load);
 watch(() => props.eventUuid, load);
 
+const editingHasHistory = ref(false);
+
 function resetForm() {
   editingUuid.value = null;
+  editingHasHistory.value = false;
   showForm.value = false;
   form.name = '';
   form.description = '';
@@ -74,6 +77,7 @@ function startCreate() {
 
 function startEdit(ticket: TicketType) {
   editingUuid.value = ticket.uuid;
+  editingHasHistory.value = ticket.quantity_sold > 0;
   showForm.value = true;
   form.name = ticket.name;
   form.description = ticket.description ?? '';
@@ -160,6 +164,13 @@ async function refreshSquare(ticket: TicketType) {
 }
 
 async function remove(ticket: TicketType) {
+  if (ticket.quantity_sold > 0) {
+    if (window.confirm(`"${ticket.name}" has existing sales or registrations and cannot be deleted.\n\nWould you like to disable it instead so it is no longer available to new buyers?`)) {
+      await disable(ticket);
+    }
+    return;
+  }
+
   if (!window.confirm(`Delete ${ticket.name}?`)) return;
   try {
     await ticketTypesService.remove(props.eventUuid, ticket.uuid);
@@ -249,9 +260,9 @@ function formatMoney(amount: number, currency: string) {
               {{ ticket.remaining_quantity === null ? 'Unlimited' : ticket.remaining_quantity }}
             </td>
             <td class="px-4 py-3">
-              <span v-if="ticket.is_sold_out" class="text-amber-700">Sold out</span>
+              <span v-if="ticket.is_sold_out" class="text-amber-700 font-semibold">Sold out</span>
               <span v-else-if="!ticket.is_active" class="text-neutral-muted">Disabled</span>
-              <span v-else class="text-emerald-700">Active</span>
+              <span v-else class="text-emerald-700 font-semibold">Active</span>
             </td>
             <td class="px-4 py-3">
               <p class="text-xs font-semibold">{{ squareLabel(ticket) }}</p>
@@ -319,14 +330,20 @@ function formatMoney(amount: number, currency: string) {
           <input v-model="form.name" required class="w-full rounded-lg border border-neutral-ivory px-3 py-2" />
         </label>
         <label class="block text-sm">
-          <span class="mb-1 block text-xs font-bold uppercase tracking-wider text-neutral-muted">Price</span>
+          <span class="mb-1 flex items-center justify-between text-xs font-bold uppercase tracking-wider text-neutral-muted">
+            <span>Price</span>
+            <span v-if="editingHasHistory" class="normal-case text-amber-700 font-normal text-[10px]">
+              (Locked due to sales)
+            </span>
+          </span>
           <input
             v-model.number="form.price"
             type="number"
             min="0"
             step="0.01"
             required
-            class="w-full rounded-lg border border-neutral-ivory px-3 py-2"
+            :disabled="editingHasHistory"
+            class="w-full rounded-lg border border-neutral-ivory px-3 py-2 disabled:bg-neutral-100 disabled:text-neutral-500 disabled:cursor-not-allowed"
           />
         </label>
         <label class="block text-sm sm:col-span-2">

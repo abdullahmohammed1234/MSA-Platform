@@ -71,6 +71,7 @@ class Event extends Model
         'max_registrations_per_attendee',
         'registration_deadline_at',
         'is_public',
+        'is_slug_custom',
         'created_by',
         'updated_by',
         'series_id',
@@ -96,6 +97,7 @@ class Event extends Model
             'max_tickets_per_order' => 'integer',
             'max_registrations_per_attendee' => 'integer',
             'is_public' => 'boolean',
+            'is_slug_custom' => 'boolean',
             'series_id' => 'integer',
             'views_count' => 'integer',
             'registrations_started_count' => 'integer',
@@ -109,6 +111,7 @@ class Event extends Model
     protected $attributes = [
         'status' => EventStatus::Draft->value,
         'is_public' => false,
+        'is_slug_custom' => false,
         'waitlist_enabled' => false,
     ];
 

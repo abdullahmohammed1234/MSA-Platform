@@ -77,12 +77,18 @@ const extraPending = computed(() => {
   );
 });
 
+const isRegistrationActive = (reg: PublicRegistration): boolean => {
+  if (reg.is_active !== undefined) return reg.is_active;
+  return ['confirmed', 'awaiting_payment', 'waitlisted'].includes(reg.status);
+};
+
 const filteredRegistrations = computed(() => {
   hiddenRevision.value;
   return registrations.value.filter((reg) => {
     if (hiddenTicketsStorage.hasRegistration(reg.uuid)) return false;
     const isPast = isPastEvent(reg.event?.end_at ?? reg.event?.start_at ?? null);
-    return activeTab.value === 'active' ? !isPast : isPast;
+    const active = isRegistrationActive(reg);
+    return activeTab.value === 'active' ? (active && !isPast) : (!active || isPast);
   });
 });
 
@@ -97,6 +103,8 @@ const getStatusClass = (status: string) => {
     case 'waitlisted':
     case 'awaiting_payment':
       return 'bg-amber-50 text-amber-700 border-amber-200';
+    case 'refunded':
+      return 'bg-purple-50 text-purple-700 border-purple-200';
     case 'cancelled':
       return 'bg-red-50 text-red-700 border-red-200';
     default:
@@ -180,7 +188,7 @@ async function executeCancelPendingPayment() {
 const HIDEABLE_EVENT_STATUSES = new Set(['cancelled', 'completed', 'archived']);
 
 const canHideRegistration = (reg: PublicRegistration): boolean => {
-  if (reg.status === 'cancelled') return true;
+  if (reg.status === 'cancelled' || reg.status === 'refunded') return true;
   if (reg.event?.status && HIDEABLE_EVENT_STATUSES.has(reg.event.status)) return true;
   return isPastEvent(reg.event?.end_at ?? reg.event?.start_at ?? null);
 };
@@ -448,7 +456,7 @@ function payLocalPending(item: StoredPendingCheckout) {
               </div>
 
               <!-- Ticket Info & Links -->
-              <div v-if="reg.status !== 'cancelled' && reg.tickets && reg.tickets.length > 0" class="mt-6 pt-5 border-t border-dashed border-neutral-ivory">
+              <div v-if="isRegistrationActive(reg) && reg.tickets && reg.tickets.length > 0" class="mt-6 pt-5 border-t border-dashed border-neutral-ivory">
                 <span class="text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/40 block mb-2">
                   Your Tickets ({{ reg.tickets.length }}):
                 </span>
@@ -504,7 +512,7 @@ function payLocalPending(item: StoredPendingCheckout) {
                     Remove from list
                   </button>
                 </template>
-                <template v-else-if="reg.status !== 'cancelled'">
+                <template v-else-if="isRegistrationActive(reg)">
                   <RouterLink
                     v-if="reg.tickets && reg.tickets.length > 0"
                     :to="{ name: 'ems-public-ticket', params: { code: reg.tickets[0].code } }"
@@ -530,6 +538,17 @@ function payLocalPending(item: StoredPendingCheckout) {
                     Remove from list
                   </button>
                 </template>
+                <div v-else-if="reg.status === 'refunded'" class="space-y-2 md:space-y-3 text-center py-2 md:py-0">
+                  <span class="block text-xs text-purple-700 font-medium italic">Booking Refunded</span>
+                  <button
+                    type="button"
+                    class="block w-full text-center border border-neutral-ivory text-neutral-black/55 hover:text-secondary hover:border-secondary/30 py-2.5 px-4 rounded-xl text-[10px] font-extrabold uppercase tracking-widest transition-all cursor-pointer inline-flex items-center justify-center gap-1.5"
+                    @click="confirmHideRegistration(reg)"
+                  >
+                    <Trash2 class="h-3 w-3" />
+                    Remove from list
+                  </button>
+                </div>
                 <div v-else class="space-y-2 md:space-y-3 text-center py-2 md:py-0">
                   <span class="block text-xs text-neutral-black/45 font-medium italic">Booking Cancelled</span>
                   <button
@@ -545,7 +564,6 @@ function payLocalPending(item: StoredPendingCheckout) {
             </div>
           </div>
         </div>
-
       </div>
     </div>
 

@@ -581,4 +581,61 @@ class EmsPublicEventsTest extends EmsTestCase
         $this->assertSame('cancelled', $refreshed->json('data.0.status'));
         $this->assertNull($refreshed->json('data.0.pending_checkout'));
     }
+
+    public function test_my_tickets_supports_active_only_filtering(): void
+    {
+        $user = $this->emsUser(\App\Ems\Support\EmsRoles::ATTENDEE);
+        $event = $this->publicEvent();
+
+        $activeReg = Registration::factory()->create([
+            'event_id' => $event->id,
+            'user_id' => $user->id,
+            'attendee_name' => $user->name,
+            'attendee_email' => $user->email,
+            'status' => RegistrationStatus::Confirmed->value,
+            'quantity' => 1,
+        ]);
+
+        $refundedReg = Registration::factory()->create([
+            'event_id' => $event->id,
+            'user_id' => $user->id,
+            'attendee_name' => $user->name,
+            'attendee_email' => $user->email,
+            'status' => RegistrationStatus::Refunded->value,
+            'quantity' => 1,
+        ]);
+
+        // Default list returns both registrations
+        $all = $this->actingAsEms($user)->getJson($this->url('public/my-tickets'));
+        $all->assertOk();
+        $this->assertCount(2, $all->json('data'));
+
+        // Active only list filters out refunded registration
+        $active = $this->actingAsEms($user)->getJson($this->url('public/my-tickets?active_only=1'));
+        $active->assertOk();
+        $this->assertCount(1, $active->json('data'));
+        $this->assertSame($activeReg->reference, $active->json('data.0.reference'));
+        $this->assertTrue($active->json('data.0.is_active'));
+    }
+
+    public function test_cancelling_refunded_registration_returns_409_conflict_instead_of_500_or_403(): void
+    {
+        $user = $this->emsUser(\App\Ems\Support\EmsRoles::ATTENDEE);
+        $event = $this->publicEvent();
+
+        $registration = Registration::factory()->create([
+            'event_id' => $event->id,
+            'user_id' => $user->id,
+            'attendee_name' => $user->name,
+            'attendee_email' => $user->email,
+            'status' => RegistrationStatus::Refunded->value,
+            'quantity' => 1,
+        ]);
+
+        $response = $this->actingAsEms($user)->postJson($this->url("public/registrations/{$registration->uuid}/cancel"));
+
+        $response->assertStatus(409);
+        $this->assertSame('This registration has already been refunded and cannot be cancelled.', $response->json('message'));
+        $this->assertSame(RegistrationStatus::Refunded, $registration->fresh()->status);
+    }
 }

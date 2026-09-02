@@ -24,6 +24,11 @@ class PublicRegistrationResource extends JsonResource
             'uuid' => $this->uuid,
             'status' => $this->status->value,
             'status_label' => $this->status->value === 'confirmed' ? 'Registered' : $this->status->label(),
+            'is_active' => in_array($this->status, [
+                RegistrationStatus::Confirmed,
+                RegistrationStatus::AwaitingPayment,
+                RegistrationStatus::Waitlisted,
+            ], true),
             'type' => $this->type->value,
             'attendee_name' => $this->attendee_name,
             'attendee_email' => $this->attendee_email,

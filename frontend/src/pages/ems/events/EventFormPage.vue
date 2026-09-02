@@ -42,8 +42,12 @@ const loadError = ref<string | null>(null);
 
 const UNCATEGORISED = 'none';
 
+const isPublished = ref(false);
+
 const form = reactive({
   name: '',
+  slug: '',
+  slug_mode: 'auto' as 'auto' | 'manual',
   short_description: '',
   description: '',
   category_id: UNCATEGORISED as string,
@@ -56,6 +60,34 @@ const form = reactive({
   banner_url: '',
   notify_audience: 'none' as 'everyone' | 'registered' | 'ticket_holders' | 'none',
 });
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+watch(
+  () => form.name,
+  (newName) => {
+    if (form.slug_mode === 'auto') {
+      form.slug = slugify(newName);
+    }
+  }
+);
+
+function onSlugInput(val: string) {
+  form.slug_mode = 'manual';
+  form.slug = slugify(val);
+}
+
+function resetToAuto() {
+  form.slug_mode = 'auto';
+  form.slug = slugify(form.name);
+}
 
 const categoryOptions = computed(() => [
   { label: 'Uncategorised', value: UNCATEGORISED },
@@ -86,6 +118,9 @@ watch(selectedTemplateUuid, (val) => {
   const template = templatesStore.templates.find((t) => t.uuid === val);
   if (template) {
     form.name = template.name;
+    if (form.slug_mode === 'auto') {
+      form.slug = slugify(template.name);
+    }
     form.description = template.description ?? '';
     form.category_id = template.category_id ? String(template.category_id) : UNCATEGORISED;
     form.capacity = template.capacity ? String(template.capacity) : '';
@@ -107,6 +142,8 @@ onMounted(async () => {
         const orig = await events.fetchOne(duplicateFrom);
         if (orig) {
           form.name = orig.name + ' (Copy)';
+          form.slug = slugify(form.name);
+          form.slug_mode = 'auto';
           form.short_description = orig.short_description ?? '';
           form.description = orig.description ?? '';
           form.category_id = orig.category_id ? String(orig.category_id) : UNCATEGORISED;
@@ -135,6 +172,9 @@ onMounted(async () => {
 
     if (event) {
       form.name = event.name;
+      form.slug = event.slug;
+      form.slug_mode = event.is_slug_custom ? 'manual' : 'auto';
+      isPublished.value = ['published', 'registration_open', 'registration_closed', 'live', 'completed'].includes(event.status);
       form.short_description = event.short_description ?? '';
       form.description = event.description ?? '';
       form.category_id = event.category_id ? String(event.category_id) : UNCATEGORISED;
@@ -155,6 +195,8 @@ onMounted(async () => {
 
 const buildPayload = (): EventPayload => ({
   name: form.name.trim(),
+  slug: form.slug.trim() || null,
+  slug_mode: form.slug_mode,
   short_description: form.short_description.trim() || null,
   description: form.description.trim() || null,
   category_id: form.category_id === UNCATEGORISED ? null : Number(form.category_id),
@@ -238,6 +280,46 @@ const cancel = () =>
           required
           :error="fieldError('name')"
         />
+
+        <div class="mb-6 rounded-xl border border-neutral-ivory bg-neutral-background/50 p-4">
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-bold uppercase tracking-wider text-neutral-black">Public Event URL / Slug</label>
+            <div class="flex items-center gap-2">
+              <button
+                v-if="form.slug_mode === 'manual'"
+                type="button"
+                class="text-xs font-semibold text-primary hover:underline"
+                @click="resetToAuto"
+              >
+                Reset to Automatic
+              </button>
+              <span
+                class="rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+                :class="form.slug_mode === 'manual' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'"
+              >
+                {{ form.slug_mode === 'manual' ? 'Custom Slug' : 'Automatic' }}
+              </span>
+            </div>
+          </div>
+
+          <div class="mt-2 flex items-center gap-2">
+            <span class="text-xs font-mono text-neutral-black/50">/events/</span>
+            <Input
+              :model-value="form.slug"
+              placeholder="e.g. sfu-msa-welcome-dinner"
+              class="font-mono text-sm"
+              :error="fieldError('slug')"
+              @update:model-value="onSlugInput"
+            />
+          </div>
+          <p class="mt-1 text-xs text-neutral-black/60">
+            {{ form.slug_mode === 'auto' ? 'Generated automatically from title. Edits switch to Custom Slug mode.' : 'Custom slug is preserved when title changes.' }}
+          </p>
+        </div>
+
+        <div v-if="isEditing && isPublished" class="mb-6 rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900" role="alert">
+          <strong>⚠ Warning:</strong> This event is published. Changing the public slug changes its URL (<code class="font-mono">/events/{{ form.slug }}</code>) and may invalidate existing links.
+        </div>
 
         <Input
           v-model="form.short_description"

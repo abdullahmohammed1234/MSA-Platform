@@ -3,6 +3,7 @@
 namespace App\Ems\Http\Requests;
 
 use App\Ems\Http\Requests\EmsFormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreTicketTypeRequest extends EmsFormRequest
 {
@@ -11,8 +12,18 @@ class StoreTicketTypeRequest extends EmsFormRequest
      */
     public function rules(): array
     {
+        $event = $this->route('event');
+        $eventId = $event?->id ?? $this->input('event_id');
+
         return [
-            'name' => ['required', 'string', 'min:1', 'max:120'],
+            'name' => [
+                'required',
+                'string',
+                'min:1',
+                'max:120',
+                Rule::unique('ems_ticket_types', 'name')
+                    ->where(fn ($query) => $query->where('event_id', $eventId)->whereNull('deleted_at')),
+            ],
             'description' => ['nullable', 'string', 'max:500'],
             'price' => ['required', 'numeric', 'min:0', 'max:999999.99'],
             'currency' => ['nullable', 'string', 'size:3'],

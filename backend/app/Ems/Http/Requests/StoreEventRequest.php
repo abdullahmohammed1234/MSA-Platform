@@ -25,7 +25,10 @@ class StoreEventRequest extends EmsFormRequest
                 'max:180',
                 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
                 Rule::unique('ems_events', 'slug')->withoutTrashed(),
+                Rule::notIn(['admin', 'login', 'register', 'events', 'api', 'dashboard', 'calendar', 'checkout', 'tickets', 'my-tickets', 'categories', 'notifications', 'templates']),
             ],
+            'slug_mode' => ['nullable', 'string', Rule::in(['auto', 'manual'])],
+            'reset_slug' => ['nullable', 'boolean'],
             'short_description' => ['nullable', 'string', 'max:500'],
             'description' => ['nullable', 'string', 'max:20000'],
             'banner_url' => ['nullable', 'string', 'max:500'],
@@ -54,6 +57,7 @@ class StoreEventRequest extends EmsFormRequest
             'name.required' => 'The event name field is required.',
             'slug.regex' => 'The slug may only contain lowercase letters, numbers and single hyphens.',
             'slug.unique' => 'Another event already uses this slug.',
+            'slug.not_in' => 'This slug is reserved and cannot be used.',
             'start_at.required' => 'The event start date and time is required.',
             'end_at.after' => 'The event must end after it starts.',
             'category_id.exists' => 'The selected category does not exist.',
@@ -63,7 +67,7 @@ class StoreEventRequest extends EmsFormRequest
 
     protected function prepareForValidation(): void
     {
-        $this->merge($this->nullifyBlanks([
+        $merge = $this->nullifyBlanks([
             'slug',
             'short_description',
             'description',
@@ -78,6 +82,12 @@ class StoreEventRequest extends EmsFormRequest
             'max_tickets_per_order',
             'max_registrations_per_attendee',
             'registration_deadline_at',
-        ]));
+        ]);
+
+        if (isset($merge['slug']) && is_string($merge['slug'])) {
+            $merge['slug'] = \Illuminate\Support\Str::slug($merge['slug']);
+        }
+
+        $this->merge($merge);
     }
 }

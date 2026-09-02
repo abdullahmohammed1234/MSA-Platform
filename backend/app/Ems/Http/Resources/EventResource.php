@@ -24,6 +24,8 @@ class EventResource extends JsonResource
             'uuid' => $this->uuid,
             'name' => $this->name,
             'slug' => $this->slug,
+            'is_slug_custom' => (bool) $this->is_slug_custom,
+            'slug_mode' => $this->is_slug_custom ? 'manual' : 'auto',
             'short_description' => $this->short_description,
             'description' => $this->description,
             'banner_url' => \App\Support\CmsAssetUrl::resolve($this->banner_url),

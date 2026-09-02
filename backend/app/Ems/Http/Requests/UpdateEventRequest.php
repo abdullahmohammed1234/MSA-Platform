@@ -34,7 +34,10 @@ class UpdateEventRequest extends EmsFormRequest
                 'max:180',
                 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
                 Rule::unique('ems_events', 'slug')->ignore($event?->id)->withoutTrashed(),
+                Rule::notIn(['admin', 'login', 'register', 'events', 'api', 'dashboard', 'calendar', 'checkout', 'tickets', 'my-tickets', 'categories', 'notifications', 'templates']),
             ],
+            'slug_mode' => ['sometimes', 'nullable', 'string', Rule::in(['auto', 'manual'])],
+            'reset_slug' => ['sometimes', 'nullable', 'boolean'],
             'short_description' => ['sometimes', 'nullable', 'string', 'max:500'],
             'description' => ['sometimes', 'nullable', 'string', 'max:20000'],
             'banner_url' => ['sometimes', 'nullable', 'string', 'max:500'],
@@ -63,6 +66,7 @@ class UpdateEventRequest extends EmsFormRequest
         return [
             'slug.regex' => 'The slug may only contain lowercase letters, numbers and single hyphens.',
             'slug.unique' => 'Another event already uses this slug.',
+            'slug.not_in' => 'This slug is reserved and cannot be used.',
             'end_at.after' => 'The event must end after it starts.',
         ];
     }
@@ -94,6 +98,10 @@ class UpdateEventRequest extends EmsFormRequest
             'max_registrations_per_attendee',
             'registration_deadline_at',
         ]);
+
+        if (isset($merge['slug']) && is_string($merge['slug'])) {
+            $merge['slug'] = \Illuminate\Support\Str::slug($merge['slug']);
+        }
 
         if ($event && $this->has('end_at') && ! $this->startAtSubmitted) {
             $merge['start_at'] = $event->start_at?->toDateTimeString();

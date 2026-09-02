@@ -31,8 +31,50 @@ class TicketTypeService
     /**
      * @param  array<string, mixed>  $data
      */
+    /**
+     * @param  array<string, mixed>  $data
+     */
     public function create(Event $event, array $data, ?User $actor = null): TicketType
     {
+        $name = (string) ($data['name'] ?? '');
+
+        // Check if an active ticket type with the same name already exists
+        $activeExists = TicketType::query()
+            ->where('event_id', $event->id)
+            ->where('name', $name)
+            ->exists();
+
+        if ($activeExists) {
+            throw new EmsException(
+                'A ticket type with this name already exists for this event.',
+                ['name' => ['A ticket type with this name already exists for this event.']],
+                Response::HTTP_UNPROCESSABLE_ENTITY
+            );
+        }
+
+        // Check if a soft-deleted ticket type with the same name exists
+        /** @var TicketType|null $trashed */
+        $trashed = TicketType::onlyTrashed()
+            ->where('event_id', $event->id)
+            ->where('name', $name)
+            ->first();
+
+        if ($trashed !== null) {
+            $trashed->restore();
+            $this->fill($trashed, $data);
+            $trashed->save();
+            $this->queueSquareSync($trashed);
+
+            Log::channel((string) config('ems.logging.channel', 'ems'))
+                ->info('ems.ticket_types.restored', [
+                    'event_uuid' => $event->uuid,
+                    'ticket_type_uuid' => $trashed->uuid,
+                    'actor_id' => $actor?->id,
+                ]);
+
+            return $trashed->fresh();
+        }
+
         $ticketType = new TicketType();
         $ticketType->event_id = $event->id;
         $this->fill($ticketType, $data);
@@ -56,6 +98,27 @@ class TicketTypeService
      */
     public function update(TicketType $ticketType, array $data, ?User $actor = null): TicketType
     {
+        $hasHistory = $ticketType->quantity_sold > 0
+            || $ticketType->registrations()->withTrashed()->exists()
+            || $ticketType->tickets()->withTrashed()->exists();
+
+        if ($hasHistory) {
+            if (array_key_exists('price', $data) && (float) $data['price'] !== (float) $ticketType->price) {
+                throw new EmsException(
+                    'Price cannot be changed after registrations or sales have occurred. Create a new ticket type or deactivate this one instead.',
+                    ['price' => ['Price cannot be changed after sales/registrations exist.']],
+                    Response::HTTP_UNPROCESSABLE_ENTITY
+                );
+            }
+            if (array_key_exists('currency', $data) && strtoupper((string) $data['currency']) !== strtoupper((string) $ticketType->currency)) {
+                throw new EmsException(
+                    'Currency cannot be changed after registrations or sales have occurred.',
+                    ['currency' => ['Currency cannot be changed after sales/registrations exist.']],
+                    Response::HTTP_UNPROCESSABLE_ENTITY
+                );
+            }
+        }
+
         $this->fill($ticketType, $data);
 
         if (array_key_exists('quantity', $data)
@@ -100,7 +163,11 @@ class TicketTypeService
 
     public function delete(TicketType $ticketType, ?User $actor = null): void
     {
-        if ($ticketType->quantity_sold > 0 || $ticketType->registrations()->exists()) {
+        $hasHistory = $ticketType->quantity_sold > 0
+            || $ticketType->registrations()->withTrashed()->exists()
+            || $ticketType->tickets()->withTrashed()->exists();
+
+        if ($hasHistory) {
             throw new ResourceInUseException(
                 'This ticket type has sales or registrations and cannot be deleted. Disable it instead.'
             );
