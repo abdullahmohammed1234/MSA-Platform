@@ -2,6 +2,7 @@
 
 namespace App\Ems\Http\Controllers\V1;
 
+use App\Ems\Support\ApiResponse;
 use App\Enums\VolunteerRegistrationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateVolunteerRegistrationRequest;
@@ -10,7 +11,6 @@ use App\Models\VolunteerRegistration;
 use App\Services\VolunteerRegistrationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class VolunteerRegistrationController extends Controller
 {
@@ -24,7 +24,7 @@ class VolunteerRegistrationController extends Controller
     /**
      * Display a paginated, searchable, filterable list of volunteer registrations.
      */
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(Request $request): JsonResponse
     {
         $this->authorize('viewAny', VolunteerRegistration::class);
 
@@ -59,25 +59,32 @@ class VolunteerRegistrationController extends Controller
 
         $perPage = min(max((int) $request->query('per_page', 15), 1), 100);
 
-        return VolunteerRegistrationResource::collection($query->paginate($perPage));
+        return ApiResponse::paginated(
+            $query->paginate($perPage),
+            'Volunteer registrations retrieved successfully.',
+            VolunteerRegistrationResource::class
+        );
     }
 
     /**
      * Display single volunteer registration detail.
      */
-    public function show(VolunteerRegistration $volunteerRegistration): VolunteerRegistrationResource
+    public function show(VolunteerRegistration $volunteerRegistration): JsonResponse
     {
         $this->authorize('view', $volunteerRegistration);
 
         $volunteerRegistration->load('assignedTo');
 
-        return new VolunteerRegistrationResource($volunteerRegistration);
+        return ApiResponse::success(
+            new VolunteerRegistrationResource($volunteerRegistration),
+            'Volunteer registration retrieved successfully.'
+        );
     }
 
     /**
      * Update administrative fields (status, admin_notes, assigned_to).
      */
-    public function update(UpdateVolunteerRegistrationRequest $request, VolunteerRegistration $volunteerRegistration): VolunteerRegistrationResource
+    public function update(UpdateVolunteerRegistrationRequest $request, VolunteerRegistration $volunteerRegistration): JsonResponse
     {
         $this->authorize('update', $volunteerRegistration);
 
@@ -87,7 +94,10 @@ class VolunteerRegistrationController extends Controller
             $request->user()?->id
         );
 
-        return new VolunteerRegistrationResource($updated);
+        return ApiResponse::success(
+            new VolunteerRegistrationResource($updated),
+            'Volunteer registration updated successfully.'
+        );
     }
 
     /**
@@ -99,9 +109,6 @@ class VolunteerRegistrationController extends Controller
 
         $this->service->delete($volunteerRegistration, $request->user()?->id);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Volunteer registration archived successfully.',
-        ]);
+        return ApiResponse::deleted('Volunteer registration archived successfully.');
     }
 }

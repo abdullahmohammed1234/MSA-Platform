@@ -52,6 +52,7 @@ const adminItems = computed(() => {
   }
 
   if (isSuper || authStore.permissions.includes('manage_users')) {
+    adminGroup.push({ label: 'Volunteering Registrars', path: '/admin/volunteering-registrars', icon: 'users' });
     adminGroup.push({ label: 'User Management', path: '/admin/academy/user-management', icon: 'users' });
     adminGroup.push({ label: 'Application Access', path: '/admin/application-access', icon: 'key' });
   }

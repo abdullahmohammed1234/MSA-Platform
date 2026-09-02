@@ -32,6 +32,18 @@ const adminRoutes: Array<RouteRecordRaw> = [
         component: () => import('@/pages/admin/Permissions.vue'),
         meta: { permissions: 'manage_permissions' }
       },
+      {
+        path: 'volunteering-registrars',
+        name: 'admin-volunteering-registrars',
+        component: () => import('@/pages/ems/volunteers/VolunteeringRegistrarsPage.vue'),
+        meta: { title: 'Volunteering Registrars', adminLogin: true }
+      },
+      {
+        path: 'volunteering-registrars/:uuid',
+        name: 'admin-volunteering-registrar-detail',
+        component: () => import('@/pages/ems/volunteers/VolunteeringRegistrarDetailPage.vue'),
+        meta: { title: 'Volunteer Registration Detail', adminLogin: true }
+      },
       // CMS Engine — extracted to /cms
       { path: 'cms', redirect: '/cms' },
       { path: 'cms/homepage', redirect: '/cms/homepage' },
