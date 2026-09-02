@@ -116,6 +116,9 @@ final class EmsRoles
                 EmsPermissions::FEEDBACK_VIEW,
                 EmsPermissions::FEEDBACK_SUBMIT,
                 EmsPermissions::PAYMENTS_REFUND,
+                EmsPermissions::VOLUNTEERS_VIEW,
+                EmsPermissions::VOLUNTEERS_UPDATE,
+                EmsPermissions::VOLUNTEERS_DELETE,
             ],
 
             // Scoped to the events they organize: no events.view_all grant.

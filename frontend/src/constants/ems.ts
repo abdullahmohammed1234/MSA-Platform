@@ -58,6 +58,10 @@ export const EMS_PERMISSIONS = {
   REPORTS_MANAGE: 'reports.manage',
 
   PAYMENTS_REFUND: 'payments.refund',
+
+  VOLUNTEERS_VIEW: 'volunteer.registrations.view',
+  VOLUNTEERS_UPDATE: 'volunteer.registrations.update',
+  VOLUNTEERS_DELETE: 'volunteer.registrations.delete',
 } as const;
 
 export type EmsPermissionSlug = (typeof EMS_PERMISSIONS)[keyof typeof EMS_PERMISSIONS];

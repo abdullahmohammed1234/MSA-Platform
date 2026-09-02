@@ -347,53 +347,17 @@ class WebsiteController extends Controller
         ]);
     }
 
-    public function submitVolunteer(Request $request): JsonResponse
+    public function submitVolunteer(\App\Http\Requests\StoreVolunteerRegistrationRequest $request, \App\Services\VolunteerRegistrationService $volunteerService): JsonResponse
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => [
-                'required',
-                'email',
-                'max:255',
-                function ($attribute, $value, $fail) {
-                    $email = trim(strtolower($value));
-                    if (!preg_match('/^[a-zA-Z0-9._%+-]+@(?:[a-zA-Z0-9-]+\.)*sfu\.ca$/i', $email)) {
-                        $fail('Volunteers must register with an @sfu.ca email address.');
-                    }
-                },
-            ],
-            'student_number' => 'required|string|regex:/^\d{9}$/',
-            'department' => 'required|string|max:255',
-            'interests' => 'required|string|max:5000',
-            'experience' => 'nullable|string|max:5000',
-        ]);
+        $validated = $request->validated();
 
-        try {
-            Mail::to(config('website.contact_recipient'))
-                ->send(new VolunteerApplication(
-                    $validated['name'],
-                    $validated['email'],
-                    $validated['student_number'],
-                    $validated['department'],
-                    $validated['interests'],
-                    $validated['experience'] ?? null
-                ));
-        } catch (Throwable $exception) {
-            Log::error('Volunteer application form email failed', [
-                'error' => $exception->getMessage(),
-                'sender_email' => $validated['email'],
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Your application could not be sent right now. Please try again later.',
-            ], 500);
-        }
+        $registration = $volunteerService->submit($validated);
 
         return response()->json([
             'success' => true,
             'message' => 'Jazakullah Khair! Your volunteer application has been received. Our department coordinator will reach out to you.',
-        ]);
+            'data' => new \App\Http\Resources\VolunteerRegistrationResource($registration),
+        ], 200);
     }
 
 }

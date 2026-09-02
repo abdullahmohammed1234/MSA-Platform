@@ -16,6 +16,7 @@ import {
   LayoutTemplate,
   MessageSquare,
   Mail,
+  HeartHandshake,
 } from 'lucide-vue-next';
 import { ToastContainer, useToastStore } from '@/components/feedback/toast';
 import { useAuthStore } from '@/stores/auth';
@@ -69,6 +70,12 @@ const navigation = computed(() =>
       to: { name: 'ems-promo-codes' },
       icon: Percent,
       permission: EMS_PERMISSIONS.EVENTS_VIEW,
+    },
+    {
+      label: 'Volunteering Registrars',
+      to: { name: 'ems-volunteering-registrars' },
+      icon: HeartHandshake,
+      permission: EMS_PERMISSIONS.VOLUNTEERS_VIEW,
     },
     {
       label: 'Feedback',

@@ -91,6 +91,11 @@ final class EmsPermissions
 
     public const PAYMENTS_REFUND = 'payments.refund';
 
+    // Volunteering Registrars
+    public const VOLUNTEERS_VIEW = 'volunteer.registrations.view';
+    public const VOLUNTEERS_UPDATE = 'volunteer.registrations.update';
+    public const VOLUNTEERS_DELETE = 'volunteer.registrations.delete';
+
     /**
      * Every EMS permission with the metadata required by the `permissions`
      * table. `name` is prefixed with "EMS:" because the platform enforces a
@@ -418,6 +423,25 @@ final class EmsPermissions
                 'name' => 'EMS: Refund Payments',
                 'group' => 'Payments',
                 'description' => 'Issue Square refunds for paid EMS orders.',
+            ],
+            // --- Volunteering Registrars ------------------------------------
+            [
+                'slug' => self::VOLUNTEERS_VIEW,
+                'name' => 'EMS: View Volunteer Registrations',
+                'group' => 'Volunteering Registrars',
+                'description' => 'View volunteer submissions and details.',
+            ],
+            [
+                'slug' => self::VOLUNTEERS_UPDATE,
+                'name' => 'EMS: Update Volunteer Registrations',
+                'group' => 'Volunteering Registrars',
+                'description' => 'Update status, notes, and assign administrators to volunteer submissions.',
+            ],
+            [
+                'slug' => self::VOLUNTEERS_DELETE,
+                'name' => 'EMS: Delete Volunteer Registrations',
+                'group' => 'Volunteering Registrars',
+                'description' => 'Archive or soft delete volunteer submissions.',
             ],
         ];
     }

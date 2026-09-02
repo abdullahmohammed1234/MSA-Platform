@@ -156,6 +156,19 @@ const emsRoutes: Array<RouteRecordRaw> = [
         meta: { title: 'Stale Capture Detail', emsPermissions: EMS_PERMISSIONS.PAYMENTS_REFUND },
       },
       {
+        path: 'volunteering-registrars',
+        name: 'ems-volunteering-registrars',
+        component: () => import('@/pages/ems/volunteers/VolunteeringRegistrarsPage.vue'),
+        meta: { title: 'Volunteering Registrars', emsPermissions: EMS_PERMISSIONS.VOLUNTEERS_VIEW },
+        alias: 'admin/volunteering-registrars',
+      },
+      {
+        path: 'volunteering-registrars/:uuid',
+        name: 'ems-volunteering-registrar-detail',
+        component: () => import('@/pages/ems/volunteers/VolunteeringRegistrarDetailPage.vue'),
+        meta: { title: 'Volunteer Registration Detail', emsPermissions: EMS_PERMISSIONS.VOLUNTEERS_VIEW },
+      },
+      {
         // Reachable without an EMS grant, otherwise the guard's redirect loops.
         path: 'unauthorized',
         name: 'ems-unauthorized',

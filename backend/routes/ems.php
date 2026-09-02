@@ -250,6 +250,17 @@ Route::middleware(['auth:sanctum', 'throttle:' . config('ems.route.throttle', 'e
         Route::get('/registrations/{registration}', [RegistrationController::class, 'show'])
             ->name('registrations.show');
 
+        // --- Volunteering Registrars ------------------------------------
+        Route::get('/volunteering-registrars', [\App\Ems\Http\Controllers\V1\VolunteerRegistrationController::class, 'index'])
+            ->name('volunteering-registrars.index');
+        Route::get('/volunteering-registrars/{volunteerRegistration:uuid}', [\App\Ems\Http\Controllers\V1\VolunteerRegistrationController::class, 'show'])
+            ->name('volunteering-registrars.show');
+        Route::put('/volunteering-registrars/{volunteerRegistration:uuid}', [\App\Ems\Http\Controllers\V1\VolunteerRegistrationController::class, 'update'])
+            ->name('volunteering-registrars.update');
+        Route::patch('/volunteering-registrars/{volunteerRegistration:uuid}', [\App\Ems\Http\Controllers\V1\VolunteerRegistrationController::class, 'update']);
+        Route::delete('/volunteering-registrars/{volunteerRegistration:uuid}', [\App\Ems\Http\Controllers\V1\VolunteerRegistrationController::class, 'destroy'])
+            ->name('volunteering-registrars.destroy');
+
         // --- Event categories -------------------------------------------
         Route::get('/event-categories', [EventCategoryController::class, 'index'])
             ->name('event-categories.index');
