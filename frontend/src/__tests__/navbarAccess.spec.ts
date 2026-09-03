@@ -22,6 +22,7 @@ vi.mock('lucide-vue-next', async () => {
     LogIn: icon('LogIn'),
     LogOut: icon('LogOut'),
     ShoppingBag: icon('ShoppingBag'),
+    Heart: icon('Heart'),
     X: icon('X'),
   };
 });
@@ -231,6 +232,7 @@ describe('Navbar Unified Access and Launcher Tests', () => {
       expect(menuText).toContain('CMS');
       expect(menuText).toContain('DAMS');
       expect(menuText).toContain('Store Admin');
+      expect(menuText).toContain('DMS (Donations)');
       expect(menuText).toContain('Admin Portal');
 
       // Verify direct roots are used
@@ -238,6 +240,7 @@ describe('Navbar Unified Access and Launcher Tests', () => {
       expect(wrapper.find('a[href="/dams"]').exists()).toBe(true);
       expect(wrapper.find('a[href="/ems"]').exists()).toBe(true);
       expect(wrapper.find('a[href="/store/admin"]').exists()).toBe(true);
+      expect(wrapper.find('a[href="/donations/admin"]').exists()).toBe(true);
       expect(wrapper.find('a[href="/admin"]').exists()).toBe(true);
     });
 
