@@ -18,6 +18,7 @@ import { publicAuthGuard } from './guards/publicAuthGuard';
 import { emsGuard } from './guards/emsGuard';
 import { cmsGuard } from './guards/cmsGuard';
 import { damsGuard } from './guards/damsGuard';
+import { dmsGuard } from './guards/dmsGuard';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -77,9 +78,10 @@ router.beforeEach(async (to) => {
   }
 
   // 2. Sequential guard pipeline
-  // The EMS owns /ems outright: its guard resolves the module's own access
-  // model and redirects to EMS screens rather than the academy fallbacks the
-  // generic guards use.
+  // DMS, EMS, CMS, DAMS own their routes outright with dedicated access models
+  const dmsResult = await dmsGuard(to);
+  if (dmsResult !== true) return dmsResult;
+
   const emsResult = await emsGuard(to);
   if (emsResult !== true) return emsResult;
 
