@@ -39,6 +39,13 @@ export function useAppAccess() {
     return isSuperOrAdmin.value || authStore.roles.includes('store-administrator') || authStore.permissions.includes('store.products.view');
   });
 
+  const hasDonationsAccess = computed(() => {
+    if (authStore.user?.application_access?.donations) {
+      return authStore.user.application_access.donations.access;
+    }
+    return isSuperOrAdmin.value || authStore.roles.includes('dms-administrator') || authStore.permissions.includes('donations.view');
+  });
+
   const hasAdminAccess = computed(() => {
     if (authStore.user?.application_access?.['admin-portal']) {
       return authStore.user.application_access['admin-portal'].access;
@@ -51,6 +58,7 @@ export function useAppAccess() {
     hasDamsAccess,
     hasEmsAccess,
     hasStoreAccess,
+    hasDonationsAccess,
     hasAdminAccess,
   };
 }

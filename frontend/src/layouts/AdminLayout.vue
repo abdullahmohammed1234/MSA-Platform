@@ -9,7 +9,7 @@ import { useAppAccess } from '@/composables/auth/useAppAccess';
 
 const toast = useToastStore();
 const authStore = useAuthStore();
-const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasStoreAccess } = useAppAccess();
+const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasStoreAccess, hasDonationsAccess } = useAppAccess();
 const isSidebarCollapsed = ref(false);
 const isMobileOpen = ref(false);
 const adminName = ref('Platform Administrator');
@@ -57,7 +57,7 @@ const adminItems = computed(() => {
     adminGroup.push({ label: 'Application Access', path: '/admin/application-access', icon: 'key' });
   }
 
-  // Applications: open shells — not embedded inside MSA Admin (Phase 4–5, Phase 10, Phase 17)
+  // Applications: open shells — not embedded inside MSA Admin (Phase 4–5, Phase 10, Phase 17, Phase 18)
   const appChildren: Array<{ label: string; path: string; icon: string }> = [];
   if (hasCmsAccess.value) {
     appChildren.push({ label: 'Open CMS', path: '/cms', icon: 'book' });
@@ -70,6 +70,9 @@ const adminItems = computed(() => {
   }
   if (hasStoreAccess.value) {
     appChildren.push({ label: 'Open Store Admin', path: '/store/admin', icon: 'server' });
+  }
+  if (hasDonationsAccess.value) {
+    appChildren.push({ label: 'Open DMS Admin', path: '/donations/admin', icon: 'heart' });
   }
   if (appChildren.length > 0) {
     items.push({
@@ -89,7 +92,7 @@ const adminItems = computed(() => {
     systemChildren.push({ label: 'Dawah Academy Management (DAMS)', path: '/admin/systems/dams', icon: 'layers' });
     systemChildren.push({ label: 'Event Management System', path: '/admin/systems/ems', icon: 'calendar' });
     systemChildren.push({ label: 'Store Management System', path: '/admin/systems/store', icon: 'server' });
-    systemChildren.push({ label: 'Donations Management System', path: '/admin/systems/donations', icon: 'server' });
+    systemChildren.push({ label: 'Donations Management System', path: '/admin/systems/donations', icon: 'heart' });
   }
 
   if (authStore.permissions.includes('view_queue_status') || isSuper) {
@@ -225,6 +228,13 @@ const handleLogout = async () => {
         </svg>
       </template>
 
+      <!-- Heart Icon Slot -->
+      <template #heart>
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.364l-7.682-7.682a4.5 4.5 0 010-6.364z" />
+        </svg>
+      </template>
+
       <!-- Layers Icon Slot -->
       <template #layers>
         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -249,66 +259,60 @@ const handleLogout = async () => {
       <!-- Star Icon Slot -->
       <template #star>
         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.908c.969 0 1.371 1.24.588 1.81l-3.97 2.883a1 1 0 00-.364 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.971-2.883a1 1 0 00-1.18 0l-3.97 2.883c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.364-1.118l-3.97-2.883c-.783-.57-.38-1.81.588-1.81h4.908a1 1 0 00.951-.69l1.519-4.674z" />
-        </svg>
-      </template>
-
-      <!-- Message Square Icon Slot -->
-      <template #message-square>
-        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        </svg>
-      </template>
-
-      <!-- File Text Icon Slot -->
-      <template #file-text>
-        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-          <polyline points="14 2 14 8 20 8" />
-          <line x1="16" y1="13" x2="8" y2="13" />
-          <line x1="16" y1="17" x2="8" y2="17" />
-          <polyline points="10 9 9 9 8 9" />
-        </svg>
-      </template>
-
-      <!-- Settings Icon Slot -->
-      <template #settings>
-        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="3" />
-          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
         </svg>
       </template>
     </Sidebar>
-    
-    <!-- Content Area -->
-    <div class="flex-grow flex flex-col min-w-0">
-      <!-- Sticky header bar -->
-      <header class="h-16 border-b border-neutral-ivory bg-white/85 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 lg:px-8 shadow-soft sticky top-0 z-20">
-        <div class="flex items-center min-w-0">
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex flex-col min-w-0">
+      <!-- Admin Header Bar -->
+      <header class="h-16 bg-white border-b border-neutral-ivory px-4 sm:px-8 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-3">
+          <!-- Mobile Sidebar Toggle Button -->
           <button
             @click="isMobileOpen = true"
-            class="lg:hidden p-2 mr-2.5 rounded-xl border border-neutral-ivory bg-white hover:bg-neutral-background text-primary transition shrink-0 cursor-pointer"
-            aria-label="Open menu"
+            class="lg:hidden rounded-lg p-2 hover:bg-neutral-background text-neutral-muted hover:text-primary transition-colors cursor-pointer"
+            aria-label="Open navigation menu"
           >
             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <span class="font-medium text-sm text-neutral-black truncate">Admin Panel v2.0 &mdash; {{ adminName }}</span>
+
+          <span class="text-xs uppercase tracking-widest font-bold text-neutral-muted hidden sm:inline-block">
+            SFU MSA Unified Admin Console
+          </span>
         </div>
-        <div class="flex items-center gap-4 shrink-0">
+
+        <div class="flex items-center gap-4">
+          <!-- Real-time Notifications Bell -->
           <NotificationBell />
-          <button
-            @click="handleLogout"
-            class="text-sm font-semibold text-primary hover:text-secondary transition-colors cursor-pointer"
-          >
-            Logout
-          </button>
+
+          <!-- Logged in Admin Badge & Quick Logout -->
+          <div class="flex items-center gap-3 pl-4 border-l border-neutral-ivory/60">
+            <div class="flex flex-col text-right hidden sm:flex">
+              <span class="text-xs font-bold text-neutral-black truncate max-w-[140px]">
+                {{ adminName }}
+              </span>
+              <span class="text-[10px] text-neutral-muted font-medium capitalize">
+                {{ authStore.roles[0] || 'Administrator' }}
+              </span>
+            </div>
+            
+            <button
+              @click="handleLogout"
+              class="px-3 py-1.5 text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 rounded-lg transition-colors cursor-pointer"
+              title="Logout from Admin"
+            >
+              Logout
+            </button>
+          </div>
         </div>
       </header>
-      
-      <!-- Main Content viewport -->
-      <main class="flex-grow p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+
+      <!-- Dynamic Route Content Wrapper -->
+      <main class="flex-1 p-4 sm:p-8 overflow-y-auto">
         <router-view />
       </main>
     </div>
