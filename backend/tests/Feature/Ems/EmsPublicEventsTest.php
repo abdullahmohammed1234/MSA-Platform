@@ -638,4 +638,20 @@ class EmsPublicEventsTest extends EmsTestCase
         $this->assertSame('This registration has already been refunded and cannot be cancelled.', $response->json('message'));
         $this->assertSame(RegistrationStatus::Refunded, $registration->fresh()->status);
     }
+
+    public function test_featured_filter_returns_only_featured_events(): void
+    {
+        $featured = $this->publicEvent(['name' => 'Featured Event', 'is_featured' => true]);
+        $regular = $this->publicEvent(['name' => 'Regular Event', 'is_featured' => false]);
+
+        $response = $this->getJson($this->publicUrl('events?featured=1'));
+
+        $response->assertOk();
+        $this->assertSuccessEnvelope($response);
+
+        $slugs = collect($response->json('data'))->pluck('slug');
+        $this->assertTrue($slugs->contains($featured->slug));
+        $this->assertFalse($slugs->contains($regular->slug));
+        $this->assertTrue($response->json('data.0.is_featured'));
+    }
 }

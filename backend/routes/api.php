@@ -369,6 +369,13 @@ Route::prefix('v1')->group(function () {
                 Route::get('/metrics', [\App\Http\Controllers\Api\V1\Admin\DonationsSystemController::class, 'metrics']);
             });
 
+            // Sponsorship & Partnerships Application (Systems registry)
+            Route::prefix('systems/sponsorship')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Api\V1\Admin\SponsorshipSystemController::class, 'index']);
+                Route::get('/health', [\App\Http\Controllers\Api\V1\Admin\SponsorshipSystemController::class, 'health']);
+                Route::get('/metrics', [\App\Http\Controllers\Api\V1\Admin\SponsorshipSystemController::class, 'metrics']);
+            });
+
             // Dawah Academy System Integration (learner application registry)
             Route::prefix('systems/dawah-academy')->group(function () {
                 Route::get('/', [\App\Http\Controllers\Api\V1\Admin\DawahAcademySystemController::class, 'index']);
@@ -739,5 +746,45 @@ Route::prefix('v1')->group(function () {
         Route::get('/reports', [\App\Donations\Http\Controllers\V1\Admin\DmsReportController::class, 'reports']);
         Route::get('/export', [\App\Donations\Http\Controllers\V1\Admin\DmsReportController::class, 'export']);
         Route::post('/reconcile', [\App\Donations\Http\Controllers\V1\Admin\DmsReconciliationController::class, 'reconcile']);
+    });
+
+    // --- Public Sponsorship routes (SPMS) -----------------------------
+    Route::prefix('sponsorship')->group(function () {
+        Route::get('/opportunities', [\App\Spms\Http\Controllers\PublicSponsorshipController::class, 'index']);
+        Route::get('/opportunities/{slug}', [\App\Spms\Http\Controllers\PublicSponsorshipController::class, 'showOpportunity']);
+        Route::post('/inquire', [\App\Spms\Http\Controllers\PublicSponsorshipController::class, 'inquire']);
+    });
+
+    // --- Standalone Sponsorship & Partnerships Management System (SPMS) Admin routes ----
+    Route::prefix('sponsorship/admin')->middleware(['auth:sanctum', 'app.access:sponsorship'])->group(function () {
+        Route::get('/dashboard', [\App\Spms\Http\Controllers\Admin\SpmsReportController::class, 'dashboard']);
+        Route::get('/reports/export', [\App\Spms\Http\Controllers\Admin\SpmsReportController::class, 'exportCsv']);
+
+        Route::get('/organizations/check-duplicates', [\App\Spms\Http\Controllers\Admin\SpmsOrganizationController::class, 'checkDuplicates']);
+        Route::apiResource('/organizations', \App\Spms\Http\Controllers\Admin\SpmsOrganizationController::class, ['except' => ['create', 'edit']]);
+        Route::post('/organizations/{organizationUuid}/contacts', [\App\Spms\Http\Controllers\Admin\SpmsContactController::class, 'store']);
+        Route::put('/contacts/{uuid}', [\App\Spms\Http\Controllers\Admin\SpmsContactController::class, 'update']);
+        Route::delete('/contacts/{uuid}', [\App\Spms\Http\Controllers\Admin\SpmsContactController::class, 'destroy']);
+        Route::post('/organizations/{organizationUuid}/communications', [\App\Spms\Http\Controllers\Admin\SpmsCommunicationController::class, 'logCommunication']);
+        Route::post('/organizations/{organizationUuid}/follow-ups', [\App\Spms\Http\Controllers\Admin\SpmsCommunicationController::class, 'createFollowUp']);
+        Route::patch('/follow-ups/{id}/complete', [\App\Spms\Http\Controllers\Admin\SpmsCommunicationController::class, 'completeFollowUp']);
+        Route::get('/renewals', [\App\Spms\Http\Controllers\Admin\SpmsCommunicationController::class, 'renewals']);
+
+        Route::apiResource('/opportunities', \App\Spms\Http\Controllers\Admin\SpmsOpportunityController::class, ['except' => ['create', 'edit']]);
+        Route::post('/opportunities/{opportunityUuid}/packages', [\App\Spms\Http\Controllers\Admin\SpmsPackageController::class, 'store']);
+        Route::put('/packages/{uuid}', [\App\Spms\Http\Controllers\Admin\SpmsPackageController::class, 'update']);
+        Route::delete('/packages/{uuid}', [\App\Spms\Http\Controllers\Admin\SpmsPackageController::class, 'destroy']);
+
+        Route::apiResource('/sponsorships', \App\Spms\Http\Controllers\Admin\SpmsSponsorshipController::class, ['except' => ['create', 'edit']]);
+        Route::patch('/sponsorships/{uuid}/status', [\App\Spms\Http\Controllers\Admin\SpmsSponsorshipController::class, 'updateStatus']);
+        Route::post('/sponsorships/{uuid}/agreement', [\App\Spms\Http\Controllers\Admin\SpmsSponsorshipController::class, 'executeAgreement']);
+
+        Route::get('/payments', [\App\Spms\Http\Controllers\Admin\SpmsPaymentController::class, 'index']);
+        Route::post('/sponsorships/{sponsorshipUuid}/payments/manual', [\App\Spms\Http\Controllers\Admin\SpmsPaymentController::class, 'recordManual']);
+        Route::post('/sponsorships/{sponsorshipUuid}/payments/square', [\App\Spms\Http\Controllers\Admin\SpmsPaymentController::class, 'createSquareCheckout']);
+
+        Route::get('/fulfillment', [\App\Spms\Http\Controllers\Admin\SpmsFulfillmentController::class, 'index']);
+        Route::post('/sponsorships/{sponsorshipUuid}/deliverables', [\App\Spms\Http\Controllers\Admin\SpmsFulfillmentController::class, 'storeDeliverable']);
+        Route::post('/deliverables/{deliverableUuid}/fulfillments', [\App\Spms\Http\Controllers\Admin\SpmsFulfillmentController::class, 'completeFulfillment']);
     });
 });

@@ -12,6 +12,7 @@ import {
   LogOut,
   ShoppingBag,
   Heart,
+  Briefcase,
   X 
 } from 'lucide-vue-next';
 
@@ -32,13 +33,14 @@ const navLinks: NavLink[] = [
   { name: 'Media', href: '/media' },
   { name: 'Store', href: '/store' },
   { name: 'Donate', href: '/donate' },
+  { name: 'Sponsorship', href: '/sponsorship' },
   { name: 'Contact', href: '/contact' },
 ];
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
-const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasStoreAccess, hasDonationsAccess, hasAdminAccess } = useAppAccess();
+const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasStoreAccess, hasDonationsAccess, hasSponsorshipAccess, hasAdminAccess } = useAppAccess();
 
 function isNavActive(href: string): boolean {
   if (href === '/') return route.path === '/';
@@ -247,7 +249,7 @@ const handleLogout = async () => {
                   @click="closeUserMenu"
                 >
                   <svg class="h-4 w-4 shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z" />
                   </svg>
                   CMS
                 </router-link>
@@ -280,6 +282,16 @@ const handleLogout = async () => {
                 >
                   <Heart class="h-4 w-4 shrink-0 text-primary" />
                   DMS (Donations)
+                </router-link>
+
+                <router-link
+                  v-if="hasSponsorshipAccess"
+                  to="/sponsorship/admin"
+                  class="flex items-center gap-2.5 px-4 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/70 hover:bg-neutral-background hover:text-primary transition-all"
+                  @click="closeUserMenu"
+                >
+                  <Briefcase class="h-4 w-4 shrink-0 text-primary" />
+                  SPMS (Sponsorship)
                 </router-link>
 
                 <router-link
@@ -426,6 +438,17 @@ const handleLogout = async () => {
                 >
                   <Heart class="h-3.5 w-3.5" />
                   DMS (Donations)
+                </router-link>
+              </div>
+
+              <div v-if="!isLoading && isAuthenticated && hasSponsorshipAccess" class="mb-4">
+                <router-link
+                  to="/sponsorship/admin"
+                  class="inline-flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest w-full justify-center"
+                  @click="closeMenu"
+                >
+                  <Briefcase class="h-3.5 w-3.5" />
+                  SPMS (Sponsorship)
                 </router-link>
               </div>
 

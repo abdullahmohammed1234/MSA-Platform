@@ -129,9 +129,19 @@ const publicRoutes: Array<RouteRecordRaw> = [
       },
       { 
         path: 'sponsors', 
-        name: 'sponsors', 
-        component: () => import('@/pages/public/SponsorsPage.vue'), 
-        meta: { title: 'Sponsors | SFU MSA', desc: 'Partner with SFU MSA and support campus community programs.' } 
+        redirect: '/sponsorship'
+      },
+      { 
+        path: 'sponsorship', 
+        name: 'public-sponsorship', 
+        component: () => import('@/pages/public/PublicSponsorshipPage.vue'), 
+        meta: { title: 'Corporate & Community Sponsorship | SFU MSA', desc: 'Partner with SFU MSA and support campus community programs.' } 
+      },
+      { 
+        path: 'sponsorship/inquire', 
+        name: 'public-sponsorship-inquire', 
+        component: () => import('@/pages/public/PublicSponsorshipInquirePage.vue'), 
+        meta: { title: 'Become a Partner | SFU MSA', desc: 'Submit a sponsorship or partnership inquiry.' } 
       },
       { 
         path: 'donations', 

@@ -1,15 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { Sidebar } from '@/components/navigation/sidebar';
-import { useToastStore, ToastContainer } from '@/components/feedback/toast';
+import { ToastContainer } from '@/components/feedback/toast';
 import { useAuthStore } from '@/stores/auth';
 import NotificationBell from '@/components/notifications/NotificationBell.vue';
 
 import { useAppAccess } from '@/composables/auth/useAppAccess';
 
-const toast = useToastStore();
 const authStore = useAuthStore();
-const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasStoreAccess, hasDonationsAccess } = useAppAccess();
+const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasStoreAccess, hasDonationsAccess, hasSponsorshipAccess } = useAppAccess();
 const isSidebarCollapsed = ref(false);
 const isMobileOpen = ref(false);
 const adminName = ref('Platform Administrator');
@@ -33,20 +32,11 @@ const adminItems = computed(() => {
   ];
 
   const adminGroup = items[0].children;
-  const isSuper = typeof authStore.isPrivilegedAdmin === 'boolean'
-    ? authStore.isPrivilegedAdmin
-    : authStore.roles.includes('admin') || authStore.roles.includes('super-admin');
+  const isSuper = authStore.roles.includes('super-admin');
 
-  if (authStore.permissions.includes('view_analytics') || isSuper) {
-    adminGroup.push({ label: 'Platform Analytics', path: '/admin/analytics', icon: 'trending-up' });
-  }
-
-  if (authStore.isAdmin || isSuper) {
-    if (authStore.permissions.includes('manage_roles') || isSuper) {
-      adminGroup.push({ label: 'Manage Roles', path: '/admin/roles', icon: 'shield' });
-    }
-    
-    if (authStore.permissions.includes('manage_permissions') || isSuper) {
+  if (isSuper || authStore.permissions.includes('manage_roles')) {
+    adminGroup.push({ label: 'Manage Roles', path: '/admin/roles', icon: 'shield' });
+    if (isSuper) {
       adminGroup.push({ label: 'Manage Permissions', path: '/admin/permissions', icon: 'key' });
     }
   }
@@ -57,7 +47,7 @@ const adminItems = computed(() => {
     adminGroup.push({ label: 'Application Access', path: '/admin/application-access', icon: 'key' });
   }
 
-  // Applications: open shells — not embedded inside MSA Admin (Phase 4–5, Phase 10, Phase 17, Phase 18)
+  // Applications: open shells — not embedded inside MSA Admin
   const appChildren: Array<{ label: string; path: string; icon: string }> = [];
   if (hasCmsAccess.value) {
     appChildren.push({ label: 'Open CMS', path: '/cms', icon: 'book' });
@@ -73,6 +63,9 @@ const adminItems = computed(() => {
   }
   if (hasDonationsAccess.value) {
     appChildren.push({ label: 'Open DMS Admin', path: '/donations/admin', icon: 'heart' });
+  }
+  if (hasSponsorshipAccess.value) {
+    appChildren.push({ label: 'Open SPMS Admin', path: '/sponsorship/admin', icon: 'briefcase' });
   }
   if (appChildren.length > 0) {
     items.push({
@@ -93,6 +86,7 @@ const adminItems = computed(() => {
     systemChildren.push({ label: 'Event Management System', path: '/admin/systems/ems', icon: 'calendar' });
     systemChildren.push({ label: 'Store Management System', path: '/admin/systems/store', icon: 'server' });
     systemChildren.push({ label: 'Donations Management System', path: '/admin/systems/donations', icon: 'heart' });
+    systemChildren.push({ label: 'Sponsorship System (SPMS)', path: '/admin/systems/sponsorship', icon: 'briefcase' });
   }
 
   if (authStore.permissions.includes('view_queue_status') || isSuper) {
@@ -115,34 +109,23 @@ const adminItems = computed(() => {
 });
 
 const handleLogout = async () => {
-  try {
-    await authStore.logout();
-    toast.success('Admin logged out successfully.');
-    setTimeout(() => {
-      window.location.href = '/';
-    }, 1000);
-  } catch (error) {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user_role');
-    localStorage.removeItem('user_name');
-    localStorage.removeItem('user_email');
-    window.location.href = '/';
-  }
+  await authStore.logout();
+  window.location.href = '/login';
 };
 </script>
 
 <template>
-  <div class="min-h-screen flex bg-neutral-background overflow-x-hidden">
+  <div class="min-h-screen bg-neutral-background flex">
+    <!-- Toast Feedback System -->
     <ToastContainer />
-    
-    <!-- Collapsible Sidebar from design system with custom icons -->
+
+    <!-- Unified Admin Sidebar Component -->
     <Sidebar
-      title="MSA Admin"
       :items="adminItems"
-      :collapsed="isSidebarCollapsed"
-      :mobileOpen="isMobileOpen"
-      @collapse="(val) => isSidebarCollapsed = val"
-      @closeMobile="isMobileOpen = false"
+      v-model:collapsed="isSidebarCollapsed"
+      v-model:mobileOpen="isMobileOpen"
+      brandName="MSA Admin"
+      logoSrc="/logo.webp"
     >
       <!-- Dashboard Icon Slot -->
       <template #dashboard>
@@ -151,10 +134,10 @@ const handleLogout = async () => {
         </svg>
       </template>
 
-      <!-- Trending Up Icon Slot -->
-      <template #trending-up>
+      <!-- Users Icon Slot -->
+      <template #users>
         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
         </svg>
       </template>
 
@@ -168,7 +151,7 @@ const handleLogout = async () => {
       <!-- Key Icon Slot -->
       <template #key>
         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m-5 8a5 5 0 1110 0a5 5 0 01-10 0zM17 14l2-2 2 2m-2-2l-2-2" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
         </svg>
       </template>
 
@@ -179,10 +162,10 @@ const handleLogout = async () => {
         </svg>
       </template>
 
-      <!-- File Icon Slot -->
-      <template #file>
+      <!-- Book Icon Slot -->
+      <template #book>
         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
         </svg>
       </template>
 
@@ -193,24 +176,10 @@ const handleLogout = async () => {
         </svg>
       </template>
 
-      <!-- QR / Check-in Icon Slot -->
-      <template #qr>
+      <!-- File Icon Slot -->
+      <template #file>
         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 2h2v2h-2v-2zm4-2h2v2h-2v-2zm-4 4h2v2h-2v-2zm4 0h2v2h-2v-2z" />
-        </svg>
-      </template>
-
-      <!-- Users Icon Slot -->
-      <template #users>
-        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-        </svg>
-      </template>
-
-      <!-- Book Icon Slot -->
-      <template #book>
-        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
       </template>
 
@@ -232,6 +201,13 @@ const handleLogout = async () => {
       <template #heart>
         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.364l-7.682-7.682a4.5 4.5 0 010-6.364z" />
+        </svg>
+      </template>
+
+      <!-- Briefcase Icon Slot -->
+      <template #briefcase>
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
         </svg>
       </template>
 

@@ -164,6 +164,7 @@ export interface Event {
   status_label: string;
   status_tone: EventStatusTone;
   is_public: boolean;
+  is_featured: boolean;
   is_publicly_visible: boolean;
   is_accepting_registrations: boolean;
 
@@ -293,6 +294,7 @@ export interface EventPayload {
   max_registrations_per_attendee?: number | null;
   registration_deadline_at?: string | null;
   is_public?: boolean;
+  is_featured?: boolean;
   notify_audience?: 'everyone' | 'registered' | 'ticket_holders' | 'none';
 }
 

@@ -45,6 +45,7 @@ class StoreEventRequest extends EmsFormRequest
             'max_registrations_per_attendee' => ['nullable', 'integer', 'min:1', 'max:100'],
             'registration_deadline_at' => ['nullable', 'date'],
             'is_public' => ['nullable', 'boolean'],
+            'is_featured' => ['nullable', 'boolean'],
         ];
     }
 

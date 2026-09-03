@@ -43,6 +43,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * @property \Illuminate\Support\Carbon|null $registration_deadline_at
  * @property EventStatus $status
  * @property bool $is_public
+ * @property bool $is_featured
  */
 class Event extends Model
 {
@@ -71,6 +72,7 @@ class Event extends Model
         'max_registrations_per_attendee',
         'registration_deadline_at',
         'is_public',
+        'is_featured',
         'is_slug_custom',
         'created_by',
         'updated_by',
@@ -97,6 +99,7 @@ class Event extends Model
             'max_tickets_per_order' => 'integer',
             'max_registrations_per_attendee' => 'integer',
             'is_public' => 'boolean',
+            'is_featured' => 'boolean',
             'is_slug_custom' => 'boolean',
             'series_id' => 'integer',
             'views_count' => 'integer',
@@ -111,6 +114,7 @@ class Event extends Model
     protected $attributes = [
         'status' => EventStatus::Draft->value,
         'is_public' => false,
+        'is_featured' => false,
         'is_slug_custom' => false,
         'waitlist_enabled' => false,
     ];
@@ -351,6 +355,15 @@ class Event extends Model
 
         return $query->where('is_public', true)
             ->whereIn('status', $visible);
+    }
+
+    /**
+     * @param  Builder<Event>  $query
+     * @return Builder<Event>
+     */
+    public function scopeFeatured(Builder $query): Builder
+    {
+        return $query->where('is_featured', true);
     }
 
     /**

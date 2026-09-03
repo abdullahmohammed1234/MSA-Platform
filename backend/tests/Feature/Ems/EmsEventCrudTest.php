@@ -284,4 +284,37 @@ class EmsEventCrudTest extends EmsTestCase
             ]);
         }
     }
+
+    public function test_an_event_can_be_created_and_updated_with_is_featured(): void
+    {
+        $administrator = $this->emsUser(EmsRoles::EVENT_ADMINISTRATOR);
+        $startAt = now()->addWeeks(2)->startOfHour();
+
+        $response = $this->actingAsEms($administrator)->postJson($this->url('events'), [
+            'name' => 'Featured Event Test',
+            'start_at' => $startAt->toDateTimeString(),
+            'is_featured' => true,
+        ]);
+
+        $response->assertCreated();
+        $response->assertJsonPath('data.is_featured', true);
+        $uuid = $response->json('data.uuid');
+
+        $this->assertDatabaseHas('ems_events', [
+            'uuid' => $uuid,
+            'is_featured' => true,
+        ]);
+
+        $updateResponse = $this->actingAsEms($administrator)->putJson($this->url("events/{$uuid}"), [
+            'is_featured' => false,
+        ]);
+
+        $updateResponse->assertOk();
+        $updateResponse->assertJsonPath('data.is_featured', false);
+
+        $this->assertDatabaseHas('ems_events', [
+            'uuid' => $uuid,
+            'is_featured' => false,
+        ]);
+    }
 }

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { Plus } from 'lucide-vue-next';
+import { Plus, Star } from 'lucide-vue-next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -204,7 +204,13 @@ const confirmDelete = async () => {
               @click="openEvent(event)"
             >
               <td class="px-5 py-4">
-                <p class="text-sm font-bold text-neutral-black">{{ event.name }}</p>
+                <div class="flex items-center gap-2">
+                  <p class="text-sm font-bold text-neutral-black">{{ event.name }}</p>
+                  <span v-if="event.is_featured" class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-extrabold text-amber-800" title="Featured Event">
+                    <Star class="h-3 w-3 fill-amber-500 text-amber-500" />
+                    Featured
+                  </span>
+                </div>
                 <p v-if="event.category" class="mt-1">
                   <EmsCategoryBadge :name="event.category.name" :color="event.category.color" />
                 </p>
@@ -251,7 +257,13 @@ const confirmDelete = async () => {
           <li v-for="event in events.events" :key="event.uuid" class="p-4">
             <button type="button" class="w-full text-left cursor-pointer" @click="openEvent(event)">
               <div class="flex items-start justify-between gap-2">
-                <p class="min-w-0 flex-1 text-sm font-bold text-neutral-black">{{ event.name }}</p>
+                <div class="flex flex-wrap items-center gap-1.5 min-w-0 flex-1">
+                  <p class="text-sm font-bold text-neutral-black">{{ event.name }}</p>
+                  <span v-if="event.is_featured" class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-extrabold text-amber-800">
+                    <Star class="h-3 w-3 fill-amber-500 text-amber-500" />
+                    Featured
+                  </span>
+                </div>
                 <EmsStatusBadge :label="event.status_label" :tone="event.status_tone" size="sm" />
               </div>
               <p v-if="event.category" class="mt-1">

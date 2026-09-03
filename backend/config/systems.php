@@ -155,6 +155,24 @@ return [
             'owns' => ['donations', 'donation_refunds'],
             'does_not_own' => ['store_products', 'ems_events', 'registrations'],
         ],
+        'sponsorship' => [
+            'id' => 'sponsorship',
+            'name' => 'Sponsorship & Partnerships Management System (SPMS)',
+            'description' => 'Authoritative owner of corporate/community sponsorships, partner relationships, package tiers, agreements, financial commitments, in-kind contributions, deliverables, and fulfillment tracking.',
+            'type' => 'application',
+            'url' => '/sponsorship/admin',
+            'admin_path' => '/admin/systems/sponsorship',
+            'version' => env('SPONSORSHIP_VERSION', '1.0.0'),
+            'dependencies' => [
+                'platform-auth',
+                'database',
+                'square-payments',
+                'queues',
+                'email',
+            ],
+            'owns' => ['sponsors', 'partners', 'contacts', 'sponsorship_opportunities', 'sponsorship_packages', 'sponsorships', 'sponsorship_agreements', 'sponsorship_commitments', 'sponsorship_payments', 'in_kind_contributions', 'sponsorship_deliverables', 'sponsorship_fulfillment', 'sponsor_communications', 'sponsorship_renewals'],
+            'does_not_own' => ['ems_events', 'store_products', 'donations', 'cms_content'],
+        ],
     ],
 
     'platform_services' => [

@@ -19,6 +19,7 @@ class IndexPublicEventRequest extends EmsFormRequest
             'category_slug' => ['nullable', 'string', 'max:120'],
             'upcoming' => ['nullable', 'boolean'],
             'past' => ['nullable', 'boolean'],
+            'featured' => ['nullable', 'boolean'],
             'registration_open' => ['nullable', 'boolean'],
             'registration_closed' => ['nullable', 'boolean'],
             'status' => ['nullable', 'string', Rule::in(EventStatus::values())],
@@ -36,7 +37,7 @@ class IndexPublicEventRequest extends EmsFormRequest
     {
         $validated = $this->validated();
 
-        foreach (['upcoming', 'past', 'registration_open', 'registration_closed'] as $flag) {
+        foreach (['upcoming', 'past', 'featured', 'registration_open', 'registration_closed'] as $flag) {
             if (array_key_exists($flag, $validated)) {
                 $validated[$flag] = filter_var($validated[$flag], FILTER_VALIDATE_BOOLEAN);
             }
@@ -59,6 +60,7 @@ class IndexPublicEventRequest extends EmsFormRequest
         $this->merge($this->coerceBooleanFlags([
             'upcoming',
             'past',
+            'featured',
             'registration_open',
             'registration_closed',
         ]));

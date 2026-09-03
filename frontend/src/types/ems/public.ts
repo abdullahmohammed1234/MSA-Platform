@@ -41,6 +41,7 @@ export interface PublicEvent {
   is_full: boolean;
   is_sold_out?: boolean;
   waitlist_enabled?: boolean;
+  is_featured?: boolean;
   is_accepting_registrations: boolean;
   registration_label: string;
 }
@@ -140,6 +141,7 @@ export interface PublicEventFilters {
   category_slug?: string;
   upcoming?: boolean;
   past?: boolean;
+  featured?: boolean;
   registration_open?: boolean;
   registration_closed?: boolean;
   status?: EventStatus | '';

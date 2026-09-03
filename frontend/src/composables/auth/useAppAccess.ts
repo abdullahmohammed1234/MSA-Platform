@@ -46,6 +46,19 @@ export function useAppAccess() {
     return isSuperOrAdmin.value || authStore.roles.includes('dms-administrator') || authStore.permissions.includes('donations.view');
   });
 
+  const hasSponsorshipAccess = computed(() => {
+    if (authStore.user?.application_access?.sponsorship) {
+      return authStore.user.application_access.sponsorship.access;
+    }
+    return (
+      isSuperOrAdmin.value ||
+      authStore.roles.includes('spms-administrator') ||
+      authStore.roles.includes('spms-staff') ||
+      authStore.roles.includes('spms-viewer') ||
+      authStore.permissions.includes('sponsorship.view')
+    );
+  });
+
   const hasAdminAccess = computed(() => {
     if (authStore.user?.application_access?.['admin-portal']) {
       return authStore.user.application_access['admin-portal'].access;
@@ -59,6 +72,8 @@ export function useAppAccess() {
     hasEmsAccess,
     hasStoreAccess,
     hasDonationsAccess,
+    hasSponsorshipAccess,
     hasAdminAccess,
+    isSuperOrAdmin,
   };
 }

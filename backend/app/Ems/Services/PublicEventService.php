@@ -170,6 +170,10 @@ class PublicEventService
                 fn (Builder $q) => $q->past()
             )
             ->when(
+                ! empty($filters['featured']),
+                fn (Builder $q) => $q->featured()
+            )
+            ->when(
                 ! empty($filters['registration_open']),
                 fn (Builder $q) => $q->where('status', EventStatus::RegistrationOpen->value)
             )

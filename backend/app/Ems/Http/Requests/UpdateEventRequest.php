@@ -54,6 +54,7 @@ class UpdateEventRequest extends EmsFormRequest
             'max_registrations_per_attendee' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:100'],
             'registration_deadline_at' => ['sometimes', 'nullable', 'date'],
             'is_public' => ['sometimes', 'boolean'],
+            'is_featured' => ['sometimes', 'boolean'],
             'notify_audience' => ['sometimes', 'nullable', 'string', Rule::in(['everyone', 'registered', 'ticket_holders', 'none'])],
         ];
     }

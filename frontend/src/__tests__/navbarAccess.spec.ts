@@ -23,6 +23,7 @@ vi.mock('lucide-vue-next', async () => {
     LogOut: icon('LogOut'),
     ShoppingBag: icon('ShoppingBag'),
     Heart: icon('Heart'),
+    Briefcase: icon('Briefcase'),
     X: icon('X'),
   };
 });

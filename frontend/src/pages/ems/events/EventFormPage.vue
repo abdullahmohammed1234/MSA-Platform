@@ -57,6 +57,7 @@ const form = reactive({
   end_at: '',
   capacity: '',
   is_public: false,
+  is_featured: false,
   banner_url: '',
   notify_audience: 'none' as 'everyone' | 'registered' | 'ticket_holders' | 'none',
 });
@@ -153,6 +154,7 @@ onMounted(async () => {
           form.end_at = toDateTimeLocal(orig.end_at);
           form.capacity = orig.capacity ? String(orig.capacity) : '';
           form.is_public = orig.is_public;
+          form.is_featured = orig.is_featured ?? false;
           form.banner_url = orig.banner_url ?? '';
           toast.info('Copied details from original event.');
         }
@@ -184,6 +186,7 @@ onMounted(async () => {
       form.end_at = toDateTimeLocal(event.end_at);
       form.capacity = event.capacity ? String(event.capacity) : '';
       form.is_public = event.is_public;
+      form.is_featured = event.is_featured ?? false;
       form.banner_url = event.banner_url ?? '';
     }
   } catch (caught) {
@@ -206,6 +209,7 @@ const buildPayload = (): EventPayload => ({
   end_at: fromDateTimeLocal(form.end_at),
   capacity: form.capacity ? Number(form.capacity) : null,
   is_public: form.is_public,
+  is_featured: form.is_featured,
   banner_url: form.banner_url.trim() || null,
   ...(isEditing.value ? { notify_audience: form.notify_audience } : {}),
 });
@@ -400,6 +404,12 @@ const cancel = () =>
           v-model="form.is_public"
           label="Publicly listable"
           description="Marks the event as eligible for public discovery once it is published."
+        />
+
+        <Switch
+          v-model="form.is_featured"
+          label="Featured event"
+          description="Highlight this event in the Featured Events section on the Home Page."
         />
 
         <Select

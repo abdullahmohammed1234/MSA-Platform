@@ -70,14 +70,36 @@ const formatEventDate = (iso: string | null): string => {
 
 onMounted(async () => {
   try {
-    // Main Website consumes EMS public events — not legacy CMS /website/events
-    const page = await publicEventsService.listEvents({
+    // 1. Fetch featured upcoming public events
+    const featuredPage = await publicEventsService.listEvents({
       per_page: 2,
+      featured: true,
       upcoming: true,
       sort_by: 'start_at',
       sort_direction: 'asc',
     });
-    featuredEvents.value = page.items.map((event: any) => ({
+
+    const items = [...featuredPage.items];
+
+    // 2. If fewer than 2 featured events exist, supplement with regular upcoming events
+    if (items.length < 2) {
+      const existingUuids = new Set(items.map((item: any) => item.uuid));
+      const fallbackPage = await publicEventsService.listEvents({
+        per_page: 2,
+        upcoming: true,
+        sort_by: 'start_at',
+        sort_direction: 'asc',
+      });
+      for (const fallbackItem of fallbackPage.items) {
+        if (!existingUuids.has((fallbackItem as any).uuid)) {
+          items.push(fallbackItem);
+          existingUuids.add((fallbackItem as any).uuid);
+          if (items.length >= 2) break;
+        }
+      }
+    }
+
+    featuredEvents.value = items.slice(0, 2).map((event: any) => ({
       id: event.uuid,
       title: event.name,
       image: event.banner_url || resolvePublicImagePath(HERO_IMAGES.foto2),
@@ -394,7 +416,7 @@ const ctaBtnUrl = computed(() => homepageData.value?.cta?.button_url ?? '/contac
       <div class="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6 mb-16 sm:mb-20">
         <div class="space-y-3">
           <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-secondary">Events Calendar</span>
-          <h2 class="text-3xl sm:text-5xl font-display font-extrabold text-primary">Next <span class="italic font-serif text-secondary font-light">Events</span></h2>
+          <h2 class="text-3xl sm:text-5xl font-display font-extrabold text-primary">Featured <span class="italic font-serif text-secondary font-light">Events</span></h2>
         </div>
         <router-link to="/events" class="text-primary font-extrabold text-[11px] uppercase tracking-widest flex items-center gap-2 group border-b-2 border-primary/10 pb-1 h-fit">
           Full Calendar <ArrowRight :size="16" class="group-hover:translate-x-1 transition-transform" />

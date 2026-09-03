@@ -229,6 +229,7 @@ class EventService
             'max_registrations_per_attendee',
             'registration_deadline_at',
             'is_public',
+            'is_featured',
         ]));
     }
 

@@ -109,6 +109,12 @@ const adminRoutes: Array<RouteRecordRaw> = [
         meta: { permissions: 'system.view', systemId: 'donations' }
       },
       {
+        path: 'systems/sponsorship',
+        name: 'admin-systems-sponsorship',
+        component: () => import('@/pages/admin/system/SystemApplicationDetailPage.vue'),
+        meta: { permissions: 'system.view', systemId: 'sponsorship' }
+      },
+      {
         path: 'systems/donations/console',
         name: 'admin-systems-donations-console',
         component: () => import('@/pages/admin/system/DonationsSystemPage.vue'),
@@ -116,6 +122,8 @@ const adminRoutes: Array<RouteRecordRaw> = [
       },
       { path: 'donations', redirect: '/donations/admin' },
       { path: 'donations/dashboard', redirect: '/donations/admin' },
+      { path: 'sponsorship', redirect: '/sponsorship/admin' },
+      { path: 'sponsorship/dashboard', redirect: '/sponsorship/admin' },
       { path: 'store', redirect: '/store/admin' },
       { path: 'store/dashboard', redirect: '/store/admin' },
       { path: 'store/products', redirect: '/store/admin/products' },

@@ -7,6 +7,7 @@ import emsRoutes from './ems';
 import cmsRoutes from './cms';
 import damsRoutes from './dams';
 import donationsRoutes from './donations';
+import sponsorshipRoutes from './sponsorship';
 import { useAuthStore } from '@/stores/auth';
 import { authGuard } from './guards/authGuard';
 import { guestGuard } from './guards/guestGuard';
@@ -19,6 +20,7 @@ import { emsGuard } from './guards/emsGuard';
 import { cmsGuard } from './guards/cmsGuard';
 import { damsGuard } from './guards/damsGuard';
 import { dmsGuard } from './guards/dmsGuard';
+import { spmsGuard } from './guards/spmsGuard';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -28,6 +30,7 @@ const router = createRouter({
     ...cmsRoutes,
     ...damsRoutes,
     ...donationsRoutes,
+    ...sponsorshipRoutes,
     ...adminRoutes,
     ...emsRoutes,
     ...authRoutes,
@@ -78,7 +81,10 @@ router.beforeEach(async (to) => {
   }
 
   // 2. Sequential guard pipeline
-  // DMS, EMS, CMS, DAMS own their routes outright with dedicated access models
+  // SPMS, DMS, EMS, CMS, DAMS own their routes outright with dedicated access models
+  const spmsResult = await spmsGuard(to);
+  if (spmsResult !== true) return spmsResult;
+
   const dmsResult = await dmsGuard(to);
   if (dmsResult !== true) return dmsResult;
 
