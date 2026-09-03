@@ -17,6 +17,7 @@ class ApplicationAccessService
         'dawah-academy',
         'dams',
         'ems',
+        'store',
         'admin-portal'
     ];
 
@@ -50,6 +51,12 @@ class ApplicationAccessService
         // If no explicit record, check dynamic fallback logic (backward compatibility)
         if ($application === 'dawah-academy') {
             if ($user->hasAnyRole(['volunteer', 'mentor'])) {
+                return true;
+            }
+        }
+
+        if ($application === 'store') {
+            if ($user->hasAnyRole(['store-administrator', 'store-staff']) || $user->hasPermissionTo('store.view') || $user->hasPermissionTo('store.products.view')) {
                 return true;
             }
         }

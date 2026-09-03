@@ -134,6 +134,7 @@ const handleSubmit = async () => {
               { name: 'Home', link: '/' },
               { name: 'About Us', link: '/about' },
               { name: 'Events', link: '/events' },
+              { name: 'MSA Store', link: '/store' },
               { name: 'Team', link: '/team' },
               { name: 'Media Gallery', link: '/media' }
             ]" :key="item.name">

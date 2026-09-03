@@ -9,7 +9,7 @@ import { useAppAccess } from '@/composables/auth/useAppAccess';
 
 const toast = useToastStore();
 const authStore = useAuthStore();
-const { hasCmsAccess, hasDamsAccess, hasEmsAccess } = useAppAccess();
+const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasStoreAccess } = useAppAccess();
 const isSidebarCollapsed = ref(false);
 const isMobileOpen = ref(false);
 const adminName = ref('Platform Administrator');
@@ -57,7 +57,7 @@ const adminItems = computed(() => {
     adminGroup.push({ label: 'Application Access', path: '/admin/application-access', icon: 'key' });
   }
 
-  // Applications: open shells — not embedded inside MSA Admin (Phase 4–5, Phase 10)
+  // Applications: open shells — not embedded inside MSA Admin (Phase 4–5, Phase 10, Phase 17)
   const appChildren: Array<{ label: string; path: string; icon: string }> = [];
   if (hasCmsAccess.value) {
     appChildren.push({ label: 'Open CMS', path: '/cms', icon: 'book' });
@@ -67,6 +67,9 @@ const adminItems = computed(() => {
   }
   if (hasEmsAccess.value) {
     appChildren.push({ label: 'Open EMS', path: '/ems', icon: 'calendar' });
+  }
+  if (hasStoreAccess.value) {
+    appChildren.push({ label: 'Open Store Admin', path: '/store/admin', icon: 'server' });
   }
   if (appChildren.length > 0) {
     items.push({
@@ -85,6 +88,7 @@ const adminItems = computed(() => {
     systemChildren.push({ label: 'Dawah Academy', path: '/admin/systems/dawah-academy', icon: 'book' });
     systemChildren.push({ label: 'Dawah Academy Management (DAMS)', path: '/admin/systems/dams', icon: 'layers' });
     systemChildren.push({ label: 'Event Management System', path: '/admin/systems/ems', icon: 'calendar' });
+    systemChildren.push({ label: 'Store Management System', path: '/admin/systems/store', icon: 'server' });
   }
 
   if (authStore.permissions.includes('view_queue_status') || isSuper) {

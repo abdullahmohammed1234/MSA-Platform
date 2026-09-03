@@ -10,12 +10,19 @@ import {
   ChevronDown,
   LogIn,
   LogOut,
+  ShoppingBag,
   X 
 } from 'lucide-vue-next';
 
 import { useAppAccess } from '@/composables/auth/useAppAccess';
 
-const navLinks = [
+interface NavLink {
+  name: string;
+  href: string;
+  external?: boolean;
+}
+
+const navLinks: NavLink[] = [
   { name: 'Home', href: '/' },
   { name: 'About', href: '/about' },
   { name: 'Events', href: '/events' },
@@ -23,14 +30,14 @@ const navLinks = [
   { name: 'Team', href: '/team' },
   { name: 'Media', href: '/media' },
   // { name: 'Resources', href: '/resources' },
-  { name: 'Store', href: 'https://sfu-msa-store.square.site/', external: true },
+  { name: 'Store', href: '/store' },
   { name: 'Contact', href: '/contact' },
 ];
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
-const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasAdminAccess } = useAppAccess();
+const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasStoreAccess, hasAdminAccess } = useAppAccess();
 
 function isNavActive(href: string): boolean {
   if (href === '/') return route.path === '/';
@@ -255,6 +262,16 @@ const handleLogout = async () => {
                 </router-link>
 
                 <router-link
+                  v-if="hasStoreAccess"
+                  to="/store/admin"
+                  class="flex items-center gap-2.5 px-4 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/70 hover:bg-neutral-background hover:text-primary transition-all"
+                  @click="closeUserMenu"
+                >
+                  <ShoppingBag class="h-4 w-4 shrink-0 text-primary" />
+                  Store Admin
+                </router-link>
+
+                <router-link
                   v-if="hasAdminAccess"
                   to="/admin"
                   class="flex items-center gap-2.5 px-4 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/70 hover:bg-neutral-background hover:text-primary transition-all"
@@ -376,6 +393,17 @@ const handleLogout = async () => {
                 >
                   <BookOpen class="h-3.5 w-3.5" />
                   DAMS
+                </router-link>
+              </div>
+
+              <div v-if="!isLoading && isAuthenticated && hasStoreAccess" class="mb-4">
+                <router-link
+                  to="/store/admin"
+                  class="inline-flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest w-full justify-center"
+                  @click="closeMenu"
+                >
+                  <ShoppingBag class="h-3.5 w-3.5" />
+                  Store Admin
                 </router-link>
               </div>
 

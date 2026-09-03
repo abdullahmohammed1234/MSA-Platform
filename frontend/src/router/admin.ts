@@ -96,6 +96,17 @@ const adminRoutes: Array<RouteRecordRaw> = [
         component: () => import('@/pages/admin/system/SystemApplicationDetailPage.vue'),
         meta: { permissions: 'system.view', systemId: 'ems' }
       },
+      {
+        path: 'systems/store',
+        name: 'admin-systems-store',
+        component: () => import('@/pages/admin/system/SystemApplicationDetailPage.vue'),
+        meta: { permissions: 'system.view', systemId: 'store' }
+      },
+      { path: 'store', redirect: '/store/admin' },
+      { path: 'store/dashboard', redirect: '/store/admin' },
+      { path: 'store/products', redirect: '/store/admin/products' },
+      { path: 'store/inventory', redirect: '/store/admin/inventory' },
+      { path: 'store/orders', redirect: '/store/admin/orders' },
       // Legacy operations consoles (advanced) — not the primary Systems detail
       {
         path: 'systems/ems/console',
@@ -205,6 +216,37 @@ const adminRoutes: Array<RouteRecordRaw> = [
         meta: { permissions: 'view_analytics' }
       }
     ]
+  },
+  {
+    path: '/store/admin',
+    component: () => import('@/layouts/store/StoreLayout.vue'),
+    meta: { appAccess: 'store' },
+    children: [
+      {
+        path: '',
+        name: 'store-admin-dashboard',
+        component: () => import('@/pages/store/admin/StoreDashboardPage.vue'),
+        meta: { title: 'Store Dashboard | MSA Store Admin' },
+      },
+      {
+        path: 'products',
+        name: 'store-admin-products',
+        component: () => import('@/pages/store/admin/StoreProductsPage.vue'),
+        meta: { title: 'Products | MSA Store Admin' },
+      },
+      {
+        path: 'inventory',
+        name: 'store-admin-inventory',
+        component: () => import('@/pages/store/admin/StoreInventoryPage.vue'),
+        meta: { title: 'Inventory | MSA Store Admin' },
+      },
+      {
+        path: 'orders',
+        name: 'store-admin-orders',
+        component: () => import('@/pages/store/admin/StoreOrdersPage.vue'),
+        meta: { title: 'Orders | MSA Store Admin' },
+      },
+    ],
   }
 ]
 

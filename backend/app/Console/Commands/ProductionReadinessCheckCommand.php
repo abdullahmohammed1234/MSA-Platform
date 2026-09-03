@@ -75,8 +75,8 @@ class ProductionReadinessCheckCommand extends Command
 
         $apps = array_keys(config('systems.applications', []));
         sort($apps);
-        if ($apps !== ['cms', 'dams', 'dawah-academy', 'ems', 'main-website']) {
-            $failures[] = 'Systems registry must contain exactly five applications';
+        if ($apps !== ['cms', 'dams', 'dawah-academy', 'ems', 'main-website', 'store']) {
+            $failures[] = 'Systems registry must contain the registered platform applications';
         }
 
         $this->info('SFU MSA Platform — production readiness check');

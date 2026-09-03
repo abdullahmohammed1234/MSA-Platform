@@ -222,6 +222,22 @@ class SquareWebhookService
                 return $applied->payment;
             }
 
+            // Check if refund belongs to StoreOrder
+            $squarePaymentId = (string) ($refund['payment_id'] ?? '');
+            if ($squarePaymentId !== '') {
+                $storeOrder = \App\Store\Models\StoreOrder::where('square_payment_id', $squarePaymentId)->first();
+                if ($storeOrder !== null) {
+                    if ($storeOrder->payment_status !== \App\Store\Enums\StorePaymentStatus::Refunded) {
+                        app(\App\Store\Services\StorePaymentService::class)->refundOrder($storeOrder, 'Refunded via Square webhook');
+                    }
+                    $record->status = WebhookEventStatus::Processed->value;
+                    $record->processed_at = now();
+                    $record->save();
+
+                    return null;
+                }
+            }
+
             return null;
         }
 
@@ -243,6 +259,11 @@ class SquareWebhookService
                 return $this->fulfillExisting($payment, $parsed, $eventType, $record);
             }
 
+            $storeOrder = $this->resolveStoreOrder($parsed, $payload);
+            if ($storeOrder !== null) {
+                return $this->fulfillStoreOrder($storeOrder, $parsed, $payload, $record);
+            }
+
             $squarePayment = data_get($payload, 'data.object.payment');
             if (is_array($squarePayment)) {
                 $ingested = $this->pos->ingestPayment($squarePayment);
@@ -257,6 +278,64 @@ class SquareWebhookService
 
                 return $ingested;
             }
+        }
+
+        return null;
+    }
+
+    private function resolveStoreOrder(array $parsed, array $payload): ?\App\Store\Models\StoreOrder
+    {
+        $reference = $parsed['reference'] ?? data_get($payload, 'data.object.payment.reference_id', data_get($payload, 'data.object.order.reference_id'));
+        if (is_string($reference) && $reference !== '') {
+            $order = \App\Store\Models\StoreOrder::where('order_number', $reference)->first();
+            if ($order !== null) {
+                return $order;
+            }
+        }
+
+        $orderId = $parsed['provider_order_id'] ?? data_get($payload, 'data.object.payment.order_id', data_get($payload, 'data.object.order.id'));
+        if (is_string($orderId) && $orderId !== '') {
+            $order = \App\Store\Models\StoreOrder::where('square_order_id', $orderId)->first();
+            if ($order !== null) {
+                return $order;
+            }
+        }
+
+        $paymentId = $parsed['provider_payment_id'] ?? data_get($payload, 'data.object.payment.id');
+        if (is_string($paymentId) && $paymentId !== '') {
+            $order = \App\Store\Models\StoreOrder::where('square_payment_id', $paymentId)->first();
+            if ($order !== null) {
+                return $order;
+            }
+        }
+
+        return null;
+    }
+
+    private function fulfillStoreOrder(\App\Store\Models\StoreOrder $order, array $parsed, array $payload, WebhookEvent $record): null
+    {
+        $status = strtolower((string) ($parsed['payment_status'] ?? data_get($payload, 'data.object.payment.status', '')));
+        $squarePaymentId = (string) ($parsed['provider_payment_id'] ?? data_get($payload, 'data.object.payment.id', $order->square_payment_id ?? ''));
+        $squareOrderId = (string) ($parsed['provider_order_id'] ?? data_get($payload, 'data.object.payment.order_id', $order->square_order_id ?? ''));
+
+        if (in_array($status, ['completed', 'approved', 'paid'], true) || $status === strtolower(PaymentStatus::Paid->value)) {
+            app(\App\Store\Services\StorePaymentService::class)->markOrderPaid($order, $squarePaymentId, $squareOrderId);
+
+            $record->status = WebhookEventStatus::Processed->value;
+            $record->processed_at = now();
+            $record->failure_reason = null;
+            $record->save();
+        } elseif (in_array($status, ['failed', 'canceled', 'rejected'], true)) {
+            if ($order->payment_status === \App\Store\Enums\StorePaymentStatus::Pending) {
+                $order->update([
+                    'payment_status' => \App\Store\Enums\StorePaymentStatus::Failed,
+                    'fulfillment_status' => \App\Store\Enums\StoreFulfillmentStatus::Cancelled,
+                ]);
+            }
+            $record->status = WebhookEventStatus::Processed->value;
+            $record->processed_at = now();
+            $record->failure_reason = null;
+            $record->save();
         }
 
         return null;

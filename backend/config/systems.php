@@ -119,6 +119,24 @@ return [
             'owns' => ['ems_events', 'registrations', 'tickets', 'check_ins'],
             'does_not_own' => ['cms_content', 'legacy_cms_events', 'academy_data'],
         ],
+        'store' => [
+            'id' => 'store',
+            'name' => 'Store Management System (SMS)',
+            'description' => 'Authoritative owner of merchandise catalogue, products, variants, inventory, and merchandise orders.',
+            'type' => 'application',
+            'url' => '/store/admin',
+            'admin_path' => '/admin/systems/store',
+            'version' => env('STORE_VERSION', '1.0.0'),
+            'dependencies' => [
+                'platform-auth',
+                'database',
+                'storage',
+                'queues',
+                'email',
+            ],
+            'owns' => ['store_products', 'store_inventory', 'store_orders'],
+            'does_not_own' => ['ems_events', 'registrations', 'tickets'],
+        ],
     ],
 
     'platform_services' => [

@@ -50,7 +50,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div>
+  <div class="relative shrink-0">
     <!-- Backdrop Overlay (Mobile only, active when drawer is open) -->
     <div
       v-if="mobileOpen"
@@ -58,11 +58,10 @@ onUnmounted(() => {
       @click="emit('closeMobile')"
     ></div>
 
-    <!-- Responsive Sidebar Container -->
+    <!-- Responsive Sidebar Container — fixed to viewport on all screens -->
     <aside
       :class="[
-        'h-screen bg-white border-r border-neutral-ivory flex flex-col justify-between transition-all duration-300 z-40',
-        'fixed inset-y-0 left-0 lg:sticky lg:top-0',
+        'fixed inset-y-0 left-0 h-screen bg-white border-r border-neutral-ivory flex flex-col justify-between transition-all duration-300 z-40',
         isCollapsed ? 'w-20' : 'w-64',
         mobileOpen ? 'translate-x-0 shadow-premium' : '-translate-x-full lg:translate-x-0'
       ]"
@@ -236,5 +235,14 @@ onUnmounted(() => {
         </div>
       </div>
     </aside>
+
+    <!-- Desktop Flexbox Layout Spacer -->
+    <div
+      :class="[
+        'hidden lg:block shrink-0 transition-all duration-300 pointer-events-none',
+        isCollapsed ? 'w-20' : 'w-64'
+      ]"
+      aria-hidden="true"
+    />
   </div>
 </template>

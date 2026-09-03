@@ -27,6 +27,11 @@ trait HasRolesAndPermissions
         return $this->roles()->whereIn('slug', $roles)->orWhereIn('name', $roles)->exists();
     }
 
+    public function hasPermissionTo(string $permission): bool
+    {
+        return $this->hasPermission($permission);
+    }
+
     public function hasPermission(string $permission): bool
     {
         // 1. Super Admin and Admin have all permissions bypass

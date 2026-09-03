@@ -304,6 +304,7 @@ class SystemsControlPlaneService
                 'cms' => $this->tableReachable('announcements', Announcement::class, 'CMS announcements store'),
                 'dams', 'dawah-academy' => $this->tableReachable('courses', Course::class, 'Academy courses store'),
                 'ems' => $this->tableReachable('ems_events', EmsEvent::class, 'EMS events store'),
+                'store' => $this->tableReachable('store_products', \App\Store\Models\StoreProduct::class, 'Store products store'),
                 'main-website' => $this->tableReachable('announcements', Announcement::class, 'CMS content consumed by Main Website'),
                 default => [
                     'status' => self::STATUS_UNKNOWN,

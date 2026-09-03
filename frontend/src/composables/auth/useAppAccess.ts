@@ -32,6 +32,13 @@ export function useAppAccess() {
     return isSuperOrAdmin.value;
   });
 
+  const hasStoreAccess = computed(() => {
+    if (authStore.user?.application_access?.store) {
+      return authStore.user.application_access.store.access;
+    }
+    return isSuperOrAdmin.value || authStore.roles.includes('store-administrator') || authStore.permissions.includes('store.products.view');
+  });
+
   const hasAdminAccess = computed(() => {
     if (authStore.user?.application_access?.['admin-portal']) {
       return authStore.user.application_access['admin-portal'].access;
@@ -43,6 +50,7 @@ export function useAppAccess() {
     hasCmsAccess,
     hasDamsAccess,
     hasEmsAccess,
+    hasStoreAccess,
     hasAdminAccess,
   };
 }

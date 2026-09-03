@@ -49,6 +49,16 @@ class DatabaseSeeder extends Seeder
                 'description' => 'Academy participant who can complete courses and earn certificates.',
             ],
             [
+                'name' => 'Store Administrator',
+                'slug' => 'store-administrator',
+                'description' => 'Manages MSA Store merchandise catalogue, inventory, orders, and fulfillment.',
+            ],
+            [
+                'name' => 'Store Staff',
+                'slug' => 'store-staff',
+                'description' => 'Manages order processing, inventory checks, and customer order status updates.',
+            ],
+            [
                 'name' => 'Member',
                 'slug' => 'member',
                 'description' => 'MSA community member with access to member-only resources.',
@@ -104,6 +114,13 @@ class DatabaseSeeder extends Seeder
             ['name' => 'Manage Team', 'slug' => 'manage_team', 'module' => 'Website', 'description' => 'Manage team members and display order.'],
             ['name' => 'Manage Media', 'slug' => 'manage_media', 'module' => 'Website', 'description' => 'Manage and upload reusable media assets.'],
 
+            // Store Module
+            ['name' => 'View Store Admin', 'slug' => 'store.view', 'module' => 'Store', 'description' => 'Access Store Admin control plane, products list, inventory, and orders.'],
+            ['name' => 'Manage Store Products', 'slug' => 'store.manage_products', 'module' => 'Store', 'description' => 'Create, edit, publish, and delete merchandise products and variants.'],
+            ['name' => 'Manage Store Inventory', 'slug' => 'store.manage_inventory', 'module' => 'Store', 'description' => 'Manage stock quantities, restocking alerts, and inventory logs.'],
+            ['name' => 'Manage Store Orders', 'slug' => 'store.manage_orders', 'module' => 'Store', 'description' => 'Fulfill, process, update order statuses, and issue customer refunds.'],
+            ['name' => 'Store Administrator', 'slug' => 'store.admin', 'module' => 'Store', 'description' => 'Full administrative access over Store settings, products, inventory, and analytics.'],
+
             // Analytics Module
             ['name' => 'View Analytics', 'slug' => 'view_analytics', 'module' => 'Analytics', 'description' => 'Access dashboard analytics data.'],
             ['name' => 'View Reports', 'slug' => 'view_reports', 'module' => 'Analytics', 'description' => 'Generate and download reports.'],
@@ -155,6 +172,7 @@ class DatabaseSeeder extends Seeder
             'view_progress', 'manage_progress', 'manage_discussions',
             'manage_events', 'manage_announcements', 'manage_resources',
             'manage_homepage', 'manage_team', 'manage_media',
+            'store.view', 'store.manage_products', 'store.manage_inventory', 'store.manage_orders', 'store.admin',
             'view_analytics', 'view_reports', 'manage_analytics', 'export_analytics',
             'manage_queues', 'view_queue_status', 'retry_failed_jobs', 'manage_scheduler',
             'view_security', 'manage_security'
@@ -162,6 +180,20 @@ class DatabaseSeeder extends Seeder
         $roles['admin']->permissions()->sync(
             Permission::whereIn('slug', $adminPermissions)->pluck('id')->toArray()
         );
+
+        // Store Administrator Role mapping
+        if (isset($roles['store-administrator'])) {
+            $roles['store-administrator']->permissions()->sync(
+                Permission::whereIn('slug', ['store.view', 'store.manage_products', 'store.manage_inventory', 'store.manage_orders', 'store.admin', 'view_analytics'])->pluck('id')->toArray()
+            );
+        }
+
+        // Store Staff Role mapping
+        if (isset($roles['store-staff'])) {
+            $roles['store-staff']->permissions()->sync(
+                Permission::whereIn('slug', ['store.view', 'store.manage_inventory', 'store.manage_orders'])->pluck('id')->toArray()
+            );
+        }
 
         // Director Role mapping
         $directorPermissions = ['manage_events', 'view_analytics', 'view_reports', 'export_analytics'];

@@ -323,18 +323,18 @@ class PlatformArchitectureContractTest extends TestCase
     // -------------------------------------------------------------------------
 
     /** @test */
-    public function systems_registry_has_exactly_five_applications_and_no_incidents(): void
+    public function systems_registry_has_registered_applications_and_no_incidents(): void
     {
         $this->actingAs($this->platformUser)
             ->getJson('/api/v1/admin/systems')
             ->assertStatus(200)
             ->assertJsonPath('incidents_supported', false)
-            ->assertJsonPath('summary.applications_total', 5);
+            ->assertJsonPath('summary.applications_total', 6);
 
         $ids = array_keys(config('systems.applications', []));
         sort($ids);
         $this->assertSame(
-            ['cms', 'dams', 'dawah-academy', 'ems', 'main-website'],
+            ['cms', 'dams', 'dawah-academy', 'ems', 'main-website', 'store'],
             $ids
         );
 

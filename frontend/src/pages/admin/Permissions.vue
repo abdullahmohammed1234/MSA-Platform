@@ -30,13 +30,29 @@ const auditLogsLastPage = ref(1);
 const isLoading = ref(false);
 const activeTab = ref('users'); // 'users' | 'directory' | 'audit'
 
-// Selected user for role/permission assignment
+// User search & selection
+const userSearchQuery = ref('');
 const selectedUserUuid = ref('');
 const userRoles = ref<string[]>([]);
 const userPermissions = ref<string[]>([]);
 
+// Permission Directory search & filter
+const directorySearchQuery = ref('');
+const directoryModuleFilter = ref('all');
+
+// Audit Log search & filter
+const auditLogActionFilter = ref('all');
+
 const selectedUser = computed(() => {
-  return users.value.find(u => u.uuid === selectedUserUuid.value) || null;
+  return users.value.find((u) => u.uuid === selectedUserUuid.value) || null;
+});
+
+const filteredUsers = computed(() => {
+  if (!userSearchQuery.value.trim()) return users.value;
+  const q = userSearchQuery.value.toLowerCase().trim();
+  return users.value.filter(
+    (u) => u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q)
+  );
 });
 
 onMounted(async () => {
@@ -46,19 +62,15 @@ onMounted(async () => {
 const loadBaseData = async () => {
   isLoading.value = true;
   try {
-    // 1. Fetch permissions
     const permsData = await rolePermissionService.getPermissions();
     permissions.value = permsData.permissions;
 
-    // 2. Fetch roles
     const rolesData = await rolePermissionService.getRoles();
     roles.value = rolesData.roles;
 
-    // 3. Fetch users
     const usersResponse = await client.get('/admin/users');
     users.value = usersResponse.data.users || [];
 
-    // 4. Fetch audit logs
     await loadAuditLogs();
   } catch (error) {
     toast.error('Failed to load authorization data.');
@@ -136,10 +148,36 @@ const toggleUserPermission = (slug: string) => {
   }
 };
 
-// Group permissions by module
+const modulesList = computed(() => {
+  const mods = new Set<string>();
+  permissions.value.forEach((p) => {
+    if (p.module) mods.add(p.module);
+  });
+  return Array.from(mods).sort();
+});
+
+// Group permissions by module with optional search filtering
 const groupedPermissions = computed(() => {
   const groups: Record<string, Permission[]> = {};
-  permissions.value.forEach(p => {
+  const query = directorySearchQuery.value.toLowerCase().trim();
+
+  permissions.value.forEach((p) => {
+    if (
+      directoryModuleFilter.value !== 'all' &&
+      p.module !== directoryModuleFilter.value
+    ) {
+      return;
+    }
+
+    if (
+      query &&
+      !p.name.toLowerCase().includes(query) &&
+      !p.slug.toLowerCase().includes(query) &&
+      !(p.description && p.description.toLowerCase().includes(query))
+    ) {
+      return;
+    }
+
     if (!groups[p.module]) {
       groups[p.module] = [];
     }
@@ -148,27 +186,34 @@ const groupedPermissions = computed(() => {
   return groups;
 });
 
+const filteredAuditLogs = computed(() => {
+  if (auditLogActionFilter.value === 'all') return auditLogs.value;
+  return auditLogs.value.filter((log) => log.action === auditLogActionFilter.value);
+});
+
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleString('en-US', {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   });
 };
 
 const getActionClass = (action: string) => {
   const mapping: Record<string, string> = {
-    role_assigned: 'bg-secondary/10 text-secondary border border-secondary/20/50',
-    role_removed: 'bg-red-50 text-red-600 border border-red-200/50',
-    roles_synced: 'bg-primary/5 text-primary border border-blue-200/50',
-    permission_granted: 'bg-primary/5 text-primary border border-primary/15/50',
-    permission_revoked: 'bg-accent-gold/20 text-amber-600 border border-amber-200/50',
-    user_permissions_synced: 'bg-purple-50 text-purple-600 border border-purple-200/50',
-    role_created: 'bg-green-50 text-green-600 border border-green-200/50',
-    role_deleted: 'bg-accent-red/10 text-rose-600 border border-accent-red/20/50',
+    role_assigned: 'bg-secondary/10 text-secondary border border-secondary/20',
+    role_removed: 'bg-red-50 text-red-600 border border-red-200',
+    roles_synced: 'bg-primary/5 text-primary border border-blue-200',
+    permission_granted: 'bg-emerald-50 text-emerald-600 border border-emerald-200',
+    permission_revoked: 'bg-amber-50 text-amber-600 border border-amber-200',
+    user_permissions_synced: 'bg-purple-50 text-purple-600 border border-purple-200',
+    role_created: 'bg-emerald-50 text-emerald-600 border border-emerald-200',
+    role_deleted: 'bg-rose-50 text-rose-600 border border-rose-200',
+    grant_application_access: 'bg-blue-50 text-blue-600 border border-blue-200',
+    revoke_application_access: 'bg-amber-50 text-amber-600 border border-amber-200',
   };
-  return mapping[action] || 'bg-neutral-50 text-neutral-600 border border-neutral-200/50';
+  return mapping[action] || 'bg-neutral-50 text-neutral-600 border border-neutral-200';
 };
 </script>
 
@@ -177,7 +222,7 @@ const getActionClass = (action: string) => {
     <!-- Header -->
     <div>
       <h1 class="text-3xl font-display font-medium text-primary">Permissions & Security</h1>
-      <p class="text-sm text-neutral-muted mt-1">Assign direct permissions, review the master permission list, and check security audit logs.</p>
+      <p class="text-sm text-neutral-muted mt-1">Assign direct capabilities, inspect the platform permission catalog, and review audit logs.</p>
     </div>
 
     <!-- Navigation Tabs -->
@@ -205,32 +250,39 @@ const getActionClass = (action: string) => {
     <!-- Tab 1: User Assignments -->
     <div v-if="activeTab === 'users'" class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-fade-in">
       <!-- User Selector Panel -->
-      <div class="lg:col-span-4 bg-white border border-neutral-ivory p-6 rounded-2xl shadow-soft">
-        <h2 class="text-base font-bold text-neutral-black mb-4">Select User</h2>
+      <div class="lg:col-span-4 bg-white border border-neutral-ivory p-6 rounded-2xl shadow-soft space-y-4">
+        <h2 class="text-base font-bold text-neutral-black">Select User Account</h2>
         
         <div>
-          <label class="block text-xs font-bold uppercase tracking-wider text-neutral-muted mb-1.5">User Account</label>
+          <label class="block text-xs font-bold uppercase tracking-wider text-neutral-muted mb-1.5">Filter User Roster</label>
+          <input
+            v-model="userSearchQuery"
+            type="text"
+            placeholder="Search by name or email..."
+            class="w-full p-2.5 text-xs rounded-xl border border-neutral-ivory focus:border-primary focus:outline-none bg-neutral-background/40 mb-2"
+          />
+
           <select
             v-model="selectedUserUuid"
             @change="handleSelectUser"
-            class="w-full p-2.5 text-sm rounded-lg border border-neutral-ivory focus:border-primary focus:outline-none bg-neutral-background/40 cursor-pointer"
+            class="w-full p-2.5 text-sm rounded-xl border border-neutral-ivory focus:border-primary focus:outline-none bg-neutral-background/40 cursor-pointer"
           >
-            <option value="">-- Choose User --</option>
-            <option v-for="user in users" :key="user.uuid" :value="user.uuid">
+            <option value="">-- Choose User ({{ filteredUsers.length }}) --</option>
+            <option v-for="user in filteredUsers" :key="user.uuid" :value="user.uuid">
               {{ user.name }} ({{ user.email }})
             </option>
           </select>
         </div>
 
         <!-- Selected User Quick Info -->
-        <div v-if="selectedUser" class="mt-6 pt-6 border-t border-neutral-ivory/50 space-y-4">
+        <div v-if="selectedUser" class="pt-4 border-t border-neutral-ivory/50 space-y-4">
           <div>
             <h4 class="text-[10px] font-bold uppercase tracking-wider text-neutral-muted">Active Roles</h4>
             <div class="flex flex-wrap gap-1 mt-1.5">
               <span
                 v-for="roleSlug in selectedUser.roles"
                 :key="roleSlug"
-                class="text-[10px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded font-mono"
+                class="text-[10px] bg-primary/10 text-primary border border-primary/20 px-2 py-0.5 rounded-full font-mono font-semibold"
               >
                 {{ roleSlug }}
               </span>
@@ -239,8 +291,10 @@ const getActionClass = (action: string) => {
           </div>
 
           <div>
-            <h4 class="text-[10px] font-bold uppercase tracking-wider text-neutral-muted">Permissions Summary</h4>
-            <p class="text-xs text-neutral-muted mt-1">Has access to {{ selectedUser.permissions.length }} direct / inherited system operations.</p>
+            <h4 class="text-[10px] font-bold uppercase tracking-wider text-neutral-muted">Permissions Overview</h4>
+            <p class="text-xs text-neutral-muted mt-1 leading-relaxed">
+              Granted <span class="font-bold text-neutral-black">{{ selectedUser.permissions.length }}</span> total system capabilities via assigned roles or direct grants.
+            </p>
           </div>
         </div>
       </div>
@@ -252,7 +306,7 @@ const getActionClass = (action: string) => {
           <div class="flex justify-between items-center mb-6">
             <div>
               <h2 class="text-base font-bold text-neutral-black">Assign Roles to {{ selectedUser.name }}</h2>
-              <p class="text-xs text-neutral-muted mt-0.5">Role changes will overwrite the user's current roles.</p>
+              <p class="text-xs text-neutral-muted mt-0.5">Role changes update the inherited capability baseline for this account.</p>
             </div>
             <Button
               v-if="can('manage_users')"
@@ -292,7 +346,7 @@ const getActionClass = (action: string) => {
           <div class="flex justify-between items-center mb-6">
             <div>
               <h2 class="text-base font-bold text-neutral-black">Assign Direct Permissions</h2>
-              <p class="text-xs text-neutral-muted mt-0.5">Use direct permissions to grant ad-hoc access without changing roles.</p>
+              <p class="text-xs text-neutral-muted mt-0.5">Use direct permissions to grant ad-hoc access without altering roles.</p>
             </div>
             <Button
               v-if="can('manage_users')"
@@ -314,7 +368,7 @@ const getActionClass = (action: string) => {
                 <label
                   v-for="perm in perms"
                   :key="perm.uuid"
-                  class="flex items-start gap-2.5 p-2 rounded-lg hover:bg-neutral-background cursor-pointer select-none transition-colors border border-neutral-ivory/30"
+                  class="flex items-start gap-2.5 p-2 rounded-xl hover:bg-neutral-background cursor-pointer select-none transition-colors border border-neutral-ivory/30"
                   :class="{ 'border-primary/20 bg-neutral-background/40': userPermissions.includes(perm.slug) }"
                 >
                   <input
@@ -340,19 +394,76 @@ const getActionClass = (action: string) => {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
         </svg>
         <h3 class="font-bold text-neutral-black mb-1">No User Selected</h3>
-        <p class="text-xs text-neutral-muted max-w-sm text-center">Choose a user from the dropdown to assign system roles and direct capabilities.</p>
+        <p class="text-xs text-neutral-muted max-w-sm text-center">Choose a user from the dropdown menu to inspect and manage system capabilities.</p>
       </div>
     </div>
 
     <!-- Tab 2: Permission Directory -->
     <div v-if="activeTab === 'directory'" class="space-y-6 animate-fade-in">
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <!-- Search & Filters for Directory -->
+      <div class="bg-white border border-neutral-ivory p-4 rounded-2xl shadow-soft flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full max-w-2xl">
+          <div class="relative max-w-xs w-full">
+            <input
+              v-model="directorySearchQuery"
+              type="text"
+              placeholder="Search permission slug or name..."
+              class="w-full pl-9 pr-4 py-2 text-sm rounded-xl border border-neutral-ivory focus:border-primary focus:outline-none bg-neutral-background/40"
+            />
+            <span class="absolute left-3 top-2.5 text-neutral-muted">
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </span>
+          </div>
+
+          <div class="flex items-center gap-1 bg-neutral-background p-1 rounded-xl border border-neutral-ivory overflow-x-auto">
+            <button
+              type="button"
+              @click="directoryModuleFilter = 'all'"
+              :class="[
+                'px-2.5 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap',
+                directoryModuleFilter === 'all'
+                  ? 'bg-white text-primary shadow-xs border border-neutral-ivory/60 font-bold'
+                  : 'text-neutral-muted hover:text-primary'
+              ]"
+            >
+              All Modules
+            </button>
+            <button
+              type="button"
+              v-for="mod in modulesList"
+              :key="mod"
+              @click="directoryModuleFilter = mod"
+              :class="[
+                'px-2.5 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap',
+                directoryModuleFilter === mod
+                  ? 'bg-white text-primary shadow-xs border border-neutral-ivory/60 font-bold'
+                  : 'text-neutral-muted hover:text-primary'
+              ]"
+            >
+              {{ mod }}
+            </button>
+          </div>
+        </div>
+
+        <div class="text-xs text-neutral-muted whitespace-nowrap">
+          Total: <span class="font-bold text-neutral-black">{{ permissions.length }}</span> permissions registered
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div v-for="(perms, moduleName) in groupedPermissions" :key="moduleName" class="bg-white border border-neutral-ivory p-6 rounded-2xl shadow-soft">
-          <h2 class="text-sm font-bold uppercase tracking-wider text-primary border-b border-neutral-ivory/50 pb-2 mb-4">
-            {{ moduleName }} Permissions
-          </h2>
+          <div class="flex items-center justify-between border-b border-neutral-ivory/50 pb-3 mb-4">
+            <h2 class="text-sm font-bold uppercase tracking-wider text-primary">
+              {{ moduleName }} Module
+            </h2>
+            <span class="text-xs font-semibold text-neutral-muted bg-neutral-background px-2.5 py-1 rounded-full border border-neutral-ivory">
+              {{ perms.length }} permissions
+            </span>
+          </div>
           
-          <div class="divide-y divide-neutral-ivory/30 space-y-4">
+          <div class="divide-y divide-neutral-ivory/30 space-y-3">
             <div v-for="perm in perms" :key="perm.uuid" class="pt-3 first:pt-0 flex justify-between items-start gap-4">
               <div>
                 <h3 class="text-xs font-bold text-neutral-black">{{ perm.name }}</h3>
@@ -369,9 +480,12 @@ const getActionClass = (action: string) => {
 
     <!-- Tab 3: Security Audit Logs -->
     <div v-if="activeTab === 'audit'" class="bg-white border border-neutral-ivory rounded-2xl shadow-soft overflow-hidden animate-fade-in">
-      <div class="px-6 py-4 border-b border-neutral-ivory/50 flex justify-between items-center">
-        <h2 class="text-base font-bold text-neutral-black">Authorization Log Trail</h2>
-        <span class="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+      <div class="px-6 py-4 border-b border-neutral-ivory/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div>
+          <h2 class="text-base font-bold text-neutral-black">Authorization Log Trail</h2>
+          <p class="text-xs text-neutral-muted">Immutable log of role changes, permission grants, and application access updates.</p>
+        </div>
+        <span class="text-xs font-semibold text-primary bg-primary/10 px-3 py-1 rounded-full">
           {{ auditLogsTotal }} entries logged
         </span>
       </div>
@@ -388,7 +502,7 @@ const getActionClass = (action: string) => {
             </tr>
           </thead>
           <tbody class="divide-y divide-neutral-ivory/30 text-xs">
-            <tr v-for="log in auditLogs" :key="log.id" class="hover:bg-neutral-background/30 transition-colors">
+            <tr v-for="log in filteredAuditLogs" :key="log.id" class="hover:bg-neutral-background/30 transition-colors">
               <td class="px-6 py-4 whitespace-nowrap text-neutral-muted font-mono">
                 {{ formatDate(log.created_at) }}
               </td>
@@ -407,9 +521,9 @@ const getActionClass = (action: string) => {
             </tr>
 
             <!-- Empty State -->
-            <tr v-if="auditLogs.length === 0">
+            <tr v-if="filteredAuditLogs.length === 0">
               <td colspan="4" class="px-6 py-12 text-center text-neutral-muted italic">
-                No security audit logs found.
+                No security audit logs match the current filter.
               </td>
             </tr>
           </tbody>
@@ -423,14 +537,14 @@ const getActionClass = (action: string) => {
           <button
             @click="loadAuditLogs(auditLogsPage - 1)"
             :disabled="auditLogsPage === 1"
-            class="px-3 py-1.5 rounded-lg border border-neutral-ivory hover:bg-neutral-background disabled:opacity-40 transition-colors cursor-pointer text-neutral-muted"
+            class="px-3 py-1.5 rounded-xl border border-neutral-ivory hover:bg-neutral-background disabled:opacity-40 transition-colors cursor-pointer text-neutral-muted font-semibold"
           >
             Previous
           </button>
           <button
             @click="loadAuditLogs(auditLogsPage + 1)"
             :disabled="auditLogsPage === auditLogsLastPage"
-            class="px-3 py-1.5 rounded-lg border border-neutral-ivory hover:bg-neutral-background disabled:opacity-40 transition-colors cursor-pointer text-neutral-muted"
+            class="px-3 py-1.5 rounded-xl border border-neutral-ivory hover:bg-neutral-background disabled:opacity-40 transition-colors cursor-pointer text-neutral-muted font-semibold"
           >
             Next
           </button>

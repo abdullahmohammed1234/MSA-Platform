@@ -162,8 +162,8 @@ const handleLogout = async () => {
 
     <!-- Sidebar -->
     <aside
-      class="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-neutral-ivory bg-white transition-transform duration-200 lg:static lg:translate-x-0"
-      :class="isMobileNavOpen ? 'translate-x-0' : '-translate-x-full'"
+      class="fixed inset-y-0 left-0 z-40 flex w-64 h-screen flex-col border-r border-neutral-ivory bg-white transition-transform duration-200"
+      :class="isMobileNavOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'"
       aria-label="Event management navigation"
     >
       <div class="flex h-16 items-center justify-between border-b border-neutral-ivory px-5">
@@ -212,6 +212,9 @@ const handleLogout = async () => {
         </router-link>
       </div>
     </aside>
+
+    <!-- Desktop Spacer -->
+    <div class="hidden lg:block w-64 shrink-0 pointer-events-none" aria-hidden="true" />
 
     <!-- Content -->
     <div class="flex min-w-0 flex-1 flex-col">

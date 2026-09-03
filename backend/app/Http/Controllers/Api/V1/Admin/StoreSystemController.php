@@ -1,0 +1,94 @@
+<?php
+
+namespace App\Http\Controllers\Api\V1\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Services\Systems\SystemsControlPlaneService;
+use App\Store\Models\StoreOrder;
+use App\Store\Models\StoreProduct;
+use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+/**
+ * Platform Systems registry entry for the Store Management System (SMS).
+ */
+class StoreSystemController extends Controller
+{
+    public function __construct(
+        private SystemsControlPlaneService $systems
+    ) {}
+
+    public function index(Request $request): JsonResponse
+    {
+        if (! $this->canView($request)) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        $app = $this->systems->application('store');
+
+        return response()->json([
+            'success' => true,
+            'system' => [
+                'name' => 'Store Management System',
+                'slug' => 'store',
+                'version' => $app['version'] ?? config('systems.applications.store.version', '1.0.0'),
+                'status' => $app['status'] ?? SystemsControlPlaneService::STATUS_UNKNOWN,
+                'frontend_url' => $app['launch_url'] ?? rtrim((string) config('app.frontend_url', ''), '/').'/store/admin',
+                'owns' => config('systems.applications.store.owns', ['store_products', 'store_inventory', 'store_orders']),
+                'updated_at' => Carbon::now()->toIso8601String(),
+            ],
+        ]);
+    }
+
+    public function health(Request $request): JsonResponse
+    {
+        if (! $this->canView($request)) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        $health = $this->systems->applicationHealth('store', $request->boolean('refresh'));
+
+        return response()->json([
+            'success' => true,
+            'health' => [
+                'status' => $health['status'] ?? SystemsControlPlaneService::STATUS_UNKNOWN,
+                'health_status' => $health['health_status'] ?? SystemsControlPlaneService::STATUS_UNKNOWN,
+                'connection_status' => $health['connection_status'] ?? [],
+                'checks' => $health['checks'] ?? [],
+                'errors' => $health['errors'] ?? [],
+                'checked_at' => $health['last_checked_at'] ?? Carbon::now()->toIso8601String(),
+            ],
+        ]);
+    }
+
+    public function metrics(Request $request): JsonResponse
+    {
+        if (! $this->canView($request)) {
+            return response()->json(['message' => 'Unauthorized.'], 403);
+        }
+
+        return response()->json([
+            'success' => true,
+            'metrics' => [
+                'products' => StoreProduct::count(),
+                'products_active' => StoreProduct::where('status', 'active')->count(),
+                'orders' => StoreOrder::count(),
+                'orders_pending' => StoreOrder::where('status', 'pending')->count(),
+                'orders_completed' => StoreOrder::where('status', 'completed')->count(),
+            ],
+        ]);
+    }
+
+    private function canView(Request $request): bool
+    {
+        $user = $request->user();
+        if (! $user) {
+            return false;
+        }
+
+        return $user->hasPermission('system.view')
+            || $user->hasRole('super-admin')
+            || $user->hasRole('admin');
+    }
+}

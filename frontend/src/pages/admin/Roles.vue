@@ -13,6 +13,8 @@ const { can } = useAuthorization();
 const roles = ref<Role[]>([]);
 const permissions = ref<Permission[]>([]);
 const isLoading = ref(false);
+const search = ref('');
+const selectedModuleFilter = ref<string>('all');
 
 // Form state
 const showForm = ref(false);
@@ -22,6 +24,7 @@ const formName = ref('');
 const formSlug = ref('');
 const formDescription = ref('');
 const formPermissions = ref<string[]>([]);
+const formPermissionSearch = ref('');
 
 onMounted(async () => {
   await fetchData();
@@ -43,10 +46,46 @@ const fetchData = async () => {
   }
 };
 
+const modulesList = computed(() => {
+  const mods = new Set<string>();
+  permissions.value.forEach((p) => {
+    if (p.module) mods.add(p.module);
+  });
+  return Array.from(mods).sort();
+});
+
+// Filtered roles list
+const filteredRoles = computed(() => {
+  return roles.value.filter((r) => {
+    const matchesSearch =
+      !search.value ||
+      r.name.toLowerCase().includes(search.value.toLowerCase()) ||
+      r.slug.toLowerCase().includes(search.value.toLowerCase()) ||
+      (r.description && r.description.toLowerCase().includes(search.value.toLowerCase()));
+
+    const matchesModule =
+      selectedModuleFilter.value === 'all' ||
+      (r.permissions && r.permissions.some((p) => p.module === selectedModuleFilter.value));
+
+    return matchesSearch && matchesModule;
+  });
+});
+
 // Group permissions by module
 const groupedPermissions = computed(() => {
   const groups: Record<string, Permission[]> = {};
-  permissions.value.forEach(p => {
+  const filterQuery = formPermissionSearch.value.toLowerCase().trim();
+
+  permissions.value.forEach((p) => {
+    if (
+      filterQuery &&
+      !p.name.toLowerCase().includes(filterQuery) &&
+      !p.slug.toLowerCase().includes(filterQuery) &&
+      !(p.description && p.description.toLowerCase().includes(filterQuery))
+    ) {
+      return;
+    }
+
     if (!groups[p.module]) {
       groups[p.module] = [];
     }
@@ -62,6 +101,7 @@ const openCreateModal = () => {
   formSlug.value = '';
   formDescription.value = '';
   formPermissions.value = [];
+  formPermissionSearch.value = '';
   showForm.value = true;
 };
 
@@ -75,7 +115,8 @@ const openEditModal = (role: Role) => {
   formName.value = role.name;
   formSlug.value = role.slug;
   formDescription.value = role.description || '';
-  formPermissions.value = role.permissions ? role.permissions.map(p => p.slug) : [];
+  formPermissions.value = role.permissions ? role.permissions.map((p) => p.slug) : [];
+  formPermissionSearch.value = '';
   showForm.value = true;
 };
 
@@ -134,14 +175,38 @@ const togglePermission = (slug: string) => {
   }
 };
 
+const toggleAllModulePermissions = (moduleName: string) => {
+  const perms = (groupedPermissions.value[moduleName] || []).map((p) => p.slug);
+  const hasAll = perms.every((slug) => formPermissions.value.includes(slug));
+
+  if (hasAll) {
+    formPermissions.value = formPermissions.value.filter((slug) => !perms.includes(slug));
+  } else {
+    perms.forEach((slug) => {
+      if (!formPermissions.value.includes(slug)) {
+        formPermissions.value.push(slug);
+      }
+    });
+  }
+};
+
+const moduleHasAll = (moduleName: string) => {
+  const perms = (groupedPermissions.value[moduleName] || []).map((p) => p.slug);
+  if (perms.length === 0) return false;
+  return perms.every((slug) => formPermissions.value.includes(slug));
+};
+
 // Module colors mapping for visual tags
 const getModuleBadgeClass = (module: string) => {
   const mapping: Record<string, string> = {
     Admin: 'bg-red-500/10 text-red-500 border border-red-500/20',
     Academy: 'bg-secondary/10 text-secondary border border-secondary/20',
     Website: 'bg-primary/10 text-blue-500 border border-primary/15',
+    Store: 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/20',
+    System: 'bg-indigo-500/10 text-indigo-600 border border-indigo-500/20',
     Analytics: 'bg-accent-gold/20 text-amber-500 border border-accent-gold/30',
-    Users: 'bg-purple-500/10 text-purple-500 border border-purple-500/20'
+    Security: 'bg-rose-500/10 text-rose-600 border border-rose-500/20',
+    EMS: 'bg-violet-500/10 text-violet-600 border border-violet-500/20',
   };
   return mapping[module] || 'bg-neutral-500/10 text-neutral-500 border border-neutral-500/20';
 };
@@ -150,10 +215,10 @@ const getModuleBadgeClass = (module: string) => {
 <template>
   <div class="space-y-8 pb-12">
     <!-- Header -->
-    <div class="flex justify-between items-center">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
       <div>
         <h1 class="text-3xl font-display font-medium text-primary">Roles & Authorization</h1>
-        <p class="text-sm text-neutral-muted mt-1">Manage user roles and assign modular platform permissions.</p>
+        <p class="text-sm text-neutral-muted mt-1">Manage user roles and assign modular platform capabilities across applications.</p>
       </div>
       <Button
         v-if="can('manage_roles')"
@@ -165,12 +230,64 @@ const getModuleBadgeClass = (module: string) => {
       </Button>
     </div>
 
+    <!-- Search & Filters -->
+    <div class="bg-white border border-neutral-ivory p-4 rounded-2xl shadow-soft flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full max-w-2xl">
+        <div class="relative max-w-xs w-full">
+          <input
+            v-model="search"
+            type="text"
+            placeholder="Search roles by name or slug..."
+            class="w-full pl-9 pr-4 py-2 text-sm rounded-xl border border-neutral-ivory focus:border-primary focus:outline-none bg-neutral-background/40"
+          />
+          <span class="absolute left-3 top-2.5 text-neutral-muted">
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </span>
+        </div>
+
+        <div class="flex items-center gap-1 bg-neutral-background p-1 rounded-xl border border-neutral-ivory overflow-x-auto">
+          <button
+            type="button"
+            @click="selectedModuleFilter = 'all'"
+            :class="[
+              'px-2.5 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap',
+              selectedModuleFilter === 'all'
+                ? 'bg-white text-primary shadow-xs border border-neutral-ivory/60 font-bold'
+                : 'text-neutral-muted hover:text-primary'
+            ]"
+          >
+            All Modules
+          </button>
+          <button
+            type="button"
+            v-for="mod in modulesList"
+            :key="mod"
+            @click="selectedModuleFilter = mod"
+            :class="[
+              'px-2.5 py-1 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap',
+              selectedModuleFilter === mod
+                ? 'bg-white text-primary shadow-xs border border-neutral-ivory/60 font-bold'
+                : 'text-neutral-muted hover:text-primary'
+            ]"
+          >
+            {{ mod }}
+          </button>
+        </div>
+      </div>
+
+      <div class="text-xs text-neutral-muted whitespace-nowrap">
+        Showing <span class="font-bold text-neutral-black">{{ filteredRoles.length }}</span> of {{ roles.length }} roles
+      </div>
+    </div>
+
     <!-- Main Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
       <!-- Roles Cards List -->
       <div :class="[showForm ? 'lg:col-span-7' : 'lg:col-span-12', 'grid grid-cols-1 md:grid-cols-2 gap-6 transition-all duration-300']">
         <div
-          v-for="role in roles"
+          v-for="role in filteredRoles"
           :key="role.uuid"
           class="bg-white border border-neutral-ivory hover:border-primary/30 p-6 rounded-2xl shadow-soft hover:shadow-md transition-all duration-300 flex flex-col justify-between relative overflow-hidden group"
         >
@@ -216,7 +333,7 @@ const getModuleBadgeClass = (module: string) => {
 
           <!-- Role Permissions Summary -->
           <div class="border-t border-neutral-ivory/50 pt-4">
-            <h4 class="text-[10px] font-bold uppercase tracking-wider text-neutral-muted mb-2">Permissions</h4>
+            <h4 class="text-[10px] font-bold uppercase tracking-wider text-neutral-muted mb-2">Permissions Summary</h4>
             <div class="flex flex-wrap gap-1">
               <span
                 v-if="role.slug === 'super-admin'"
@@ -230,20 +347,21 @@ const getModuleBadgeClass = (module: string) => {
               >
                 No Permissions Inherited
               </span>
-              <span
-                v-else
-                v-for="perm in role.permissions.slice(0, 5)"
-                :key="perm.uuid"
-                class="text-[9px] px-1.5 py-0.5 rounded font-mono bg-neutral-background text-neutral-black border border-neutral-ivory/50"
-              >
-                {{ perm.slug }}
-              </span>
-              <span
-                v-if="role.permissions && role.permissions.length > 5"
-                class="text-[9px] px-1.5 py-0.5 rounded font-mono bg-primary/10 text-primary font-bold"
-              >
-                +{{ role.permissions.length - 5 }} more
-              </span>
+              <template v-else>
+                <span
+                  v-for="perm in role.permissions.slice(0, 5)"
+                  :key="perm.uuid"
+                  :class="['text-[9px] px-1.5 py-0.5 rounded font-mono', getModuleBadgeClass(perm.module)]"
+                >
+                  {{ perm.slug }}
+                </span>
+                <span
+                  v-if="role.permissions.length > 5"
+                  class="text-[9px] px-1.5 py-0.5 rounded font-mono bg-primary/10 text-primary font-bold"
+                >
+                  +{{ role.permissions.length - 5 }} more
+                </span>
+              </template>
             </div>
           </div>
         </div>
@@ -252,12 +370,15 @@ const getModuleBadgeClass = (module: string) => {
       <!-- Right Drawer / Edit & Create Form (Glassmorphism Card) -->
       <div
         v-if="showForm"
-        class="lg:col-span-5 bg-white/95 backdrop-blur-md border border-neutral-ivory p-6 rounded-2xl shadow-soft sticky top-24 z-10 animate-fade-in-right"
+        class="lg:col-span-5 bg-white/95 backdrop-blur-md border border-neutral-ivory p-6 rounded-2xl shadow-soft sticky top-24 z-10 animate-fade-in-right space-y-6"
       >
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-lg font-bold text-neutral-black">
-            {{ isEditing ? 'Edit Role Details' : 'Create Custom Role' }}
-          </h2>
+        <div class="flex justify-between items-center pb-3 border-b border-neutral-ivory/50">
+          <div>
+            <h2 class="text-lg font-bold text-neutral-black">
+              {{ isEditing ? 'Edit Role Details' : 'Create Custom Role' }}
+            </h2>
+            <p class="text-xs text-neutral-muted">Define title, unique key, and assign capabilities.</p>
+          </div>
           <button
             @click="showForm = false"
             class="text-neutral-muted hover:text-neutral-black transition-colors text-sm font-semibold cursor-pointer"
@@ -266,18 +387,18 @@ const getModuleBadgeClass = (module: string) => {
           </button>
         </div>
 
-        <form @submit.prevent="handleSaveRole" class="space-y-6">
+        <form @submit.prevent="handleSaveRole" class="space-y-5">
           <Input
             v-model="formName"
             label="Role Name"
-            placeholder="e.g. Dawah Mentor"
+            placeholder="e.g. Store Manager"
             required
           />
 
           <Input
             v-model="formSlug"
             label="Role Slug"
-            placeholder="e.g. dawah-mentor"
+            placeholder="e.g. store-manager"
             required
             :disabled="isEditing"
           />
@@ -286,27 +407,46 @@ const getModuleBadgeClass = (module: string) => {
             <label class="block text-xs font-bold uppercase tracking-wider text-neutral-muted mb-1.5">Description</label>
             <textarea
               v-model="formDescription"
-              class="w-full min-h-[80px] p-3 text-sm rounded-lg border border-neutral-ivory focus:border-primary focus:outline-none bg-neutral-background/30"
-              placeholder="Provide a description for the role..."
+              class="w-full min-h-[70px] p-3 text-sm rounded-xl border border-neutral-ivory focus:border-primary focus:outline-none bg-neutral-background/30"
+              placeholder="Describe the responsibilities and scope of this role..."
             ></textarea>
           </div>
 
-          <!-- Modular Permissions Matrix -->
+          <!-- Permission Filter Input in Form -->
           <div>
-            <label class="block text-xs font-bold uppercase tracking-wider text-neutral-muted mb-3">Assign Permissions</label>
-            <div class="space-y-4 max-h-[280px] overflow-y-auto pr-2">
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-xs font-bold uppercase tracking-wider text-neutral-muted">Assign Permissions</label>
+              <span class="text-xs font-semibold text-primary">
+                {{ formPermissions.length }} selected
+              </span>
+            </div>
+
+            <input
+              v-model="formPermissionSearch"
+              type="text"
+              placeholder="Filter permissions..."
+              class="w-full px-3 py-1.5 text-xs rounded-lg border border-neutral-ivory focus:border-primary focus:outline-none bg-neutral-background/40 mb-3"
+            />
+
+            <!-- Modular Permissions Matrix -->
+            <div class="space-y-4 max-h-[300px] overflow-y-auto pr-2">
               <div v-for="(perms, moduleName) in groupedPermissions" :key="moduleName" class="space-y-2">
-                <div class="flex items-center justify-between border-b border-neutral-ivory/30 pb-1">
+                <div class="flex items-center justify-between border-b border-neutral-ivory/40 pb-1">
                   <span class="text-xs font-bold text-neutral-black">{{ moduleName }} Module</span>
-                  <span :class="['text-[9px] px-1.5 py-0.5 rounded-full font-bold', getModuleBadgeClass(moduleName as string)]">
-                    {{ perms.length }} options
-                  </span>
+                  <button
+                    type="button"
+                    @click="toggleAllModulePermissions(moduleName as string)"
+                    class="text-[10px] font-semibold text-primary hover:underline cursor-pointer"
+                  >
+                    {{ moduleHasAll(moduleName as string) ? 'Deselect All' : 'Select All' }}
+                  </button>
                 </div>
                 <div class="grid grid-cols-1 gap-2 pl-1">
                   <label
                     v-for="perm in perms"
                     :key="perm.uuid"
-                    class="flex items-start gap-2.5 p-2 rounded-lg hover:bg-neutral-background cursor-pointer select-none transition-colors border border-transparent hover:border-neutral-ivory/30"
+                    class="flex items-start gap-2.5 p-2 rounded-xl hover:bg-neutral-background cursor-pointer select-none transition-colors border border-transparent hover:border-neutral-ivory/30"
+                    :class="{ 'bg-primary/5 border-primary/20': formPermissions.includes(perm.slug) }"
                   >
                     <input
                       type="checkbox"

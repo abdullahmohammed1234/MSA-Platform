@@ -111,11 +111,11 @@ class SystemsControlPlaneTest extends TestCase
 
         $ids = collect($response->json('applications'))->pluck('id')->all();
         $this->assertSame(
-            ['main-website', 'cms', 'dawah-academy', 'dams', 'ems'],
+            ['main-website', 'cms', 'dawah-academy', 'dams', 'ems', 'store'],
             $ids
         );
-        $this->assertCount(5, $ids);
-        $this->assertCount(5, array_unique($ids));
+        $this->assertCount(6, $ids);
+        $this->assertCount(6, array_unique($ids));
 
         $urls = collect($response->json('applications'))->pluck('url', 'id');
         $this->assertSame('/', $urls['main-website']);

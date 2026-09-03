@@ -355,6 +355,13 @@ Route::prefix('v1')->group(function () {
                 Route::get('/metrics', [\App\Http\Controllers\Api\V1\Admin\DamsSystemController::class, 'metrics']);
             });
 
+            // Store Application (Systems registry)
+            Route::prefix('systems/store')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Api\V1\Admin\StoreSystemController::class, 'index']);
+                Route::get('/health', [\App\Http\Controllers\Api\V1\Admin\StoreSystemController::class, 'health']);
+                Route::get('/metrics', [\App\Http\Controllers\Api\V1\Admin\StoreSystemController::class, 'metrics']);
+            });
+
             // Dawah Academy System Integration (learner application registry)
             Route::prefix('systems/dawah-academy')->group(function () {
                 Route::get('/', [\App\Http\Controllers\Api\V1\Admin\DawahAcademySystemController::class, 'index']);
@@ -671,5 +678,41 @@ Route::prefix('v1')->group(function () {
             Route::get('/discussions/threads', [\App\Http\Controllers\Api\V1\AdminDiscussionController::class, 'threads'])->middleware('permission:manage_discussions')->name('discussions.threads');
             Route::patch('/discussions/reports/{report}/resolve', [\App\Http\Controllers\Api\V1\AdminDiscussionController::class, 'resolve'])->middleware('permission:manage_discussions')->name('discussions.reports.resolve');
         });
+    });
+
+    // --- Public Store routes -------------------------------------------
+    Route::prefix('store')->group(function () {
+        Route::get('/products', [\App\Store\Http\Controllers\Public\StoreCatalogueController::class, 'index']);
+        Route::get('/products/{slug}', [\App\Store\Http\Controllers\Public\StoreCatalogueController::class, 'show']);
+
+        Route::get('/cart', [\App\Store\Http\Controllers\Public\StoreCartController::class, 'show']);
+        Route::post('/cart/items', [\App\Store\Http\Controllers\Public\StoreCartController::class, 'addItem']);
+        Route::patch('/cart/items/{uuid}', [\App\Store\Http\Controllers\Public\StoreCartController::class, 'updateItem']);
+        Route::delete('/cart/items/{uuid}', [\App\Store\Http\Controllers\Public\StoreCartController::class, 'removeItem']);
+        Route::delete('/cart', [\App\Store\Http\Controllers\Public\StoreCartController::class, 'clear']);
+
+        Route::post('/checkout', [\App\Store\Http\Controllers\Public\StoreCheckoutController::class, 'processCheckout']);
+
+        Route::middleware('auth:sanctum')->group(function () {
+            Route::get('/orders', [\App\Store\Http\Controllers\Public\StoreCustomerOrderController::class, 'index']);
+            Route::get('/orders/{order:uuid}', [\App\Store\Http\Controllers\Public\StoreCustomerOrderController::class, 'show']);
+        });
+    });
+
+    // --- Store Administration routes (SMS / Store Admin Console) ------
+    Route::prefix('store-admin')->middleware(['auth:sanctum', 'app.access:store'])->group(function () {
+        Route::get('/products', [\App\Store\Http\Controllers\Admin\AdminStoreProductController::class, 'index']);
+        Route::post('/products', [\App\Store\Http\Controllers\Admin\AdminStoreProductController::class, 'store']);
+        Route::get('/products/{product:uuid}', [\App\Store\Http\Controllers\Admin\AdminStoreProductController::class, 'show']);
+        Route::put('/products/{product:uuid}', [\App\Store\Http\Controllers\Admin\AdminStoreProductController::class, 'update']);
+        Route::delete('/products/{product:uuid}', [\App\Store\Http\Controllers\Admin\AdminStoreProductController::class, 'destroy']);
+
+        Route::get('/inventory', [\App\Store\Http\Controllers\Admin\AdminStoreInventoryController::class, 'index']);
+        Route::post('/inventory/adjust', [\App\Store\Http\Controllers\Admin\AdminStoreInventoryController::class, 'adjust']);
+
+        Route::get('/orders', [\App\Store\Http\Controllers\Admin\AdminStoreOrderController::class, 'index']);
+        Route::get('/orders/{order:uuid}', [\App\Store\Http\Controllers\Admin\AdminStoreOrderController::class, 'show']);
+        Route::patch('/orders/{order:uuid}/fulfillment', [\App\Store\Http\Controllers\Admin\AdminStoreOrderController::class, 'updateFulfillment']);
+        Route::post('/orders/{order:uuid}/refund', [\App\Store\Http\Controllers\Admin\AdminStoreOrderController::class, 'refund']);
     });
 });

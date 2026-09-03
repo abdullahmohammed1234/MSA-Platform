@@ -154,6 +154,43 @@ const publicRoutes: Array<RouteRecordRaw> = [
       {
         path: 'volunteer',
         redirect: '/contact?volunteer=true'
+      },
+      // Public Store — Catalogue, Cart, Checkout, Success, My Orders
+      {
+        path: 'store',
+        name: 'public-store-catalogue',
+        component: () => import('@/pages/public/store/StoreCataloguePage.vue'),
+        meta: { title: 'MSA Store | SFU MSA', desc: 'Browse official SFU MSA merchandise and gear.' },
+      },
+      {
+        path: 'store/product/:slug',
+        name: 'public-store-product-detail',
+        component: () => import('@/pages/public/store/StoreProductDetailPage.vue'),
+        meta: { title: 'Product Details | SFU MSA Store', desc: 'View merchandise details and select options.' },
+      },
+      {
+        path: 'store/cart',
+        name: 'public-store-cart',
+        component: () => import('@/pages/public/store/StoreCartPage.vue'),
+        meta: { title: 'Shopping Cart | SFU MSA Store', desc: 'Review your cart items.' },
+      },
+      {
+        path: 'store/checkout',
+        name: 'public-store-checkout',
+        component: () => import('@/pages/public/store/StoreCheckoutPage.vue'),
+        meta: { title: 'Store Checkout | SFU MSA Store', desc: 'Complete merchandise checkout.' },
+      },
+      {
+        path: 'store/checkout/success',
+        name: 'public-store-checkout-success',
+        component: () => import('@/pages/public/store/StoreCheckoutSuccessPage.vue'),
+        meta: { title: 'Order Confirmed | SFU MSA Store', desc: 'Merchandise order received.' },
+      },
+      {
+        path: 'store/my-orders',
+        name: 'public-store-my-orders',
+        component: () => import('@/pages/public/store/StoreMyOrdersPage.vue'),
+        meta: { title: 'My Store Orders | SFU MSA', desc: 'View past merchandise purchases.', requiresAuth: true },
       }
     ]
   },

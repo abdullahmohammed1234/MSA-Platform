@@ -21,6 +21,7 @@ vi.mock('lucide-vue-next', async () => {
     ChevronDown: icon('ChevronDown'),
     LogIn: icon('LogIn'),
     LogOut: icon('LogOut'),
+    ShoppingBag: icon('ShoppingBag'),
     X: icon('X'),
   };
 });
@@ -229,12 +230,14 @@ describe('Navbar Unified Access and Launcher Tests', () => {
       expect(menuText).toContain('EMS');
       expect(menuText).toContain('CMS');
       expect(menuText).toContain('DAMS');
+      expect(menuText).toContain('Store Admin');
       expect(menuText).toContain('Admin Portal');
 
       // Verify direct roots are used
       expect(wrapper.find('a[href="/cms"]').exists()).toBe(true);
       expect(wrapper.find('a[href="/dams"]').exists()).toBe(true);
       expect(wrapper.find('a[href="/ems"]').exists()).toBe(true);
+      expect(wrapper.find('a[href="/store/admin"]').exists()).toBe(true);
       expect(wrapper.find('a[href="/admin"]').exists()).toBe(true);
     });
 
