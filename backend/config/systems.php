@@ -137,6 +137,24 @@ return [
             'owns' => ['store_products', 'store_inventory', 'store_orders'],
             'does_not_own' => ['ems_events', 'registrations', 'tickets'],
         ],
+        'donations' => [
+            'id' => 'donations',
+            'name' => 'Donation Management System (DMS)',
+            'description' => 'Authoritative owner of public donations, donor records, refunds, and financial donation reporting.',
+            'type' => 'application',
+            'url' => '/donations/admin',
+            'admin_path' => '/admin/systems/donations',
+            'version' => env('DONATIONS_VERSION', '1.0.0'),
+            'dependencies' => [
+                'platform-auth',
+                'database',
+                'square-payments',
+                'queues',
+                'email',
+            ],
+            'owns' => ['donations', 'donation_refunds'],
+            'does_not_own' => ['store_products', 'ems_events', 'registrations'],
+        ],
     ],
 
     'platform_services' => [

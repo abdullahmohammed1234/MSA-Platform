@@ -89,6 +89,7 @@ const adminItems = computed(() => {
     systemChildren.push({ label: 'Dawah Academy Management (DAMS)', path: '/admin/systems/dams', icon: 'layers' });
     systemChildren.push({ label: 'Event Management System', path: '/admin/systems/ems', icon: 'calendar' });
     systemChildren.push({ label: 'Store Management System', path: '/admin/systems/store', icon: 'server' });
+    systemChildren.push({ label: 'Donations Management System', path: '/admin/systems/donations', icon: 'server' });
   }
 
   if (authStore.permissions.includes('view_queue_status') || isSuper) {

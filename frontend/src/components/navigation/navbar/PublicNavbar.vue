@@ -29,8 +29,8 @@ const navLinks: NavLink[] = [
   { name: 'Prayer', href: '/prayer' },
   { name: 'Team', href: '/team' },
   { name: 'Media', href: '/media' },
-  // { name: 'Resources', href: '/resources' },
   { name: 'Store', href: '/store' },
+  { name: 'Donate', href: '/donate' },
   { name: 'Contact', href: '/contact' },
 ];
 

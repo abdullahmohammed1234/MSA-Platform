@@ -236,6 +236,18 @@ class SquareWebhookService
 
                     return null;
                 }
+
+                $donation = \App\Donations\Models\Donation::where('square_payment_id', $squarePaymentId)->first();
+                if ($donation !== null) {
+                    if ($donation->status !== \App\Donations\Enums\DonationStatus::Refunded) {
+                        app(\App\Donations\Services\DonationPaymentService::class)->refundDonation($donation, 'Refunded via Square webhook');
+                    }
+                    $record->status = WebhookEventStatus::Processed->value;
+                    $record->processed_at = now();
+                    $record->save();
+
+                    return null;
+                }
             }
 
             return null;
@@ -262,6 +274,11 @@ class SquareWebhookService
             $storeOrder = $this->resolveStoreOrder($parsed, $payload);
             if ($storeOrder !== null) {
                 return $this->fulfillStoreOrder($storeOrder, $parsed, $payload, $record);
+            }
+
+            $donation = $this->resolveDonation($parsed, $payload);
+            if ($donation !== null) {
+                return $this->fulfillDonation($donation, $parsed, $payload, $record);
             }
 
             $squarePayment = data_get($payload, 'data.object.payment');
@@ -588,6 +605,59 @@ class SquareWebhookService
         }
 
         return $redacted;
+    }
+
+    private function resolveDonation(array $parsed, array $payload): ?\App\Donations\Models\Donation
+    {
+        $reference = $parsed['reference'] ?? data_get($payload, 'data.object.payment.reference_id', data_get($payload, 'data.object.order.reference_id'));
+        if (is_string($reference) && str_starts_with($reference, 'DON-')) {
+            $donation = \App\Donations\Models\Donation::where('donation_number', $reference)->first();
+            if ($donation !== null) {
+                return $donation;
+            }
+        }
+
+        $orderId = $parsed['provider_order_id'] ?? data_get($payload, 'data.object.payment.order_id', data_get($payload, 'data.object.order.id'));
+        if (is_string($orderId) && $orderId !== '') {
+            $donation = \App\Donations\Models\Donation::where('square_order_id', $orderId)->first();
+            if ($donation !== null) {
+                return $donation;
+            }
+        }
+
+        $paymentId = $parsed['provider_payment_id'] ?? data_get($payload, 'data.object.payment.id');
+        if (is_string($paymentId) && $paymentId !== '') {
+            $donation = \App\Donations\Models\Donation::where('square_payment_id', $paymentId)->first();
+            if ($donation !== null) {
+                return $donation;
+            }
+        }
+
+        return null;
+    }
+
+    private function fulfillDonation(\App\Donations\Models\Donation $donation, array $parsed, array $payload, WebhookEvent $record): null
+    {
+        $status = strtolower((string) ($parsed['payment_status'] ?? data_get($payload, 'data.object.payment.status', '')));
+        $squarePaymentId = (string) ($parsed['provider_payment_id'] ?? data_get($payload, 'data.object.payment.id', $donation->square_payment_id ?? ''));
+        $squareOrderId = (string) ($parsed['provider_order_id'] ?? data_get($payload, 'data.object.payment.order_id', $donation->square_order_id ?? ''));
+
+        if (in_array($status, ['completed', 'approved', 'paid'], true) || $status === strtolower(PaymentStatus::Paid->value)) {
+            app(\App\Donations\Services\DonationPaymentService::class)->markPaid($donation, $squarePaymentId, $squareOrderId);
+
+            $record->status = WebhookEventStatus::Processed->value;
+            $record->processed_at = now();
+            $record->failure_reason = null;
+            $record->save();
+        } elseif (in_array($status, ['failed', 'canceled', 'rejected'], true)) {
+            app(\App\Donations\Services\DonationPaymentService::class)->markFailed($donation, 'Square payment failed/canceled');
+            $record->status = WebhookEventStatus::Processed->value;
+            $record->processed_at = now();
+            $record->failure_reason = null;
+            $record->save();
+        }
+
+        return null;
     }
 
     private function redactKeysRecursive(array &$array, array $keys): void

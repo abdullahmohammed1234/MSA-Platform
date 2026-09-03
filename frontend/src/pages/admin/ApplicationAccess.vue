@@ -35,6 +35,7 @@ const appsList = [
   { key: 'dams', label: 'DAMS' },
   { key: 'ems', label: 'EMS' },
   { key: 'store', label: 'MSA Store' },
+  { key: 'donations', label: 'Donations' },
   { key: 'admin-portal', label: 'Admin Portal' },
 ];
 

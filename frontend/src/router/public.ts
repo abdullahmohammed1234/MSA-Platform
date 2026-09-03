@@ -191,6 +191,19 @@ const publicRoutes: Array<RouteRecordRaw> = [
         name: 'public-store-my-orders',
         component: () => import('@/pages/public/store/StoreMyOrdersPage.vue'),
         meta: { title: 'My Store Orders | SFU MSA', desc: 'View past merchandise purchases.', requiresAuth: true },
+      },
+      // Public Donations
+      {
+        path: 'donate',
+        name: 'public-donate',
+        component: () => import('@/pages/public/DonatePage.vue'),
+        meta: { title: 'Donate | SFU MSA', desc: 'Support SFU MSA student programs, Friday prayer, and community services.' },
+      },
+      {
+        path: 'donate/success',
+        name: 'public-donate-success',
+        component: () => import('@/pages/public/DonateSuccessPage.vue'),
+        meta: { title: 'Donation Received | SFU MSA', desc: 'Thank you for supporting SFU MSA.' },
       }
     ]
   },

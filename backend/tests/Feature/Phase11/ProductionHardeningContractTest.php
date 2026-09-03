@@ -306,7 +306,7 @@ class ProductionHardeningContractTest extends TestCase
             ->getJson('/api/v1/admin/systems')
             ->assertOk()
             ->assertJsonPath('incidents_supported', false)
-            ->assertJsonPath('summary.applications_total', 6)
+            ->assertJsonPath('summary.applications_total', 7)
             ->json();
 
         foreach ($payload['applications'] as $app) {

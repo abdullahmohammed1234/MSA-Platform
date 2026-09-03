@@ -362,6 +362,13 @@ Route::prefix('v1')->group(function () {
                 Route::get('/metrics', [\App\Http\Controllers\Api\V1\Admin\StoreSystemController::class, 'metrics']);
             });
 
+            // Donations Application (Systems registry)
+            Route::prefix('systems/donations')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Api\V1\Admin\DonationsSystemController::class, 'index']);
+                Route::get('/health', [\App\Http\Controllers\Api\V1\Admin\DonationsSystemController::class, 'health']);
+                Route::get('/metrics', [\App\Http\Controllers\Api\V1\Admin\DonationsSystemController::class, 'metrics']);
+            });
+
             // Dawah Academy System Integration (learner application registry)
             Route::prefix('systems/dawah-academy')->group(function () {
                 Route::get('/', [\App\Http\Controllers\Api\V1\Admin\DawahAcademySystemController::class, 'index']);
@@ -714,5 +721,23 @@ Route::prefix('v1')->group(function () {
         Route::get('/orders/{order:uuid}', [\App\Store\Http\Controllers\Admin\AdminStoreOrderController::class, 'show']);
         Route::patch('/orders/{order:uuid}/fulfillment', [\App\Store\Http\Controllers\Admin\AdminStoreOrderController::class, 'updateFulfillment']);
         Route::post('/orders/{order:uuid}/refund', [\App\Store\Http\Controllers\Admin\AdminStoreOrderController::class, 'refund']);
+    });
+
+    // --- Public Donation routes ---------------------------------------
+    Route::prefix('donations')->group(function () {
+        Route::post('/checkout', [\App\Donations\Http\Controllers\V1\PublicDonationController::class, 'checkout']);
+        Route::get('/{uuid}/status', [\App\Donations\Http\Controllers\V1\PublicDonationController::class, 'status']);
+    });
+
+    // --- Standalone Donation Management System (DMS) Admin routes ----
+    Route::prefix('donations/admin')->middleware(['auth:sanctum', 'app.access:donations'])->group(function () {
+        Route::get('/dashboard', [\App\Donations\Http\Controllers\V1\Admin\DmsDashboardController::class, 'index']);
+        Route::get('/donations', [\App\Donations\Http\Controllers\V1\Admin\DmsDonationController::class, 'index']);
+        Route::get('/donations/{uuid}', [\App\Donations\Http\Controllers\V1\Admin\DmsDonationController::class, 'show']);
+        Route::post('/donations/{uuid}/refund', [\App\Donations\Http\Controllers\V1\Admin\DmsRefundController::class, 'refund']);
+        Route::get('/donors', [\App\Donations\Http\Controllers\V1\Admin\DmsDonorController::class, 'index']);
+        Route::get('/reports', [\App\Donations\Http\Controllers\V1\Admin\DmsReportController::class, 'reports']);
+        Route::get('/export', [\App\Donations\Http\Controllers\V1\Admin\DmsReportController::class, 'export']);
+        Route::post('/reconcile', [\App\Donations\Http\Controllers\V1\Admin\DmsReconciliationController::class, 'reconcile']);
     });
 });

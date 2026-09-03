@@ -59,6 +59,16 @@ class DatabaseSeeder extends Seeder
                 'description' => 'Manages order processing, inventory checks, and customer order status updates.',
             ],
             [
+                'name' => 'Donations Administrator',
+                'slug' => 'dms-administrator',
+                'description' => 'Full control over Donations Management System, donor records, refunds, and reports.',
+            ],
+            [
+                'name' => 'Donations Staff',
+                'slug' => 'dms-staff',
+                'description' => 'Manages donation records, donor lookup, and status tracking.',
+            ],
+            [
                 'name' => 'Member',
                 'slug' => 'member',
                 'description' => 'MSA community member with access to member-only resources.',
@@ -120,6 +130,14 @@ class DatabaseSeeder extends Seeder
             ['name' => 'Manage Store Inventory', 'slug' => 'store.manage_inventory', 'module' => 'Store', 'description' => 'Manage stock quantities, restocking alerts, and inventory logs.'],
             ['name' => 'Manage Store Orders', 'slug' => 'store.manage_orders', 'module' => 'Store', 'description' => 'Fulfill, process, update order statuses, and issue customer refunds.'],
             ['name' => 'Store Administrator', 'slug' => 'store.admin', 'module' => 'Store', 'description' => 'Full administrative access over Store settings, products, inventory, and analytics.'],
+
+            // Donations Module
+            ['name' => 'View DMS Admin', 'slug' => 'donations.view', 'module' => 'Donations', 'description' => 'Access Donation Management System control plane and records.'],
+            ['name' => 'Manage Donations', 'slug' => 'donations.manage', 'module' => 'Donations', 'description' => 'Manage donation records and donor lookup.'],
+            ['name' => 'Refund Donations', 'slug' => 'donations.refund', 'module' => 'Donations', 'description' => 'Authorize and issue donation refunds via Square.'],
+            ['name' => 'Donation Reports', 'slug' => 'donations.reports', 'module' => 'Donations', 'description' => 'Access financial donation reports.'],
+            ['name' => 'Export Donations', 'slug' => 'donations.export', 'module' => 'Donations', 'description' => 'Export donation records as CSV.'],
+            ['name' => 'Reconcile Donations', 'slug' => 'donations.reconcile', 'module' => 'Donations', 'description' => 'Run reconciliation routines with Square API.'],
 
             // Analytics Module
             ['name' => 'View Analytics', 'slug' => 'view_analytics', 'module' => 'Analytics', 'description' => 'Access dashboard analytics data.'],

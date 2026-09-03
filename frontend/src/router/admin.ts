@@ -102,6 +102,20 @@ const adminRoutes: Array<RouteRecordRaw> = [
         component: () => import('@/pages/admin/system/SystemApplicationDetailPage.vue'),
         meta: { permissions: 'system.view', systemId: 'store' }
       },
+      {
+        path: 'systems/donations',
+        name: 'admin-systems-donations',
+        component: () => import('@/pages/admin/system/SystemApplicationDetailPage.vue'),
+        meta: { permissions: 'system.view', systemId: 'donations' }
+      },
+      {
+        path: 'systems/donations/console',
+        name: 'admin-systems-donations-console',
+        component: () => import('@/pages/admin/system/DonationsSystemPage.vue'),
+        meta: { permissions: 'system.view' }
+      },
+      { path: 'donations', redirect: '/donations/admin' },
+      { path: 'donations/dashboard', redirect: '/donations/admin' },
       { path: 'store', redirect: '/store/admin' },
       { path: 'store/dashboard', redirect: '/store/admin' },
       { path: 'store/products', redirect: '/store/admin/products' },

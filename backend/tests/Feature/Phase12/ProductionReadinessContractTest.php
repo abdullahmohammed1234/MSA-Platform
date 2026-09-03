@@ -303,7 +303,7 @@ class ProductionReadinessContractTest extends TestCase
     {
         $ids = array_keys(config('systems.applications', []));
         sort($ids);
-        $this->assertSame(['cms', 'dams', 'dawah-academy', 'ems', 'main-website', 'store'], $ids);
+        $this->assertSame(['cms', 'dams', 'dawah-academy', 'donations', 'ems', 'main-website', 'store'], $ids);
         $this->assertArrayHasKey('queues', config('systems.platform_services'));
         $this->assertArrayHasKey('database', config('systems.platform_services'));
         $this->assertArrayHasKey('email', config('systems.platform_services'));

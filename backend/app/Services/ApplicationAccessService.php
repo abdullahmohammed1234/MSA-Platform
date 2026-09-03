@@ -18,6 +18,7 @@ class ApplicationAccessService
         'dams',
         'ems',
         'store',
+        'donations',
         'admin-portal'
     ];
 
@@ -57,6 +58,12 @@ class ApplicationAccessService
 
         if ($application === 'store') {
             if ($user->hasAnyRole(['store-administrator', 'store-staff']) || $user->hasPermissionTo('store.view') || $user->hasPermissionTo('store.products.view')) {
+                return true;
+            }
+        }
+
+        if ($application === 'donations') {
+            if ($user->hasAnyRole(['dms-administrator', 'dms-staff']) || $user->hasPermissionTo('donations.view') || $user->hasPermissionTo('donations.manage')) {
                 return true;
             }
         }

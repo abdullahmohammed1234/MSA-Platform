@@ -6,6 +6,7 @@ import authRoutes from './auth';
 import emsRoutes from './ems';
 import cmsRoutes from './cms';
 import damsRoutes from './dams';
+import donationsRoutes from './donations';
 import { useAuthStore } from '@/stores/auth';
 import { authGuard } from './guards/authGuard';
 import { guestGuard } from './guards/guestGuard';
@@ -25,6 +26,7 @@ const router = createRouter({
     ...academyRoutes,
     ...cmsRoutes,
     ...damsRoutes,
+    ...donationsRoutes,
     ...adminRoutes,
     ...emsRoutes,
     ...authRoutes,
