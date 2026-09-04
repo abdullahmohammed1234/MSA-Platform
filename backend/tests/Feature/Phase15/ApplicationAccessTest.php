@@ -311,4 +311,30 @@ class ApplicationAccessTest extends TestCase
             ->getJson('/api/v1/admin/application-access')
             ->assertStatus(403);
     }
+
+    /**
+     * Test SPMS (Sponsorship) role access rules for spms-administrator and spms-staff roles.
+     */
+    public function test_spms_sponsorship_roles_bypass_and_explicit_grants(): void
+    {
+        // Normal user does not have SPMS sponsorship application access initially
+        $this->assertFalse($this->appAccessService->canAccess($this->normalUser, 'sponsorship'));
+
+        // Assign SPMS Staff role
+        $spmsStaffRole = Role::create(['name' => 'Sponsorship Staff', 'slug' => 'spms-staff']);
+        $this->normalUser->roles()->sync([$spmsStaffRole->id]);
+
+        // SPMS staff have automatic sponsorship access via role fallback
+        $this->assertTrue($this->appAccessService->canAccess($this->normalUser, 'sponsorship'));
+
+        $apps = $this->appAccessService->accessibleApplications($this->normalUser);
+        $this->assertEquals('role', $apps['sponsorship']['source']);
+
+        // Test explicit grant for ordinary member without SPMS role
+        $otherUser = User::factory()->create();
+        $this->assertFalse($this->appAccessService->canAccess($otherUser, 'sponsorship'));
+
+        $this->appAccessService->grant($otherUser, 'sponsorship', $this->adminUser);
+        $this->assertTrue($this->appAccessService->canAccess($otherUser, 'sponsorship'));
+    }
 }

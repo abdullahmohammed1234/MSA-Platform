@@ -36,6 +36,7 @@ const appsList = [
   { key: 'ems', label: 'EMS' },
   { key: 'store', label: 'MSA Store' },
   { key: 'donations', label: 'Donations' },
+  { key: 'sponsorship', label: 'SPMS (Sponsorship)' },
   { key: 'admin-portal', label: 'Admin Portal' },
 ];
 
@@ -142,7 +143,7 @@ const getUserInitials = (name: string) => {
     </div>
 
     <!-- Application Overview Cards Summary -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 xl:grid-cols-9 gap-3">
       <div
         v-for="app in appsList"
         :key="app.key"

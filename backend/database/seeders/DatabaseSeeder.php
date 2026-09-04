@@ -69,6 +69,21 @@ class DatabaseSeeder extends Seeder
                 'description' => 'Manages donation records, donor lookup, and status tracking.',
             ],
             [
+                'name' => 'Sponsorship Administrator',
+                'slug' => 'spms-administrator',
+                'description' => 'Full administrative management of corporate partnerships, agreements, commitments, and financial reporting.',
+            ],
+            [
+                'name' => 'Sponsorship Staff',
+                'slug' => 'spms-staff',
+                'description' => 'Manages partner communications, organization contacts, follow-up logs, and deliverable fulfillment.',
+            ],
+            [
+                'name' => 'Sponsorship Viewer',
+                'slug' => 'spms-viewer',
+                'description' => 'Read-only access to SPMS dashboard, partner rosters, and sponsorship fulfillment progress.',
+            ],
+            [
                 'name' => 'Member',
                 'slug' => 'member',
                 'description' => 'MSA community member with access to member-only resources.',
@@ -130,6 +145,15 @@ class DatabaseSeeder extends Seeder
             ['name' => 'Manage Store Inventory', 'slug' => 'store.manage_inventory', 'module' => 'Store', 'description' => 'Manage stock quantities, restocking alerts, and inventory logs.'],
             ['name' => 'Manage Store Orders', 'slug' => 'store.manage_orders', 'module' => 'Store', 'description' => 'Fulfill, process, update order statuses, and issue customer refunds.'],
             ['name' => 'Store Administrator', 'slug' => 'store.admin', 'module' => 'Store', 'description' => 'Full administrative access over Store settings, products, inventory, and analytics.'],
+            ['name' => 'View Store Products', 'slug' => 'store.products.view', 'module' => 'Store', 'description' => 'View products in the Store admin portal.'],
+            ['name' => 'Create Store Products', 'slug' => 'store.products.create', 'module' => 'Store', 'description' => 'Create new merchandise products and variants.'],
+            ['name' => 'Update Store Products', 'slug' => 'store.products.update', 'module' => 'Store', 'description' => 'Edit merchandise products, variants, and product images.'],
+            ['name' => 'Delete Store Products', 'slug' => 'store.products.delete', 'module' => 'Store', 'description' => 'Archive or delete merchandise products.'],
+            ['name' => 'View Inventory', 'slug' => 'store.inventory.view', 'module' => 'Store', 'description' => 'View stock levels and inventory adjustment logs.'],
+            ['name' => 'Update Inventory', 'slug' => 'store.inventory.update', 'module' => 'Store', 'description' => 'Perform manual inventory stock adjustments.'],
+            ['name' => 'View Store Orders', 'slug' => 'store.orders.view', 'module' => 'Store', 'description' => 'View customer merchandise orders and details.'],
+            ['name' => 'Update Store Orders', 'slug' => 'store.orders.update', 'module' => 'Store', 'description' => 'Update order fulfillment status.'],
+            ['name' => 'Refund Store Orders', 'slug' => 'store.orders.refund', 'module' => 'Store', 'description' => 'Issue refunds for paid merchandise orders.'],
 
             // Donations Module
             ['name' => 'View DMS Admin', 'slug' => 'donations.view', 'module' => 'Donations', 'description' => 'Access Donation Management System control plane and records.'],
@@ -138,6 +162,17 @@ class DatabaseSeeder extends Seeder
             ['name' => 'Donation Reports', 'slug' => 'donations.reports', 'module' => 'Donations', 'description' => 'Access financial donation reports.'],
             ['name' => 'Export Donations', 'slug' => 'donations.export', 'module' => 'Donations', 'description' => 'Export donation records as CSV.'],
             ['name' => 'Reconcile Donations', 'slug' => 'donations.reconcile', 'module' => 'Donations', 'description' => 'Run reconciliation routines with Square API.'],
+
+            // Sponsorship Module (SPMS)
+            ['name' => 'View Sponsorships', 'slug' => 'sponsorship.view', 'module' => 'Sponsorship', 'description' => 'View SPMS dashboard, corporate partners, opportunities, and sponsorship records.'],
+            ['name' => 'Create Sponsorship Opportunities', 'slug' => 'sponsorship.create', 'module' => 'Sponsorship', 'description' => 'Register new partner organizations, contacts, and sponsorship opportunity packages.'],
+            ['name' => 'Edit Sponsorship Details', 'slug' => 'sponsorship.edit', 'module' => 'Sponsorship', 'description' => 'Update partner organization info, contacts, follow-ups, and opportunity details.'],
+            ['name' => 'Manage Sponsorships', 'slug' => 'sponsorship.manage', 'module' => 'Sponsorship', 'description' => 'Full administrative management of corporate partnerships, commitments, and status transitions.'],
+            ['name' => 'Manage Sponsorship Agreements', 'slug' => 'sponsorship.agreements', 'module' => 'Sponsorship', 'description' => 'Execute, upload, and update formal sponsorship legal agreements.'],
+            ['name' => 'Manage Sponsorship Payments', 'slug' => 'sponsorship.payments', 'module' => 'Sponsorship', 'description' => 'Record manual cash/cheque payments and create Square checkout links for commitments.'],
+            ['name' => 'Manage Deliverables & Fulfillment', 'slug' => 'sponsorship.fulfillment', 'module' => 'Sponsorship', 'description' => 'Track benefit deliverables, in-kind contributions, and mark sponsorship fulfillment complete.'],
+            ['name' => 'Export Sponsorship Reports', 'slug' => 'sponsorship.export', 'module' => 'Sponsorship', 'description' => 'Export SPMS financial reports, renewals, and partner logs in CSV format.'],
+            ['name' => 'SPMS Administrator', 'slug' => 'sponsorship.admin', 'module' => 'Sponsorship', 'description' => 'Full administrative control over Sponsorship & Partnerships Management System.'],
 
             // Analytics Module
             ['name' => 'View Analytics', 'slug' => 'view_analytics', 'module' => 'Analytics', 'description' => 'Access dashboard analytics data.'],
@@ -191,6 +226,11 @@ class DatabaseSeeder extends Seeder
             'manage_events', 'manage_announcements', 'manage_resources',
             'manage_homepage', 'manage_team', 'manage_media',
             'store.view', 'store.manage_products', 'store.manage_inventory', 'store.manage_orders', 'store.admin',
+            'store.products.view', 'store.products.create', 'store.products.update', 'store.products.delete',
+            'store.inventory.view', 'store.inventory.update', 'store.orders.view', 'store.orders.update', 'store.orders.refund',
+            'donations.view', 'donations.manage', 'donations.refund', 'donations.reports', 'donations.export', 'donations.reconcile',
+            'sponsorship.view', 'sponsorship.create', 'sponsorship.edit', 'sponsorship.manage', 'sponsorship.agreements',
+            'sponsorship.payments', 'sponsorship.fulfillment', 'sponsorship.export', 'sponsorship.admin',
             'view_analytics', 'view_reports', 'manage_analytics', 'export_analytics',
             'manage_queues', 'view_queue_status', 'retry_failed_jobs', 'manage_scheduler',
             'view_security', 'manage_security'
@@ -202,14 +242,49 @@ class DatabaseSeeder extends Seeder
         // Store Administrator Role mapping
         if (isset($roles['store-administrator'])) {
             $roles['store-administrator']->permissions()->sync(
-                Permission::whereIn('slug', ['store.view', 'store.manage_products', 'store.manage_inventory', 'store.manage_orders', 'store.admin', 'view_analytics'])->pluck('id')->toArray()
+                Permission::whereIn('slug', ['store.view', 'store.manage_products', 'store.manage_inventory', 'store.manage_orders', 'store.admin', 'store.products.view', 'store.products.create', 'store.products.update', 'store.products.delete', 'store.inventory.view', 'store.inventory.update', 'store.orders.view', 'store.orders.update', 'store.orders.refund', 'view_analytics'])->pluck('id')->toArray()
             );
         }
 
         // Store Staff Role mapping
         if (isset($roles['store-staff'])) {
             $roles['store-staff']->permissions()->sync(
-                Permission::whereIn('slug', ['store.view', 'store.manage_inventory', 'store.manage_orders'])->pluck('id')->toArray()
+                Permission::whereIn('slug', ['store.view', 'store.manage_inventory', 'store.manage_orders', 'store.products.view', 'store.inventory.view', 'store.inventory.update', 'store.orders.view', 'store.orders.update'])->pluck('id')->toArray()
+            );
+        }
+
+        // DMS Administrator Role mapping
+        if (isset($roles['dms-administrator'])) {
+            $roles['dms-administrator']->permissions()->sync(
+                Permission::whereIn('slug', ['donations.view', 'donations.manage', 'donations.refund', 'donations.reports', 'donations.export', 'donations.reconcile', 'view_analytics'])->pluck('id')->toArray()
+            );
+        }
+
+        // DMS Staff Role mapping
+        if (isset($roles['dms-staff'])) {
+            $roles['dms-staff']->permissions()->sync(
+                Permission::whereIn('slug', ['donations.view', 'donations.manage', 'donations.reports'])->pluck('id')->toArray()
+            );
+        }
+
+        // SPMS Administrator Role mapping
+        if (isset($roles['spms-administrator'])) {
+            $roles['spms-administrator']->permissions()->sync(
+                Permission::whereIn('slug', ['sponsorship.view', 'sponsorship.create', 'sponsorship.edit', 'sponsorship.manage', 'sponsorship.agreements', 'sponsorship.payments', 'sponsorship.fulfillment', 'sponsorship.export', 'sponsorship.admin', 'view_analytics'])->pluck('id')->toArray()
+            );
+        }
+
+        // SPMS Staff Role mapping
+        if (isset($roles['spms-staff'])) {
+            $roles['spms-staff']->permissions()->sync(
+                Permission::whereIn('slug', ['sponsorship.view', 'sponsorship.create', 'sponsorship.edit', 'sponsorship.fulfillment'])->pluck('id')->toArray()
+            );
+        }
+
+        // SPMS Viewer Role mapping
+        if (isset($roles['spms-viewer'])) {
+            $roles['spms-viewer']->permissions()->sync(
+                Permission::whereIn('slug', ['sponsorship.view'])->pluck('id')->toArray()
             );
         }
 
@@ -327,7 +402,10 @@ class DatabaseSeeder extends Seeder
         // 8. Seed the Event Management System (roles, permissions, categories)
         $this->call(EmsDatabaseSeeder::class);
 
-        // 9. Platform notification permissions + preference backfill
+        // 9. Seed Sponsorship & Partnerships Management System (roles and permissions)
+        $this->call(SpmsRolePermissionSeeder::class);
+
+        // 10. Platform notification permissions + preference backfill
         $this->call(NotificationSeeder::class);
     }
 }
