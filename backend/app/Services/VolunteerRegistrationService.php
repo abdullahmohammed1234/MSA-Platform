@@ -31,6 +31,7 @@ class VolunteerRegistrationService
             return VolunteerRegistration::create([
                 'name' => $data['name'],
                 'email' => $data['email'],
+                'phone' => $data['phone'] ?? null,
                 'student_number' => $data['student_number'],
                 'department' => $data['department'],
                 'interests' => $data['interests'],

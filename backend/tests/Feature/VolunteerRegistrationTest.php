@@ -4,9 +4,12 @@ namespace Tests\Feature;
 
 use App\Enums\VolunteerRegistrationStatus;
 use App\Ems\Support\EmsRoles;
+use App\Mail\DailyVolunteerDigestMail;
 use App\Mail\VolunteerApplication;
 use App\Models\User;
 use App\Models\VolunteerRegistration;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Tests\Feature\Ems\EmsTestCase;
 
@@ -14,12 +17,23 @@ class VolunteerRegistrationTest extends EmsTestCase
 {
     private function adminUser(): User
     {
-        return $this->emsUser(EmsRoles::EVENT_ADMINISTRATOR);
+        $user = User::factory()->create();
+        $role = \App\Models\Role::firstOrCreate(['slug' => 'admin'], ['name' => 'Admin', 'uuid' => (string) \Illuminate\Support\Str::uuid()]);
+        $user->roles()->syncWithoutDetaching([$role->id]);
+
+        DB::table('application_access')->insertOrIgnore([
+            'user_id' => $user->id,
+            'application' => 'admin-portal',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        return $user->fresh();
     }
 
-    private function attendeeUser(): User
+    private function adminUrl(string $path = ''): string
     {
-        return $this->emsUser(EmsRoles::ATTENDEE);
+        return '/api/v1/admin/' . ltrim($path, '/');
     }
 
     public function test_public_submission_persists_registration_to_database(): void
@@ -29,8 +43,9 @@ class VolunteerRegistrationTest extends EmsTestCase
         $response = $this->postJson('/api/v1/website/volunteer', [
             'name' => 'Ahmad Volunteer',
             'email' => 'ahmad@sfu.ca',
+            'phone' => '778-123-4567',
             'student_number' => '301987654',
-            'department' => 'Events & Logistics',
+            'department' => 'Events',
             'interests' => 'I want to help organize Friday Jumuah and community dinners.',
             'experience' => 'Previous high school MSA vice president.',
         ]);
@@ -39,12 +54,14 @@ class VolunteerRegistrationTest extends EmsTestCase
         $response->assertJsonPath('success', true);
         $response->assertJsonPath('data.name', 'Ahmad Volunteer');
         $response->assertJsonPath('data.email', 'ahmad@sfu.ca');
+        $response->assertJsonPath('data.phone', '778-123-4567');
 
         $this->assertDatabaseHas('volunteer_registrations', [
             'name' => 'Ahmad Volunteer',
             'email' => 'ahmad@sfu.ca',
+            'phone' => '778-123-4567',
             'student_number' => '301987654',
-            'department' => 'Events & Logistics',
+            'department' => 'Events',
             'status' => VolunteerRegistrationStatus::New->value,
         ]);
 
@@ -62,8 +79,9 @@ class VolunteerRegistrationTest extends EmsTestCase
         $response = $this->postJson('/api/v1/website/volunteer', [
             'name' => 'Fatima Volunteer',
             'email' => 'fatima@sfu.ca',
+            'phone' => '604-987-6543',
             'student_number' => '301111222',
-            'department' => 'Media & Comms',
+            'department' => 'Marketing (Media & Comms)',
             'interests' => 'Graphic design and social media management.',
         ]);
 
@@ -73,6 +91,7 @@ class VolunteerRegistrationTest extends EmsTestCase
         $this->assertDatabaseHas('volunteer_registrations', [
             'name' => 'Fatima Volunteer',
             'email' => 'fatima@sfu.ca',
+            'phone' => '604-987-6543',
             'student_number' => '301111222',
             'status' => VolunteerRegistrationStatus::New->value,
         ]);
@@ -104,21 +123,21 @@ class VolunteerRegistrationTest extends EmsTestCase
         ]);
 
         // Unauthenticated
-        $this->getJson($this->url('volunteering-registrars'))
+        $this->getJson($this->adminUrl('volunteering-registrars'))
             ->assertUnauthorized();
 
-        $this->getJson($this->url("volunteering-registrars/{$registration->uuid}"))
+        $this->getJson($this->adminUrl("volunteering-registrars/{$registration->uuid}"))
             ->assertUnauthorized();
 
-        // Unauthorized authenticated user (Attendee role without permission)
-        $attendee = $this->attendeeUser();
+        // Unauthorized authenticated user (User without admin-portal access)
+        $nonAdmin = User::factory()->create();
 
-        $this->actingAsEms($attendee)
-            ->getJson($this->url('volunteering-registrars'))
+        $this->actingAsEms($nonAdmin)
+            ->getJson($this->adminUrl('volunteering-registrars'))
             ->assertForbidden();
 
-        $this->actingAsEms($attendee)
-            ->getJson($this->url("volunteering-registrars/{$registration->uuid}"))
+        $this->actingAsEms($nonAdmin)
+            ->getJson($this->adminUrl("volunteering-registrars/{$registration->uuid}"))
             ->assertForbidden();
     }
 
@@ -129,27 +148,27 @@ class VolunteerRegistrationTest extends EmsTestCase
         $reg1 = VolunteerRegistration::factory()->create([
             'name' => 'Zayd Smith',
             'email' => 'zayd@sfu.ca',
-            'department' => 'Media & Comms',
+            'department' => 'Marketing (Media & Comms)',
             'status' => VolunteerRegistrationStatus::New,
         ]);
 
         $reg2 = VolunteerRegistration::factory()->create([
             'name' => 'Bilal Khan',
             'email' => 'bilal@sfu.ca',
-            'department' => 'Events & Logistics',
+            'department' => 'Events',
             'status' => VolunteerRegistrationStatus::Contacted,
         ]);
 
         // List all
         $response = $this->actingAsEms($admin)
-            ->getJson($this->url('volunteering-registrars'));
+            ->getJson($this->adminUrl('volunteering-registrars'));
 
         $response->assertOk();
         $response->assertJsonCount(2, 'data');
 
         // Filter by status
         $filterResponse = $this->actingAsEms($admin)
-            ->getJson($this->url('volunteering-registrars?status=contacted'));
+            ->getJson($this->adminUrl('volunteering-registrars?status=contacted'));
 
         $filterResponse->assertOk();
         $filterResponse->assertJsonCount(1, 'data');
@@ -157,7 +176,7 @@ class VolunteerRegistrationTest extends EmsTestCase
 
         // Search by query
         $searchResponse = $this->actingAsEms($admin)
-            ->getJson($this->url('volunteering-registrars?search=Zayd'));
+            ->getJson($this->adminUrl('volunteering-registrars?search=Zayd'));
 
         $searchResponse->assertOk();
         $searchResponse->assertJsonCount(1, 'data');
@@ -171,18 +190,20 @@ class VolunteerRegistrationTest extends EmsTestCase
         $registration = VolunteerRegistration::factory()->create([
             'name' => 'Yusuf Ali',
             'email' => 'yusuf@sfu.ca',
+            'phone' => '778-555-0199',
             'student_number' => '301999888',
-            'department' => 'Education & Outreach',
+            'department' => 'Education',
             'interests' => 'Teaching basic Quranic Arabic.',
             'admin_notes' => 'Interview scheduled for Friday after Jumuah.',
         ]);
 
         $response = $this->actingAsEms($admin)
-            ->getJson($this->url("volunteering-registrars/{$registration->uuid}"));
+            ->getJson($this->adminUrl("volunteering-registrars/{$registration->uuid}"));
 
         $response->assertOk();
         $response->assertJsonPath('data.uuid', $registration->uuid);
         $response->assertJsonPath('data.name', 'Yusuf Ali');
+        $response->assertJsonPath('data.phone', '778-555-0199');
         $response->assertJsonPath('data.admin_notes', 'Interview scheduled for Friday after Jumuah.');
     }
 
@@ -199,7 +220,7 @@ class VolunteerRegistrationTest extends EmsTestCase
         ]);
 
         $response = $this->actingAsEms($admin)
-            ->putJson($this->url("volunteering-registrars/{$registration->uuid}"), [
+            ->putJson($this->adminUrl("volunteering-registrars/{$registration->uuid}"), [
                 'status' => 'contacted',
                 'admin_notes' => 'Sent initial Discord invite link.',
                 'assigned_to' => $assignee->id,
@@ -230,7 +251,7 @@ class VolunteerRegistrationTest extends EmsTestCase
         ]);
 
         $response = $this->actingAsEms($admin)
-            ->deleteJson($this->url("volunteering-registrars/{$registration->uuid}"));
+            ->deleteJson($this->adminUrl("volunteering-registrars/{$registration->uuid}"));
 
         $response->assertOk();
         $response->assertJsonPath('success', true);
@@ -238,5 +259,22 @@ class VolunteerRegistrationTest extends EmsTestCase
         $this->assertSoftDeleted('volunteer_registrations', [
             'id' => $registration->id,
         ]);
+    }
+
+    public function test_daily_digest_command_sends_email_when_submissions_exist_today(): void
+    {
+        Mail::fake();
+
+        VolunteerRegistration::factory()->create([
+            'name' => 'Today Submission',
+            'email' => 'today@sfu.ca',
+            'created_at' => now(),
+        ]);
+
+        Artisan::call('volunteer:send-daily-digest');
+
+        Mail::assertSent(DailyVolunteerDigestMail::class, function ($mail) {
+            return $mail->hasTo('sfumsa@hotmail.com');
+        });
     }
 }

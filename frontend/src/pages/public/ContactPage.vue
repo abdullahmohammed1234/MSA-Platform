@@ -53,6 +53,7 @@ const isVolunteerOpen = ref(false);
 const volunteerForm = ref({
   name: '',
   email: '',
+  phone: '',
   student_number: '',
   department: 'General Inquiries',
   interests: '',
@@ -64,10 +65,11 @@ const volunteerError = ref('');
 
 const volunteerDepts = [
   'General Inquiries',
-  'Events & Logistics',
-  'Media & Comms',
-  'Sisters\' Affairs',
-  'Education & Outreach'
+  'Education',
+  'Finance',
+  'Events',
+  'Marketing (Media & Comms)',
+  'IT'
 ];
 
 onMounted(() => {
@@ -123,6 +125,7 @@ const handleVolunteerSubmit = async () => {
     volunteerForm.value = {
       name: '',
       email: '',
+      phone: '',
       student_number: '',
       department: 'General Inquiries',
       interests: '',
@@ -132,6 +135,7 @@ const handleVolunteerSubmit = async () => {
       volunteerSuccess.value = false;
       isVolunteerOpen.value = false;
     }, 4000);
+
   } catch (err: any) {
     volunteerError.value = err.message || 'Your application could not be submitted right now.';
   } finally {
@@ -417,17 +421,27 @@ const toggleFaq = (index: number) => {
             />
           </div>
           <div class="space-y-2">
-            <label class="text-xs font-bold uppercase tracking-widest text-neutral-black/40 font-sans">Target Department</label>
-            <select 
-              required
-              v-model="volunteerForm.department"
-              class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-primary/20 outline-none transition-all text-neutral-black text-sm appearance-none cursor-pointer"
-            >
-              <option v-for="dept in volunteerDepts" :key="dept" :value="dept">
-                {{ dept }}
-              </option>
-            </select>
+            <label class="text-xs font-bold uppercase tracking-widest text-neutral-black/40 font-sans">Phone Number (Optional)</label>
+            <input 
+              type="tel" 
+              placeholder="e.g. (778) 123-4567"
+              v-model="volunteerForm.phone"
+              class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-primary/20 outline-none transition-all text-neutral-black text-sm"
+            />
           </div>
+        </div>
+
+        <div class="space-y-2">
+          <label class="text-xs font-bold uppercase tracking-widest text-neutral-black/40 font-sans">Target Department</label>
+          <select 
+            required
+            v-model="volunteerForm.department"
+            class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl px-6 py-4 focus:ring-2 focus:ring-primary/20 outline-none transition-all text-neutral-black text-sm appearance-none cursor-pointer"
+          >
+            <option v-for="dept in volunteerDepts" :key="dept" :value="dept">
+              {{ dept }}
+            </option>
+          </select>
         </div>
 
         <div class="space-y-2">

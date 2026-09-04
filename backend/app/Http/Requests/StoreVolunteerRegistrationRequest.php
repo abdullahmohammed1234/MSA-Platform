@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreVolunteerRegistrationRequest extends FormRequest
 {
@@ -26,8 +27,20 @@ class StoreVolunteerRegistrationRequest extends FormRequest
                     }
                 },
             ],
+            'phone' => ['nullable', 'string', 'max:50'],
             'student_number' => ['required', 'string', 'regex:/^\d{9}$/'],
-            'department' => ['required', 'string', 'max:255'],
+            'department' => [
+                'required',
+                'string',
+                Rule::in([
+                    'Education',
+                    'Finance',
+                    'Events',
+                    'Marketing (Media & Comms)',
+                    'IT',
+                    'General Inquiries',
+                ]),
+            ],
             'interests' => ['required', 'string', 'max:5000'],
             'experience' => ['nullable', 'string', 'max:5000'],
         ];
@@ -37,6 +50,7 @@ class StoreVolunteerRegistrationRequest extends FormRequest
     {
         return [
             'student_number.regex' => 'Student number must be exactly 9 digits.',
+            'department.in' => 'Selected department is invalid.',
         ];
     }
 
@@ -51,6 +65,12 @@ class StoreVolunteerRegistrationRequest extends FormRequest
         if ($this->has('student_number')) {
             $this->merge([
                 'student_number' => trim((string) $this->input('student_number')),
+            ]);
+        }
+
+        if ($this->has('phone')) {
+            $this->merge([
+                'phone' => trim((string) $this->input('phone')),
             ]);
         }
     }

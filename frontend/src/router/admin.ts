@@ -35,13 +35,13 @@ const adminRoutes: Array<RouteRecordRaw> = [
       {
         path: 'volunteering-registrars',
         name: 'admin-volunteering-registrars',
-        component: () => import('@/pages/ems/volunteers/VolunteeringRegistrarsPage.vue'),
+        component: () => import('@/pages/admin/volunteers/VolunteeringRegistrarsPage.vue'),
         meta: { title: 'Volunteering Registrars', adminLogin: true }
       },
       {
         path: 'volunteering-registrars/:uuid',
         name: 'admin-volunteering-registrar-detail',
-        component: () => import('@/pages/ems/volunteers/VolunteeringRegistrarDetailPage.vue'),
+        component: () => import('@/pages/admin/volunteers/VolunteeringRegistrarDetailPage.vue'),
         meta: { title: 'Volunteer Registration Detail', adminLogin: true }
       },
       // CMS Engine — extracted to /cms

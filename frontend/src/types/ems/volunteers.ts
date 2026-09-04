@@ -11,6 +11,7 @@ export interface VolunteerRegistration {
   uuid: string;
   name: string;
   email: string;
+  phone?: string | null;
   student_number: string;
   department: string;
   interests: string;

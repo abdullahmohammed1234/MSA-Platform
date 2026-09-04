@@ -10,4 +10,5 @@ Artisan::command('inspire', function () {
 use Illuminate\Support\Facades\Schedule;
 
 Schedule::command('store:cleanup-expired-orders')->everyFifteenMinutes();
+Schedule::command('volunteer:send-daily-digest')->dailyAt('23:55');
 

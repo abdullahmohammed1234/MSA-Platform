@@ -1,0 +1,1 @@
+import{p as e}from"./index-D1uVb8By.js";function t(){let t=e(),n=()=>typeof t.isPrivilegedAdmin==`boolean`?t.isPrivilegedAdmin:t.roles.includes(`admin`)||t.roles.includes(`super-admin`),r=e=>t.roles.includes(e)||n(),i=e=>t.permissions.includes(e)||n();return{can:e=>i(e),hasRole:r,hasPermission:i}}export{t};

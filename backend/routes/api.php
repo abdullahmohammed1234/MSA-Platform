@@ -132,6 +132,14 @@ Route::prefix('v1')->group(function () {
                 Route::get('/{user}', [\App\Http\Controllers\Api\V1\Admin\ApplicationAccessController::class, 'show'])->name('api.admin.application-access.show');
                 Route::put('/{user}', [\App\Http\Controllers\Api\V1\Admin\ApplicationAccessController::class, 'update'])->name('api.admin.application-access.update');
             });
+
+            Route::prefix('volunteering-registrars')->middleware('permission:manage_users')->group(function () {
+                Route::get('/', [\App\Ems\Http\Controllers\V1\VolunteerRegistrationController::class, 'index'])->name('api.admin.volunteering-registrars.index');
+                Route::get('/{volunteerRegistration:uuid}', [\App\Ems\Http\Controllers\V1\VolunteerRegistrationController::class, 'show'])->name('api.admin.volunteering-registrars.show');
+                Route::put('/{volunteerRegistration:uuid}', [\App\Ems\Http\Controllers\V1\VolunteerRegistrationController::class, 'update'])->name('api.admin.volunteering-registrars.update');
+                Route::patch('/{volunteerRegistration:uuid}', [\App\Ems\Http\Controllers\V1\VolunteerRegistrationController::class, 'update']);
+                Route::delete('/{volunteerRegistration:uuid}', [\App\Ems\Http\Controllers\V1\VolunteerRegistrationController::class, 'destroy'])->name('api.admin.volunteering-registrars.destroy');
+            });
         });
         
         // Admin Academy LMS routes

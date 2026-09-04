@@ -19,6 +19,7 @@ class VolunteerRegistrationResource extends JsonResource
             'uuid' => $this->uuid,
             'name' => $this->name,
             'email' => $this->email,
+            'phone' => $this->phone,
             'student_number' => $this->student_number,
             'department' => $this->department,
             'interests' => $this->interests,

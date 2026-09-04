@@ -19,6 +19,7 @@ class VolunteerRegistration extends Model
         'uuid',
         'name',
         'email',
+        'phone',
         'student_number',
         'department',
         'interests',
