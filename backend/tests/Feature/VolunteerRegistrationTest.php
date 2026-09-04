@@ -264,6 +264,7 @@ class VolunteerRegistrationTest extends EmsTestCase
     public function test_daily_digest_command_sends_email_when_submissions_exist_today(): void
     {
         Mail::fake();
+        config(['website.contact_recipient' => 'sfumsa@hotmail.com']);
 
         VolunteerRegistration::factory()->create([
             'name' => 'Today Submission',

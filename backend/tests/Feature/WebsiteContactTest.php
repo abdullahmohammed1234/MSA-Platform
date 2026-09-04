@@ -59,7 +59,7 @@ class WebsiteContactTest extends TestCase
             'name' => 'Test Volunteer',
             'email' => 'volunteer@sfu.ca',
             'student_number' => '301234567',
-            'department' => 'Events & Logistics',
+            'department' => 'Events',
             'interests' => 'I would love to help coordinate weekly Friday prayers and social events.',
             'experience' => 'I have coordinate high school events before.',
         ];
@@ -95,7 +95,7 @@ class WebsiteContactTest extends TestCase
             'name' => 'Test Volunteer',
             'email' => 'volunteer@gmail.com',
             'student_number' => '12345',
-            'department' => 'Events & Logistics',
+            'department' => 'Events',
             'interests' => 'Help out',
         ];
 
