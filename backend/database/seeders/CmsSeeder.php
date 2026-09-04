@@ -15,13 +15,15 @@ class CmsSeeder extends Seeder
     public function run(): void
     {
         // 1. Seed Homepage Sections & Blocks
-        $heroSection = HomepageSection::create([
-            'name' => 'Hero Section',
-            'key' => 'hero',
-            'display_order' => 1,
-            'is_visible' => true,
-            'status' => 'published',
-        ]);
+        $heroSection = HomepageSection::firstOrCreate(
+            ['key' => 'hero'],
+            [
+                'name' => 'Hero Section',
+                'display_order' => 1,
+                'is_visible' => true,
+                'status' => 'published',
+            ]
+        );
 
         $heroBlocks = [
             ['key' => 'tagline', 'value' => 'Simon Fraser University', 'type' => 'text', 'display_order' => 1],
@@ -35,16 +37,21 @@ class CmsSeeder extends Seeder
         ];
 
         foreach ($heroBlocks as $block) {
-            $heroSection->blocks()->create($block);
+            $heroSection->blocks()->firstOrCreate(
+                ['key' => $block['key']],
+                $block
+            );
         }
 
-        $offeringsSection = HomepageSection::create([
-            'name' => 'Offerings Section',
-            'key' => 'offerings',
-            'display_order' => 2,
-            'is_visible' => true,
-            'status' => 'published',
-        ]);
+        $offeringsSection = HomepageSection::firstOrCreate(
+            ['key' => 'offerings'],
+            [
+                'name' => 'Offerings Section',
+                'display_order' => 2,
+                'is_visible' => true,
+                'status' => 'published',
+            ]
+        );
 
         $offeringBlocks = [
             ['key' => 'section_title', 'value' => 'What we Provide', 'type' => 'text', 'display_order' => 1],
@@ -64,16 +71,21 @@ class CmsSeeder extends Seeder
         ];
 
         foreach ($offeringBlocks as $block) {
-            $offeringsSection->blocks()->create($block);
+            $offeringsSection->blocks()->firstOrCreate(
+                ['key' => $block['key']],
+                $block
+            );
         }
 
-        $ctaSection = HomepageSection::create([
-            'name' => 'CTA Section',
-            'key' => 'cta',
-            'display_order' => 3,
-            'is_visible' => true,
-            'status' => 'published',
-        ]);
+        $ctaSection = HomepageSection::firstOrCreate(
+            ['key' => 'cta'],
+            [
+                'name' => 'CTA Section',
+                'display_order' => 3,
+                'is_visible' => true,
+                'status' => 'published',
+            ]
+        );
 
         $ctaBlocks = [
             ['key' => 'title', 'value' => 'Be part of something Meaningful', 'type' => 'text', 'display_order' => 1],
@@ -83,7 +95,10 @@ class CmsSeeder extends Seeder
         ];
 
         foreach ($ctaBlocks as $block) {
-            $ctaSection->blocks()->create($block);
+            $ctaSection->blocks()->firstOrCreate(
+                ['key' => $block['key']],
+                $block
+            );
         }
 
         // 2. Seed Announcements
@@ -109,19 +124,25 @@ class CmsSeeder extends Seeder
         ];
 
         foreach ($announcements as $ann) {
-            Announcement::create(array_merge($ann, ['uuid' => (string) Str::uuid()]));
+            Announcement::firstOrCreate(
+                ['slug' => $ann['slug']],
+                array_merge($ann, ['uuid' => (string) Str::uuid()])
+            );
         }
 
         // 4. Seed Team Members
-        $team = config('website_defaults.team');
+        $team = config('website_defaults.team', []);
 
         foreach ($team as $index => $member) {
-            TeamMember::create(array_merge($member, [
-                'uuid' => (string) Str::uuid(),
-                'display_order' => $index,
-                'status' => 'published',
-                'bio' => 'Serving the SFU Muslim community.',
-            ]));
+            TeamMember::firstOrCreate(
+                ['name' => $member['name'], 'role' => $member['role']],
+                array_merge($member, [
+                    'uuid' => (string) Str::uuid(),
+                    'display_order' => $index,
+                    'status' => 'published',
+                    'bio' => 'Serving the SFU Muslim community.',
+                ])
+            );
         }
 
         // 5. Seed Resources
@@ -246,10 +267,13 @@ class CmsSeeder extends Seeder
         ];
 
         foreach ($resources as $res) {
-            Resource::create(array_merge($res, [
-                'uuid' => (string) Str::uuid(),
-                'status' => 'published',
-            ]));
+            Resource::firstOrCreate(
+                ['title' => $res['title']],
+                array_merge($res, [
+                    'uuid' => (string) Str::uuid(),
+                    'status' => 'published',
+                ])
+            );
         }
     }
 }
