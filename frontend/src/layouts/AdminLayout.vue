@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, computed } from 'vue';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { ToastContainer } from '@/components/feedback/toast';
 import { useAuthStore } from '@/stores/auth';
@@ -11,13 +11,9 @@ const authStore = useAuthStore();
 const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasStoreAccess, hasDonationsAccess, hasSponsorshipAccess } = useAppAccess();
 const isSidebarCollapsed = ref(false);
 const isMobileOpen = ref(false);
-const adminName = ref('Platform Administrator');
 
-onMounted(() => {
-  const storedName = localStorage.getItem('user_name');
-  if (storedName) {
-    adminName.value = storedName;
-  }
+const adminName = computed(() => {
+  return authStore.user?.name || localStorage.getItem('user_name') || 'Admin User';
 });
 
 const adminItems = computed(() => {
@@ -124,7 +120,8 @@ const handleLogout = async () => {
       :items="adminItems"
       v-model:collapsed="isSidebarCollapsed"
       v-model:mobileOpen="isMobileOpen"
-      brandName="MSA Admin"
+      title="MSA Admin"
+      subtitle="Platform Console"
       logoSrc="/logo.webp"
     >
       <!-- Dashboard Icon Slot -->
@@ -233,10 +230,17 @@ const handleLogout = async () => {
       </template>
 
       <!-- Star Icon Slot -->
-      <template #star>
-        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-        </svg>
+      <!-- User Profile Footer Slot -->
+      <template #footer-user>
+        <div class="h-9 w-9 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center text-sm uppercase shrink-0">
+          {{ (adminName || 'A').charAt(0) }}
+        </div>
+        <div class="flex flex-col min-w-0">
+          <span class="text-sm font-semibold text-neutral-black truncate">{{ adminName }}</span>
+          <span class="text-[10px] text-neutral-muted uppercase tracking-wider font-mono font-bold truncate">
+            {{ authStore.roles[0] || 'Administrator' }}
+          </span>
+        </div>
       </template>
     </Sidebar>
 

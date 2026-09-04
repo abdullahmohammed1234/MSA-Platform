@@ -378,6 +378,30 @@ class DatabaseSeeder extends Seeder
         );
         $volunteerUser->roles()->sync([$roles['volunteer']->id]);
 
+        // Seed Application Access for platform administrators
+        $allApps = ['admin-portal', 'dawah-academy', 'cms', 'dams', 'ems', 'store', 'donations', 'sponsorship'];
+        foreach ($allApps as $app) {
+            \Illuminate\Support\Facades\DB::table('application_access')->insertOrIgnore([
+                'user_id' => $superAdminUser->id,
+                'application' => $app,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+            \Illuminate\Support\Facades\DB::table('application_access')->insertOrIgnore([
+                'user_id' => $adminUser->id,
+                'application' => $app,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
+        \Illuminate\Support\Facades\DB::table('application_access')->insertOrIgnore([
+            ['user_id' => $coordinatorUser->id, 'application' => 'dams', 'created_at' => now(), 'updated_at' => now()],
+            ['user_id' => $coordinatorUser->id, 'application' => 'dawah-academy', 'created_at' => now(), 'updated_at' => now()],
+            ['user_id' => $mentorUser->id, 'application' => 'dawah-academy', 'created_at' => now(), 'updated_at' => now()],
+            ['user_id' => $volunteerUser->id, 'application' => 'dawah-academy', 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
         // 5. Seed CMS content
         $this->call(CmsSeeder::class);
 

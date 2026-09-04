@@ -4,8 +4,8 @@ import type { SidebarProps } from './types';
 
 const props = withDefaults(defineProps<SidebarProps>(), {
   collapsed: false,
-  title: 'Academy',
-  logoAlt: 'Dawah Academy logo',
+  title: 'MSA Admin',
+  logoAlt: 'MSA Admin logo',
   mobileOpen: false,
 });
 
