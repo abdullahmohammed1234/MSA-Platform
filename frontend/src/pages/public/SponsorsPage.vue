@@ -105,29 +105,29 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-  <div class="bg-neutral-background min-h-screen">
+  <div class="bg-neutral-background min-h-screen overflow-x-hidden w-full">
     <!-- Hero Section -->
     <section class="relative py-24 sm:py-32 bg-primary text-neutral-white overflow-hidden border-b border-primary/10">
       <div class="absolute inset-0 pattern-islamic opacity-5" />
-      <div class="absolute top-0 right-0 w-96 h-96 bg-secondary-light/10 blur-[120px] rounded-full" />
+      <div class="absolute top-0 right-0 w-96 h-96 bg-secondary-light/10 blur-[120px] rounded-full pointer-events-none" />
       
       <div class="container-custom relative z-10">
         <div class="max-w-4xl space-y-8">
           <ScrollReveal direction="right">
             <span class="inline-flex items-center gap-2 px-4 py-2 bg-neutral-white/10 border border-neutral-white/20 rounded-full text-accent-gold font-bold uppercase tracking-widest text-[10px]">
-              <Plus class="w-3 h-3" /> Sponsor & Partner
+              <Plus class="w-3 h-3 shrink-0" /> Sponsor & Partner
             </span>
           </ScrollReveal>
 
           <ScrollReveal :delay="0.2">
-            <h1 class="text-5xl md:text-[92px] font-display font-medium leading-[0.9] tracking-tighter text-neutral-white">
-              Empower our <br />
+            <h1 class="text-3xl sm:text-5xl md:text-[80px] lg:text-[92px] font-display font-medium leading-[1.0] sm:leading-[0.9] tracking-tighter text-neutral-white break-words">
+              Empower our <br class="hidden sm:inline" />
               <span class="text-accent-gold italic font-serif">Community & Growth.</span>
             </h1>
           </ScrollReveal>
 
           <ScrollReveal :delay="0.3">
-            <p class="text-xl md:text-2xl text-neutral-white/70 leading-relaxed max-w-2xl font-light">
+            <p class="text-base sm:text-xl md:text-2xl text-neutral-white/70 leading-relaxed max-w-2xl font-light">
               By sponsoring the SFU Muslim Students Association, you support key programming, Jumu'ah facilities, and student mentorship while increasing your brand exposure.
             </p>
           </ScrollReveal>
@@ -137,12 +137,12 @@ const handleSubmit = async () => {
 
     <!-- Sponsor Tiers & Grid -->
     <section class="section-padding">
-      <div class="container-custom space-y-20">
-        <div class="max-w-3xl mb-16 space-y-4">
-          <h2 class="text-4xl md:text-5xl font-display font-bold text-primary">
+      <div class="container-custom space-y-16 sm:space-y-20">
+        <div class="max-w-3xl mb-12 sm:mb-16 space-y-4">
+          <h2 class="text-3xl sm:text-4xl md:text-5xl font-display font-bold text-primary break-words">
             Our Partners & Sponsors
           </h2>
-          <p class="text-lg leading-relaxed text-neutral-black/60">
+          <p class="text-base sm:text-lg leading-relaxed text-neutral-black/60 font-light">
             We are deeply grateful to the organizations and local businesses that make our programming possible.
           </p>
         </div>
@@ -165,7 +165,7 @@ const handleSubmit = async () => {
                 target="_blank"
                 class="block"
               >
-                <PublicCard variant="premium" class="bg-neutral-white p-8 border border-neutral-gray/20 flex flex-col items-center justify-center min-h-[180px] hover:border-primary/40 transition-all">
+                <PublicCard variant="premium" class="bg-neutral-white p-6 sm:p-8 border border-neutral-gray/20 flex flex-col items-center justify-center min-h-[180px] hover:border-primary/40 transition-all">
                   <img :src="sp.logoUrl" :alt="sp.name" class="max-h-16 max-w-full object-contain mb-4 filter grayscale group-hover:grayscale-0 transition-all duration-300" />
                   <span class="font-bold text-primary text-lg">{{ sp.name }}</span>
                 </PublicCard>
@@ -178,7 +178,7 @@ const handleSubmit = async () => {
             <h3 class="text-xs font-bold uppercase tracking-[0.2em] text-secondary-light border-b border-neutral-gray/20 pb-3">
               Gold Sponsors
             </h3>
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-8">
               <a 
                 v-for="sp in groupedSponsors.Gold" 
                 :key="sp.id"
@@ -186,7 +186,7 @@ const handleSubmit = async () => {
                 target="_blank"
                 class="block"
               >
-                <PublicCard variant="default" class="bg-neutral-white p-6 border border-neutral-gray/20 flex flex-col items-center justify-center min-h-[140px] hover:border-primary/30 transition-all">
+                <PublicCard variant="default" class="bg-neutral-white p-5 sm:p-6 border border-neutral-gray/20 flex flex-col items-center justify-center min-h-[140px] hover:border-primary/30 transition-all">
                   <img :src="sp.logoUrl" :alt="sp.name" class="max-h-12 max-w-full object-contain mb-3" />
                   <span class="font-semibold text-primary text-sm text-center">{{ sp.name }}</span>
                 </PublicCard>
@@ -199,16 +199,16 @@ const handleSubmit = async () => {
             <h3 class="text-xs font-bold uppercase tracking-[0.2em] text-secondary-light border-b border-neutral-gray/20 pb-3">
               Community Partners & Supporters
             </h3>
-            <div class="flex flex-wrap gap-4">
+            <div class="flex flex-wrap gap-3 sm:gap-4">
               <div 
                 v-for="sp in [...groupedSponsors.Silver, ...groupedSponsors.Bronze]" 
                 :key="sp.id"
-                class="px-5 py-3 rounded-xl bg-neutral-white border border-neutral-gray/20 flex items-center gap-3"
+                class="px-4 sm:px-5 py-3 rounded-xl bg-neutral-white border border-neutral-gray/20 flex items-center gap-3 max-w-full overflow-hidden"
               >
-                <span class="font-bold text-xs uppercase tracking-wider px-2 py-0.5 rounded" :class="sp.tier === 'Silver' ? 'bg-neutral-gray/10 text-neutral-black/50' : 'bg-amber-100 text-amber-800'">
+                <span class="font-bold text-[10px] sm:text-xs uppercase tracking-wider px-2 py-0.5 rounded shrink-0" :class="sp.tier === 'Silver' ? 'bg-neutral-gray/10 text-neutral-black/50' : 'bg-amber-100 text-amber-800'">
                   {{ sp.tier }}
                 </span>
-                <span class="text-primary font-medium text-sm">{{ sp.name }}</span>
+                <span class="text-primary font-medium text-xs sm:text-sm truncate">{{ sp.name }}</span>
               </div>
             </div>
           </div>
@@ -220,20 +220,20 @@ const handleSubmit = async () => {
     <section class="section-padding bg-neutral-white border-y border-neutral-gray/20">
       <div class="container-custom">
         <div class="max-w-3xl mb-16 space-y-4">
-          <h2 class="text-4xl md:text-5xl font-display font-bold text-primary">
+          <h2 class="text-3xl sm:text-4xl md:text-5xl font-display font-bold text-primary break-words">
             Sponsorship Benefits
           </h2>
-          <p class="text-lg leading-relaxed text-neutral-black/60">
+          <p class="text-base sm:text-lg leading-relaxed text-neutral-black/60 font-light">
             Why support the SFU Muslim Students Association?
           </p>
         </div>
 
-        <div class="grid md:grid-cols-3 gap-8">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
           <PublicCard
             v-for="(benefit, idx) in benefits"
             :key="idx"
             variant="premium"
-            class="bg-neutral-background border border-neutral-gray/20 p-8 space-y-6"
+            class="bg-neutral-background border border-neutral-gray/20 p-6 sm:p-8 space-y-6"
           >
             <div class="w-12 h-12 rounded-xl bg-primary/5 text-primary flex items-center justify-center border border-primary/10">
               <component :is="benefit.icon" class="w-6 h-6" />
@@ -252,12 +252,12 @@ const handleSubmit = async () => {
     <!-- Sponsorship Application Form -->
     <section class="section-padding">
       <div class="container-custom">
-        <div class="grid lg:grid-cols-2 gap-16 items-start">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-start">
           <div class="space-y-6 max-w-lg">
-            <h2 class="text-4xl font-bold text-primary font-display">
+            <h2 class="text-3xl sm:text-4xl font-bold text-primary font-display break-words">
               Become a Sponsor
             </h2>
-            <p class="text-neutral-black/60 leading-relaxed font-light">
+            <p class="text-neutral-black/60 leading-relaxed font-light text-sm sm:text-base">
               Fill out our simple application form, and our sponsorship team will reach out with our detailed partnership package options.
             </p>
             <div class="p-6 bg-neutral-white rounded-2xl border border-neutral-gray/20">
@@ -269,7 +269,7 @@ const handleSubmit = async () => {
           </div>
 
           <!-- Form Card -->
-          <PublicCard variant="premium" class="bg-neutral-white p-8 md:p-12 border border-neutral-gray/20 shadow-premium">
+          <PublicCard variant="premium" class="bg-neutral-white p-5 sm:p-8 md:p-12 border border-neutral-gray/20 shadow-premium w-full">
             <form @submit.prevent="handleSubmit" class="space-y-6">
               <div class="space-y-2">
                 <label class="text-xs font-bold uppercase tracking-widest text-neutral-black/30 font-sans">Company Name</label>

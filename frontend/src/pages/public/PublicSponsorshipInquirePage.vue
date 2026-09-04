@@ -38,16 +38,16 @@ const handleSubmit = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-neutral-background pt-28 pb-16">
+  <div class="min-h-screen bg-neutral-background pt-28 pb-16 overflow-x-hidden w-full">
     <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
       
-      <div class="bg-white rounded-3xl border border-neutral-ivory p-8 sm:p-12 shadow-premium">
+      <div class="bg-white rounded-3xl border border-neutral-ivory p-5 sm:p-8 md:p-12 shadow-premium">
         <div class="text-center max-w-xl mx-auto mb-10">
           <div class="inline-flex items-center gap-2 bg-emerald-50 text-emerald-800 border border-emerald-200 px-4 py-1.5 rounded-full text-xs font-extrabold uppercase tracking-widest mb-4">
             <Handshake class="w-4 h-4 text-emerald-600" />
             <span>Partner Lead Form</span>
           </div>
-          <h1 class="text-2xl sm:text-4xl font-display font-extrabold text-neutral-black tracking-tight">
+          <h1 class="text-2xl sm:text-4xl font-display font-extrabold text-neutral-black tracking-tight break-words">
             Sponsorship & Partnership Inquiry
           </h1>
           <p class="mt-2 text-sm text-neutral-black/60">

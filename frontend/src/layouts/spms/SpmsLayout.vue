@@ -58,7 +58,7 @@ const handleLogout = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-neutral-background flex font-sans">
+  <div class="min-h-screen bg-neutral-background flex font-sans overflow-x-hidden w-full">
     <!-- Viewport Fixed Sidebar (SPMS) -->
     <aside
       :class="[
@@ -153,7 +153,7 @@ const handleLogout = async () => {
       </header>
 
       <!-- Main Content Page Area -->
-      <main class="flex-1 p-6 sm:p-8 overflow-y-auto max-w-7xl w-full mx-auto">
+      <main class="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto max-w-7xl w-full mx-auto">
         <router-view />
       </main>
     </div>

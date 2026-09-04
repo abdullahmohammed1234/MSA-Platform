@@ -92,29 +92,29 @@ const formatCurrency = (cents: number) => {
 </script>
 
 <template>
-  <div class="bg-neutral-background min-h-screen">
+  <div class="bg-neutral-background min-h-screen overflow-x-hidden w-full">
     <!-- Hero Section -->
     <section class="relative py-24 sm:py-32 bg-primary text-white overflow-hidden border-b border-primary/10">
       <div class="absolute inset-0 pattern-islamic opacity-5" />
-      <div class="absolute top-0 right-0 w-96 h-96 bg-secondary-light/10 blur-[120px] rounded-full" />
+      <div class="absolute top-0 right-0 w-96 h-96 bg-secondary-light/10 blur-[120px] rounded-full pointer-events-none" />
 
       <div class="container-custom relative z-10">
         <div class="max-w-4xl space-y-8">
           <ScrollReveal direction="right">
             <span class="inline-flex items-center gap-2 px-4 py-2 bg-white/10 border border-white/20 rounded-full text-accent-gold font-bold uppercase tracking-widest text-[10px]">
-              <Handshake class="w-3.5 h-3.5 text-accent-gold" /> SFU MSA Corporate & Community Partnerships
+              <Handshake class="w-3.5 h-3.5 text-accent-gold shrink-0" /> SFU MSA Corporate & Community Partnerships
             </span>
           </ScrollReveal>
 
           <ScrollReveal :delay="0.2">
-            <h1 class="text-4xl md:text-6xl font-display font-bold leading-[1.05] tracking-tight text-white">
-              Partner With the Largest <br />
+            <h1 class="text-2xl sm:text-4xl md:text-6xl font-display font-bold leading-tight tracking-tight text-white break-words">
+              Partner With the Largest <br class="hidden sm:inline" />
               <span class="text-accent-gold italic font-serif">Muslim Student Community at SFU.</span>
             </h1>
           </ScrollReveal>
 
           <ScrollReveal :delay="0.3">
-            <p class="text-lg md:text-xl text-white/80 leading-relaxed max-w-2xl font-light">
+            <p class="text-base sm:text-lg md:text-xl text-white/80 leading-relaxed max-w-2xl font-light">
               Connect your brand with thousands of students across Burnaby and Surrey campuses while supporting Friday Jumu'ah services, campus Musallas, Ramadan care, and student development.
             </p>
           </ScrollReveal>
@@ -139,10 +139,10 @@ const formatCurrency = (cents: number) => {
       <div class="container-custom">
         <div class="max-w-3xl mb-16 space-y-3">
           <span class="text-xs font-bold uppercase tracking-[0.2em] text-primary">Why Partner With SFU MSA</span>
-          <h2 class="text-3xl sm:text-4xl font-display font-bold text-neutral-black">
+          <h2 class="text-2xl sm:text-3xl md:text-4xl font-display font-bold text-neutral-black break-words">
             Strategic Brand Impact & Campus Engagement
           </h2>
-          <p class="text-base text-neutral-black/60 leading-relaxed font-light">
+          <p class="text-sm sm:text-base text-neutral-black/60 leading-relaxed font-light">
             Our corporate and community partners gain authentic access to a highly engaged student demographic while enabling vital spiritual and social infrastructure.
           </p>
         </div>
@@ -152,7 +152,7 @@ const formatCurrency = (cents: number) => {
             v-for="(b, idx) in defaultBenefits"
             :key="idx"
             variant="premium"
-            class="bg-neutral-background border border-neutral-ivory p-8 space-y-5"
+            class="bg-neutral-background border border-neutral-ivory p-6 sm:p-8 space-y-5"
           >
             <div class="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center border border-primary/20">
               <component :is="b.icon" class="w-6 h-6" />
@@ -168,7 +168,7 @@ const formatCurrency = (cents: number) => {
     <section v-if="opportunities.length > 0" class="py-20 container-custom">
       <div class="max-w-3xl mb-12 space-y-3">
         <span class="text-xs font-bold uppercase tracking-[0.2em] text-primary">Active Event & Drive Opportunities</span>
-        <h2 class="text-3xl sm:text-4xl font-display font-bold text-neutral-black">
+        <h2 class="text-2xl sm:text-3xl md:text-4xl font-display font-bold text-neutral-black break-words">
           Featured Sponsorship Opportunities
         </h2>
       </div>
@@ -177,14 +177,14 @@ const formatCurrency = (cents: number) => {
         <div
           v-for="opp in opportunities"
           :key="opp.uuid"
-          class="bg-white rounded-3xl border border-neutral-ivory p-8 shadow-soft space-y-6"
+          class="bg-white rounded-3xl border border-neutral-ivory p-5 sm:p-8 shadow-soft space-y-6 overflow-hidden"
         >
           <div class="border-b border-neutral-ivory pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <span class="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-3 py-1 rounded-full">
                 {{ opp.opportunity_type }} Sponsorship
               </span>
-              <h3 class="text-2xl font-bold text-neutral-black mt-2">{{ opp.title }}</h3>
+              <h3 class="text-xl sm:text-2xl font-bold text-neutral-black mt-2 break-words">{{ opp.title }}</h3>
               <p v-if="opp.description" class="text-sm text-neutral-black/60 mt-1">{{ opp.description }}</p>
             </div>
 
@@ -201,11 +201,11 @@ const formatCurrency = (cents: number) => {
             <div
               v-for="pkg in opp.packages"
               :key="pkg.uuid"
-              class="bg-neutral-background rounded-2xl p-6 border border-neutral-ivory flex flex-col justify-between"
+              class="bg-neutral-background rounded-2xl p-5 sm:p-6 border border-neutral-ivory flex flex-col justify-between"
             >
               <div>
                 <h4 class="text-lg font-bold text-neutral-black">{{ pkg.name }}</h4>
-                <div class="mt-2 text-2xl font-extrabold text-primary">
+                <div class="mt-2 text-xl sm:text-2xl font-extrabold text-primary">
                   {{ formatCurrency(pkg.price_cents) }}
                   <span class="text-xs font-normal text-neutral-black/50">CAD</span>
                 </div>
@@ -225,13 +225,13 @@ const formatCurrency = (cents: number) => {
 
     <!-- Partner Inquiry Form Section -->
     <section id="partner-inquiry" class="py-20 container-custom">
-      <div class="grid lg:grid-cols-2 gap-16 items-start">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-start">
         <div class="space-y-6">
           <span class="text-xs font-bold uppercase tracking-[0.2em] text-primary">Get In Touch</span>
-          <h2 class="text-4xl font-bold text-neutral-black font-display leading-tight">
+          <h2 class="text-3xl sm:text-4xl font-bold text-neutral-black font-display leading-tight break-words">
             Become an SFU MSA Sponsor or Partner
           </h2>
-          <p class="text-neutral-black/60 leading-relaxed font-light text-base">
+          <p class="text-neutral-black/60 leading-relaxed font-light text-sm sm:text-base">
             Complete our partnership application below. Our Partnerships & Sponsorship Team will review your organization details and reach out within 2 business days.
           </p>
 
@@ -244,7 +244,7 @@ const formatCurrency = (cents: number) => {
         </div>
 
         <!-- Form Card -->
-        <PublicCard variant="premium" class="bg-white p-8 sm:p-10 border border-neutral-ivory shadow-premium rounded-3xl">
+        <PublicCard variant="premium" class="bg-white p-5 sm:p-8 md:p-10 border border-neutral-ivory shadow-premium rounded-3xl w-full">
           <form @submit.prevent="handleSubmit" class="space-y-6">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div class="space-y-2">

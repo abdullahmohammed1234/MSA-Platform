@@ -198,4 +198,22 @@ class LoginTest extends TestCase
 
         $response->assertStatus(200)->assertJsonStructure(['token', 'user']);
     }
+
+    public function test_regular_user_does_not_evaluate_as_super_admin_when_super_admin_role_exists(): void
+    {
+        Role::create(['name' => 'Super Admin', 'slug' => 'super-admin']);
+        Role::create(['name' => 'Member', 'slug' => 'member']);
+
+        $regularUser = User::create([
+            'name' => 'Regular User',
+            'email' => 'regular@sfu.ca',
+            'password' => Hash::make('password123'),
+            'is_active' => true,
+        ]);
+        $regularUser->roles()->sync(Role::where('slug', 'member')->pluck('id'));
+
+        $this->assertFalse($regularUser->hasRole('super-admin'));
+        $this->assertFalse($regularUser->hasRole('Super Admin'));
+        $this->assertFalse($regularUser->hasAnyRole(['super-admin', 'admin']));
+    }
 }

@@ -19,12 +19,16 @@ trait HasRolesAndPermissions
 
     public function hasRole(string $role): bool
     {
-        return $this->roles()->where('slug', $role)->orWhere('name', $role)->exists();
+        return $this->roles()->where(function ($query) use ($role) {
+            $query->where('slug', $role)->orWhere('name', $role);
+        })->exists();
     }
 
     public function hasAnyRole(array $roles): bool
     {
-        return $this->roles()->whereIn('slug', $roles)->orWhereIn('name', $roles)->exists();
+        return $this->roles()->where(function ($query) use ($roles) {
+            $query->whereIn('slug', $roles)->orWhereIn('name', $roles);
+        })->exists();
     }
 
     public function hasPermissionTo(string $permission): bool
