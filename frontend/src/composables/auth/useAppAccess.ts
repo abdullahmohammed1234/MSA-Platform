@@ -66,6 +66,19 @@ export function useAppAccess() {
     return isSuperOrAdmin.value;
   });
 
+  const hasMlibmsAccess = computed(() => {
+    if (authStore.user?.application_access?.mlibms) {
+      return authStore.user.application_access.mlibms.access;
+    }
+    return (
+      isSuperOrAdmin.value ||
+      authStore.roles.includes('mlibms-administrator') ||
+      authStore.roles.includes('mlibms-cataloger') ||
+      authStore.roles.includes('mlibms-viewer') ||
+      authStore.permissions.includes('library.view')
+    );
+  });
+
   return {
     hasCmsAccess,
     hasDamsAccess,
@@ -74,6 +87,7 @@ export function useAppAccess() {
     hasDonationsAccess,
     hasSponsorshipAccess,
     hasAdminAccess,
+    hasMlibmsAccess,
     isSuperOrAdmin,
   };
 }

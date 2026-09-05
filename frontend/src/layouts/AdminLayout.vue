@@ -8,7 +8,7 @@ import NotificationBell from '@/components/notifications/NotificationBell.vue';
 import { useAppAccess } from '@/composables/auth/useAppAccess';
 
 const authStore = useAuthStore();
-const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasStoreAccess, hasDonationsAccess, hasSponsorshipAccess } = useAppAccess();
+const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasStoreAccess, hasDonationsAccess, hasSponsorshipAccess, hasMlibmsAccess } = useAppAccess();
 const isSidebarCollapsed = ref(false);
 const isMobileOpen = ref(false);
 
@@ -63,6 +63,9 @@ const adminItems = computed(() => {
   if (hasSponsorshipAccess.value) {
     appChildren.push({ label: 'Open SPMS Admin', path: '/sponsorship/admin', icon: 'briefcase' });
   }
+  if (hasMlibmsAccess.value) {
+    appChildren.push({ label: 'Open MLibMS Admin', path: '/library/admin', icon: 'book' });
+  }
   if (appChildren.length > 0) {
     items.push({
       label: 'Applications',
@@ -73,8 +76,12 @@ const adminItems = computed(() => {
 
   const systemChildren: Array<{ label: string; path: string; icon: string }> = [];
 
-  if (authStore.permissions.includes('system.view') || isSuper) {
-    systemChildren.push({ label: 'Systems Overview', path: '/admin/systems', icon: 'dashboard' });
+  if (authStore.permissions.includes('platform.view') || authStore.permissions.includes('system.view') || isSuper) {
+    systemChildren.push({ label: 'Platform Operations Overview', path: '/admin', icon: 'dashboard' });
+    systemChildren.push({ label: 'Operational Alerts', path: '/admin/operations/alerts', icon: 'shield' });
+    systemChildren.push({ label: 'Unified Audit Search', path: '/admin/operations/audit', icon: 'key' });
+    systemChildren.push({ label: 'Health History & Probes', path: '/admin/operations/health', icon: 'server' });
+    systemChildren.push({ label: 'Systems Control Plane', path: '/admin/systems', icon: 'layers' });
     systemChildren.push({ label: 'Main Website', path: '/admin/systems/main-website', icon: 'home' });
     systemChildren.push({ label: 'Content Management System', path: '/admin/systems/cms', icon: 'file' });
     systemChildren.push({ label: 'Dawah Academy', path: '/admin/systems/dawah-academy', icon: 'book' });
@@ -83,6 +90,7 @@ const adminItems = computed(() => {
     systemChildren.push({ label: 'Store Management System', path: '/admin/systems/store', icon: 'server' });
     systemChildren.push({ label: 'Donations Management System', path: '/admin/systems/donations', icon: 'heart' });
     systemChildren.push({ label: 'Sponsorship System (SPMS)', path: '/admin/systems/sponsorship', icon: 'briefcase' });
+    systemChildren.push({ label: 'Library Management System (MLibMS)', path: '/admin/systems/library', icon: 'book' });
   }
 
   if (authStore.permissions.includes('view_queue_status') || isSuper) {

@@ -58,16 +58,32 @@ class DefaultTicketIssuer implements TicketIssuer
 
             $quantity = max(1, (int) $registration->quantity);
             $tickets = collect();
+            $attendees = $registration->metadata['attendees'] ?? [];
 
             for ($i = 0; $i < $quantity; $i++) {
+                $holderName = $registration->attendee_name;
+                $holderEmail = $registration->attendee_email;
+
+                if (isset($attendees[$i]) && is_array($attendees[$i])) {
+                    if (! empty($attendees[$i]['name'])) {
+                        $holderName = trim((string) $attendees[$i]['name']);
+                    } elseif (! empty($attendees[$i]['first_name']) || ! empty($attendees[$i]['last_name'])) {
+                        $holderName = trim(($attendees[$i]['first_name'] ?? '') . ' ' . ($attendees[$i]['last_name'] ?? ''));
+                    }
+
+                    if (! empty($attendees[$i]['email'])) {
+                        $holderEmail = strtolower(trim((string) $attendees[$i]['email']));
+                    }
+                }
+
                 $ticket = new Ticket();
                 $ticket->code = $this->codes->generate();
                 $ticket->event_id = $registration->event_id;
                 $ticket->registration_id = $registration->id;
                 $ticket->ticket_type_id = $registration->ticket_type_id;
                 $ticket->status = TicketStatus::Issued;
-                $ticket->holder_name = $registration->attendee_name;
-                $ticket->holder_email = $registration->attendee_email;
+                $ticket->holder_name = $holderName;
+                $ticket->holder_email = $holderEmail;
                 $ticket->issued_at = now();
                 $ticket->save();
 

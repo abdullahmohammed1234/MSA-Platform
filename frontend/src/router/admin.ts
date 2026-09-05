@@ -115,6 +115,12 @@ const adminRoutes: Array<RouteRecordRaw> = [
         meta: { permissions: 'system.view', systemId: 'sponsorship' }
       },
       {
+        path: 'systems/library',
+        name: 'admin-systems-library',
+        component: () => import('@/pages/admin/systems/MlibmsSystemOverviewPage.vue'),
+        meta: { permissions: 'system.view', systemId: 'mlibms' }
+      },
+      {
         path: 'systems/donations/console',
         name: 'admin-systems-donations-console',
         component: () => import('@/pages/admin/system/DonationsSystemPage.vue'),
@@ -206,6 +212,24 @@ const adminRoutes: Array<RouteRecordRaw> = [
         name: 'admin-notifications',
         component: () => import('@/pages/admin/Notifications.vue'),
         meta: { permissions: 'manage_notifications' }
+      },
+      {
+        path: 'operations/audit',
+        name: 'admin-operations-audit',
+        component: () => import('@/pages/admin/operations/PlatformAuditPage.vue'),
+        meta: { permissions: 'platform.audit' }
+      },
+      {
+        path: 'operations/alerts',
+        name: 'admin-operations-alerts',
+        component: () => import('@/pages/admin/operations/PlatformAlertsPage.vue'),
+        meta: { permissions: 'platform.alerts' }
+      },
+      {
+        path: 'operations/health',
+        name: 'admin-operations-health',
+        component: () => import('@/pages/admin/operations/PlatformHealthHistoryPage.vue'),
+        meta: { permissions: 'platform.health' }
       },
       {
         path: 'system/queues',

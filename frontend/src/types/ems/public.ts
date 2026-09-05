@@ -151,6 +151,13 @@ export interface PublicEventFilters {
   page?: number;
 }
 
+export interface AttendeePayloadItem {
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+}
+
 export interface RegisterForEventPayload {
   first_name: string;
   last_name: string;
@@ -162,6 +169,7 @@ export interface RegisterForEventPayload {
   ticket_type_id?: string | null;
   promo_code?: string | null;
   order_uuid?: string | null;
+  attendees?: AttendeePayloadItem[];
 }
 
 export interface CalendarFilters {

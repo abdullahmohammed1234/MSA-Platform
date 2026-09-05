@@ -58,6 +58,13 @@ class TemplateRenderer
             ? $registration->tickets
             : ($registration?->tickets()->get() ?? collect());
 
+        if (isset($extra['ticket_id'])) {
+            $specificTicket = $tickets->firstWhere('id', $extra['ticket_id']);
+            if ($specificTicket !== null) {
+                $tickets = collect([$specificTicket]);
+            }
+        }
+
         $ticketCodes = $tickets->pluck('code')->filter()->values()->all();
         $firstTicket = $tickets->first();
         $qrUrl = $firstTicket instanceof Ticket
@@ -70,8 +77,8 @@ class TemplateRenderer
         $start = $event?->start_at?->timezone($event->timezone ?? config('ems.defaults.timezone'));
 
         return [
-            'attendee_name' => (string) ($registration?->attendee_name ?? $extra['attendee_name'] ?? ''),
-            'attendee_email' => (string) ($registration?->attendee_email ?? $extra['attendee_email'] ?? ''),
+            'attendee_name' => (string) ($extra['attendee_name'] ?? $registration?->attendee_name ?? ''),
+            'attendee_email' => (string) ($extra['attendee_email'] ?? $registration?->attendee_email ?? ''),
             'event_name' => (string) ($event?->name ?? $extra['event_name'] ?? ''),
             'event_date' => $start?->format('l, F j, Y') ?? '',
             'event_time' => $start?->format('g:i A T') ?? '',

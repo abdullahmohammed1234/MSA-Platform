@@ -19,6 +19,11 @@ class SystemPermissionSeeder extends Seeder
             ['name' => 'View Queue Status', 'slug' => 'view_queue_status', 'module' => 'System', 'description' => 'Monitor queue partition active and pending jobs.'],
             ['name' => 'Retry Failed Jobs', 'slug' => 'retry_failed_jobs', 'module' => 'System', 'description' => 'Re-run background jobs that failed.'],
             ['name' => 'Manage Scheduler', 'slug' => 'manage_scheduler', 'module' => 'System', 'description' => 'List and run scheduled cron tasks.'],
+            ['name' => 'View Platform Operations', 'slug' => 'platform.view', 'module' => 'Platform', 'description' => 'Access Platform Operations dashboard and metrics.'],
+            ['name' => 'View System Health', 'slug' => 'platform.health', 'module' => 'Platform', 'description' => 'View system availability and health histories.'],
+            ['name' => 'View Platform Audit', 'slug' => 'platform.audit', 'module' => 'Platform', 'description' => 'Search and filter platform audit logs.'],
+            ['name' => 'Manage Platform Alerts', 'slug' => 'platform.alerts', 'module' => 'Platform', 'description' => 'View, acknowledge, and resolve system alerts.'],
+            ['name' => 'Execute Platform Operations', 'slug' => 'platform.operations', 'module' => 'Platform', 'description' => 'Execute administrative maintenance actions.'],
         ];
 
         foreach ($permissionsData as $permData) {

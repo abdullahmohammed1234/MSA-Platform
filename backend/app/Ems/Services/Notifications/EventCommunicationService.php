@@ -36,6 +36,29 @@ class EventCommunicationService
             }
         }
 
+        foreach ($registration->tickets as $index => $ticket) {
+            $holderEmail = strtolower(trim((string) ($ticket->holder_email ?? '')));
+            $primaryEmail = strtolower(trim((string) ($registration->attendee_email ?? '')));
+
+            if ($index === 0 && ($holderEmail === '' || $holderEmail === $primaryEmail)) {
+                continue;
+            }
+
+            if ($holderEmail !== '' && $holderEmail !== $primaryEmail) {
+                $this->dispatcher->notifyRegistration(
+                    $registration,
+                    NotificationType::RegistrationConfirmed->value,
+                    [
+                        'recipient_email' => $ticket->holder_email,
+                        'attendee_name' => $ticket->holder_name ?? $registration->attendee_name,
+                        'attendee_email' => $ticket->holder_email,
+                        'ticket_id' => $ticket->id,
+                        'idempotency_suffix' => 'ticket:' . $ticket->id,
+                    ]
+                );
+            }
+        }
+
         Log::channel((string) config('ems.logging.channel', 'ems'))
             ->info('ems.notifications.registration_bundle_dispatched', [
                 'registration_uuid' => $registration->uuid,

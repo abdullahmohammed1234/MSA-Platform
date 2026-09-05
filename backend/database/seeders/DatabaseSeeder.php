@@ -84,6 +84,16 @@ class DatabaseSeeder extends Seeder
                 'description' => 'Read-only access to SPMS dashboard, partner rosters, and sponsorship fulfillment progress.',
             ],
             [
+                'name' => 'Library Administrator',
+                'slug' => 'library-admin',
+                'description' => 'Full control over Library Management System (MLibMS), cataloging, physical copy inventory, member loans, and overrides.',
+            ],
+            [
+                'name' => 'Library Staff',
+                'slug' => 'library-staff',
+                'description' => 'Manages library cataloging, copy barcode management, and circulation member overrides.',
+            ],
+            [
                 'name' => 'Member',
                 'slug' => 'member',
                 'description' => 'MSA community member with access to member-only resources.',
@@ -174,6 +184,17 @@ class DatabaseSeeder extends Seeder
             ['name' => 'Export Sponsorship Reports', 'slug' => 'sponsorship.export', 'module' => 'Sponsorship', 'description' => 'Export SPMS financial reports, renewals, and partner logs in CSV format.'],
             ['name' => 'SPMS Administrator', 'slug' => 'sponsorship.admin', 'module' => 'Sponsorship', 'description' => 'Full administrative control over Sponsorship & Partnerships Management System.'],
 
+            // Library Module (MLibMS)
+            ['name' => 'View Library Admin', 'slug' => 'library.view', 'module' => 'Library', 'description' => 'Access MLibMS admin control plane and dashboard.'],
+            ['name' => 'Catalog Books', 'slug' => 'library.catalog', 'module' => 'Library', 'description' => 'Create and edit bibliographic book catalog entries.'],
+            ['name' => 'Manage Inventory Copies', 'slug' => 'library.copies', 'module' => 'Library', 'description' => 'Add and update physical book copy barcodes and condition.'],
+            ['name' => 'Manage Members', 'slug' => 'library.members', 'module' => 'Library', 'description' => 'Manage library member roster, status, and search.'],
+            ['name' => 'Manage Loans', 'slug' => 'library.loans', 'module' => 'Library', 'description' => 'Perform staff loans, returns, renewals, and overdue overrides.'],
+            ['name' => 'Manage Reservations', 'slug' => 'library.reservations', 'module' => 'Library', 'description' => 'Manage hold queues and reservation fulfillments.'],
+            ['name' => 'Library Reports', 'slug' => 'library.reports', 'module' => 'Library', 'description' => 'Access library circulation and inventory reports.'],
+            ['name' => 'Library Settings', 'slug' => 'library.settings', 'module' => 'Library', 'description' => 'Configure library rules, loan limits, and due dates.'],
+            ['name' => 'MLibMS Administrator', 'slug' => 'library.admin', 'module' => 'Library', 'description' => 'Full administrative control over MSA Library Management System.'],
+
             // Analytics Module
             ['name' => 'View Analytics', 'slug' => 'view_analytics', 'module' => 'Analytics', 'description' => 'Access dashboard analytics data.'],
             ['name' => 'View Reports', 'slug' => 'view_reports', 'module' => 'Analytics', 'description' => 'Generate and download reports.'],
@@ -231,6 +252,7 @@ class DatabaseSeeder extends Seeder
             'donations.view', 'donations.manage', 'donations.refund', 'donations.reports', 'donations.export', 'donations.reconcile',
             'sponsorship.view', 'sponsorship.create', 'sponsorship.edit', 'sponsorship.manage', 'sponsorship.agreements',
             'sponsorship.payments', 'sponsorship.fulfillment', 'sponsorship.export', 'sponsorship.admin',
+            'library.view', 'library.catalog', 'library.copies', 'library.members', 'library.loans', 'library.reservations', 'library.reports', 'library.settings', 'library.admin',
             'view_analytics', 'view_reports', 'manage_analytics', 'export_analytics',
             'manage_queues', 'view_queue_status', 'retry_failed_jobs', 'manage_scheduler',
             'view_security', 'manage_security'
@@ -285,6 +307,20 @@ class DatabaseSeeder extends Seeder
         if (isset($roles['spms-viewer'])) {
             $roles['spms-viewer']->permissions()->sync(
                 Permission::whereIn('slug', ['sponsorship.view'])->pluck('id')->toArray()
+            );
+        }
+
+        // Library Administrator Role mapping
+        if (isset($roles['library-admin'])) {
+            $roles['library-admin']->permissions()->sync(
+                Permission::whereIn('slug', ['library.view', 'library.catalog', 'library.copies', 'library.members', 'library.loans', 'library.reservations', 'library.reports', 'library.settings', 'library.admin', 'view_analytics'])->pluck('id')->toArray()
+            );
+        }
+
+        // Library Staff Role mapping
+        if (isset($roles['library-staff'])) {
+            $roles['library-staff']->permissions()->sync(
+                Permission::whereIn('slug', ['library.view', 'library.catalog', 'library.copies', 'library.members', 'library.loans', 'library.reservations'])->pluck('id')->toArray()
             );
         }
 
@@ -379,7 +415,7 @@ class DatabaseSeeder extends Seeder
         $volunteerUser->roles()->sync([$roles['volunteer']->id]);
 
         // Seed Application Access for platform administrators
-        $allApps = ['admin-portal', 'dawah-academy', 'cms', 'dams', 'ems', 'store', 'donations', 'sponsorship'];
+        $allApps = ['admin-portal', 'dawah-academy', 'cms', 'dams', 'ems', 'store', 'donations', 'sponsorship', 'mlibms'];
         foreach ($allApps as $app) {
             \Illuminate\Support\Facades\DB::table('application_access')->insertOrIgnore([
                 'user_id' => $superAdminUser->id,

@@ -96,7 +96,7 @@ class QueuedEventNotificationDispatcher implements EventNotificationDispatcher
         $notification->payment_id = $payload['payment_id'] ?? $registration->settledPayment?->id;
         $notification->ticket_id = $payload['ticket_id'] ?? $registration->tickets->first()?->id;
         $notification->user_id = $registration->user_id;
-        $notification->recipient_email = $registration->attendee_email;
+        $notification->recipient_email = $payload['recipient_email'] ?? $registration->attendee_email;
         $notification->channel = NotificationChannel::Mail;
         $notification->type = $notificationType->value;
         $notification->template_key = $rendered['template_key'];
@@ -192,7 +192,7 @@ class QueuedEventNotificationDispatcher implements EventNotificationDispatcher
         $notification->payment_id = $payload['payment_id'] ?? $registration->settledPayment?->id;
         $notification->ticket_id = $payload['ticket_id'] ?? $registration->tickets->first()?->id;
         $notification->user_id = $registration->user_id;
-        $notification->recipient_email = $registration->attendee_email;
+        $notification->recipient_email = $payload['recipient_email'] ?? $registration->attendee_email;
         $notification->channel = NotificationChannel::Mail;
         $notification->type = $notificationType->value;
         $notification->template_key = $rendered['template_key'];

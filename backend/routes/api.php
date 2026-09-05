@@ -15,6 +15,11 @@ use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\UserController;
 use App\Http\Controllers\Api\V1\WebsiteController;
 use App\Http\Controllers\Api\V1\AnalyticsController;
+use App\Http\Controllers\Api\V1\Admin\PlatformHealthController;
+use App\Http\Controllers\Api\V1\Admin\PlatformAuditController;
+use App\Http\Controllers\Api\V1\Admin\PlatformAlertController;
+use App\Http\Controllers\Api\V1\Admin\PlatformIntelligenceController;
+use App\Http\Controllers\Api\V1\Admin\PlatformOperationsController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -277,6 +282,44 @@ Route::prefix('v1')->group(function () {
             Route::get('/security/dashboard', [\App\Http\Controllers\Api\V1\Admin\SecurityDashboardController::class, 'dashboard'])
                 ->middleware('permission:view_security')
                 ->name('api.admin.security.dashboard');
+
+            // Platform Operations & Intelligence (Phase 21)
+            Route::prefix('platform')->group(function () {
+                Route::get('/health/history', [PlatformHealthController::class, 'index'])
+                    ->middleware('permission:platform.health')
+                    ->name('api.admin.platform.health.history');
+                Route::post('/health/snapshot', [PlatformHealthController::class, 'snapshot'])
+                    ->middleware('permission:platform.health')
+                    ->name('api.admin.platform.health.snapshot');
+
+                Route::get('/audit', [PlatformAuditController::class, 'index'])
+                    ->middleware('permission:platform.audit')
+                    ->name('api.admin.platform.audit');
+
+                Route::get('/alerts', [PlatformAlertController::class, 'index'])
+                    ->middleware('permission:platform.alerts')
+                    ->name('api.admin.platform.alerts.index');
+                Route::post('/alerts/{id}/acknowledge', [PlatformAlertController::class, 'acknowledge'])
+                    ->middleware('permission:platform.alerts')
+                    ->name('api.admin.platform.alerts.acknowledge');
+                Route::post('/alerts/{id}/resolve', [PlatformAlertController::class, 'resolve'])
+                    ->middleware('permission:platform.alerts')
+                    ->name('api.admin.platform.alerts.resolve');
+
+                Route::get('/intelligence/metrics', [PlatformIntelligenceController::class, 'metrics'])
+                    ->middleware('permission:platform.view')
+                    ->name('api.admin.platform.intelligence.metrics');
+
+                Route::post('/operations/retry-job', [PlatformOperationsController::class, 'retryJob'])
+                    ->middleware('permission:platform.operations')
+                    ->name('api.admin.platform.operations.retry-job');
+                Route::post('/operations/flush-failed', [PlatformOperationsController::class, 'flushFailed'])
+                    ->middleware('permission:platform.operations')
+                    ->name('api.admin.platform.operations.flush-failed');
+                Route::post('/operations/run-task', [PlatformOperationsController::class, 'runTask'])
+                    ->middleware('permission:platform.operations')
+                    ->name('api.admin.platform.operations.run-task');
+            });
         });
 
         Route::middleware('app.access:cms')->group(function () {
@@ -383,6 +426,14 @@ Route::prefix('v1')->group(function () {
                 Route::get('/health', [\App\Http\Controllers\Api\V1\Admin\SponsorshipSystemController::class, 'health']);
                 Route::get('/metrics', [\App\Http\Controllers\Api\V1\Admin\SponsorshipSystemController::class, 'metrics']);
             });
+
+            // MSA Library Management System (Systems registry)
+            Route::prefix('systems/library')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Api\V1\Admin\MlibmsSystemController::class, 'index']);
+                Route::get('/health', [\App\Http\Controllers\Api\V1\Admin\MlibmsSystemController::class, 'health']);
+                Route::get('/metrics', [\App\Http\Controllers\Api\V1\Admin\MlibmsSystemController::class, 'metrics']);
+            });
+
 
             // Dawah Academy System Integration (learner application registry)
             Route::prefix('systems/dawah-academy')->group(function () {
@@ -795,4 +846,54 @@ Route::prefix('v1')->group(function () {
         Route::post('/sponsorships/{sponsorshipUuid}/deliverables', [\App\Spms\Http\Controllers\Admin\SpmsFulfillmentController::class, 'storeDeliverable']);
         Route::post('/deliverables/{deliverableUuid}/fulfillments', [\App\Spms\Http\Controllers\Admin\SpmsFulfillmentController::class, 'completeFulfillment']);
     });
+
+    // --- MLibMS Public & Self-Service Portal routes ----
+    Route::prefix('library')->group(function () {
+        Route::get('/books', [\App\Mlibms\Http\Controllers\V1\Public\PublicCatalogController::class, 'index'])->name('api.library.books.index');
+        Route::get('/books/{uuid}', [\App\Mlibms\Http\Controllers\V1\Public\PublicCatalogController::class, 'show'])->name('api.library.books.show');
+        Route::get('/categories', [\App\Mlibms\Http\Controllers\V1\Public\PublicCatalogController::class, 'categories'])->name('api.library.categories');
+
+        // Authenticated Member Self-Service Circulation & Portal
+        Route::middleware('auth:sanctum')->group(function () {
+            Route::post('/scan/checkout', [\App\Mlibms\Http\Controllers\V1\Public\SelfServiceCirculationController::class, 'checkout'])->name('api.library.scan.checkout');
+            Route::post('/scan/return', [\App\Mlibms\Http\Controllers\V1\Public\SelfServiceCirculationController::class, 'returnItem'])->name('api.library.scan.return');
+            Route::get('/my-loans', [\App\Mlibms\Http\Controllers\V1\Public\MemberPortalController::class, 'me'])->name('api.library.my-loans');
+            Route::post('/loans/{uuid}/renew', [\App\Mlibms\Http\Controllers\V1\Public\MemberPortalController::class, 'renew'])->name('api.library.loans.renew');
+            Route::post('/books/{uuid}/hold', [\App\Mlibms\Http\Controllers\V1\Public\MemberPortalController::class, 'placeHold'])->name('api.library.books.hold');
+            Route::delete('/holds/{uuid}', [\App\Mlibms\Http\Controllers\V1\Public\MemberPortalController::class, 'cancelHold'])->name('api.library.holds.cancel');
+        });
+    });
+
+    // --- Standalone MLibMS Staff Admin routes ----
+    Route::prefix('admin/library')->middleware(['auth:sanctum', 'app.access:mlibms'])->group(function () {
+
+        Route::get('/intake/lookup', [\App\Mlibms\Http\Controllers\V1\Admin\AdminIntakeController::class, 'lookup'])->name('api.admin.library.intake.lookup');
+        Route::post('/intake/store', [\App\Mlibms\Http\Controllers\V1\Admin\AdminIntakeController::class, 'store'])->name('api.admin.library.intake.store');
+
+        Route::get('/books', [\App\Mlibms\Http\Controllers\V1\Admin\AdminBookController::class, 'index'])->name('api.admin.library.books.index');
+        Route::get('/books/{uuid}', [\App\Mlibms\Http\Controllers\V1\Admin\AdminBookController::class, 'show'])->name('api.admin.library.books.show');
+        Route::put('/books/{uuid}', [\App\Mlibms\Http\Controllers\V1\Admin\AdminBookController::class, 'update'])->name('api.admin.library.books.update');
+        Route::delete('/books/{uuid}', [\App\Mlibms\Http\Controllers\V1\Admin\AdminBookController::class, 'destroy'])->name('api.admin.library.books.destroy');
+
+        Route::get('/copies', [\App\Mlibms\Http\Controllers\V1\Admin\AdminCopyController::class, 'index'])->name('api.admin.library.copies.index');
+        Route::post('/copies', [\App\Mlibms\Http\Controllers\V1\Admin\AdminCopyController::class, 'store'])->name('api.admin.library.copies.store');
+        Route::put('/copies/{uuid}', [\App\Mlibms\Http\Controllers\V1\Admin\AdminCopyController::class, 'update'])->name('api.admin.library.copies.update');
+
+        Route::get('/members', [\App\Mlibms\Http\Controllers\V1\Admin\AdminMemberController::class, 'index'])->name('api.admin.library.members.index');
+        Route::post('/members/guest', [\App\Mlibms\Http\Controllers\V1\Admin\AdminMemberController::class, 'storeGuest'])->name('api.admin.library.members.guest');
+        Route::put('/members/{uuid}', [\App\Mlibms\Http\Controllers\V1\Admin\AdminMemberController::class, 'update'])->name('api.admin.library.members.update');
+
+        Route::get('/loans', [\App\Mlibms\Http\Controllers\V1\Admin\AdminLoanController::class, 'index'])->name('api.admin.library.loans.index');
+        Route::post('/loans/override-return', [\App\Mlibms\Http\Controllers\V1\Admin\AdminLoanController::class, 'overrideReturn'])->name('api.admin.library.loans.override-return');
+
+        Route::get('/reservations', [\App\Mlibms\Http\Controllers\V1\Admin\AdminReservationController::class, 'index'])->name('api.admin.library.reservations.index');
+        Route::post('/reservations/{uuid}/cancel', [\App\Mlibms\Http\Controllers\V1\Admin\AdminReservationController::class, 'cancel'])->name('api.admin.library.reservations.cancel');
+
+        Route::get('/reports/stats', [\App\Mlibms\Http\Controllers\V1\Admin\AdminReportController::class, 'stats'])->name('api.admin.library.reports.stats');
+        Route::get('/reports/export-loans', [\App\Mlibms\Http\Controllers\V1\Admin\AdminReportController::class, 'exportLoans'])->name('api.admin.library.reports.export-loans');
+
+        Route::get('/settings', [\App\Mlibms\Http\Controllers\V1\Admin\AdminSettingController::class, 'index'])->name('api.admin.library.settings.index');
+        Route::put('/settings', [\App\Mlibms\Http\Controllers\V1\Admin\AdminSettingController::class, 'update'])->name('api.admin.library.settings.update');
+    });
+
 });

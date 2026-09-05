@@ -31,6 +31,7 @@ const navLinks: NavLink[] = [
   { name: 'Prayer', href: '/prayer' },
   { name: 'Team', href: '/team' },
   { name: 'Media', href: '/media' },
+  { name: 'Library', href: '/library' },
   { name: 'Store', href: '/store' },
   { name: 'Donate', href: '/donate' },
   { name: 'Sponsorship', href: '/sponsorship' },
@@ -40,7 +41,7 @@ const navLinks: NavLink[] = [
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
-const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasStoreAccess, hasDonationsAccess, hasSponsorshipAccess, hasAdminAccess } = useAppAccess();
+const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasStoreAccess, hasDonationsAccess, hasSponsorshipAccess, hasAdminAccess, hasMlibmsAccess } = useAppAccess();
 
 function isNavActive(href: string): boolean {
   if (href === '/') return route.path === '/';
@@ -54,6 +55,15 @@ const isAuthenticated = computed(() => authStore.isAuthenticated);
 const canAccessAcademy = computed(() => authStore.canAccessAcademy);
 const showPublicAuth = computed(() => isPublicAuthEnabled);
 const isLoading = ref(false);
+
+const filteredNavLinks = computed(() => {
+  return navLinks.filter(link => {
+    if (link.href === '/library' && !isAuthenticated.value) {
+      return false;
+    }
+    return true;
+  });
+});
 
 const handleScroll = () => {
   scrolled.value = window.scrollY > 20;
@@ -128,7 +138,7 @@ const handleLogout = async () => {
         <!-- Desktop Nav -->
         <nav class="hidden xl:flex items-center gap-8 shrink-0">
         <div class="flex items-center gap-6">
-          <template v-for="link in navLinks" :key="link.name">
+          <template v-for="link in filteredNavLinks" :key="link.name">
             <a
               v-if="link.external"
               :href="link.href"
@@ -292,6 +302,36 @@ const handleLogout = async () => {
                 >
                   <Briefcase class="h-4 w-4 shrink-0 text-primary" />
                   SPMS (Sponsorship)
+                </router-link>
+
+                <router-link
+                  to="/library/my-loans"
+                  class="flex items-center gap-2.5 px-4 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/70 hover:bg-neutral-background hover:text-primary transition-all"
+                  @click="closeUserMenu"
+                >
+                  <BookOpen class="h-4 w-4 shrink-0 text-primary" />
+                  My Library Loans & Holds
+                </router-link>
+
+                <router-link
+                  to="/library/scan"
+                  class="flex items-center gap-2.5 px-4 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/70 hover:bg-neutral-background hover:text-primary transition-all"
+                  @click="closeUserMenu"
+                >
+                  <svg class="h-4 w-4 shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                  </svg>
+                  Self-Service Scanner
+                </router-link>
+
+                <router-link
+                  v-if="hasMlibmsAccess"
+                  to="/library/admin"
+                  class="flex items-center gap-2.5 px-4 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/70 hover:bg-neutral-background hover:text-primary transition-all"
+                  @click="closeUserMenu"
+                >
+                  <BookOpen class="h-4 w-4 shrink-0 text-primary" />
+                  MLibMS Admin
                 </router-link>
 
                 <router-link
@@ -491,7 +531,7 @@ const handleLogout = async () => {
 
               <nav class="flex flex-col gap-2">
                 <div
-                  v-for="(link, i) in navLinks"
+                  v-for="(link, i) in filteredNavLinks"
                   :key="link.name"
                 >
                   <a

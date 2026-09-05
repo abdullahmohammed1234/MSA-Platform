@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use App\Platform\Models\PlatformHealthHistory;
+use App\Platform\Enums\SystemHealthStatus;
 use Throwable;
 
 /**
@@ -38,6 +40,7 @@ class SystemsControlPlaneService
         'cms-resources' => 'CMS Resources',
         'ems-event-apis' => 'EMS Event APIs',
         'academy-shared-schema' => 'Academy Shared Schema',
+        'square-payments' => 'Square Payment Integration',
     ];
 
     public function overview(bool $refresh = false): array
@@ -128,8 +131,42 @@ class SystemsControlPlaneService
         ];
     }
 
+    public function recordSnapshot(): PlatformHealthHistory
+    {
+        $overview = $this->overview(true);
+        $summary = $overview['summary'] ?? [];
+
+        $appStatuses = $summary['applications_by_status'] ?? [];
+        $overallStatus = SystemHealthStatus::OPERATIONAL;
+        if (($appStatuses[self::STATUS_UNAVAILABLE] ?? 0) > 0) {
+            $overallStatus = SystemHealthStatus::UNAVAILABLE;
+        } elseif (($appStatuses[self::STATUS_DEGRADED] ?? 0) > 0) {
+            $overallStatus = SystemHealthStatus::DEGRADED;
+        }
+
+        return PlatformHealthHistory::create([
+            'system_status' => $overallStatus,
+            'operational_count' => $appStatuses[self::STATUS_OPERATIONAL] ?? 0,
+            'degraded_count' => $appStatuses[self::STATUS_DEGRADED] ?? 0,
+            'unavailable_count' => $appStatuses[self::STATUS_UNAVAILABLE] ?? 0,
+            'details' => [
+                'applications' => array_map(fn ($app) => [
+                    'id' => $app['id'],
+                    'status' => $app['status'],
+                    'status_reason' => $app['status_reason'] ?? null,
+                ], $overview['applications'] ?? []),
+                'platform_services' => array_map(fn ($svc) => [
+                    'id' => $svc['id'],
+                    'status' => $svc['status'],
+                    'status_reason' => $svc['status_reason'] ?? null,
+                ], $overview['platform_services'] ?? []),
+            ],
+            'recorded_at' => now(),
+        ]);
+    }
+
     /**
-     * @return array{database: array, storage: array, email: array, queues: array, auth: array}
+     * @return array{database: array, storage: array, email: array, queues: array, auth: array, square: array}
      */
     private function probeInfrastructure(): array
     {
@@ -139,7 +176,58 @@ class SystemsControlPlaneService
             'email' => $this->checkEmail(),
             'queues' => $this->checkQueues(),
             'auth' => $this->checkAuth(),
+            'square' => $this->checkSquare(),
         ];
+    }
+
+    private function checkSquare(): array
+    {
+        try {
+            $env = config('ems.payments.square.environment', config('services.square.environment', env('SQUARE_ENVIRONMENT', 'sandbox')));
+            $accessToken = config('ems.payments.square.access_token', config('services.square.access_token', env('SQUARE_ACCESS_TOKEN')));
+            $locationId = config('ems.payments.square.location_id', config('services.square.location_id', env('SQUARE_LOCATION_ID')));
+
+            $configured = ! empty($accessToken) && ! empty($locationId);
+
+            if (! $configured) {
+                if (app()->environment('production')) {
+                    return [
+                        'status' => self::STATUS_DEGRADED,
+                        'message' => 'Square payment credentials not configured in production',
+                        'metrics' => [
+                            'environment' => $env,
+                            'configured' => false,
+                        ],
+                    ];
+                }
+
+                return [
+                    'status' => self::STATUS_OPERATIONAL,
+                    'message' => "Square payment integration in local sandbox mode ({$env})",
+                    'metrics' => [
+                        'environment' => $env,
+                        'configured' => false,
+                    ],
+                ];
+            }
+
+            return [
+                'status' => self::STATUS_OPERATIONAL,
+                'message' => "Square payment integration configured ({$env})",
+                'metrics' => [
+                    'environment' => $env,
+                    'configured' => true,
+                ],
+            ];
+        } catch (Throwable) {
+            return [
+                'status' => self::STATUS_UNAVAILABLE,
+                'message' => 'Square integration probe failed',
+                'metrics' => [
+                    'configured' => false,
+                ],
+            ];
+        }
     }
 
     private function buildApplication(string $id, array $infra, string $checkedAt): array
@@ -305,7 +393,10 @@ class SystemsControlPlaneService
                 'dams', 'dawah-academy' => $this->tableReachable('courses', Course::class, 'Academy courses store'),
                 'ems' => $this->tableReachable('ems_events', EmsEvent::class, 'EMS events store'),
                 'store' => $this->tableReachable('store_products', \App\Store\Models\StoreProduct::class, 'Store products store'),
+                'donations' => $this->tableReachable('donations', \App\Donations\Models\Donation::class, 'DMS donations store'),
+                'sponsorship' => $this->tableReachable('spms_sponsorships', \App\Spms\Models\Sponsorship::class, 'SPMS sponsorships store'),
                 'main-website' => $this->tableReachable('announcements', Announcement::class, 'CMS content consumed by Main Website'),
+                'mlibms' => $this->tableReachable('mlibms_books', \App\Mlibms\Models\Book::class, 'MLibMS books store'),
                 default => [
                     'status' => self::STATUS_UNKNOWN,
                     'message' => 'No application-specific probe configured',
@@ -351,6 +442,7 @@ class SystemsControlPlaneService
             'cms-resources' => $infra['database'],
             'ems-event-apis' => $infra['database'],
             'academy-shared-schema' => $infra['database'],
+            'square-payments' => $infra['square'],
         ];
 
         $out = [];

@@ -144,11 +144,7 @@ class CheckoutService
                 $this->createOrderItem($order, $ticketType, $quantity, $unitPrice, $currency);
             }
 
-            $metadata = array_filter([
-                'first_name' => $firstName,
-                'last_name' => $lastName,
-                'student_id' => isset($data['student_id']) ? trim((string) $data['student_id']) : null,
-            ], fn ($value) => $value !== null && $value !== '');
+            $metadata = $this->buildMetadata($data, $firstName, $lastName);
 
             $registration = new Registration();
             $registration->reference = $this->codes->registrationReference();
@@ -338,11 +334,7 @@ class CheckoutService
 
                 $this->createOrderItem($order, $ticketType, $quantity, $unitPrice, $currency);
 
-                $metadata = array_filter([
-                    'first_name' => $firstName,
-                    'last_name' => $lastName,
-                    'student_id' => isset($data['student_id']) ? trim((string) $data['student_id']) : null,
-                ], fn ($value) => $value !== null && $value !== '');
+                $metadata = $this->buildMetadata($data, $firstName, $lastName);
 
                 $registration = new Registration();
                 $registration->reference = $this->codes->registrationReference();
@@ -408,11 +400,7 @@ class CheckoutService
 
             $this->createOrderItem($order, $ticketType, $quantity, $unitPrice, $currency);
 
-            $metadata = array_filter([
-                'first_name' => $firstName,
-                'last_name' => $lastName,
-                'student_id' => isset($data['student_id']) ? trim((string) $data['student_id']) : null,
-            ], fn ($value) => $value !== null && $value !== '');
+            $metadata = $this->buildMetadata($data, $firstName, $lastName);
 
             $registration = new Registration();
             $registration->reference = $this->codes->registrationReference();
@@ -787,11 +775,7 @@ class CheckoutService
         OrderItem::query()->where('order_id', $order->id)->delete();
         $this->createOrderItem($order, $ticketType, $quantity, $quoted['unit_price'], $quoted['currency']);
 
-        $metadata = array_filter([
-            'first_name' => $firstName,
-            'last_name' => $lastName,
-            'student_id' => isset($data['student_id']) ? trim((string) $data['student_id']) : ($registration->metadata['student_id'] ?? null),
-        ], fn ($value) => $value !== null && $value !== '');
+        $metadata = $this->buildMetadata($data, $firstName, $lastName);
 
         $registration->ticket_type_id = $ticketType->id;
         $registration->attendee_name = $attendeeName;
@@ -1196,5 +1180,36 @@ class CheckoutService
                 }
             })
             ->exists();
+    }
+
+    private function buildMetadata(array $data, string $firstName, string $lastName): array
+    {
+        $metadata = array_filter([
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'student_id' => isset($data['student_id']) ? trim((string) $data['student_id']) : null,
+        ], fn ($value) => $value !== null && $value !== '');
+
+        if (! empty($data['attendees']) && is_array($data['attendees'])) {
+            $formatted = [];
+            foreach ($data['attendees'] as $att) {
+                if (is_array($att) && ! empty($att['email'])) {
+                    $fn = trim((string) ($att['first_name'] ?? ''));
+                    $ln = trim((string) ($att['last_name'] ?? ''));
+                    $formatted[] = [
+                        'first_name' => $fn,
+                        'last_name' => $ln,
+                        'name' => trim($fn . ' ' . $ln),
+                        'email' => strtolower(trim((string) $att['email'])),
+                        'phone' => ! empty($att['phone']) ? trim((string) $att['phone']) : null,
+                    ];
+                }
+            }
+            if ($formatted !== []) {
+                $metadata['attendees'] = $formatted;
+            }
+        }
+
+        return $metadata;
     }
 }

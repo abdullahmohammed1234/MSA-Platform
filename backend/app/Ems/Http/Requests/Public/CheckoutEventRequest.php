@@ -22,6 +22,11 @@ class CheckoutEventRequest extends EmsFormRequest
             'ticket_type_id' => ['required', 'uuid'],
             'promo_code' => ['nullable', 'string', 'max:50'],
             'order_uuid' => ['sometimes', 'nullable', 'uuid'],
+            'attendees' => ['nullable', 'array', 'max:50'],
+            'attendees.*.first_name' => ['required_with:attendees', 'string', 'min:1', 'max:80'],
+            'attendees.*.last_name' => ['required_with:attendees', 'string', 'min:1', 'max:80'],
+            'attendees.*.email' => ['required_with:attendees', 'email', 'max:255'],
+            'attendees.*.phone' => ['nullable', 'string', 'max:32'],
         ];
     }
 

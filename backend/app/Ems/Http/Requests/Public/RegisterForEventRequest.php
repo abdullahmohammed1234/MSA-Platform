@@ -27,6 +27,11 @@ class RegisterForEventRequest extends EmsFormRequest
             'quantity' => ['nullable', 'integer', 'min:1', 'max:10'],
             'ticket_type_id' => ['nullable', 'uuid'],
             'promo_code' => ['nullable', 'string', 'max:50'],
+            'attendees' => ['nullable', 'array', 'max:50'],
+            'attendees.*.first_name' => ['required_with:attendees', 'string', 'min:1', 'max:80'],
+            'attendees.*.last_name' => ['required_with:attendees', 'string', 'min:1', 'max:80'],
+            'attendees.*.email' => ['required_with:attendees', 'email', 'max:255'],
+            'attendees.*.phone' => ['nullable', 'string', 'max:32'],
         ];
     }
 

@@ -340,4 +340,48 @@ class EmsRegistrationEmailReliabilityTest extends EmsTestCase
         $this->assertSame(2, $notification->fresh()->retry_count);
         $this->assertSame('SMTP down on retry', $notification->fresh()->error);
     }
+
+    public function test_multi_attendee_registration_dispatches_individual_emails_to_secondary_ticket_holders(): void
+    {
+        Mail::fake();
+
+        $event = Event::factory()->publiclyDiscoverable()->create([
+            'status' => EventStatus::RegistrationOpen,
+            'start_at' => now()->addDays(5),
+            'capacity' => 10,
+        ]);
+
+        $response = $this->postJson($this->url("public/events/{$event->slug}/register"), [
+            'first_name' => 'Alice',
+            'last_name' => 'Smith',
+            'email' => 'alice@example.com',
+            'quantity' => 2,
+            'attendees' => [
+                ['first_name' => 'Alice', 'last_name' => 'Smith', 'email' => 'alice@example.com'],
+                ['first_name' => 'Bob', 'last_name' => 'Jones', 'email' => 'bob@example.com'],
+            ],
+        ]);
+
+        $response->assertStatus(201);
+        $this->assertSuccessEnvelope($response);
+
+        $registration = Registration::query()
+            ->where('event_id', $event->id)
+            ->where('attendee_email', 'alice@example.com')
+            ->firstOrFail();
+
+        $this->assertCount(2, $registration->tickets);
+        $this->assertSame('Alice Smith', $registration->tickets[0]->holder_name);
+        $this->assertSame('alice@example.com', $registration->tickets[0]->holder_email);
+        $this->assertSame('Bob Jones', $registration->tickets[1]->holder_name);
+        $this->assertSame('bob@example.com', $registration->tickets[1]->holder_email);
+
+        Mail::assertSent(EventNotificationMail::class, function ($mail) {
+            return $mail->hasTo('alice@example.com');
+        });
+
+        Mail::assertSent(EventNotificationMail::class, function ($mail) {
+            return $mail->hasTo('bob@example.com');
+        });
+    }
 }

@@ -52,6 +52,69 @@ const form = reactive({
   quantity: 1,
 });
 
+interface AttendeeInput {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone: string;
+  same_as_primary: boolean;
+}
+
+const attendees = ref<AttendeeInput[]>([]);
+
+watch(
+  () => form.quantity,
+  (newQty) => {
+    const qty = Math.max(1, newQty || 1);
+    while (attendees.value.length < qty) {
+      const isFirst = attendees.value.length === 0;
+      attendees.value.push({
+        first_name: isFirst ? form.first_name : '',
+        last_name: isFirst ? form.last_name : '',
+        email: isFirst ? form.email : '',
+        phone: isFirst ? form.phone : '',
+        same_as_primary: false,
+      });
+    }
+    if (attendees.value.length > qty) {
+      attendees.value = attendees.value.slice(0, qty);
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  [() => form.first_name, () => form.last_name, () => form.email, () => form.phone],
+  ([fn, ln, em, ph]) => {
+    if (attendees.value[0]) {
+      attendees.value[0].first_name = fn;
+      attendees.value[0].last_name = ln;
+      attendees.value[0].email = em;
+      attendees.value[0].phone = ph;
+    }
+    attendees.value.forEach((att, idx) => {
+      if (idx > 0 && att.same_as_primary) {
+        att.first_name = fn;
+        att.last_name = ln;
+        att.email = em;
+        att.phone = ph;
+      }
+    });
+  }
+);
+
+function toggleSameAsPrimary(idx: number) {
+  const att = attendees.value[idx];
+  if (!att) return;
+  att.same_as_primary = !att.same_as_primary;
+  if (att.same_as_primary) {
+    att.first_name = form.first_name;
+    att.last_name = form.last_name;
+    att.email = form.email;
+    att.phone = form.phone;
+  }
+}
+
 const promoCodeInput = ref('');
 const appliedPromoCode = ref<any | null>(null);
 const validatingPromo = ref(false);
@@ -311,6 +374,23 @@ async function submit(payNow = true) {
 
     if (!canRegister.value) return;
 
+    const attendeePayload = attendees.value.map((att, idx) => {
+      if (idx === 0 || att.same_as_primary) {
+        return {
+          first_name: form.first_name.trim() || null,
+          last_name: form.last_name.trim() || null,
+          email: form.email.trim() || null,
+          phone: form.phone.trim() || null,
+        };
+      }
+      return {
+        first_name: att.first_name.trim() || null,
+        last_name: att.last_name.trim() || null,
+        email: att.email.trim() || null,
+        phone: att.phone.trim() || null,
+      };
+    });
+
     const payload = {
       first_name: form.first_name.trim(),
       last_name: form.last_name.trim(),
@@ -321,6 +401,7 @@ async function submit(payNow = true) {
       quantity: form.quantity,
       ticket_type_id: selectedTicketId.value || null,
       promo_code: appliedPromoCode.value ? appliedPromoCode.value.code : null,
+      attendees: form.quantity > 1 ? attendeePayload : undefined,
     };
 
     if (selectedTicket.value) {
@@ -638,6 +719,84 @@ const previewSubtotal = computed(() =>
                   class="mt-1.5 w-full rounded-xl border border-neutral-ivory px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary"
                 />
               </label>
+
+              <div v-if="form.quantity > 1" class="space-y-4 pt-3 border-t border-neutral-ivory">
+                <div class="flex flex-col gap-0.5">
+                  <p class="text-xs font-extrabold uppercase tracking-wider text-primary">
+                    Attendee Details ({{ form.quantity }} Tickets)
+                  </p>
+                  <p class="text-[11px] text-neutral-black/50">
+                    Each attendee will receive their own personalized ticket & QR code email.
+                  </p>
+                </div>
+
+                <div
+                  v-for="(att, idx) in attendees.slice(1)"
+                  :key="idx"
+                  class="rounded-2xl border border-neutral-ivory bg-neutral-background/70 p-3.5 space-y-3"
+                >
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-neutral-black/80">
+                      Ticket #{{ idx + 2 }} Holder
+                    </span>
+                    <label class="flex items-center gap-1.5 text-xs text-neutral-black/60 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        :checked="att.same_as_primary"
+                        class="rounded border-neutral-ivory text-primary focus:ring-primary/20"
+                        @change="toggleSameAsPrimary(idx + 1)"
+                      />
+                      Same as primary registrant
+                    </label>
+                  </div>
+
+                  <div v-if="!att.same_as_primary" class="grid gap-3 sm:grid-cols-2">
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-neutral-black/50">
+                      First Name
+                      <input
+                        v-model="att.first_name"
+                        placeholder="Attendee First Name"
+                        class="mt-1 w-full rounded-xl border border-neutral-ivory px-3 py-2 text-xs focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary"
+                      />
+                      <span v-if="fieldError('attendees.' + (idx + 1) + '.first_name')" class="mt-1 block text-red-600 font-medium normal-case tracking-normal">
+                        {{ fieldError('attendees.' + (idx + 1) + '.first_name') }}
+                      </span>
+                    </label>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-neutral-black/50">
+                      Last Name
+                      <input
+                        v-model="att.last_name"
+                        placeholder="Attendee Last Name"
+                        class="mt-1 w-full rounded-xl border border-neutral-ivory px-3 py-2 text-xs focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary"
+                      />
+                      <span v-if="fieldError('attendees.' + (idx + 1) + '.last_name')" class="mt-1 block text-red-600 font-medium normal-case tracking-normal">
+                        {{ fieldError('attendees.' + (idx + 1) + '.last_name') }}
+                      </span>
+                    </label>
+                    <label class="block sm:col-span-2 text-[11px] font-bold uppercase tracking-wider text-neutral-black/50">
+                      Email Address
+                      <input
+                        v-model="att.email"
+                        type="email"
+                        placeholder="Attendee Email (for ticket delivery)"
+                        class="mt-1 w-full rounded-xl border border-neutral-ivory px-3 py-2 text-xs focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary"
+                      />
+                      <span v-if="fieldError('attendees.' + (idx + 1) + '.email')" class="mt-1 block text-red-600 font-medium normal-case tracking-normal">
+                        {{ fieldError('attendees.' + (idx + 1) + '.email') }}
+                      </span>
+                    </label>
+                    <label class="block sm:col-span-2 text-[11px] font-bold uppercase tracking-wider text-neutral-black/50">
+                      Phone (Optional)
+                      <input
+                        v-model="att.phone"
+                        type="tel"
+                        placeholder="Attendee Phone Number"
+                        class="mt-1 w-full rounded-xl border border-neutral-ivory px-3 py-2 text-xs focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary"
+                      />
+                    </label>
+                  </div>
+                </div>
+              </div>
 
               <label v-if="selectedTicket && !selectedTicket.is_free" class="block text-xs font-bold uppercase tracking-wider text-neutral-black/50">
                 Promo Code

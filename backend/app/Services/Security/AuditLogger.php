@@ -17,10 +17,19 @@ class AuditLogger
      * @param string|null $description
      * @param array|null $payload
      * @param int|null $userId
+     * @param string|null $application
+     * @param string $severity
      * @return AuditLog
      */
-    public function log(string $action, ?Model $target = null, ?string $description = null, ?array $payload = null, ?int $userId = null): AuditLog
-    {
+    public static function log(
+        string $action,
+        ?Model $target = null,
+        ?string $description = null,
+        ?array $payload = null,
+        ?int $userId = null,
+        ?string $application = null,
+        string $severity = 'info'
+    ): AuditLog {
         $resolvedUserId = $userId ?? Auth::id();
         
         $ipAddress = Request::ip();
@@ -28,7 +37,9 @@ class AuditLogger
 
         return AuditLog::create([
             'user_id' => $resolvedUserId,
+            'application' => $application,
             'action' => $action,
+            'severity' => in_array($severity, ['info', 'warning', 'critical'], true) ? $severity : 'info',
             'target_type' => $target ? get_class($target) : null,
             'target_id' => $target ? $target->getKey() : null,
             'description' => $description,

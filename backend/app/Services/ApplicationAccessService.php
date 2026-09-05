@@ -20,8 +20,10 @@ class ApplicationAccessService
         'store',
         'donations',
         'sponsorship',
+        'mlibms',
         'admin-portal'
     ];
+
 
     protected $auditLogger;
 
@@ -75,7 +77,14 @@ class ApplicationAccessService
             }
         }
 
+        if ($application === 'mlibms') {
+            if ($user->hasAnyRole(['mlibms-administrator', 'mlibms-cataloger', 'mlibms-viewer', 'library-admin', 'library-staff']) || $user->hasPermissionTo('library.view') || $user->hasPermissionTo('library.catalog')) {
+                return true;
+            }
+        }
+
         return false;
+
     }
 
     /**

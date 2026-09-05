@@ -173,7 +173,25 @@ return [
             'owns' => ['sponsors', 'partners', 'contacts', 'sponsorship_opportunities', 'sponsorship_packages', 'sponsorships', 'sponsorship_agreements', 'sponsorship_commitments', 'sponsorship_payments', 'in_kind_contributions', 'sponsorship_deliverables', 'sponsorship_fulfillment', 'sponsor_communications', 'sponsorship_renewals'],
             'does_not_own' => ['ems_events', 'store_products', 'donations', 'cms_content'],
         ],
+        'mlibms' => [
+            'id' => 'mlibms',
+            'name' => 'MSA Library Management System (MLibMS)',
+            'description' => 'Authoritative owner of library catalog, books, physical copy inventory, self-service circulation, members, and reservations.',
+            'type' => 'application',
+            'url' => '/library/admin',
+            'admin_path' => '/admin/systems/library',
+            'version' => env('MLIBMS_VERSION', '1.0.0'),
+            'dependencies' => [
+                'platform-auth',
+                'database',
+                'queues',
+                'email',
+            ],
+            'owns' => ['mlibms_books', 'mlibms_copies', 'mlibms_loans', 'mlibms_members', 'mlibms_reservations'],
+            'does_not_own' => ['store_products', 'donations', 'ems_events'],
+        ],
     ],
+
 
     'platform_services' => [
         'queues' => [

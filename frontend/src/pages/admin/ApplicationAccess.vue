@@ -37,6 +37,7 @@ const appsList = [
   { key: 'store', label: 'MSA Store' },
   { key: 'donations', label: 'Donations' },
   { key: 'sponsorship', label: 'SPMS (Sponsorship)' },
+  { key: 'mlibms', label: 'MLibMS (Library)' },
   { key: 'admin-portal', label: 'Admin Portal' },
 ];
 
