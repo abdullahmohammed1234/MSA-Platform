@@ -113,15 +113,15 @@ const handleLogout = async () => {
   <div class="fixed top-4 inset-x-0 z-50 w-full max-w-full px-3 sm:px-4 pointer-events-none box-border overflow-x-clip">
     <div
       :class="[
-        'pointer-events-auto mx-auto w-full max-w-7xl min-w-0 rounded-full border transition-all duration-500 box-border animate-navbar-in',
+        'pointer-events-auto mx-auto w-full max-w-[96rem] min-w-0 rounded-full border transition-all duration-500 box-border animate-navbar-in',
         scrolled
-          ? 'bg-white/90 backdrop-blur-xl border-neutral-ivory/80 shadow-premium py-2 px-3 sm:py-2.5 sm:px-4'
-          : 'bg-neutral-background/75 backdrop-blur-lg border-neutral-ivory/30 shadow-soft py-3 px-3 sm:py-4 sm:px-6'
+          ? 'bg-white/90 backdrop-blur-xl border-neutral-ivory/80 shadow-premium py-2 px-3 sm:py-2.5 sm:px-5'
+          : 'bg-neutral-background/85 backdrop-blur-lg border-neutral-ivory/40 shadow-soft py-2.5 px-3 sm:py-3.5 sm:px-6'
       ]"
     >
-      <div class="flex items-center justify-between gap-2 min-w-0 w-full">
-        <router-link to="/" class="flex items-center gap-2 sm:gap-3 group min-w-0 shrink-0 overflow-hidden pl-0.5 sm:pl-2">
-          <div class="h-9 w-9 sm:h-11 sm:w-11 shrink-0 flex items-center justify-center">
+      <div class="flex items-center justify-between gap-2 xl:gap-4 min-w-0 w-full">
+        <router-link to="/" class="flex items-center gap-2 sm:gap-2.5 group min-w-0 shrink-0 overflow-hidden pl-0.5 sm:pl-1">
+          <div class="h-9 w-9 sm:h-10 sm:w-10 shrink-0 flex items-center justify-center">
             <img
               src="/logo.webp"
               alt="SFU MSA logo"
@@ -129,15 +129,15 @@ const handleLogout = async () => {
             />
           </div>
           <div class="hidden sm:flex flex-col min-w-0 overflow-hidden">
-            <span class="text-sm sm:text-lg font-display font-extrabold text-primary leading-none tracking-tight uppercase truncate">SFU MSA</span>
-            <span class="hidden md:block text-[8px] uppercase tracking-[0.2em] text-neutral-black/40 font-bold mt-0.5 truncate">Muslim Students Association</span>
+            <span class="text-sm sm:text-base font-display font-extrabold text-primary leading-none tracking-tight uppercase truncate">SFU MSA</span>
+            <span class="hidden 2xl:block text-[8px] uppercase tracking-[0.15em] text-neutral-black/40 font-bold mt-0.5 truncate">Muslim Students Association</span>
           </div>
           <span class="sr-only">SFU MSA</span>
         </router-link>
 
         <!-- Desktop Nav -->
-        <nav class="hidden xl:flex items-center gap-8 shrink-0">
-        <div class="flex items-center gap-6">
+        <nav class="hidden xl:flex items-center gap-4 2xl:gap-8 shrink-0 min-w-0">
+        <div class="flex items-center gap-2.5 xl:gap-3.5 2xl:gap-5.5 whitespace-nowrap shrink-0">
           <template v-for="link in filteredNavLinks" :key="link.name">
             <a
               v-if="link.external"
@@ -145,8 +145,8 @@ const handleLogout = async () => {
               target="_blank"
               rel="noopener noreferrer"
               :class="[
-                'text-[10px] font-extrabold uppercase tracking-[0.2em] transition-all relative py-2 group',
-                'text-neutral-black/55 hover:text-primary'
+                'text-[10px] 2xl:text-[11px] font-extrabold uppercase tracking-[0.1em] transition-all relative py-1.5 group shrink-0 whitespace-nowrap',
+                'text-neutral-black/60 hover:text-primary'
               ]"
             >
               {{ link.name }}
@@ -156,8 +156,8 @@ const handleLogout = async () => {
               v-else
               :to="link.href"
               :class="[
-                'text-[10px] font-extrabold uppercase tracking-[0.2em] transition-all relative py-2 group',
-                isNavActive(link.href) ? 'text-primary' : 'text-neutral-black/55 hover:text-primary'
+                'text-[10px] 2xl:text-[11px] font-extrabold uppercase tracking-[0.1em] transition-all relative py-1.5 group shrink-0 whitespace-nowrap',
+                isNavActive(link.href) ? 'text-primary' : 'text-neutral-black/60 hover:text-primary'
               ]"
             >
               {{ link.name }}
@@ -172,13 +172,13 @@ const handleLogout = async () => {
         </div>
         
 
-        <div class="flex items-center gap-3 pr-2">
+        <div class="flex items-center gap-2 2xl:gap-3 pr-1 shrink-0">
           <!-- Guest Actions -->
           <template v-if="!isAuthenticated">
             <router-link
               v-if="!isLoading && showPublicAuth"
               to="/login"
-              class="inline-flex items-center gap-2 border border-primary/20 text-primary px-5 py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest hover:bg-primary/5 transition-all"
+              class="inline-flex items-center gap-1.5 border border-primary/20 text-primary px-3.5 py-2 2xl:px-5 2xl:py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider hover:bg-primary/5 transition-all shrink-0 whitespace-nowrap"
             >
               <LogIn class="h-3.5 w-3.5" />
               Login
@@ -187,17 +187,17 @@ const handleLogout = async () => {
             <router-link
               v-if="showPublicAuth"
               to="/register"
-              class="bg-primary text-white px-6 py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest hover:bg-secondary hover:shadow-premium transition-all hover:-translate-y-0.5 active:scale-95"
+              class="bg-primary text-white px-4 py-2 2xl:px-6 2xl:py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider hover:bg-secondary hover:shadow-premium transition-all hover:-translate-y-0.5 active:scale-95 shrink-0 whitespace-nowrap"
             >
               Register
             </router-link>
           </template>
 
           <!-- Authenticated Account Dropdown -->
-          <div v-else-if="!isLoading" class="relative">
+          <div v-else-if="!isLoading" class="relative shrink-0">
             <button
               @click="toggleUserMenu"
-              class="inline-flex items-center gap-2 bg-primary text-white hover:bg-secondary px-5 py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest hover:shadow-premium transition-all hover:-translate-y-0.5 active:scale-95 cursor-pointer"
+              class="inline-flex items-center gap-2 bg-primary text-white hover:bg-secondary px-4 py-2 2xl:px-5 2xl:py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider hover:shadow-premium transition-all hover:-translate-y-0.5 active:scale-95 cursor-pointer shrink-0 whitespace-nowrap"
             >
               <span>{{ authStore.user?.name || 'My Account' }}</span>
               <ChevronDown
