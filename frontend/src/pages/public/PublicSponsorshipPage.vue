@@ -322,11 +322,13 @@ const formatCurrency = (cents: number) => {
               type="submit"
               variant="primary"
               size="lg"
-              class="w-full justify-center gap-3"
+              class="w-full justify-center gap-3 whitespace-nowrap"
               :disabled="isSubmitting"
             >
-              <Send class="w-4 h-4" />
-              {{ isSubmitting ? 'Submitting Application...' : 'Submit Partnership Application' }}
+              <div class="flex items-center justify-center gap-2 whitespace-nowrap">
+                <Send class="w-4 h-4 shrink-0" />
+                <span class="whitespace-nowrap">{{ isSubmitting ? 'Submitting Application...' : 'Submit Partnership Application' }}</span>
+              </div>
             </PublicButton>
 
             <!-- Success Alert -->

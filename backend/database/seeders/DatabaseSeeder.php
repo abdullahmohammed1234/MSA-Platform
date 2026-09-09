@@ -148,6 +148,7 @@ class DatabaseSeeder extends Seeder
             ['name' => 'Manage Homepage', 'slug' => 'manage_homepage', 'module' => 'Website', 'description' => 'Manage homepage sections and content.'],
             ['name' => 'Manage Team', 'slug' => 'manage_team', 'module' => 'Website', 'description' => 'Manage team members and display order.'],
             ['name' => 'Manage Media', 'slug' => 'manage_media', 'module' => 'Website', 'description' => 'Manage and upload reusable media assets.'],
+            ['name' => 'Manage Featured Opportunities', 'slug' => 'manage_featured_opportunities', 'module' => 'Website', 'description' => 'Create and manage featured community opportunities.'],
 
             // Store Module
             ['name' => 'View Store Admin', 'slug' => 'store.view', 'module' => 'Store', 'description' => 'Access Store Admin control plane, products list, inventory, and orders.'],

@@ -4,6 +4,7 @@ import type {
   Announcement,
   TeamMember,
   Resource,
+  FeaturedOpportunity,
   Media,
   MediaCategory,
   MediaUploadOptions,
@@ -148,6 +149,45 @@ export const cmsService = {
   async rollbackResource(uuid: string, version: number): Promise<Resource> {
     const response = await client.post(`/cms/resources/${uuid}/rollback`, { version });
     return response.data.resource;
+  },
+
+  // 6.5 Featured Opportunities
+  async getFeaturedOpportunities(params: any = {}): Promise<PaginatedResponse<FeaturedOpportunity>> {
+    const response = await client.get('/cms/featured-opportunities', { params });
+    return response.data;
+  },
+
+  async getFeaturedOpportunity(uuid: string): Promise<FeaturedOpportunity> {
+    const response = await client.get(`/cms/featured-opportunities/${uuid}`);
+    return response.data;
+  },
+
+  async createFeaturedOpportunity(data: Partial<FeaturedOpportunity>): Promise<FeaturedOpportunity> {
+    const response = await client.post('/cms/featured-opportunities', data);
+    return response.data.opportunity;
+  },
+
+  async updateFeaturedOpportunity(uuid: string, data: Partial<FeaturedOpportunity>): Promise<FeaturedOpportunity> {
+    const response = await client.put(`/cms/featured-opportunities/${uuid}`, data);
+    return response.data.opportunity;
+  },
+
+  async deleteFeaturedOpportunity(uuid: string): Promise<void> {
+    await client.delete(`/cms/featured-opportunities/${uuid}`);
+  },
+
+  async reorderFeaturedOpportunities(uuids: string[]): Promise<void> {
+    await client.post('/cms/featured-opportunities/reorder', { uuids });
+  },
+
+  async getFeaturedOpportunityRevisions(uuid: string): Promise<CmsRevision[]> {
+    const response = await client.get(`/cms/featured-opportunities/${uuid}/revisions`);
+    return response.data.revisions;
+  },
+
+  async rollbackFeaturedOpportunity(uuid: string, version: number): Promise<FeaturedOpportunity> {
+    const response = await client.post(`/cms/featured-opportunities/${uuid}/rollback`, { version });
+    return response.data.opportunity;
   },
 
   // 7. Media Library

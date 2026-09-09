@@ -7,6 +7,7 @@ use App\Models\CMS\HomepageContentBlock;
 use App\Models\CMS\Announcement;
 use App\Models\CMS\TeamMember;
 use App\Models\CMS\Resource;
+use App\Models\CMS\FeaturedOpportunity;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
@@ -275,5 +276,26 @@ class CmsSeeder extends Seeder
                 ])
             );
         }
+
+        // 6. Seed Featured Opportunities
+        FeaturedOpportunity::firstOrCreate(
+            ['slug' => 'blessed-tree-year-one'],
+            [
+                'uuid' => (string) Str::uuid(),
+                'title' => 'The Blessed Tree — Year One Program',
+                'eyebrow' => 'Featured Educational Resource',
+                'short_description' => 'Deepen your spiritual foundation and Islamic literacy with traditional, authentic knowledge.',
+                'description' => "Deepen your spiritual foundation and Islamic literacy with traditional, authentic knowledge. The Blessed Tree's Year One Program offers structured, accessible instruction in foundational Islamic sciences — including Aqeedah, Fiqh, Tajweed, and Tazkiyah — specifically designed for post-secondary students and community members seeking grounded scholarship under qualified teachers.",
+                'featured_image' => '/Hero/blessed_tree.webp',
+                'external_url' => 'https://theblessedtree.org/programs/year-one',
+                'features' => [
+                    'Structured Year-Long Curriculum',
+                    'Accessible Post-Secondary Schedule'
+                ],
+                'is_published' => true,
+                'published_at' => now(),
+                'sort_order' => 1,
+            ]
+        );
     }
 }

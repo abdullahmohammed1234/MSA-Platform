@@ -14,6 +14,7 @@ export const HERO_IMAGES = {
   sfuMsaFnd2024_38: '/Hero/SFU_MSA_FND_2024-38.webp',
   juneMsa3: '/Hero/23+June+MSA-3.webp',
   teamPhoto: '/Hero/Team+Photo.webp',
+  blessedTree: '/Hero/blessed_tree.webp',
 } as const;
 
 const HERO_FILENAMES = new Set([

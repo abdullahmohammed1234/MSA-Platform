@@ -80,10 +80,11 @@ const PRAYER_NAMES: PrayerName[] = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
 export const campusPrayerInfo: Record<Campus, CampusPrayerInfo> = {
   Burnaby: {
     name: 'SFU Burnaby',
-    location: 'AQ 3200, SUB 2402, and Residence Prayer Room',
+    location: 'AQ 3200, SUB 2402, Discovery 1 Room 2300, & Residence Prayer Room',
     rooms: [
       'AQ 3200, on the east concourse between Renaissance Coffee and the Mackenzie Cafeteria',
       'SUB 2402, 2nd floor',
+      'Discovery 1 Room 2300',
       'Residence Prayer Room',
     ],
     coordinates: { latitude: 49.2781, longitude: -122.9199 },

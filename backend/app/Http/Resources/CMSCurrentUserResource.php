@@ -11,6 +11,7 @@ class CMSCurrentUserResource extends JsonResource
         'manage_announcements',
         'manage_team',
         'manage_resources',
+        'manage_featured_opportunities',
         'manage_media',
         'view_analytics',
         'view_reports',

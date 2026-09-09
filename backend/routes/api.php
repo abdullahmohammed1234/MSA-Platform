@@ -114,6 +114,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/resources', [WebsiteController::class, 'resources'])->name('api.website.resources');
         Route::get('/media', [WebsiteController::class, 'media'])->name('api.website.media');
         Route::get('/sponsors', [WebsiteController::class, 'sponsors'])->name('api.website.sponsors');
+        Route::get('/featured-opportunities', [WebsiteController::class, 'featuredOpportunities'])->name('api.website.featured-opportunities');
         Route::get('/prayer-times', [WebsiteController::class, 'prayerTimes'])->name('api.website.prayer-times');
         Route::post('/contact', [WebsiteController::class, 'submitContact'])->middleware('throttle:public_forms')->name('api.website.contact');
         Route::post('/newsletter/subscribe', [WebsiteController::class, 'subscribeNewsletter'])->middleware('throttle:public_forms')->name('api.website.newsletter.subscribe');
@@ -357,6 +358,32 @@ Route::prefix('v1')->group(function () {
             Route::post('/cms/announcements/{uuid}/rollback', [\App\Http\Controllers\Admin\CMS\AnnouncementController::class, 'rollback'])
                 ->middleware('permission:manage_announcements')
                 ->name('api.admin.cms.announcements.rollback');
+
+            // CMS Featured Opportunities
+            Route::get('/cms/featured-opportunities', [\App\Http\Controllers\Admin\CMS\FeaturedOpportunityController::class, 'index'])
+                ->middleware('permission:manage_featured_opportunities|manage_announcements|manage_homepage')
+                ->name('api.admin.cms.featured-opportunities.index');
+            Route::post('/cms/featured-opportunities', [\App\Http\Controllers\Admin\CMS\FeaturedOpportunityController::class, 'store'])
+                ->middleware('permission:manage_featured_opportunities|manage_announcements|manage_homepage')
+                ->name('api.admin.cms.featured-opportunities.store');
+            Route::post('/cms/featured-opportunities/reorder', [\App\Http\Controllers\Admin\CMS\FeaturedOpportunityController::class, 'reorder'])
+                ->middleware('permission:manage_featured_opportunities|manage_announcements|manage_homepage')
+                ->name('api.admin.cms.featured-opportunities.reorder');
+            Route::get('/cms/featured-opportunities/{uuid}', [\App\Http\Controllers\Admin\CMS\FeaturedOpportunityController::class, 'show'])
+                ->middleware('permission:manage_featured_opportunities|manage_announcements|manage_homepage')
+                ->name('api.admin.cms.featured-opportunities.show');
+            Route::put('/cms/featured-opportunities/{uuid}', [\App\Http\Controllers\Admin\CMS\FeaturedOpportunityController::class, 'update'])
+                ->middleware('permission:manage_featured_opportunities|manage_announcements|manage_homepage')
+                ->name('api.admin.cms.featured-opportunities.update');
+            Route::delete('/cms/featured-opportunities/{uuid}', [\App\Http\Controllers\Admin\CMS\FeaturedOpportunityController::class, 'destroy'])
+                ->middleware('permission:manage_featured_opportunities|manage_announcements|manage_homepage')
+                ->name('api.admin.cms.featured-opportunities.destroy');
+            Route::get('/cms/featured-opportunities/{uuid}/revisions', [\App\Http\Controllers\Admin\CMS\FeaturedOpportunityController::class, 'revisions'])
+                ->middleware('permission:manage_featured_opportunities|manage_announcements|manage_homepage')
+                ->name('api.admin.cms.featured-opportunities.revisions');
+            Route::post('/cms/featured-opportunities/{uuid}/rollback', [\App\Http\Controllers\Admin\CMS\FeaturedOpportunityController::class, 'rollback'])
+                ->middleware('permission:manage_featured_opportunities|manage_announcements|manage_homepage')
+                ->name('api.admin.cms.featured-opportunities.rollback');
         });
 
         Route::middleware('app.access:admin-portal')->group(function () {
@@ -656,6 +683,32 @@ Route::prefix('v1')->group(function () {
             Route::post('/resources/{uuid}/rollback', [\App\Http\Controllers\Admin\CMS\ResourceController::class, 'rollback'])
                 ->middleware('permission:manage_resources')
                 ->name('resources.rollback');
+
+            // CMS Featured Opportunities
+            Route::get('/featured-opportunities', [\App\Http\Controllers\Admin\CMS\FeaturedOpportunityController::class, 'index'])
+                ->middleware('permission:manage_featured_opportunities|manage_announcements|manage_homepage')
+                ->name('featured-opportunities.index');
+            Route::post('/featured-opportunities', [\App\Http\Controllers\Admin\CMS\FeaturedOpportunityController::class, 'store'])
+                ->middleware('permission:manage_featured_opportunities|manage_announcements|manage_homepage')
+                ->name('featured-opportunities.store');
+            Route::post('/featured-opportunities/reorder', [\App\Http\Controllers\Admin\CMS\FeaturedOpportunityController::class, 'reorder'])
+                ->middleware('permission:manage_featured_opportunities|manage_announcements|manage_homepage')
+                ->name('featured-opportunities.reorder');
+            Route::get('/featured-opportunities/{uuid}', [\App\Http\Controllers\Admin\CMS\FeaturedOpportunityController::class, 'show'])
+                ->middleware('permission:manage_featured_opportunities|manage_announcements|manage_homepage')
+                ->name('featured-opportunities.show');
+            Route::put('/featured-opportunities/{uuid}', [\App\Http\Controllers\Admin\CMS\FeaturedOpportunityController::class, 'update'])
+                ->middleware('permission:manage_featured_opportunities|manage_announcements|manage_homepage')
+                ->name('featured-opportunities.update');
+            Route::delete('/featured-opportunities/{uuid}', [\App\Http\Controllers\Admin\CMS\FeaturedOpportunityController::class, 'destroy'])
+                ->middleware('permission:manage_featured_opportunities|manage_announcements|manage_homepage')
+                ->name('featured-opportunities.destroy');
+            Route::get('/featured-opportunities/{uuid}/revisions', [\App\Http\Controllers\Admin\CMS\FeaturedOpportunityController::class, 'revisions'])
+                ->middleware('permission:manage_featured_opportunities|manage_announcements|manage_homepage')
+                ->name('featured-opportunities.revisions');
+            Route::post('/featured-opportunities/{uuid}/rollback', [\App\Http\Controllers\Admin\CMS\FeaturedOpportunityController::class, 'rollback'])
+                ->middleware('permission:manage_featured_opportunities|manage_announcements|manage_homepage')
+                ->name('featured-opportunities.rollback');
 
             Route::get('/media/categories', [\App\Http\Controllers\Admin\CMS\MediaCategoryController::class, 'index'])
                 ->middleware('permission:manage_media|manage_team|manage_announcements|manage_events|manage_resources|manage_homepage')

@@ -14,12 +14,19 @@ export const useCmsAccessStore = defineStore('cmsAccess', () => {
   const roles = computed(() => profile.value?.roles ?? []);
   const hasCmsAccess = computed(() => profile.value?.has_cms_access === true);
 
-  const can = (permission: string): boolean => permissions.value.includes(permission);
+  const isPrivileged = computed(() => {
+    const authStore = useAuthStore();
+    const authRoles = authStore.roles || [];
+    const cmsRoles = (roles.value ?? []).map((r: any) => (typeof r === 'string' ? r : r.slug));
+    return [...authRoles, ...cmsRoles].some((role) => ['admin', 'super-admin'].includes(role));
+  });
+
+  const can = (permission: string): boolean => isPrivileged.value || permissions.value.includes(permission);
 
   const canAny = (required: string[]): boolean =>
-    required.length === 0 || required.some((permission) => can(permission));
+    required.length === 0 || isPrivileged.value || required.some((permission) => can(permission));
 
-  const canAll = (required: string[]): boolean => required.every((permission) => can(permission));
+  const canAll = (required: string[]): boolean => isPrivileged.value || required.every((permission) => can(permission));
 
   const resolve = async (force = false): Promise<CmsCurrentUser | null> => {
     const authStore = useAuthStore();

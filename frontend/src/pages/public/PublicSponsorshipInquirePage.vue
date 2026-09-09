@@ -164,10 +164,10 @@ const handleSubmit = async () => {
           <button
             type="submit"
             :disabled="submitting"
-            class="w-full bg-primary text-white py-4 rounded-2xl font-extrabold text-xs uppercase tracking-widest hover:bg-secondary transition-all shadow-md cursor-pointer flex items-center justify-center gap-2"
+            class="w-full bg-primary text-white py-4 rounded-2xl font-extrabold text-xs uppercase tracking-widest hover:bg-secondary transition-all shadow-md cursor-pointer flex items-center justify-center gap-2 whitespace-nowrap"
           >
-            <Send class="w-4 h-4" />
-            <span>{{ submitting ? 'Submitting...' : 'Submit Partnership Inquiry' }}</span>
+            <Send class="w-4 h-4 shrink-0" />
+            <span class="whitespace-nowrap">{{ submitting ? 'Submitting...' : 'Submit Partnership Inquiry' }}</span>
           </button>
         </form>
       </div>

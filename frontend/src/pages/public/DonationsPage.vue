@@ -3,9 +3,9 @@ import { ref, computed } from 'vue';
 import { 
   Heart, 
   Sparkles, 
-  BookOpen, 
   MapPin, 
-  Coffee
+  Coffee,
+  BookOpen,
 } from 'lucide-vue-next';
 import ScrollReveal from '@/components/shared/ScrollReveal.vue';
 import PublicButton from '@/components/shared/PublicButton.vue';

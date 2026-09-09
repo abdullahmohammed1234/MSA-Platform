@@ -85,6 +85,21 @@ export interface NewsletterSubscription {
 
 
 
+export interface PublicFeaturedOpportunity {
+  id: string;
+  title: string;
+  slug: string;
+  eyebrow: string;
+  short_description?: string | null;
+  description?: string | null;
+  featured_image?: string | null;
+  external_url?: string | null;
+  features?: string[] | null;
+  is_published: boolean;
+  published_at?: string | null;
+  sort_order: number;
+}
+
 export const websiteService = {
   async getHomepageData(): Promise<any> {
     const response = await api.get('/website/homepage');
@@ -136,6 +151,14 @@ export const websiteService = {
   async getSponsors(): Promise<SponsorItem[]> {
     const response = await api.get('/website/sponsors');
     return response.data?.sponsors ?? [];
+  },
+
+  async getFeaturedOpportunities(): Promise<PublicFeaturedOpportunity[]> {
+    const response = await api.get('/website/featured-opportunities');
+    return (response.data?.opportunities ?? []).map((opp: PublicFeaturedOpportunity) => ({
+      ...opp,
+      featured_image: opp.featured_image ? resolvePublicImagePath(opp.featured_image) : null,
+    }));
   },
 
   async submitContact(data: ContactSubmission): Promise<{ success: boolean; message: string }> {

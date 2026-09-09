@@ -40,6 +40,12 @@ const cmsRoutes: Array<RouteRecordRaw> = [
         meta: { cmsPermissions: 'manage_resources', title: 'Resources' }
       },
       {
+        path: 'featured-opportunities',
+        name: 'cms-featured-opportunities',
+        component: () => import('@/pages/admin/cms/FeaturedOpportunitiesCms.vue'),
+        meta: { cmsPermissions: 'manage_featured_opportunities', title: 'Featured Opportunities' }
+      },
+      {
         path: 'media',
         name: 'cms-media',
         component: () => import('@/pages/admin/cms/MediaCms.vue'),

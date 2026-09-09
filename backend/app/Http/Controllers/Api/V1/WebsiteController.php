@@ -9,6 +9,7 @@ use App\Models\CMS\Announcement;
 use App\Models\CMS\Media;
 use App\Models\CMS\TeamMember;
 use App\Models\CMS\Resource;
+use App\Models\CMS\FeaturedOpportunity;
 use App\Services\CMS\HomepageService;
 use App\Services\Analytics\AnalyticsService;
 use App\Services\NewsletterService;
@@ -258,6 +259,37 @@ class WebsiteController extends Controller
 
         return response()->json([
             'sponsors' => $sponsors,
+        ]);
+    }
+
+    public function featuredOpportunities(): JsonResponse
+    {
+        $opportunities = Cache::remember('website_featured_opportunities', 86400, function () {
+            return FeaturedOpportunity::where('is_published', true)
+                ->orderBy('sort_order', 'asc')
+                ->orderBy('published_at', 'desc')
+                ->get()
+                ->map(function ($item) {
+                    return [
+                        'id' => $item->uuid,
+                        'title' => $item->title,
+                        'slug' => $item->slug,
+                        'eyebrow' => $item->eyebrow ?? 'Featured Opportunity',
+                        'short_description' => $item->short_description,
+                        'description' => $item->description,
+                        'featured_image' => CmsAssetUrl::resolve($item->featured_image),
+                        'external_url' => $item->external_url,
+                        'features' => $item->features ?? [],
+                        'is_published' => $item->is_published,
+                        'published_at' => $item->published_at?->toIso8601String(),
+                        'sort_order' => $item->sort_order,
+                    ];
+                })
+                ->toArray();
+        });
+
+        return response()->json([
+            'opportunities' => $opportunities,
         ]);
     }
 

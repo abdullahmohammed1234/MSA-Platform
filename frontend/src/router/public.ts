@@ -143,6 +143,16 @@ const publicRoutes: Array<RouteRecordRaw> = [
         component: () => import('@/pages/public/PublicSponsorshipInquirePage.vue'), 
         meta: { title: 'Become a Partner | SFU MSA', desc: 'Submit a sponsorship or partnership inquiry.' } 
       },
+      {
+        path: 'featured-opportunities',
+        name: 'public-featured-opportunities',
+        component: () => import('@/pages/public/FeaturedOpportunitiesPage.vue'),
+        meta: { title: 'Featured Opportunities | SFU MSA', desc: 'Discover programs, initiatives, and educational opportunities highlighted by SFU MSA.' }
+      },
+      {
+        path: 'opportunities',
+        redirect: '/featured-opportunities'
+      },
       { 
         path: 'donations', 
         name: 'donations', 

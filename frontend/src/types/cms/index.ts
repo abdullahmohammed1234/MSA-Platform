@@ -71,6 +71,25 @@ export interface Resource {
   updated_at?: string;
 }
 
+export interface FeaturedOpportunity {
+  id?: number;
+  uuid: string;
+  title: string;
+  slug: string;
+  eyebrow?: string | null;
+  short_description?: string | null;
+  description?: string | null;
+  featured_image?: string | null;
+  external_url?: string | null;
+  features?: string[] | null;
+  is_published: boolean;
+  published_at?: string | null;
+  sort_order: number;
+  author_id?: number | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface MediaCategory {
   id: number;
   uuid: string;

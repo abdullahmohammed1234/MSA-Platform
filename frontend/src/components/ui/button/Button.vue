@@ -101,7 +101,7 @@ const handleClick = (e: MouseEvent) => {
         <slot name="left-icon"></slot>
       </span>
       
-      <span :class="{ 'opacity-80': isLoading }">
+      <span :class="[{ 'opacity-80': isLoading }, 'inline-flex items-center justify-center gap-2 whitespace-nowrap']">
         <slot></slot>
       </span>
 

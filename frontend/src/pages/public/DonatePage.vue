@@ -2,7 +2,6 @@
 import { ref, computed } from 'vue';
 import { donationsService } from '@/services/donations.service';
 import { useToastStore } from '@/components/feedback/toast';
-import { HERO_IMAGES } from '@/constants/publicAssets';
 import {
   Heart,
   ShieldCheck,
@@ -11,6 +10,7 @@ import {
   ChevronDown,
 } from 'lucide-vue-next';
 import ScrollReveal from '@/components/shared/ScrollReveal.vue';
+import { HERO_IMAGES } from '@/constants/publicAssets';
 
 const toast = useToastStore();
 
