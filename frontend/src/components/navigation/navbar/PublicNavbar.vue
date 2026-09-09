@@ -34,7 +34,7 @@ const navLinks: NavLink[] = [
   { name: 'Library', href: '/library' },
   { name: 'Store', href: '/store' },
   { name: 'Donate', href: '/donate' },
-  { name: 'Opportunities', href: '/featured-opportunities' },
+  { name: 'Learning Resources', href: '/featured-opportunities' },
   { name: 'Sponsorship', href: '/sponsorship' },
   { name: 'Contact', href: '/contact' },
 ];

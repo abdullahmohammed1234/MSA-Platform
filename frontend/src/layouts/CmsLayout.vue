@@ -47,7 +47,7 @@ const cmsItems = computed(() => {
     children.push({ label: 'Resources Library', path: '/cms/resources', icon: 'book' });
   }
   if (isSuper || cmsAccess.permissions.includes('manage_featured_opportunities') || cmsAccess.permissions.includes('manage_homepage') || cmsAccess.permissions.includes('manage_announcements')) {
-    children.push({ label: 'Featured Opportunities', path: '/cms/featured-opportunities', icon: 'sparkles' });
+    children.push({ label: 'Learning Resources', path: '/cms/featured-opportunities', icon: 'sparkles' });
   }
   if (isSuper || cmsAccess.permissions.includes('manage_media')) {
     children.push({ label: 'Media Library', path: '/cms/media', icon: 'image' });

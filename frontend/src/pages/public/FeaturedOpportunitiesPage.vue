@@ -50,15 +50,14 @@ onMounted(() => {
           </ScrollReveal>
 
           <ScrollReveal :delay="0.2">
-            <h1 class="text-3xl sm:text-5xl md:text-7xl font-display font-bold leading-tight tracking-tight text-white break-words">
-              Featured <br class="hidden sm:inline" />
-              <span class="text-accent-gold italic font-serif">Opportunities.</span>
+            <h1 class="text-3xl sm:text-5xl md:text-6xl lg:text-7xl font-display font-bold leading-tight tracking-tight text-white">
+              Learning <span class="text-accent-gold italic font-serif">Resources.</span>
             </h1>
           </ScrollReveal>
 
           <ScrollReveal :delay="0.3">
             <p class="text-base sm:text-xl text-white/80 leading-relaxed max-w-2xl font-light">
-              Discover programs, initiatives, educational opportunities, and community experiences highlighted by the SFU MSA.
+              Discover educational programs, courses, spiritual development initiatives, and community learning resources highlighted by the SFU MSA.
             </p>
           </ScrollReveal>
         </div>
@@ -71,7 +70,7 @@ onMounted(() => {
         <!-- Loading State -->
         <div v-if="isLoading" class="flex flex-col items-center justify-center py-20 space-y-4">
           <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
-          <p class="text-xs font-bold uppercase tracking-widest text-primary/60">Loading Featured Opportunities...</p>
+          <p class="text-xs font-bold uppercase tracking-widest text-primary/60">Loading Learning Resources...</p>
         </div>
 
         <!-- Error State -->
@@ -89,9 +88,9 @@ onMounted(() => {
         <!-- Empty State -->
         <div v-else-if="opportunities.length === 0" class="max-w-2xl mx-auto py-16 px-8 bg-white border border-neutral-ivory rounded-3xl text-center shadow-soft space-y-4">
           <Compass class="w-12 h-12 text-primary/40 mx-auto" />
-          <h3 class="text-xl font-bold text-neutral-black">No Active Featured Opportunities</h3>
+          <h3 class="text-xl font-bold text-neutral-black">No Active Learning Resources</h3>
           <p class="text-sm text-neutral-black/60 font-light max-w-md mx-auto leading-relaxed">
-            There are currently no active featured opportunities listed. Check back soon for upcoming community programs, courses, and educational initiatives!
+            There are currently no active learning resources listed. Check back soon for upcoming community programs, courses, and educational initiatives!
           </p>
         </div>
 

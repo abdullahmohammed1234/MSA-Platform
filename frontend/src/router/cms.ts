@@ -43,7 +43,7 @@ const cmsRoutes: Array<RouteRecordRaw> = [
         path: 'featured-opportunities',
         name: 'cms-featured-opportunities',
         component: () => import('@/pages/admin/cms/FeaturedOpportunitiesCms.vue'),
-        meta: { cmsPermissions: 'manage_featured_opportunities', title: 'Featured Opportunities' }
+        meta: { cmsPermissions: 'manage_featured_opportunities', title: 'Learning Resources' }
       },
       {
         path: 'media',

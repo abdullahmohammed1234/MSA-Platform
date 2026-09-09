@@ -189,9 +189,9 @@ const handleRollback = async (version: number) => {
     <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
       <div>
         <h1 class="text-4xl font-display font-extrabold text-primary flex items-center gap-3">
-          <Sparkles class="w-8 h-8 text-accent-gold" /> Featured Opportunities CMS
+          <Sparkles class="w-8 h-8 text-accent-gold" /> Learning Resources CMS
         </h1>
-        <p class="text-neutral-black/45 text-sm">Manage public opportunities, initiatives, and partner programs highlighted across the platform.</p>
+        <p class="text-neutral-black/45 text-sm">Manage public educational programs, initiatives, and partner learning resources highlighted across the platform.</p>
       </div>
       <button 
         @click="openCreateForm"
