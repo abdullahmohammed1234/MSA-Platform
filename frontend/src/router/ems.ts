@@ -84,6 +84,12 @@ const emsRoutes: Array<RouteRecordRaw> = [
         },
       },
       {
+        path: 'events/:uuid/volunteers',
+        name: 'ems-event-volunteers',
+        component: () => import('@/pages/ems/events/EventVolunteersPage.vue'),
+        meta: { title: 'Event Volunteers', emsPermissions: EMS_PERMISSIONS.EVENTS_VIEW },
+      },
+      {
         path: 'events/:uuid/edit',
         name: 'ems-event-edit',
         component: () => import('@/pages/ems/events/EventFormPage.vue'),

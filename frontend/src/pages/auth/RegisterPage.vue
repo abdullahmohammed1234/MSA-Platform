@@ -6,7 +6,7 @@ import Button from '@/components/ui/button/Button.vue';
 import Input from '@/components/ui/input/Input.vue';
 import Checkbox from '@/components/ui/checkbox/Checkbox.vue';
 import Alert from '@/components/feedback/alert/Alert.vue';
-import { Motion } from '@motionone/vue';
+import { Motion, Presence } from '@motionone/vue';
 
 const router = useRouter();
 const authStore = useAuthStore();

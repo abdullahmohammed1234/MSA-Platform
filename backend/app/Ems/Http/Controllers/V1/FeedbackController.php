@@ -136,4 +136,72 @@ class FeedbackController extends EmsController
             'comments' => $comments,
         ], 'Feedback analytics retrieved.');
     }
+
+    /**
+     * POST /api/v1/ems/public/events/{slug}/feedback
+     * Submit feedback for an event publicly via event slug & registration email/token.
+     */
+    public function publicStore(Request $request, string $slug): JsonResponse
+    {
+        $event = Event::where('slug', $slug)->firstOrFail();
+
+        $validated = $request->validate([
+            'overall_rating' => 'required|integer|min:1|max:5',
+            'organization_rating' => 'required|integer|min:1|max:5',
+            'program_rating' => 'required|integer|min:1|max:5',
+            'venue_rating' => 'required|integer|min:1|max:5',
+            'text_feedback' => 'nullable|string|max:2000',
+            'is_anonymous' => 'boolean',
+            'email' => 'nullable|email',
+            'registration_uuid' => 'nullable|string',
+        ]);
+
+        $registration = null;
+        if (!empty($validated['registration_uuid'])) {
+            $registration = Registration::where('uuid', $validated['registration_uuid'])
+                ->where('event_id', $event->id)
+                ->first();
+        } elseif (!empty($validated['email'])) {
+            $registration = Registration::where('event_id', $event->id)
+                ->where('status', 'confirmed')
+                ->where('attendee_email', strtolower($validated['email']))
+                ->first();
+        }
+
+        // Duplicate submission check
+        if ($registration) {
+            $exists = EventFeedback::where('event_id', $event->id)
+                ->where('registration_id', $registration->id)
+                ->exists();
+            if ($exists) {
+                return ApiResponse::error('Feedback has already been submitted for this registration.', [], 409);
+            }
+        } elseif (!empty($validated['email'])) {
+            $exists = EventFeedback::where('event_id', $event->id)
+                ->whereHas('registration', function ($q) use ($validated) {
+                    $q->where('attendee_email', strtolower($validated['email']));
+                })->exists();
+            if ($exists) {
+                return ApiResponse::error('Feedback has already been submitted for this email.', [], 409);
+            }
+        }
+
+        $feedback = EventFeedback::create([
+            'uuid' => (string) Str::uuid(),
+            'event_id' => $event->id,
+            'registration_id' => $registration?->id,
+            'user_id' => ($validated['is_anonymous'] ?? false) ? null : ($request->user()?->id ?? $registration?->user_id),
+            'is_anonymous' => $validated['is_anonymous'] ?? false,
+            'overall_rating' => $validated['overall_rating'],
+            'organization_rating' => $validated['organization_rating'],
+            'program_rating' => $validated['program_rating'],
+            'venue_rating' => $validated['venue_rating'],
+            'text_feedback' => $validated['text_feedback'] ?? null,
+        ]);
+
+        return ApiResponse::created([
+            'feedback' => $feedback,
+            'event_name' => $event->name,
+        ], 'Thank you! Your feedback has been recorded.');
+    }
 }

@@ -149,6 +149,13 @@ const confirmDelete = async () => {
             Attendees
           </Button>
           <Button
+            variant="outline"
+            size="sm"
+            @click="router.push({ name: 'ems-event-volunteers', params: { uuid } })"
+          >
+            Volunteers
+          </Button>
+          <Button
             v-if="canCheckIn"
             variant="outline"
             size="sm"

@@ -193,6 +193,15 @@ class TemplateRenderer
      */
     private function defaultsFor(string $key): array
     {
+        if ($key === NotificationType::FeedbackRequest->value) {
+            return [
+                'subject' => 'How was {{ event_name }}? Share your feedback',
+                'body_html' => '<p>Assalamu alaikum {{ attendee_name }},</p>'
+                    . '<p>Thank you for attending <strong>{{ event_name }}</strong>. We would love to hear your feedback!</p>'
+                    . '<p><a href="{{ feedback_link }}">Share your feedback</a></p>',
+            ];
+        }
+
         $name = NotificationType::tryFrom($key)?->label() ?? 'MSA Event Update';
 
         return [

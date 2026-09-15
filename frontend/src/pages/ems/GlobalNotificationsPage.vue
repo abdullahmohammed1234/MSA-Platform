@@ -124,7 +124,60 @@ watch([statusFilter, typeFilter], () => {
         </div>
       </div>
 
-      <div class="overflow-hidden rounded-2xl border border-neutral-ivory bg-white shadow-soft">
+      <!-- Mobile Card List View (< md) -->
+      <div class="block md:hidden space-y-3">
+        <div v-if="isLoading" class="p-6 text-center text-neutral-muted animate-pulse bg-white rounded-2xl border border-neutral-ivory">
+          Loading communications history...
+        </div>
+        <div v-else-if="notifications.length === 0" class="p-6 text-center text-neutral-muted bg-white rounded-2xl border border-neutral-ivory">
+          No notifications found.
+        </div>
+        <div
+          v-else
+          v-for="row in notifications"
+          :key="'mob-' + row.uuid"
+          class="bg-white rounded-2xl border border-neutral-ivory p-4 shadow-sm space-y-2.5"
+        >
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <p class="font-bold text-primary text-sm">{{ row.recipient_email }}</p>
+              <p class="text-xs text-neutral-muted">Event: {{ row.event?.name || '—' }}</p>
+            </div>
+            <EmsStatusBadge :label="row.status" :tone="toneForStatus(row.status)" />
+          </div>
+
+          <div class="text-xs text-neutral-black font-medium">
+            <span class="text-neutral-muted">Subject:</span> {{ row.subject }}
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-neutral-muted pt-1 border-t border-neutral-ivory/50">
+            <div>Type: <span class="font-medium text-neutral-black">{{ row.type }}</span></div>
+            <div>{{ row.sent_at ? new Date(row.sent_at).toLocaleString() : (row.last_attempt_at ? new Date(row.last_attempt_at).toLocaleString() : '—') }}</div>
+          </div>
+
+          <div v-if="row.provider_message_id" class="text-[10px] font-mono text-neutral-muted truncate">
+            Msg ID: {{ row.provider_message_id }}
+          </div>
+
+          <div v-if="row.error" class="text-xs text-red-600 font-medium">
+            Error: {{ row.error }}
+          </div>
+
+          <div v-if="canSendNotifications && row.status === 'failed'" class="pt-2 flex justify-end">
+            <Button
+              size="sm"
+              variant="outline"
+              class="min-h-[44px] px-4"
+              @click="retry(row)"
+            >
+              Retry Delivery
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desktop Table View (>= md) -->
+      <div class="hidden md:block overflow-hidden rounded-2xl border border-neutral-ivory bg-white shadow-soft">
         <table class="min-w-full text-left text-sm" aria-label="Notifications history ledger">
           <thead class="border-b border-neutral-ivory text-[11px] uppercase tracking-wider text-neutral-muted">
             <tr>

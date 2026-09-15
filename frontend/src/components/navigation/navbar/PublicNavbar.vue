@@ -52,6 +52,16 @@ function isNavActive(href: string): boolean {
 const isOpen = ref(false);
 const scrolled = ref(false);
 
+const openMobileAccordion = ref<Record<string, boolean>>({
+  navigation: true,
+  applications: false,
+  admin: false,
+});
+
+const toggleMobileAccordion = (section: string) => {
+  openMobileAccordion.value[section] = !openMobileAccordion.value[section];
+};
+
 const isAuthenticated = computed(() => authStore.isAuthenticated);
 const canAccessAcademy = computed(() => authStore.canAccessAcademy);
 const showPublicAuth = computed(() => isPublicAuthEnabled);
@@ -412,160 +422,150 @@ const handleLogout = async () => {
                 </button>
               </div>
 
-              <div v-if="!isLoading && isAuthenticated && canAccessAcademy" class="mb-4">
-                <router-link
-                  to="/academy"
-                  class="inline-flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest w-full justify-center"
-                  @click="closeMenu"
+              <!-- Accordion 1: Main Navigation -->
+              <div class="border-b border-neutral-ivory/80 pb-3 mb-3">
+                <button
+                  @click="toggleMobileAccordion('navigation')"
+                  class="w-full flex items-center justify-between py-2 text-[11px] font-extrabold uppercase tracking-widest text-neutral-black/50 hover:text-primary transition-colors cursor-pointer min-h-[44px]"
                 >
-                  <BookOpen class="h-3.5 w-3.5" />
-                  Dawah Academy
-                </router-link>
+                  <span>Navigation</span>
+                  <ChevronDown :class="['w-4 h-4 transition-transform duration-200', openMobileAccordion.navigation ? 'rotate-180' : '']" />
+                </button>
+
+                <nav v-if="openMobileAccordion.navigation" class="flex flex-col gap-1 pt-1">
+                  <div v-for="(link, i) in filteredNavLinks" :key="link.name">
+                    <a
+                      v-if="link.external"
+                      :href="link.href"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      class="text-lg font-serif min-h-[44px] flex items-center justify-between group transition-colors text-neutral-black hover:text-primary px-2 rounded-xl"
+                      @click="closeMenu"
+                    >
+                      <div class="flex items-center gap-3">
+                        <span class="text-[10px] font-mono text-neutral-black/30">{{ (i + 1).toString().padStart(2, '0') }}</span>
+                        {{ link.name }}
+                      </div>
+                      <ChevronRight class="w-4 h-4 transition-transform group-hover:translate-x-1 opacity-0 group-hover:opacity-100" />
+                    </a>
+                    <router-link
+                      v-else
+                      :to="link.href"
+                      :class="[
+                        'text-lg font-serif min-h-[44px] flex items-center justify-between group transition-colors px-2 rounded-xl',
+                        isNavActive(link.href) ? 'text-primary font-medium bg-primary/5' : 'text-neutral-black hover:text-primary'
+                      ]"
+                      @click="closeMenu"
+                    >
+                      <div class="flex items-center gap-3">
+                        <span class="text-[10px] font-mono text-neutral-black/30">{{ (i + 1).toString().padStart(2, '0') }}</span>
+                        {{ link.name }}
+                      </div>
+                      <ChevronRight :class="['w-4 h-4 transition-transform group-hover:translate-x-1', isNavActive(link.href) ? 'opacity-100' : 'opacity-0']" />
+                    </router-link>
+                  </div>
+                </nav>
               </div>
 
-              <div v-if="!isLoading && isAuthenticated && hasEmsAccess" class="mb-4">
-                <router-link
-                  to="/ems"
-                  class="inline-flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest w-full justify-center"
-                  @click="closeMenu"
+              <!-- Accordion 2: Applications -->
+              <div v-if="!isLoading && isAuthenticated && (hasEmsAccess || hasCmsAccess || hasDamsAccess || hasStoreAccess || hasDonationsAccess || hasSponsorshipAccess || canAccessAcademy)" class="border-b border-neutral-ivory/80 pb-3 mb-3">
+                <button
+                  @click="toggleMobileAccordion('applications')"
+                  class="w-full flex items-center justify-between py-2 text-[11px] font-extrabold uppercase tracking-widest text-neutral-black/50 hover:text-primary transition-colors cursor-pointer min-h-[44px]"
                 >
-                  <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  EMS
-                </router-link>
-              </div>
+                  <span>Applications</span>
+                  <ChevronDown :class="['w-4 h-4 transition-transform duration-200', openMobileAccordion.applications ? 'rotate-180' : '']" />
+                </button>
 
-              <div v-if="!isLoading && isAuthenticated && hasCmsAccess" class="mb-4">
-                <router-link
-                  to="/cms"
-                  class="inline-flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest w-full justify-center"
-                  @click="closeMenu"
-                >
-                  <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z" />
-                  </svg>
-                  CMS
-                </router-link>
-              </div>
-
-              <div v-if="!isLoading && isAuthenticated && hasDamsAccess" class="mb-4">
-                <router-link
-                  to="/dams"
-                  class="inline-flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest w-full justify-center"
-                  @click="closeMenu"
-                >
-                  <BookOpen class="h-3.5 w-3.5" />
-                  DAMS
-                </router-link>
-              </div>
-
-              <div v-if="!isLoading && isAuthenticated && hasStoreAccess" class="mb-4">
-                <router-link
-                  to="/store/admin"
-                  class="inline-flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest w-full justify-center"
-                  @click="closeMenu"
-                >
-                  <ShoppingBag class="h-3.5 w-3.5" />
-                  Store Admin
-                </router-link>
-              </div>
-
-              <div v-if="!isLoading && isAuthenticated && hasDonationsAccess" class="mb-4">
-                <router-link
-                  to="/donations/admin"
-                  class="inline-flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest w-full justify-center"
-                  @click="closeMenu"
-                >
-                  <Heart class="h-3.5 w-3.5" />
-                  DMS (Donations)
-                </router-link>
-              </div>
-
-              <div v-if="!isLoading && isAuthenticated && hasSponsorshipAccess" class="mb-4">
-                <router-link
-                  to="/sponsorship/admin"
-                  class="inline-flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest w-full justify-center"
-                  @click="closeMenu"
-                >
-                  <Briefcase class="h-3.5 w-3.5" />
-                  SPMS (Sponsorship)
-                </router-link>
-              </div>
-
-              <div v-if="!isLoading && isAuthenticated && hasAdminAccess" class="mb-4">
-                <router-link
-                  to="/admin"
-                  class="inline-flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest w-full justify-center"
-                  @click="closeMenu"
-                >
-                  <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                  </svg>
-                  Admin Portal
-                </router-link>
-              </div>
-
-              <div v-if="!isLoading && isAuthenticated" class="mb-4">
-                <router-link
-                  to="/my-tickets"
-                  class="inline-flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest w-full justify-center"
-                  @click="closeMenu"
-                >
-                  <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                  </svg>
-                  My Tickets
-                </router-link>
-              </div>
-
-              <div v-if="!isLoading && !isAuthenticated && showPublicAuth" class="mb-4">
-                <router-link
-                  to="/login"
-                  class="inline-flex items-center gap-2 border border-primary/20 text-primary px-5 py-3 rounded-full text-[10px] font-bold uppercase tracking-widest w-full justify-center"
-                  @click="closeMenu"
-                >
-                  <LogIn class="h-3.5 w-3.5" />
-                  Login
-                </router-link>
-              </div>
-
-              <nav class="flex flex-col gap-2">
-                <div
-                  v-for="(link, i) in filteredNavLinks"
-                  :key="link.name"
-                >
-                  <a
-                    v-if="link.external"
-                    :href="link.href"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="text-2xl font-serif py-3 flex items-center justify-between group transition-colors text-neutral-black hover:text-primary"
-                    @click="closeMenu"
-                  >
-                    <div class="flex items-center gap-4">
-                      <span class="text-[10px] font-mono text-neutral-black/20 mt-1">{{ (i + 1).toString().padStart(2, '0') }}</span>
-                      {{ link.name }}
-                    </div>
-                    <ChevronRight class="w-5 h-5 transition-transform group-hover:translate-x-1 opacity-0 group-hover:opacity-100" />
-                  </a>
+                <div v-if="openMobileAccordion.applications" class="space-y-2 pt-1">
                   <router-link
-                    v-else
-                    :to="link.href"
-                    :class="[
-                      'text-2xl font-serif py-3 flex items-center justify-between group transition-colors',
-                      isNavActive(link.href) ? 'text-primary font-medium' : 'text-neutral-black hover:text-primary'
-                    ]"
+                    v-if="canAccessAcademy"
+                    to="/academy"
+                    class="flex items-center gap-3 px-4 min-h-[44px] rounded-xl text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary hover:bg-primary/20 transition-all"
                     @click="closeMenu"
                   >
-                    <div class="flex items-center gap-4">
-                      <span class="text-[10px] font-mono text-neutral-black/20 mt-1">{{ (i + 1).toString().padStart(2, '0') }}</span>
-                      {{ link.name }}
-                    </div>
-                    <ChevronRight :class="['w-5 h-5 transition-transform group-hover:translate-x-1', isNavActive(link.href) ? 'opacity-100' : 'opacity-0']" />
+                    <BookOpen class="h-4 w-4" /> Dawah Academy
+                  </router-link>
+                  <router-link
+                    v-if="hasEmsAccess"
+                    to="/ems"
+                    class="flex items-center gap-3 px-4 min-h-[44px] rounded-xl text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary hover:bg-primary/20 transition-all"
+                    @click="closeMenu"
+                  >
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    EMS (Events)
+                  </router-link>
+                  <router-link
+                    v-if="hasCmsAccess"
+                    to="/cms"
+                    class="flex items-center gap-3 px-4 min-h-[44px] rounded-xl text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary hover:bg-primary/20 transition-all"
+                    @click="closeMenu"
+                  >
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2h-2a2 2 0 01-2-2v-4z" />
+                    </svg>
+                    CMS (Content)
+                  </router-link>
+                  <router-link
+                    v-if="hasDamsAccess"
+                    to="/dams"
+                    class="flex items-center gap-3 px-4 min-h-[44px] rounded-xl text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary hover:bg-primary/20 transition-all"
+                    @click="closeMenu"
+                  >
+                    <BookOpen class="h-4 w-4" /> DAMS (Academy Mgmt)
+                  </router-link>
+                  <router-link
+                    v-if="hasStoreAccess"
+                    to="/store/admin"
+                    class="flex items-center gap-3 px-4 min-h-[44px] rounded-xl text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary hover:bg-primary/20 transition-all"
+                    @click="closeMenu"
+                  >
+                    <ShoppingBag class="h-4 w-4" /> Store Admin
+                  </router-link>
+                  <router-link
+                    v-if="hasDonationsAccess"
+                    to="/donations/admin"
+                    class="flex items-center gap-3 px-4 min-h-[44px] rounded-xl text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary hover:bg-primary/20 transition-all"
+                    @click="closeMenu"
+                  >
+                    <Heart class="h-4 w-4" /> DMS (Donations)
+                  </router-link>
+                  <router-link
+                    v-if="hasSponsorshipAccess"
+                    to="/sponsorship/admin"
+                    class="flex items-center gap-3 px-4 min-h-[44px] rounded-xl text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary hover:bg-primary/20 transition-all"
+                    @click="closeMenu"
+                  >
+                    <Briefcase class="h-4 w-4" /> SPMS (Sponsorship)
                   </router-link>
                 </div>
-              </nav>
+              </div>
+
+              <!-- Accordion 3: Administration -->
+              <div v-if="!isLoading && isAuthenticated && hasAdminAccess" class="border-b border-neutral-ivory/80 pb-3 mb-3">
+                <button
+                  @click="toggleMobileAccordion('admin')"
+                  class="w-full flex items-center justify-between py-2 text-[11px] font-extrabold uppercase tracking-widest text-neutral-black/50 hover:text-primary transition-colors cursor-pointer min-h-[44px]"
+                >
+                  <span>Administration</span>
+                  <ChevronDown :class="['w-4 h-4 transition-transform duration-200', openMobileAccordion.admin ? 'rotate-180' : '']" />
+                </button>
+
+                <div v-if="openMobileAccordion.admin" class="space-y-2 pt-1">
+                  <router-link
+                    to="/admin"
+                    class="flex items-center gap-3 px-4 min-h-[44px] rounded-xl text-xs font-bold uppercase tracking-wider bg-primary text-white hover:bg-secondary transition-all"
+                    @click="closeMenu"
+                  >
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                    </svg>
+                    Admin Portal
+                  </router-link>
+                </div>
+              </div>
 
               <div class="mt-auto pt-12 space-y-8">
                 <div v-if="showPublicAuth" class="space-y-3">

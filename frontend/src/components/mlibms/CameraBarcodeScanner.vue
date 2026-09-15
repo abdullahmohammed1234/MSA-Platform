@@ -5,6 +5,7 @@ import { Camera, CameraOff, RefreshCw } from 'lucide-vue-next';
 
 const emit = defineEmits<{
   (e: 'scan', barcode: string): void;
+  (e: 'scan-success', barcode: string): void;
   (e: 'error', errMessage: string): void;
 }>();
 
@@ -32,6 +33,13 @@ const playBeep = () => {
 
 const startScanner = async () => {
   errorMessage.value = '';
+
+  if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    errorMessage.value = 'Camera scanning requires a secure HTTPS connection or localhost.';
+    emit('error', errorMessage.value);
+    return;
+  }
+
   try {
     if (!html5QrcodeScanner) {
       html5QrcodeScanner = new Html5Qrcode(scannerContainerId);
@@ -48,7 +56,9 @@ const startScanner = async () => {
       },
       (decodedText) => {
         playBeep();
-        emit('scan', decodedText.trim());
+        const cleaned = decodedText.trim();
+        emit('scan', cleaned);
+        emit('scan-success', cleaned);
       },
       (_err) => {
         // Ignore frame decode errors during active scanning

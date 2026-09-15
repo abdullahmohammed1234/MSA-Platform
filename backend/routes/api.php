@@ -284,6 +284,114 @@ Route::prefix('v1')->group(function () {
                 ->middleware('permission:view_security')
                 ->name('api.admin.security.dashboard');
 
+            // Phase 27 Platform Command Center & Executive Operations
+            Route::get('/command-center', [\App\Http\Controllers\Api\V1\Admin\PlatformCommandCenterController::class, 'index'])
+                ->name('api.admin.command-center.index');
+
+            // Phase 28 Platform Governance, Audit & Continuity
+            Route::prefix('governance')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Api\V1\Admin\PlatformGovernanceController::class, 'index'])
+                    ->name('api.admin.governance.index');
+                Route::get('/audit', [\App\Http\Controllers\Api\V1\Admin\PlatformGovernanceController::class, 'auditIndex'])
+                    ->name('api.admin.governance.audit.index');
+                Route::get('/audit/{id}', [\App\Http\Controllers\Api\V1\Admin\PlatformGovernanceController::class, 'auditShow'])
+                    ->name('api.admin.governance.audit.show');
+                Route::get('/incidents/{identifier}/timeline', [\App\Http\Controllers\Api\V1\Admin\PlatformGovernanceController::class, 'timeline'])
+                    ->name('api.admin.governance.timeline');
+                Route::get('/integrity', [\App\Http\Controllers\Api\V1\Admin\PlatformGovernanceController::class, 'integrity'])
+                    ->name('api.admin.governance.integrity');
+                Route::get('/continuity', [\App\Http\Controllers\Api\V1\Admin\PlatformGovernanceController::class, 'continuity'])
+                    ->name('api.admin.governance.continuity');
+                Route::get('/report', [\App\Http\Controllers\Api\V1\Admin\PlatformGovernanceController::class, 'report'])
+                    ->name('api.admin.governance.report');
+            });
+
+            // Phase 29 Platform Lifecycle, Configuration & Environment Management
+            Route::prefix('lifecycle')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Api\V1\Admin\PlatformLifecycleController::class, 'index'])
+                    ->name('api.admin.lifecycle.index');
+                Route::get('/environment', [\App\Http\Controllers\Api\V1\Admin\PlatformLifecycleController::class, 'environment'])
+                    ->name('api.admin.lifecycle.environment');
+                Route::get('/release', [\App\Http\Controllers\Api\V1\Admin\PlatformLifecycleController::class, 'release'])
+                    ->name('api.admin.lifecycle.release');
+                Route::get('/dependencies', [\App\Http\Controllers\Api\V1\Admin\PlatformLifecycleController::class, 'dependencies'])
+                    ->name('api.admin.lifecycle.dependencies');
+                Route::get('/migrations', [\App\Http\Controllers\Api\V1\Admin\PlatformLifecycleController::class, 'migrations'])
+                    ->name('api.admin.lifecycle.migrations');
+                Route::get('/scheduler', [\App\Http\Controllers\Api\V1\Admin\PlatformLifecycleController::class, 'scheduler'])
+                    ->name('api.admin.lifecycle.scheduler');
+                Route::get('/drift', [\App\Http\Controllers\Api\V1\Admin\PlatformLifecycleController::class, 'drift'])
+                    ->name('api.admin.lifecycle.drift');
+                Route::get('/readiness', [\App\Http\Controllers\Api\V1\Admin\PlatformLifecycleController::class, 'readiness'])
+                    ->name('api.admin.lifecycle.readiness');
+            });
+
+            // Phase 30 Platform Change Management & Release Intelligence
+            Route::prefix('releases')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Api\V1\Admin\PlatformReleaseController::class, 'index'])
+                    ->name('api.admin.releases.index');
+                Route::get('/current', [\App\Http\Controllers\Api\V1\Admin\PlatformReleaseController::class, 'current'])
+                    ->name('api.admin.releases.current');
+                Route::get('/compare', [\App\Http\Controllers\Api\V1\Admin\PlatformReleaseController::class, 'compare'])
+                    ->name('api.admin.releases.compare');
+                Route::get('/{identifier}', [\App\Http\Controllers\Api\V1\Admin\PlatformReleaseController::class, 'show'])
+                    ->name('api.admin.releases.show');
+                Route::post('/', [\App\Http\Controllers\Api\V1\Admin\PlatformReleaseController::class, 'store'])
+                    ->name('api.admin.releases.store');
+                Route::get('/{identifier}/changes', [\App\Http\Controllers\Api\V1\Admin\PlatformReleaseController::class, 'changes'])
+                    ->name('api.admin.releases.changes');
+                Route::get('/{identifier}/impact', [\App\Http\Controllers\Api\V1\Admin\PlatformReleaseController::class, 'impact'])
+                    ->name('api.admin.releases.impact');
+                Route::get('/{identifier}/readiness', [\App\Http\Controllers\Api\V1\Admin\PlatformReleaseController::class, 'readiness'])
+                    ->name('api.admin.releases.readiness');
+                Route::get('/{identifier}/verification', [\App\Http\Controllers\Api\V1\Admin\PlatformReleaseController::class, 'verification'])
+                    ->name('api.admin.releases.verification');
+                Route::post('/{identifier}/verify', [\App\Http\Controllers\Api\V1\Admin\PlatformReleaseController::class, 'runVerification'])
+                    ->name('api.admin.releases.run-verification');
+                Route::get('/{identifier}/timeline', [\App\Http\Controllers\Api\V1\Admin\PlatformReleaseController::class, 'timeline'])
+                    ->name('api.admin.releases.timeline');
+                Route::get('/{identifier}/rollback', [\App\Http\Controllers\Api\V1\Admin\PlatformReleaseController::class, 'rollback'])
+                    ->name('api.admin.releases.rollback');
+                Route::post('/{identifier}/approve', [\App\Http\Controllers\Api\V1\Admin\PlatformReleaseController::class, 'approve'])
+                    ->name('api.admin.releases.approve');
+                Route::post('/{identifier}/reject', [\App\Http\Controllers\Api\V1\Admin\PlatformReleaseController::class, 'reject'])
+                    ->name('api.admin.releases.reject');
+            });
+
+            Route::prefix('changes')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Api\V1\Admin\PlatformReleaseController::class, 'changesIndex'])
+                    ->name('api.admin.changes.index');
+                Route::get('/{identifier}', [\App\Http\Controllers\Api\V1\Admin\PlatformReleaseController::class, 'changesShow'])
+                    ->name('api.admin.changes.show');
+                Route::post('/', [\App\Http\Controllers\Api\V1\Admin\PlatformReleaseController::class, 'changesStore'])
+                    ->name('api.admin.changes.store');
+            });
+
+            // Phase 24 & 25 Operational Workflow, Action Center & Controlled Remediation
+            Route::prefix('operations')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Api\V1\Admin\OperationsController::class, 'index'])->name('api.admin.operations.index');
+                Route::get('/summary', [\App\Http\Controllers\Api\V1\Admin\OperationsController::class, 'summary'])->name('api.admin.operations.summary');
+                Route::post('/detect', [\App\Http\Controllers\Api\V1\Admin\OperationsController::class, 'runDetection'])->middleware('throttle:10,1')->name('api.admin.operations.detect');
+                Route::get('/alerts/{id}', [\App\Http\Controllers\Api\V1\Admin\OperationsController::class, 'show'])->name('api.admin.operations.show');
+                Route::post('/alerts/{id}/acknowledge', [\App\Http\Controllers\Api\V1\Admin\OperationsController::class, 'acknowledge'])->name('api.admin.operations.acknowledge');
+                Route::post('/alerts/{id}/resolve', [\App\Http\Controllers\Api\V1\Admin\OperationsController::class, 'resolve'])->name('api.admin.operations.resolve');
+                Route::post('/alerts/{id}/dismiss', [\App\Http\Controllers\Api\V1\Admin\OperationsController::class, 'dismiss'])->name('api.admin.operations.dismiss');
+                Route::post('/alerts/{id}/reopen', [\App\Http\Controllers\Api\V1\Admin\OperationsController::class, 'reopen'])->name('api.admin.operations.reopen');
+
+                // Phase 25 & 26 Controlled Remediation & Operational Governance
+                Route::get('/alerts/{id}/actions', [\App\Http\Controllers\Api\V1\Admin\OperationsRemediationController::class, 'getActionsForAlert'])->name('api.admin.operations.alerts.actions');
+                Route::post('/alerts/{id}/actions/{actionKey}', [\App\Http\Controllers\Api\V1\Admin\OperationsRemediationController::class, 'executeAction'])->middleware('throttle:10,1')->name('api.admin.operations.alerts.execute');
+                Route::get('/executions', [\App\Http\Controllers\Api\V1\Admin\OperationsRemediationController::class, 'indexExecutions'])->name('api.admin.operations.executions.index');
+                Route::get('/executions/{uuid}', [\App\Http\Controllers\Api\V1\Admin\OperationsRemediationController::class, 'showExecution'])->name('api.admin.operations.executions.show');
+
+                // Phase 26 Governance & Automation Intelligence
+                Route::get('/governance/health', [\App\Http\Controllers\Api\V1\Admin\OperationsGovernanceController::class, 'getHealthMetrics'])->name('api.admin.operations.governance.health');
+                Route::get('/approvals', [\App\Http\Controllers\Api\V1\Admin\OperationsGovernanceController::class, 'indexApprovals'])->name('api.admin.operations.approvals.index');
+                Route::post('/alerts/{id}/actions/{actionKey}/request-approval', [\App\Http\Controllers\Api\V1\Admin\OperationsGovernanceController::class, 'requestApproval'])->name('api.admin.operations.alerts.request-approval');
+                Route::post('/approvals/{uuid}/approve', [\App\Http\Controllers\Api\V1\Admin\OperationsGovernanceController::class, 'approve'])->name('api.admin.operations.approvals.approve');
+                Route::post('/approvals/{uuid}/reject', [\App\Http\Controllers\Api\V1\Admin\OperationsGovernanceController::class, 'reject'])->name('api.admin.operations.approvals.reject');
+            });
+
             // Platform Operations & Intelligence (Phase 21)
             Route::prefix('platform')->group(function () {
                 Route::get('/health/history', [PlatformHealthController::class, 'index'])
@@ -310,6 +418,18 @@ Route::prefix('v1')->group(function () {
                 Route::get('/intelligence/metrics', [PlatformIntelligenceController::class, 'metrics'])
                     ->middleware('permission:platform.view')
                     ->name('api.admin.platform.intelligence.metrics');
+
+                // Phase 23 Central Admin Platform Intelligence & Operational Analytics
+                Route::prefix('intelligence')->group(function () {
+                    Route::get('/', [\App\Http\Controllers\Api\V1\Admin\IntelligenceController::class, 'index'])->name('api.admin.intelligence.index');
+                    Route::get('/ems', [\App\Http\Controllers\Api\V1\Admin\IntelligenceController::class, 'ems'])->name('api.admin.intelligence.ems');
+                    Route::get('/donations', [\App\Http\Controllers\Api\V1\Admin\IntelligenceController::class, 'donations'])->name('api.admin.intelligence.donations');
+                    Route::get('/store', [\App\Http\Controllers\Api\V1\Admin\IntelligenceController::class, 'store'])->name('api.admin.intelligence.store');
+                    Route::get('/mlibms', [\App\Http\Controllers\Api\V1\Admin\IntelligenceController::class, 'mlibms'])->name('api.admin.intelligence.mlibms');
+                    Route::get('/communications', [\App\Http\Controllers\Api\V1\Admin\IntelligenceController::class, 'communications'])->name('api.admin.intelligence.communications');
+                    Route::get('/volunteers', [\App\Http\Controllers\Api\V1\Admin\IntelligenceController::class, 'volunteers'])->name('api.admin.intelligence.volunteers');
+                    Route::get('/feedback', [\App\Http\Controllers\Api\V1\Admin\IntelligenceController::class, 'feedback'])->name('api.admin.intelligence.feedback');
+                });
 
                 Route::post('/operations/retry-job', [PlatformOperationsController::class, 'retryJob'])
                     ->middleware('permission:platform.operations')

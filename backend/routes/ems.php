@@ -21,6 +21,7 @@ use App\Ems\Http\Controllers\V1\EventTemplateController;
 use App\Ems\Http\Controllers\V1\EventSeriesController;
 use App\Ems\Http\Controllers\V1\PromoCodeController;
 use App\Ems\Http\Controllers\V1\FeedbackController;
+use App\Ems\Http\Controllers\V1\EventVolunteerController;
 use App\Ems\Http\Controllers\V1\CalendarController;
 use Illuminate\Support\Facades\Route;
 
@@ -78,6 +79,12 @@ Route::prefix('public')
         Route::delete('/events/{slug}/waitlist/{entry}', [PublicEventController::class, 'leaveWaitlist'])
             ->middleware('throttle:' . config('ems.public.registration_throttle', 'ems_registration'))
             ->name('events.waitlist.leave');
+        Route::post('/events/{slug}/feedback', [FeedbackController::class, 'publicStore'])
+            ->middleware('throttle:' . config('ems.public.registration_throttle', 'ems_registration'))
+            ->name('events.feedback.public-store');
+        Route::post('/events/{slug}/volunteers', [EventVolunteerController::class, 'publicStore'])
+            ->middleware('throttle:' . config('ems.public.registration_throttle', 'ems_registration'))
+            ->name('events.volunteers.public-store');
 
         Route::get('/categories', [PublicEventController::class, 'categories'])
             ->name('categories.index');
@@ -238,6 +245,8 @@ Route::middleware(['auth:sanctum', 'throttle:' . config('ems.route.throttle', 'e
         Route::post('/payments/{payment}/refund', [PaymentController::class, 'refund'])->name('payments.refund');
         Route::post('/payments/{payment}/fulfill', [PaymentController::class, 'fulfill'])->name('payments.fulfill');
         Route::post('/payments/{payment}/reconcile', [PaymentController::class, 'reconcile'])->name('payments.reconcile');
+        Route::post('/admin/payments/override', [\App\Ems\Http\Controllers\V1\Admin\PaymentOverrideController::class, 'overridePayment'])->name('payments.override');
+        Route::post('/admin/payments/reconcile-external', [\App\Ems\Http\Controllers\V1\Admin\PaymentOverrideController::class, 'reconcileExternalSquare'])->name('payments.reconcile-external');
 
         Route::get('/stale-captures', [StaleCaptureController::class, 'index'])->name('stale-captures.index');
         Route::get('/stale-captures/{payment}/{squarePaymentId}', [StaleCaptureController::class, 'show'])
@@ -334,5 +343,13 @@ Route::middleware(['auth:sanctum', 'throttle:' . config('ems.route.throttle', 'e
             ->name('events.feedback.index');
         Route::post('/events/{event}/feedback', [FeedbackController::class, 'store'])
             ->name('events.feedback.store');
+
+        // --- Event volunteers (Phase 22D) -------------------------------
+        Route::get('/events/{event}/volunteers', [EventVolunteerController::class, 'index'])
+            ->name('events.volunteers.index');
+        Route::patch('/events/{event}/volunteers/{volunteer}/status', [EventVolunteerController::class, 'updateStatus'])
+            ->name('events.volunteers.update-status');
+        Route::get('/events/{event}/volunteers/export', [EventVolunteerController::class, 'exportCsv'])
+            ->name('events.volunteers.export');
         });
     });

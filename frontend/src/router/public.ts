@@ -61,6 +61,15 @@ const publicRoutes: Array<RouteRecordRaw> = [
         },
       },
       {
+        path: 'events/:slug/feedback',
+        name: 'ems-public-event-feedback',
+        component: () => import('@/pages/public/ems/EmsPublicEventFeedbackPage.vue'),
+        meta: {
+          title: 'Event Feedback | SFU MSA',
+          desc: 'Submit post-event feedback and survey.',
+        },
+      },
+      {
         path: 'events/:slug',
         name: 'ems-public-event',
         component: () => import('@/pages/public/ems/EmsPublicEventDetailPage.vue'),
@@ -72,6 +81,14 @@ const publicRoutes: Array<RouteRecordRaw> = [
       // Legacy /ems-events URLs → /events (bookmarks & old Square redirects)
       { path: 'ems-events', redirect: '/events' },
       { path: 'ems-events/calendar', redirect: '/events/calendar' },
+      {
+        path: 'ems-events/:slug/feedback',
+        redirect: (to) => ({
+          name: 'ems-public-event-feedback',
+          params: { slug: to.params.slug },
+          query: to.query,
+        }),
+      },
       {
         path: 'ems-events/:slug/checkout/success',
         redirect: (to) => ({

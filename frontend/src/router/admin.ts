@@ -202,6 +202,12 @@ const adminRoutes: Array<RouteRecordRaw> = [
       { path: 'academy/settings', redirect: '/dams/settings' },
 
       {
+        path: 'intelligence',
+        name: 'admin-intelligence',
+        component: () => import('@/pages/admin/intelligence/PlatformIntelligencePage.vue'),
+        meta: { permissions: 'platform.view', title: 'Platform Intelligence | SFU MSA Platform' }
+      },
+      {
         path: 'analytics',
         name: 'admin-analytics',
         component: () => import('@/pages/admin/Analytics.vue'),
@@ -212,6 +218,48 @@ const adminRoutes: Array<RouteRecordRaw> = [
         name: 'admin-notifications',
         component: () => import('@/pages/admin/Notifications.vue'),
         meta: { permissions: 'manage_notifications' }
+      },
+      {
+        path: 'command-center',
+        name: 'admin-command-center',
+        component: () => import('@/pages/admin/operations/CommandCenterPage.vue'),
+        meta: { permissions: 'platform.operations', title: 'Platform Command Center | SFU MSA Platform' }
+      },
+      {
+        path: 'governance',
+        name: 'admin-governance',
+        component: () => import('@/pages/admin/governance/GovernanceDashboardPage.vue'),
+        meta: { permissions: 'platform.view', title: 'Governance & Continuity | SFU MSA Platform' }
+      },
+      {
+        path: 'governance/audit',
+        name: 'admin-governance-audit',
+        component: () => import('@/pages/admin/governance/AuditExplorerPage.vue'),
+        meta: { permissions: 'platform.audit', title: 'Audit Explorer | SFU MSA Platform' }
+      },
+      {
+        path: 'lifecycle',
+        name: 'admin-lifecycle',
+        component: () => import('@/pages/admin/lifecycle/PlatformLifecyclePage.vue'),
+        meta: { permissions: 'platform.view', title: 'Platform Lifecycle & Environment | SFU MSA Platform' }
+      },
+      {
+        path: 'releases',
+        name: 'admin-releases',
+        component: () => import('@/pages/admin/release/ReleaseManagementPage.vue'),
+        meta: { permissions: 'platform.view', title: 'Release Management & Change Intelligence | SFU MSA Platform' }
+      },
+      {
+        path: 'operations',
+        name: 'admin-operations',
+        component: () => import('@/pages/admin/operations/OperationsCenterPage.vue'),
+        meta: { permissions: 'platform.operations', title: 'Operations Center | SFU MSA Platform' }
+      },
+      {
+        path: 'operations/history',
+        name: 'admin-operations-history',
+        component: () => import('@/pages/admin/operations/OperationsHistoryPage.vue'),
+        meta: { permissions: 'platform.operations', title: 'Operations History | SFU MSA Platform' }
       },
       {
         path: 'operations/audit',

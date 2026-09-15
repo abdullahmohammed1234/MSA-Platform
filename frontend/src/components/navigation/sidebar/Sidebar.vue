@@ -12,14 +12,30 @@ const props = withDefaults(defineProps<SidebarProps>(), {
 const emit = defineEmits<{
   (e: 'collapse', collapsed: boolean): void;
   (e: 'closeMobile'): void;
+  (e: 'update:mobileOpen', open: boolean): void;
 }>();
 
 const isCollapsed = ref(props.collapsed);
 const expandedGroups = ref<Record<string, boolean>>({});
 
+const closeMobileDrawer = () => {
+  emit('closeMobile');
+  emit('update:mobileOpen', false);
+};
+
 watch(() => props.collapsed, (val) => {
   isCollapsed.value = val;
 });
+
+watch(() => props.mobileOpen, (val) => {
+  if (typeof document !== 'undefined') {
+    if (val) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+  }
+}, { immediate: true });
 
 const toggleCollapse = () => {
   isCollapsed.value = !isCollapsed.value;
@@ -36,7 +52,7 @@ const isGroupExpanded = (label: string) => {
 
 const handleKeyDown = (e: KeyboardEvent) => {
   if (e.key === 'Escape' && props.mobileOpen) {
-    emit('closeMobile');
+    closeMobileDrawer();
   }
 };
 
@@ -46,6 +62,9 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener('keydown', handleKeyDown);
+  if (typeof document !== 'undefined') {
+    document.body.style.overflow = '';
+  }
 });
 </script>
 
@@ -55,7 +74,7 @@ onUnmounted(() => {
     <div
       v-if="mobileOpen"
       class="fixed inset-0 bg-neutral-black/40 backdrop-blur-xs z-35 lg:hidden transition-opacity duration-300"
-      @click="emit('closeMobile')"
+      @click="closeMobileDrawer"
     ></div>
 
     <!-- Responsive Sidebar Container — fixed to viewport on all screens -->
@@ -118,7 +137,7 @@ onUnmounted(() => {
           <!-- Mobile Close Button -->
           <button
             v-if="mobileOpen"
-            @click="emit('closeMobile')"
+            @click="closeMobileDrawer"
             class="lg:hidden rounded-lg p-1.5 hover:bg-neutral-background text-neutral-muted hover:text-primary transition-colors cursor-pointer shrink-0"
             aria-label="Close sidebar"
           >
@@ -184,7 +203,7 @@ onUnmounted(() => {
                   :to="subItem.path"
                   class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-neutral-muted hover:text-primary hover:bg-neutral-background transition-all"
                   active-class="text-primary font-semibold bg-neutral-ivory/50 border-l-4 border-primary"
-                  @click="emit('closeMobile')"
+                  @click="closeMobileDrawer"
                 >
                   <!-- Render Icon -->
                   <div class="flex-shrink-0">

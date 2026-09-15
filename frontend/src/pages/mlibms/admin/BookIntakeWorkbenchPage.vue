@@ -33,6 +33,8 @@ const form = ref({
 
 const createdBook = ref<any>(null);
 
+const activeTab = ref<'camera' | 'isbn' | 'manual'>('camera');
+
 const handleLookup = async () => {
   if (!isbnInput.value.trim() || isSearching.value) return;
   isSearching.value = true;
@@ -61,11 +63,14 @@ const handleLookup = async () => {
       form.value.cover_image_url = sug.cover_image_url || '';
       form.value.summary = sug.summary || '';
     } else {
-      toast.info('ISBN not found. Please enter details manually.');
+      toast.info('ISBN metadata not found online. Please enter details manually.');
       form.value.isbn_13 = isbnInput.value.trim();
+      activeTab.value = 'manual';
     }
   } catch (e) {
-    toast.error('ISBN lookup failed.');
+    toast.error('ISBN lookup failed. Switching to manual entry.');
+    form.value.isbn_13 = isbnInput.value.trim();
+    activeTab.value = 'manual';
   } finally {
     isSearching.value = false;
   }
@@ -73,6 +78,7 @@ const handleLookup = async () => {
 
 const handleCameraIsbnScan = (isbn: string) => {
   isbnInput.value = isbn;
+  toast.success(`Scanned ISBN: ${isbn}`);
   handleLookup();
 };
 
@@ -142,16 +148,38 @@ const printBarcodeLabels = () => {
       <p class="text-xs text-neutral-muted mt-1">Scan book ISBN via camera or USB scanner, verify bibliographic metadata, add physical copy inventory, and generate barcode labels.</p>
     </div>
 
+    <!-- Mode Selector Tabs -->
+    <div class="flex items-center gap-2 border-b border-neutral-ivory pb-2">
+      <button
+        @click="activeTab = 'camera'"
+        :class="['px-4 py-2 text-xs font-bold rounded-xl transition-all', activeTab === 'camera' ? 'bg-primary text-white shadow-sm' : 'bg-white text-neutral-muted hover:text-neutral-black border border-neutral-ivory']"
+      >
+        [ Scan ISBN via Camera ]
+      </button>
+      <button
+        @click="activeTab = 'isbn'"
+        :class="['px-4 py-2 text-xs font-bold rounded-xl transition-all', activeTab === 'isbn' ? 'bg-primary text-white shadow-sm' : 'bg-white text-neutral-muted hover:text-neutral-black border border-neutral-ivory']"
+      >
+        [ Enter ISBN Manually ]
+      </button>
+      <button
+        @click="activeTab = 'manual'"
+        :class="['px-4 py-2 text-xs font-bold rounded-xl transition-all', activeTab === 'manual' ? 'bg-primary text-white shadow-sm' : 'bg-white text-neutral-muted hover:text-neutral-black border border-neutral-ivory']"
+      >
+        [ Enter Book Manually ]
+      </button>
+    </div>
+
     <!-- Step 1: ISBN Scanner Input -->
-    <div class="bg-white border border-neutral-ivory rounded-2xl p-6 space-y-6 shadow-soft">
-      <h3 class="text-xs font-bold text-neutral-muted uppercase tracking-wider">Step 1: Scan Book ISBN</h3>
+    <div v-if="activeTab !== 'manual'" class="bg-white border border-neutral-ivory rounded-2xl p-6 space-y-6 shadow-soft">
+      <h3 class="text-xs font-bold text-neutral-muted uppercase tracking-wider">Step 1: Scan / Lookup Book ISBN</h3>
       
       <!-- Integrated Camera Scanner -->
-      <div class="border border-neutral-ivory rounded-xl p-4 bg-neutral-background max-w-lg mx-auto">
+      <div v-if="activeTab === 'camera'" class="border border-neutral-ivory rounded-xl p-4 bg-neutral-background max-w-lg mx-auto">
         <div class="text-xs font-bold uppercase tracking-wider text-neutral-muted text-center mb-2">
           Live Camera ISBN Scanner
         </div>
-        <CameraBarcodeScanner @scan-success="handleCameraIsbnScan" />
+        <CameraBarcodeScanner @scan="handleCameraIsbnScan" @scan-success="handleCameraIsbnScan" />
       </div>
 
       <form @submit.prevent="handleLookup" class="flex flex-col sm:flex-row gap-3 pt-2">
@@ -160,14 +188,14 @@ const printBarcodeLabels = () => {
           <input
             v-model="isbnInput"
             type="text"
-            placeholder="Or type/scan ISBN-13 or ISBN-10 barcode (e.g. 9780132350884)..."
+            placeholder="Type or scan ISBN-13 or ISBN-10 barcode (e.g. 9780132350884)..."
             class="w-full pl-11 pr-4 py-2.5 bg-white border border-neutral-ivory rounded-xl text-neutral-black placeholder-neutral-muted font-mono text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-sm"
           />
         </div>
         <button
           type="submit"
           :disabled="isSearching || !isbnInput"
-          class="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-sm transition-all shadow-soft disabled:opacity-50 flex items-center justify-center space-x-2 shrink-0"
+          class="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-sm transition-all shadow-soft disabled:opacity-50 flex items-center justify-center space-x-2 shrink-0 cursor-pointer"
         >
           <span>{{ isSearching ? 'Searching...' : 'Scan / Lookup' }}</span>
         </button>

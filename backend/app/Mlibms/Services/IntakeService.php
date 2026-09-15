@@ -25,44 +25,18 @@ class IntakeService
             ->first();
     }
 
+    public function __construct(
+        private readonly ?BookMetadataService $metadataService = null
+    ) {
+    }
+
     /**
-     * Assistive metadata lookup via Open Library API.
+     * Assistive metadata lookup via multi-provider BookMetadataService.
      */
     public function lookupExternalMetadata(string $isbn): ?array
     {
-        $cleanIsbn = preg_replace('/[^0-9X]/i', '', $isbn);
-
-        try {
-            $response = Http::timeout(5)->get("https://openlibrary.org/api/books", [
-                'bibkeys' => "ISBN:{$cleanIsbn}",
-                'format' => 'json',
-                'jscmd' => 'data',
-            ]);
-
-            if ($response->successful()) {
-                $data = $response->json("ISBN:{$cleanIsbn}");
-                if ($data) {
-                    $authors = array_map(fn($a) => $a['name'] ?? '', $data['authors'] ?? []);
-                    $publishers = array_map(fn($p) => $p['name'] ?? '', $data['publishers'] ?? []);
-
-                    return [
-                        'title' => $data['title'] ?? null,
-                        'subtitle' => $data['subtitle'] ?? null,
-                        'authors' => array_filter($authors),
-                        'publishers' => array_filter($publishers),
-                        'publication_year' => isset($data['publish_date']) ? (int) preg_replace('/[^0-9]/', '', $data['publish_date']) : null,
-                        'cover_image_url' => $data['cover']['medium'] ?? $data['cover']['large'] ?? null,
-                        'summary' => is_string($data['notes'] ?? null) ? $data['notes'] : null,
-                        'isbn_13' => strlen($cleanIsbn) === 13 ? $cleanIsbn : null,
-                        'isbn_10' => strlen($cleanIsbn) === 10 ? $cleanIsbn : null,
-                    ];
-                }
-            }
-        } catch (\Throwable $e) {
-            // Log fallback error safely; metadata lookup is strictly assistive
-        }
-
-        return null;
+        $svc = $this->metadataService ?? app(BookMetadataService::class);
+        return $svc->lookupMetadata($isbn);
     }
 
     /**

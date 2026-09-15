@@ -257,6 +257,14 @@ class Event extends Model
     }
 
     /**
+     * @return HasMany<EventVolunteer, $this>
+     */
+    public function volunteers(): HasMany
+    {
+        return $this->hasMany(EventVolunteer::class, 'event_id');
+    }
+
+    /**
      * @return HasMany<EventReminder, $this>
      */
     public function reminders(): HasMany

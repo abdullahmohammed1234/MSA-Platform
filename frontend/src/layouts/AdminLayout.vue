@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { ToastContainer } from '@/components/feedback/toast';
 import { useAuthStore } from '@/stores/auth';
@@ -7,10 +8,15 @@ import NotificationBell from '@/components/notifications/NotificationBell.vue';
 
 import { useAppAccess } from '@/composables/auth/useAppAccess';
 
+const route = useRoute();
 const authStore = useAuthStore();
 const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasStoreAccess, hasDonationsAccess, hasSponsorshipAccess, hasMlibmsAccess } = useAppAccess();
 const isSidebarCollapsed = ref(false);
 const isMobileOpen = ref(false);
+
+watch(() => route.path, () => {
+  isMobileOpen.value = false;
+});
 
 const adminName = computed(() => {
   return authStore.user?.name || localStorage.getItem('user_name') || 'Admin User';
@@ -76,7 +82,14 @@ const adminItems = computed(() => {
 
   const systemChildren: Array<{ label: string; path: string; icon: string }> = [];
 
-  if (authStore.permissions.includes('platform.view') || authStore.permissions.includes('system.view') || isSuper) {
+  if (authStore.permissions.includes('platform.view') || authStore.permissions.includes('system.view') || authStore.permissions.includes('platform.operations') || isSuper) {
+    systemChildren.push({ label: 'Platform Command Center', path: '/admin/command-center', icon: 'dashboard' });
+    systemChildren.push({ label: 'Governance & Continuity', path: '/admin/governance', icon: 'shield' });
+    systemChildren.push({ label: 'Lifecycle & Environment', path: '/admin/lifecycle', icon: 'server' });
+    systemChildren.push({ label: 'Release & Change Management', path: '/admin/releases', icon: 'layers' });
+    systemChildren.push({ label: 'Audit Explorer', path: '/admin/governance/audit', icon: 'key' });
+    systemChildren.push({ label: 'Operations Center', path: '/admin/operations', icon: 'shield' });
+    systemChildren.push({ label: 'Platform Intelligence & Analytics', path: '/admin/intelligence', icon: 'trending-up' });
     systemChildren.push({ label: 'Platform Operations Overview', path: '/admin', icon: 'dashboard' });
     systemChildren.push({ label: 'Operational Alerts', path: '/admin/operations/alerts', icon: 'shield' });
     systemChildren.push({ label: 'Unified Audit Search', path: '/admin/operations/audit', icon: 'key' });

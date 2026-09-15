@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   CalendarDays,
@@ -38,10 +38,36 @@ const access = useEmsAccessStore();
 const isMobileNavOpen = ref(false);
 const isUserMenuOpen = ref(false);
 
+watch(isMobileNavOpen, (val) => {
+  if (typeof document !== 'undefined') {
+    if (val) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+  }
+});
+
+watch(() => route.path, () => {
+  isMobileNavOpen.value = false;
+});
+
+const handleKeyDown = (e: KeyboardEvent) => {
+  if (e.key === 'Escape' && isMobileNavOpen.value) {
+    isMobileNavOpen.value = false;
+  }
+};
+
 onMounted(() => {
-  // The guard already resolves this before the route renders; this covers a
-  // direct mount, e.g. during hot reload.
+  window.addEventListener('keydown', handleKeyDown);
   void access.resolve();
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown);
+  if (typeof document !== 'undefined') {
+    document.body.style.overflow = '';
+  }
 });
 
 const navigation = computed(() =>
