@@ -35,50 +35,73 @@ const createdBook = ref<any>(null);
 
 const activeTab = ref<'camera' | 'isbn' | 'manual'>('camera');
 
+const sanitizeIsbn = (input: string): string => {
+  const raw = input.trim().replace(/[^0-9X]/gi, '');
+  // If 18 digits (13-digit EAN-13 + 5-digit price addon starting with 978 or 979), trim to 13 digits
+  if (raw.length === 18 && (raw.startsWith('978') || raw.startsWith('979'))) {
+    return raw.substring(0, 13);
+  }
+  return raw || input.trim();
+};
+
 const handleLookup = async () => {
-  if (!isbnInput.value.trim() || isSearching.value) return;
+  const target = sanitizeIsbn(isbnInput.value);
+  if (!target || isSearching.value) return;
   isSearching.value = true;
   lookupResult.value = null;
   createdBook.value = null;
 
   try {
-    const res = await mlibmsAdminService.lookupIsbn(isbnInput.value.trim());
+    const res = await mlibmsAdminService.lookupIsbn(target);
     lookupResult.value = res;
 
     if (res.exists_in_catalog && res.data) {
       toast.info('Book already exists in local catalog.');
       form.value.title = res.data.title;
-      form.value.isbn_13 = res.data.isbn_13 || '';
+      form.value.isbn_13 = res.data.isbn_13 || target;
       form.value.isbn_10 = res.data.isbn_10 || '';
-    } else if (res.suggested_data) {
+      if (res.data.authors && res.data.authors.length > 0) {
+        form.value.author_names = res.data.authors.map((a: any) => a.name || a);
+      }
+      if (res.data.publisher) {
+        form.value.publisher_name = res.data.publisher.name || res.data.publisher;
+      }
+    } else if (res.status === 'FOUND' || res.suggested_data) {
       toast.success('Found metadata online! Fields pre-populated.');
       const sug = res.suggested_data;
       form.value.title = sug.title || '';
       form.value.subtitle = sug.subtitle || '';
-      form.value.isbn_13 = sug.isbn_13 || isbnInput.value.trim();
+      form.value.isbn_13 = sug.isbn_13 || target;
       form.value.isbn_10 = sug.isbn_10 || '';
       form.value.author_names = sug.authors && sug.authors.length > 0 ? sug.authors : [''];
       form.value.publisher_name = sug.publishers && sug.publishers.length > 0 ? sug.publishers[0] : '';
       form.value.publication_year = sug.publication_year || null;
       form.value.cover_image_url = sug.cover_image_url || '';
       form.value.summary = sug.summary || '';
+    } else if (res.status === 'UPSTREAM_ERROR') {
+      toast.warning('External metadata service is temporarily unavailable. You can enter details manually.');
+      form.value.isbn_13 = target;
+    } else if (res.status === 'INVALID_INPUT') {
+      toast.error('The scanned ISBN is invalid. Please check the ISBN.');
+      form.value.isbn_13 = target;
     } else {
-      toast.info('ISBN metadata not found online. Please enter details manually.');
-      form.value.isbn_13 = isbnInput.value.trim();
-      activeTab.value = 'manual';
+      toast.info('No external metadata found for this ISBN. You can enter details manually.');
+      form.value.isbn_13 = target;
     }
   } catch (e) {
     toast.error('ISBN lookup failed. Switching to manual entry.');
-    form.value.isbn_13 = isbnInput.value.trim();
-    activeTab.value = 'manual';
+    form.value.isbn_13 = target;
   } finally {
     isSearching.value = false;
   }
 };
 
 const handleCameraIsbnScan = (isbn: string) => {
-  isbnInput.value = isbn;
-  toast.success(`Scanned ISBN: ${isbn}`);
+  const cleaned = sanitizeIsbn(isbn);
+  if (!cleaned || isSearching.value) return;
+
+  isbnInput.value = cleaned;
+  toast.success(`Scanned ISBN: ${cleaned}`);
   handleLookup();
 };
 
@@ -179,7 +202,7 @@ const printBarcodeLabels = () => {
         <div class="text-xs font-bold uppercase tracking-wider text-neutral-muted text-center mb-2">
           Live Camera ISBN Scanner
         </div>
-        <CameraBarcodeScanner @scan="handleCameraIsbnScan" @scan-success="handleCameraIsbnScan" />
+        <CameraBarcodeScanner @scan-success="handleCameraIsbnScan" />
       </div>
 
       <form @submit.prevent="handleLookup" class="flex flex-col sm:flex-row gap-3 pt-2">
@@ -187,6 +210,7 @@ const printBarcodeLabels = () => {
           <Search class="w-5 h-5 absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-muted" />
           <input
             v-model="isbnInput"
+            @keydown.enter.prevent="handleLookup"
             type="text"
             placeholder="Type or scan ISBN-13 or ISBN-10 barcode (e.g. 9780132350884)..."
             class="w-full pl-11 pr-4 py-2.5 bg-white border border-neutral-ivory rounded-xl text-neutral-black placeholder-neutral-muted font-mono text-sm focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-sm"

@@ -22,24 +22,32 @@ class AdminIntakeController extends Controller
     {
         $isbn = $request->input('isbn');
         if (empty($isbn)) {
-            return response()->json(['message' => 'ISBN is required.'], 422);
+            return response()->json([
+                'status' => 'INVALID_INPUT',
+                'exists_in_catalog' => false,
+                'message' => 'ISBN is required.',
+                'suggested_data' => null,
+            ], 422);
         }
 
         $existingBook = $this->intakeService->findByIsbn($isbn);
         if ($existingBook) {
             return response()->json([
+                'status' => 'LOCAL_EXISTS',
                 'exists_in_catalog' => true,
                 'message' => 'Book already exists in local catalog.',
                 'data' => new BookResource($existingBook),
             ]);
         }
 
-        $externalData = $this->intakeService->lookupExternalMetadata($isbn);
+        $result = $this->intakeService->lookupExternalMetadataResult($isbn);
 
         return response()->json([
+            'status' => $result['status'],
             'exists_in_catalog' => false,
-            'message' => $externalData ? 'Found metadata online.' : 'No external metadata found.',
-            'suggested_data' => $externalData,
+            'message' => $result['message'],
+            'suggested_data' => $result['data'],
+            'provider' => $result['provider'] ?? null,
         ]);
     }
 

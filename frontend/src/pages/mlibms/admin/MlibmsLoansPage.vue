@@ -7,14 +7,85 @@
       </div>
 
       <button
-        @click="showOverrideModal = true"
-        class="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl transition-colors text-sm shadow-soft"
+        @click="showScannerPanel = !showScannerPanel"
+        class="inline-flex items-center gap-2 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl transition-colors text-sm shadow-soft cursor-pointer"
       >
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
         </svg>
-        Admin Return Override
+        <span>{{ showScannerPanel ? 'Hide Return Scanner' : 'Quick Return Scanner' }}</span>
       </button>
+    </div>
+
+    <!-- Quick Return & Circulation Scanner Panel -->
+    <div v-if="showScannerPanel" class="bg-white rounded-2xl p-6 border border-amber-200 shadow-soft space-y-4">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-neutral-ivory pb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-neutral-black">Quick Return Barcode Scanner</h2>
+            <p class="text-xs text-neutral-muted">Scan physical copy barcodes with a USB reader or camera to immediately process returns.</p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          @click="showCamera = !showCamera"
+          class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border border-neutral-ivory bg-neutral-background hover:bg-neutral-ivory text-xs font-bold text-neutral-black transition-colors"
+        >
+          <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+          </svg>
+          <span>{{ showCamera ? 'Hide Camera' : 'Use Camera Scanner' }}</span>
+        </button>
+      </div>
+
+      <!-- Live Camera Scanner Viewport -->
+      <div v-if="showCamera" class="max-w-md mx-auto">
+        <CameraBarcodeScanner @scan="handleQuickScan" @scan-success="handleQuickScan" />
+      </div>
+
+      <!-- USB Barcode Reader & Input Form -->
+      <form @submit.prevent="handleOverrideReturn" class="flex flex-col sm:flex-row gap-3">
+        <div class="flex-1 relative">
+          <input
+            ref="quickBarcodeInput"
+            v-model="overrideBarcode"
+            @keydown.enter.prevent="handleOverrideReturn"
+            type="text"
+            placeholder="Scan or enter book copy barcode (e.g. MLIB-C-000100)..."
+            class="w-full bg-neutral-background border border-neutral-ivory rounded-xl px-4 py-3 font-mono text-sm text-neutral-black font-bold focus:outline-none focus:border-amber-600 focus:ring-2 focus:ring-amber-600/20 shadow-inner"
+          />
+          <span v-if="submittingOverride" class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-amber-600 animate-pulse">
+            Processing...
+          </span>
+        </div>
+
+        <button
+          type="submit"
+          :disabled="submittingOverride || !overrideBarcode.trim()"
+          class="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-sm transition-colors shadow-soft disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          <span>Process Return</span>
+        </button>
+      </form>
+
+      <!-- Return Result Alert Banner -->
+      <div
+        v-if="overrideMessage"
+        :class="overrideSuccess ? 'bg-emerald-50 border-emerald-200 text-emerald-900' : 'bg-rose-50 border-rose-200 text-rose-900'"
+        class="p-4 rounded-xl border text-xs font-semibold flex items-center justify-between transition-all"
+      >
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full" :class="overrideSuccess ? 'bg-emerald-500' : 'bg-rose-500'"></span>
+          <span>{{ overrideMessage }}</span>
+        </div>
+        <button @click="overrideMessage = ''" class="text-neutral-muted hover:text-neutral-black">Dismiss</button>
+      </div>
     </div>
 
     <!-- Filter Bar -->
@@ -82,71 +153,23 @@
         </table>
       </div>
     </div>
-
-    <!-- Admin Return Override Modal -->
-    <div v-if="showOverrideModal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-      <div class="bg-white border border-neutral-ivory rounded-2xl p-6 max-w-md w-full shadow-soft space-y-4">
-        <div class="flex items-center justify-between">
-          <h3 class="text-lg font-bold text-neutral-black">Staff Return Override</h3>
-          <button @click="showOverrideModal = false" class="text-neutral-muted hover:text-neutral-black">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <p class="text-xs text-neutral-muted leading-relaxed">
-          Scan or enter a physical copy barcode to perform an administrative forced return (useful for misplaced books or walk-in guest returns).
-        </p>
-
-        <form @submit.prevent="handleOverrideReturn" class="space-y-4">
-          <div>
-            <label class="block text-xs font-bold text-neutral-muted uppercase mb-1">Copy Barcode</label>
-            <input
-              v-model="overrideBarcode"
-              type="text"
-              required
-              placeholder="e.g. MLIB-C-000100"
-              class="w-full bg-white border border-neutral-ivory rounded-xl px-3 py-2 text-neutral-black focus:outline-none focus:border-primary font-mono text-sm shadow-sm"
-            />
-          </div>
-
-          <div v-if="overrideMessage" :class="overrideSuccess ? 'text-emerald-700' : 'text-rose-700'" class="text-xs font-bold">
-            {{ overrideMessage }}
-          </div>
-
-          <div class="flex justify-end gap-3 pt-2">
-            <button
-              type="button"
-              @click="showOverrideModal = false"
-              class="px-4 py-2 bg-neutral-background hover:bg-neutral-ivory text-neutral-black rounded-xl text-xs font-bold transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              :disabled="submittingOverride"
-              class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs transition-colors shadow-sm disabled:opacity-50"
-            >
-              {{ submittingOverride ? 'Processing...' : 'Complete Override Return' }}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, nextTick } from 'vue';
 import mlibmsAdminService from '@/services/mlibms/mlibmsAdminService';
+import CameraBarcodeScanner from '@/components/mlibms/CameraBarcodeScanner.vue';
 
 const loans = ref<any[]>([]);
 const loading = ref(true);
 const searchQuery = ref('');
 const selectedStatus = ref('');
 
-const showOverrideModal = ref(false);
+const showScannerPanel = ref(true);
+const showCamera = ref(false);
+const quickBarcodeInput = ref<HTMLInputElement | null>(null);
+
 const overrideBarcode = ref('');
 const submittingOverride = ref(false);
 const overrideMessage = ref('');
@@ -173,21 +196,34 @@ const fetchLoans = async () => {
   }
 };
 
+const handleQuickScan = (barcode: string) => {
+  const cleanBarcode = barcode?.trim();
+  if (!cleanBarcode || submittingOverride.value) return;
+
+  overrideBarcode.value = cleanBarcode;
+  handleOverrideReturn();
+};
+
 const handleOverrideReturn = async () => {
-  if (!overrideBarcode.value) return;
+  const barcodeToProcess = overrideBarcode.value.trim();
+  if (!barcodeToProcess || submittingOverride.value) return;
+
   submittingOverride.value = true;
   overrideMessage.value = '';
   try {
-    const res = await mlibmsAdminService.overrideReturn(overrideBarcode.value);
+    const res = await mlibmsAdminService.overrideReturn(barcodeToProcess);
     overrideSuccess.value = true;
-    overrideMessage.value = res.message || 'Book returned successfully via administrative override.';
+    overrideMessage.value = res.message || `Book copy ${barcodeToProcess} returned successfully.`;
     overrideBarcode.value = '';
     await fetchLoans();
   } catch (err: any) {
     overrideSuccess.value = false;
-    overrideMessage.value = err.response?.data?.message || 'Failed to execute override return.';
+    overrideMessage.value = err.response?.data?.message || `Failed to return book copy ${barcodeToProcess}.`;
   } finally {
     submittingOverride.value = false;
+    nextTick(() => {
+      quickBarcodeInput.value?.focus();
+    });
   }
 };
 
@@ -218,6 +254,10 @@ const statusBadgeClass = (status: string) => {
 
 onMounted(() => {
   fetchLoans();
+  nextTick(() => {
+    quickBarcodeInput.value?.focus();
+  });
 });
 </script>
+
 

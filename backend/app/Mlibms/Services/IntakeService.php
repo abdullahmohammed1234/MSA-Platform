@@ -40,6 +40,15 @@ class IntakeService
     }
 
     /**
+     * Comprehensive metadata lookup returning status details.
+     */
+    public function lookupExternalMetadataResult(string $isbn): array
+    {
+        $svc = $this->metadataService ?? app(BookMetadataService::class);
+        return $svc->lookupMetadataResult($isbn);
+    }
+
+    /**
      * Transactional creation of a new Book record with physical copies.
      */
     public function createBookWithCopies(array $bookPayload, array $copiesPayload = []): Book
