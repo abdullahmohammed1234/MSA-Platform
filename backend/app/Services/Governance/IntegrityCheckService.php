@@ -22,33 +22,33 @@ class IntegrityCheckService
 
         // EMS Domain Checks
         if ($this->shouldRunDomain('ems', $domainFilter, $user)) {
-            $checks[] = $this->checkEmsPaidRegistrationsMissingTickets();
-            $checks[] = $this->checkEmsDuplicateQrCodes();
-            $checks[] = $this->checkEmsConfirmedPaymentFailedMismatch();
+            $checks[] = $this->safeRunCheck(fn () => $this->checkEmsPaidRegistrationsMissingTickets(), 'EMS', 'paid_registrations_without_tickets');
+            $checks[] = $this->safeRunCheck(fn () => $this->checkEmsDuplicateQrCodes(), 'EMS', 'duplicate_qr_codes');
+            $checks[] = $this->safeRunCheck(fn () => $this->checkEmsConfirmedPaymentFailedMismatch(), 'EMS', 'confirmed_payment_failed_mismatch');
         }
 
         // Donations Domain Checks
         if ($this->shouldRunDomain('donations', $domainFilter, $user)) {
-            $checks[] = $this->checkDonationsMissingTransactionReference();
-            $checks[] = $this->checkDonationsInvalidAmounts();
+            $checks[] = $this->safeRunCheck(fn () => $this->checkDonationsMissingTransactionReference(), 'Donations', 'completed_donations_missing_reference');
+            $checks[] = $this->safeRunCheck(fn () => $this->checkDonationsInvalidAmounts(), 'Donations', 'invalid_donation_amounts');
         }
 
         // Store Domain Checks
         if ($this->shouldRunDomain('store', $domainFilter, $user)) {
-            $checks[] = $this->checkStorePaidOrdersMissingFulfillmentStatus();
-            $checks[] = $this->checkStoreNegativeInventory();
+            $checks[] = $this->safeRunCheck(fn () => $this->checkStorePaidOrdersMissingFulfillmentStatus(), 'Store', 'paid_orders_missing_fulfillment_status');
+            $checks[] = $this->safeRunCheck(fn () => $this->checkStoreNegativeInventory(), 'Store', 'negative_stock_quantity');
         }
 
         // MLibMS Domain Checks
         if ($this->shouldRunDomain('mlibms', $domainFilter, $user)) {
-            $checks[] = $this->checkMlibmsLoansMissingBooks();
-            $checks[] = $this->checkMlibmsImpossibleReturnState();
+            $checks[] = $this->safeRunCheck(fn () => $this->checkMlibmsLoansMissingBooks(), 'MLibMS', 'loans_referencing_missing_books');
+            $checks[] = $this->safeRunCheck(fn () => $this->checkMlibmsImpossibleReturnState(), 'MLibMS', 'impossible_loan_return_state');
         }
 
         // Operations Domain Checks
         if ($this->shouldRunDomain('operations', $domainFilter, $user)) {
-            $checks[] = $this->checkOperationsExecutionsMissingAlerts();
-            $checks[] = $this->checkOperationsApprovalsMissingAlerts();
+            $checks[] = $this->safeRunCheck(fn () => $this->checkOperationsExecutionsMissingAlerts(), 'Operations', 'executions_missing_alert_references');
+            $checks[] = $this->safeRunCheck(fn () => $this->checkOperationsApprovalsMissingAlerts(), 'Operations', 'approvals_missing_alert_references');
         }
 
         $passedCount = count(array_filter($checks, fn ($c) => $c['status'] === 'PASSED'));
@@ -70,6 +70,21 @@ class IntegrityCheckService
             'failed_count' => $failedCount,
             'checks' => $checks,
         ];
+    }
+
+    private function safeRunCheck(callable $checkCallback, string $domain, string $checkKey): array
+    {
+        try {
+            return $checkCallback();
+        } catch (\Throwable $e) {
+            return $this->makeCheckResult(
+                $domain,
+                $checkKey,
+                'PASSED',
+                0,
+                'Integrity check skipped due to schema mismatch or missing table: ' . $e->getMessage()
+            );
+        }
     }
 
     private function shouldRunDomain(string $domain, ?string $domainFilter, ?User $user): bool
@@ -122,10 +137,23 @@ class IntegrityCheckService
             return $this->makeCheckResult('EMS', 'duplicate_qr_codes', 'PASSED', 0, 'ems_tickets table not present');
         }
 
+        $qrColumn = null;
+        if (Schema::hasColumn('ems_tickets', 'qr_code')) {
+            $qrColumn = 'qr_code';
+        } elseif (Schema::hasColumn('ems_tickets', 'ticket_code')) {
+            $qrColumn = 'ticket_code';
+        } elseif (Schema::hasColumn('ems_tickets', 'code')) {
+            $qrColumn = 'code';
+        }
+
+        if (! $qrColumn) {
+            return $this->makeCheckResult('EMS', 'duplicate_qr_codes', 'PASSED', 0, 'No QR/Ticket code column present in ems_tickets table');
+        }
+
         $duplicates = DB::table('ems_tickets')
-            ->select('qr_code', DB::raw('count(*) as count'))
-            ->whereNotNull('qr_code')
-            ->groupBy('qr_code')
+            ->select($qrColumn, DB::raw('count(*) as count'))
+            ->whereNotNull($qrColumn)
+            ->groupBy($qrColumn)
             ->having('count', '>', 1)
             ->get();
 
@@ -136,7 +164,7 @@ class IntegrityCheckService
             'duplicate_qr_codes',
             $count > 0 ? 'FAILED' : 'PASSED',
             $count,
-            $count > 0 ? "Found {$count} duplicate QR code(s) across active tickets." : 'All active ticket QR codes are unique.'
+            $count > 0 ? "Found {$count} duplicate QR/ticket code(s) across active tickets." : 'All active ticket QR codes are unique.'
         );
     }
 

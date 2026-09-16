@@ -60,31 +60,39 @@ class ApplicationAccessService
         }
 
         if ($application === 'store') {
-            if ($user->hasAnyRole(['store-administrator', 'store-staff']) || $user->hasPermissionTo('store.view') || $user->hasPermissionTo('store.products.view')) {
+            if ($user->hasAnyRole(['store-administrator', 'store-staff']) || $this->hasPermissionSafe($user, 'store.view') || $this->hasPermissionSafe($user, 'store.products.view')) {
                 return true;
             }
         }
 
         if ($application === 'donations') {
-            if ($user->hasAnyRole(['dms-administrator', 'dms-staff']) || $user->hasPermissionTo('donations.view') || $user->hasPermissionTo('donations.manage')) {
+            if ($user->hasAnyRole(['dms-administrator', 'dms-staff']) || $this->hasPermissionSafe($user, 'donations.view') || $this->hasPermissionSafe($user, 'donations.manage')) {
                 return true;
             }
         }
 
         if ($application === 'sponsorship') {
-            if ($user->hasAnyRole(['spms-administrator', 'spms-staff', 'spms-viewer']) || $user->hasPermissionTo('sponsorship.view') || $user->hasPermissionTo('sponsorship.manage')) {
+            if ($user->hasAnyRole(['spms-administrator', 'spms-staff', 'spms-viewer']) || $this->hasPermissionSafe($user, 'sponsorship.view') || $this->hasPermissionSafe($user, 'sponsorship.manage')) {
                 return true;
             }
         }
 
         if ($application === 'mlibms') {
-            if ($user->hasAnyRole(['mlibms-administrator', 'mlibms-cataloger', 'mlibms-viewer', 'library-admin', 'library-staff']) || $user->hasPermissionTo('library.view') || $user->hasPermissionTo('library.catalog')) {
+            if ($user->hasAnyRole(['mlibms-administrator', 'mlibms-cataloger', 'mlibms-viewer', 'library-admin', 'library-staff']) || $this->hasPermissionSafe($user, 'library.view') || $this->hasPermissionSafe($user, 'library.catalog')) {
                 return true;
             }
         }
 
         return false;
+    }
 
+    private function hasPermissionSafe(User $user, string $permission): bool
+    {
+        try {
+            return $user->can($permission) || $user->hasPermissionTo($permission);
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     /**
