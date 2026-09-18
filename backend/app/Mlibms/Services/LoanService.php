@@ -23,23 +23,89 @@ class LoanService
     ) {}
 
     /**
+     * Resolves a physical copy by copy barcode, accession number, copy UUID, OR book ISBN-13 / ISBN-10.
+     */
+    public function resolveCopyByIdentifier(string $identifier, string $purpose = 'checkout'): Copy
+    {
+        $raw = trim($identifier);
+        if (empty($raw)) {
+            throw new InvalidArgumentException("Identifier is required.");
+        }
+
+        $cleanDigits = preg_replace('/[^0-9X]/i', '', $raw);
+        if (strlen($cleanDigits) === 18 && (str_starts_with($cleanDigits, '978') || str_starts_with($cleanDigits, '979'))) {
+            $cleanDigits = substr($cleanDigits, 0, 13);
+        }
+
+        // 1. Direct copy lookup
+        $copy = Copy::where('barcode', $raw)
+            ->orWhere('accession_number', $raw)
+            ->orWhere('uuid', $raw)
+            ->orWhere('barcode', $cleanDigits)
+            ->orWhere('accession_number', $cleanDigits)
+            ->lockForUpdate()
+            ->first();
+
+        if ($copy) {
+            return $copy;
+        }
+
+        // 2. Book ISBN lookup
+        $bookQuery = \App\Mlibms\Models\Book::query();
+        $bookQuery->where('isbn_13', $raw)
+            ->orWhere('isbn_10', $raw)
+            ->orWhere('uuid', $raw);
+
+        if (!empty($cleanDigits)) {
+            $bookQuery->orWhere('isbn_13', $cleanDigits)
+                ->orWhere('isbn_10', $cleanDigits);
+        }
+
+        $matchedBook = $bookQuery->first();
+
+        if ($matchedBook) {
+            if ($purpose === 'checkout') {
+                $copy = Copy::where('book_id', $matchedBook->id)
+                    ->where('status', 'available')
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$copy) {
+                    $copy = Copy::where('book_id', $matchedBook->id)->lockForUpdate()->first();
+                }
+            } else {
+                $copy = Copy::where('book_id', $matchedBook->id)
+                    ->whereHas('loans', function ($q) {
+                        $q->whereIn('status', ['active', 'overdue']);
+                    })
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$copy) {
+                    $copy = Copy::where('book_id', $matchedBook->id)->lockForUpdate()->first();
+                }
+            }
+
+            if ($copy) {
+                return $copy;
+            }
+
+            throw new RuntimeException("Book '{$matchedBook->title}' exists in catalog, but no physical copies exist.");
+        }
+
+        throw new InvalidArgumentException("Book or physical copy with barcode/ISBN '{$raw}' was not found in the library.");
+    }
+
+    /**
      * Self-service checkout for an authenticated user.
      */
     public function selfServiceCheckout(string $copyBarcode, User $user): Loan
     {
         return DB::transaction(function () use ($copyBarcode, $user) {
-            $copy = Copy::where('barcode', $copyBarcode)
-                ->orWhere('accession_number', $copyBarcode)
-                ->orWhere('uuid', $copyBarcode)
-                ->lockForUpdate()
-                ->first();
-
-            if (!$copy) {
-                throw new InvalidArgumentException("Physical copy with barcode '{$copyBarcode}' was not found.");
-            }
+            $copy = $this->resolveCopyByIdentifier($copyBarcode, 'checkout');
 
             if ($copy->status->value !== 'available') {
-                throw new RuntimeException("Copy {$copy->barcode} is currently {$copy->status->label()} and cannot be checked out.");
+                throw new RuntimeException("Copy {$copy->barcode} ({$copy->book->title}) is currently {$copy->status->label()} and cannot be checked out.");
             }
 
             if ($copy->book->is_reference_only) {
@@ -110,19 +176,11 @@ class LoanService
     public function selfServiceReturn(string $copyBarcode, User $user): Loan
     {
         return DB::transaction(function () use ($copyBarcode, $user) {
-            $copy = Copy::where('barcode', $copyBarcode)
-                ->orWhere('accession_number', $copyBarcode)
-                ->orWhere('uuid', $copyBarcode)
-                ->lockForUpdate()
-                ->first();
-
-            if (!$copy) {
-                throw new InvalidArgumentException("Physical copy with barcode '{$copyBarcode}' was not found.");
-            }
+            $copy = $this->resolveCopyByIdentifier($copyBarcode, 'return');
 
             $loan = Loan::where('copy_id', $copy->id)->whereIn('status', ['active', 'overdue'])->first();
             if (!$loan) {
-                throw new RuntimeException("No active loan checkout record found for copy {$copy->barcode}.");
+                throw new RuntimeException("No active loan checkout record found for item {$copy->barcode} ({$copy->book->title}).");
             }
 
             $member = Member::where('user_id', $user->id)->first();
@@ -140,19 +198,11 @@ class LoanService
     public function staffReturnOverride(string $copyBarcode, User $staffUser): Loan
     {
         return DB::transaction(function () use ($copyBarcode, $staffUser) {
-            $copy = Copy::where('barcode', $copyBarcode)
-                ->orWhere('accession_number', $copyBarcode)
-                ->orWhere('uuid', $copyBarcode)
-                ->lockForUpdate()
-                ->first();
-
-            if (!$copy) {
-                throw new InvalidArgumentException("Physical copy with barcode '{$copyBarcode}' was not found.");
-            }
+            $copy = $this->resolveCopyByIdentifier($copyBarcode, 'return');
 
             $loan = Loan::where('copy_id', $copy->id)->whereIn('status', ['active', 'overdue'])->first();
             if (!$loan) {
-                throw new RuntimeException("No active loan checkout record found for copy {$copy->barcode}.");
+                throw new RuntimeException("No active loan checkout record found for item {$copy->barcode} ({$copy->book->title}).");
             }
 
             return $this->executeReturn($loan, $copy, $staffUser->id);

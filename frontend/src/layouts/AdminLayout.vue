@@ -80,20 +80,42 @@ const adminItems = computed(() => {
     });
   }
 
+  // Security & Operations section
+  const secOpsChildren: Array<{ label: string; path: string; icon: string }> = [];
+
+  if (authStore.permissions.includes('view_security') || isSuper) {
+    secOpsChildren.push({ label: 'Security Center', path: '/admin/security', icon: 'shield' });
+  }
+
+  if (authStore.permissions.includes('view_queue_status') || isSuper) {
+    secOpsChildren.push({ label: 'Platform Queues', path: '/admin/system/queues', icon: 'server' });
+  }
+
+  if (authStore.permissions.includes('platform.view') || authStore.permissions.includes('system.view') || authStore.permissions.includes('platform.operations') || isSuper) {
+    secOpsChildren.push({ label: 'Operations Center', path: '/admin/operations', icon: 'shield' });
+    secOpsChildren.push({ label: 'Platform Command Center', path: '/admin/command-center', icon: 'dashboard' });
+    secOpsChildren.push({ label: 'Operational Alerts', path: '/admin/operations/alerts', icon: 'shield' });
+    secOpsChildren.push({ label: 'Health History & Probes', path: '/admin/operations/health', icon: 'server' });
+    secOpsChildren.push({ label: 'Unified Audit Search', path: '/admin/operations/audit', icon: 'key' });
+    secOpsChildren.push({ label: 'Governance & Continuity', path: '/admin/governance', icon: 'shield' });
+    secOpsChildren.push({ label: 'Audit Explorer', path: '/admin/governance/audit', icon: 'key' });
+    secOpsChildren.push({ label: 'Lifecycle & Environment', path: '/admin/lifecycle', icon: 'server' });
+    secOpsChildren.push({ label: 'Release & Change Management', path: '/admin/releases', icon: 'layers' });
+    secOpsChildren.push({ label: 'Platform Intelligence & Analytics', path: '/admin/intelligence', icon: 'trending-up' });
+  }
+
+  if (secOpsChildren.length > 0) {
+    items.push({
+      label: 'Security & Operations',
+      path: '#',
+      children: secOpsChildren
+    });
+  }
+
+  // Systems Control section
   const systemChildren: Array<{ label: string; path: string; icon: string }> = [];
 
   if (authStore.permissions.includes('platform.view') || authStore.permissions.includes('system.view') || authStore.permissions.includes('platform.operations') || isSuper) {
-    systemChildren.push({ label: 'Platform Command Center', path: '/admin/command-center', icon: 'dashboard' });
-    systemChildren.push({ label: 'Governance & Continuity', path: '/admin/governance', icon: 'shield' });
-    systemChildren.push({ label: 'Lifecycle & Environment', path: '/admin/lifecycle', icon: 'server' });
-    systemChildren.push({ label: 'Release & Change Management', path: '/admin/releases', icon: 'layers' });
-    systemChildren.push({ label: 'Audit Explorer', path: '/admin/governance/audit', icon: 'key' });
-    systemChildren.push({ label: 'Operations Center', path: '/admin/operations', icon: 'shield' });
-    systemChildren.push({ label: 'Platform Intelligence & Analytics', path: '/admin/intelligence', icon: 'trending-up' });
-    systemChildren.push({ label: 'Platform Operations Overview', path: '/admin', icon: 'dashboard' });
-    systemChildren.push({ label: 'Operational Alerts', path: '/admin/operations/alerts', icon: 'shield' });
-    systemChildren.push({ label: 'Unified Audit Search', path: '/admin/operations/audit', icon: 'key' });
-    systemChildren.push({ label: 'Health History & Probes', path: '/admin/operations/health', icon: 'server' });
     systemChildren.push({ label: 'Systems Control Plane', path: '/admin/systems', icon: 'layers' });
     systemChildren.push({ label: 'Main Website', path: '/admin/systems/main-website', icon: 'home' });
     systemChildren.push({ label: 'Content Management System', path: '/admin/systems/cms', icon: 'file' });
@@ -106,17 +128,9 @@ const adminItems = computed(() => {
     systemChildren.push({ label: 'Library Management System (MLibMS)', path: '/admin/systems/library', icon: 'book' });
   }
 
-  if (authStore.permissions.includes('view_queue_status') || isSuper) {
-    systemChildren.push({ label: 'Platform Queues', path: '/admin/system/queues', icon: 'server' });
-  }
-
-  if (authStore.permissions.includes('view_security') || isSuper) {
-    systemChildren.push({ label: 'Security Center', path: '/admin/security', icon: 'shield' });
-  }
-
   if (systemChildren.length > 0) {
     items.push({
-      label: 'System',
+      label: 'Systems Control',
       path: '#',
       children: systemChildren
     });

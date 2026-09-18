@@ -121,4 +121,42 @@ class MlibmsSelfServiceCirculationTest extends TestCase
         $response->assertStatus(200)
             ->assertJsonPath('message', 'Administrative return successfully executed.');
     }
+
+    public function test_self_service_checkout_and_return_using_book_isbn(): void
+    {
+        $user = User::factory()->create();
+        $book = Book::create([
+            'title' => 'Tafsir Ibn Kathir',
+            'slug' => 'tafsir-ibn-kathir',
+            'isbn_13' => '9780140449136',
+            'isbn_10' => '0140449136',
+        ]);
+        $copy = Copy::create([
+            'book_id' => $book->id,
+            'barcode' => 'MLIB-C-999999',
+            'accession_number' => 'MLIB-A-999999',
+            'status' => 'available'
+        ]);
+
+        // Checkout using ISBN-13
+        $checkoutResponse = $this->actingAs($user, 'sanctum')->postJson('/api/v1/library/scan/checkout', [
+            'copy_barcode' => '978-0-14-044913-6',
+        ]);
+
+        $checkoutResponse->assertStatus(201)
+            ->assertJsonPath('data.status', 'active');
+
+        $this->assertDatabaseHas('mlibms_loans', [
+            'copy_id' => $copy->id,
+            'status' => 'active',
+        ]);
+
+        // Return using ISBN-10
+        $returnResponse = $this->actingAs($user, 'sanctum')->postJson('/api/v1/library/scan/return', [
+            'copy_barcode' => '0140449136',
+        ]);
+
+        $returnResponse->assertStatus(200)
+            ->assertJsonPath('data.status', 'returned');
+    }
 }

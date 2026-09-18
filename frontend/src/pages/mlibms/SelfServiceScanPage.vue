@@ -192,7 +192,6 @@ onUnmounted(() => {
 
             <!-- Integrated Camera Barcode Scanner component -->
             <CameraBarcodeScanner 
-              @scan="handleCameraDetected" 
               @scan-success="handleCameraDetected" 
             />
           </div>

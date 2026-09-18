@@ -3,6 +3,12 @@ import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { Camera, CameraOff, RefreshCw, CheckCircle2 } from 'lucide-vue-next';
 
+const props = withDefaults(defineProps<{
+  cooldownMs?: number;
+}>(), {
+  cooldownMs: 3000,
+});
+
 const emit = defineEmits<{
   (e: 'scan', barcode: string): void;
   (e: 'scan-success', barcode: string): void;
@@ -14,12 +20,17 @@ const isScanning = ref(false);
 const errorMessage = ref('');
 const lastDetectedBarcode = ref('');
 const showDetectionFeedback = ref(false);
+const isLocked = ref(false);
 
 let html5QrcodeScanner: Html5Qrcode | null = null;
 let lastScannedText = '';
 let lastScanTime = 0;
 let feedbackTimer: any = null;
-const cooldownMs = 2000;
+
+// Frame consensus tracking to prevent frame decode jitter
+let candidateBarcode = '';
+let candidateCount = 0;
+let lastCandidateTime = 0;
 
 const playBeep = () => {
   try {
@@ -28,7 +39,7 @@ const playBeep = () => {
     const gain = ctx.createGain();
     osc.type = 'sine';
     osc.frequency.setValueAtTime(880, ctx.currentTime);
-    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.setValueAtTime(0.12, ctx.currentTime);
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.start();
@@ -38,24 +49,55 @@ const playBeep = () => {
   }
 };
 
-const onScanSuccessCallback = (decodedText: string) => {
-  const now = Date.now();
-  const cleaned = decodedText.trim();
-  if (!cleaned) return;
+const sanitizeBarcode = (input: string): string => {
+  const cleaned = input.trim();
+  const rawDigits = cleaned.replace(/[^0-9X]/gi, '');
+  if (rawDigits.length === 18 && (rawDigits.startsWith('978') || rawDigits.startsWith('979'))) {
+    return rawDigits.substring(0, 13);
+  }
+  return cleaned;
+};
 
-  if (cleaned === lastScannedText && now - lastScanTime < cooldownMs) {
-    return; // Skip duplicate frame within cooldown window
+const onScanSuccessCallback = (decodedText: string) => {
+  const cleaned = sanitizeBarcode(decodedText);
+  if (!cleaned || cleaned.length < 4) return;
+
+  const now = Date.now();
+
+  if (cleaned === lastScannedText && now - lastScanTime < props.cooldownMs) {
+    return;
+  }
+
+  // Frame consensus stabilization: require 2 consecutive frames for candidate match
+  if (cleaned === candidateBarcode && now - lastCandidateTime < 600) {
+    candidateCount++;
+  } else {
+    candidateBarcode = cleaned;
+    candidateCount = 1;
+    lastCandidateTime = now;
+  }
+
+  const isFormedIsbn = (cleaned.length === 13 && (cleaned.startsWith('978') || cleaned.startsWith('979')));
+  const isFormedCopyBarcode = cleaned.toUpperCase().startsWith('MLIB-');
+
+  if (candidateCount < 2 && !isFormedIsbn && !isFormedCopyBarcode) {
+    return;
   }
 
   lastScannedText = cleaned;
   lastScanTime = now;
   lastDetectedBarcode.value = cleaned;
   showDetectionFeedback.value = true;
+  isLocked.value = true;
+
+  candidateBarcode = '';
+  candidateCount = 0;
 
   clearTimeout(feedbackTimer);
   feedbackTimer = setTimeout(() => {
     showDetectionFeedback.value = false;
-  }, 2000);
+    isLocked.value = false;
+  }, 2500);
 
   playBeep();
   emit('scan', cleaned);
@@ -74,11 +116,15 @@ const stopScanner = async () => {
   } finally {
     html5QrcodeScanner = null;
     isScanning.value = false;
+    isLocked.value = false;
   }
 };
 
 const startScanner = async () => {
   errorMessage.value = '';
+  lastScannedText = '';
+  candidateBarcode = '';
+  candidateCount = 0;
   await nextTick();
 
   if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
@@ -94,7 +140,7 @@ const startScanner = async () => {
   }
 
   try {
-    await stopScanner(); // Stop and clear any lingering instance
+    await stopScanner();
 
     html5QrcodeScanner = new Html5Qrcode(scannerContainerId, {
       formatsToSupport: [
@@ -108,7 +154,7 @@ const startScanner = async () => {
         Html5QrcodeSupportedFormats.QR_CODE,
       ],
       experimentalFeatures: {
-        useBarCodeDetectorIfSupported: true,
+        useBarCodeDetectorIfSupported: false,
       },
       verbose: false,
     });
@@ -118,9 +164,9 @@ const startScanner = async () => {
     await html5QrcodeScanner.start(
       { facingMode: 'environment' },
       {
-        fps: 15,
+        fps: 10,
         qrbox: (viewfinderWidth: number, viewfinderHeight: number) => ({
-          width: Math.max(240, Math.floor(viewfinderWidth * 0.85)),
+          width: Math.max(250, Math.floor(viewfinderWidth * 0.85)),
           height: Math.max(140, Math.floor(viewfinderHeight * 0.55)),
         }),
         aspectRatio: 1.777778,
@@ -131,15 +177,21 @@ const startScanner = async () => {
         },
       },
       onScanSuccessCallback,
-      (_err) => {
-        // Ignore frame decode misses
-      }
+      () => {}
     );
   } catch (err: any) {
     isScanning.value = false;
     errorMessage.value = err?.message || 'Camera access denied or no camera device available.';
     emit('error', errorMessage.value);
   }
+};
+
+const resetScanState = () => {
+  lastScannedText = '';
+  candidateBarcode = '';
+  candidateCount = 0;
+  showDetectionFeedback.value = false;
+  isLocked.value = false;
 };
 
 onMounted(() => {
@@ -159,14 +211,25 @@ onUnmounted(() => {
         <span class="text-xs font-extrabold uppercase tracking-wider text-neutral-black">Camera Barcode Scanner</span>
       </div>
 
-      <button
-        type="button"
-        @click="isScanning ? stopScanner() : startScanner()"
-        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-ivory bg-neutral-background hover:bg-neutral-ivory/40 text-xs font-bold text-neutral-black transition-all cursor-pointer"
-      >
-        <component :is="isScanning ? CameraOff : RefreshCw" class="w-3.5 h-3.5 text-primary" />
-        <span>{{ isScanning ? 'Pause Camera' : 'Start Camera' }}</span>
-      </button>
+      <div class="flex items-center gap-2">
+        <button
+          v-if="lastDetectedBarcode"
+          type="button"
+          @click="resetScanState"
+          class="px-2.5 py-1.5 rounded-xl border border-neutral-ivory bg-white hover:bg-neutral-background text-[11px] font-bold text-neutral-black transition-all cursor-pointer"
+        >
+          Reset Scan
+        </button>
+
+        <button
+          type="button"
+          @click="isScanning ? stopScanner() : startScanner()"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-ivory bg-neutral-background hover:bg-neutral-ivory/40 text-xs font-bold text-neutral-black transition-all cursor-pointer"
+        >
+          <component :is="isScanning ? CameraOff : RefreshCw" class="w-3.5 h-3.5 text-primary" />
+          <span>{{ isScanning ? 'Pause Camera' : 'Start Camera' }}</span>
+        </button>
+      </div>
     </div>
 
     <!-- Scanner Viewfinder Container -->
@@ -176,12 +239,13 @@ onUnmounted(() => {
       <!-- Scanned Detection Notification -->
       <div
         v-if="showDetectionFeedback"
-        class="absolute top-3 left-3 right-3 bg-emerald-600/90 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-between backdrop-blur-md shadow-lg transition-all animate-fade-in"
+        class="absolute top-3 left-3 right-3 bg-emerald-600/90 text-white px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-between backdrop-blur-md shadow-lg transition-all animate-fade-in z-20"
       >
         <div class="flex items-center gap-2 truncate">
           <CheckCircle2 class="w-4 h-4 text-emerald-200 shrink-0" />
-          <span class="truncate">Scanned: <span class="font-mono underline">{{ lastDetectedBarcode }}</span></span>
+          <span class="truncate">Locked: <span class="font-mono underline font-bold">{{ lastDetectedBarcode }}</span></span>
         </div>
+        <span class="text-[10px] bg-emerald-700/80 px-2 py-0.5 rounded-md font-mono">Confirmed</span>
       </div>
 
       <div v-if="!isScanning && !errorMessage" class="text-center p-6 text-white/70 space-y-2">

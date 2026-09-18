@@ -468,7 +468,7 @@ const handleLogout = async () => {
               </div>
 
               <!-- Accordion 2: Applications -->
-              <div v-if="!isLoading && isAuthenticated && (hasEmsAccess || hasCmsAccess || hasDamsAccess || hasStoreAccess || hasDonationsAccess || hasSponsorshipAccess || canAccessAcademy)" class="border-b border-neutral-ivory/80 pb-3 mb-3">
+              <div v-if="!isLoading && isAuthenticated && (hasEmsAccess || hasCmsAccess || hasDamsAccess || hasStoreAccess || hasDonationsAccess || hasSponsorshipAccess || hasMlibmsAccess || canAccessAcademy)" class="border-b border-neutral-ivory/80 pb-3 mb-3">
                 <button
                   @click="toggleMobileAccordion('applications')"
                   class="w-full flex items-center justify-between py-2 text-[11px] font-extrabold uppercase tracking-widest text-neutral-black/50 hover:text-primary transition-colors cursor-pointer min-h-[44px]"
@@ -504,7 +504,7 @@ const handleLogout = async () => {
                     @click="closeMenu"
                   >
                     <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2h-2a2 2 0 01-2-2v-4z" />
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z" />
                     </svg>
                     CMS (Content)
                   </router-link>
@@ -540,6 +540,14 @@ const handleLogout = async () => {
                   >
                     <Briefcase class="h-4 w-4" /> SPMS (Sponsorship)
                   </router-link>
+                  <router-link
+                    v-if="hasMlibmsAccess"
+                    to="/library/admin"
+                    class="flex items-center gap-3 px-4 min-h-[44px] rounded-xl text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary hover:bg-primary/20 transition-all"
+                    @click="closeMenu"
+                  >
+                    <BookOpen class="h-4 w-4" /> MLibMS (Library)
+                  </router-link>
                 </div>
               </div>
 
@@ -569,14 +577,22 @@ const handleLogout = async () => {
 
               <div class="mt-auto pt-12 space-y-8">
                 <div v-if="showPublicAuth" class="space-y-3">
-                  <router-link
-                    v-if="!isAuthenticated"
-                    to="/register"
-                    class="block w-full py-5 bg-primary text-white rounded-2xl text-center text-xs font-bold uppercase tracking-[0.2em] shadow-xl shadow-primary/10 hover:bg-secondary active:scale-[0.98] transition-all"
-                    @click="closeMenu"
-                  >
-                    Register
-                  </router-link>
+                  <template v-if="!isAuthenticated">
+                    <router-link
+                      to="/login"
+                      class="block w-full py-4 border border-primary/20 text-primary bg-white rounded-2xl text-center text-xs font-bold uppercase tracking-[0.2em] hover:bg-primary/5 active:scale-[0.98] transition-all"
+                      @click="closeMenu"
+                    >
+                      Login
+                    </router-link>
+                    <router-link
+                      to="/register"
+                      class="block w-full py-4 bg-primary text-white rounded-2xl text-center text-xs font-bold uppercase tracking-[0.2em] shadow-xl shadow-primary/10 hover:bg-secondary active:scale-[0.98] transition-all"
+                      @click="closeMenu"
+                    >
+                      Register
+                    </router-link>
+                  </template>
                   <button
                     v-else
                     type="button"

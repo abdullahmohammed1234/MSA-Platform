@@ -46,7 +46,7 @@
 
       <!-- Live Camera Scanner Viewport -->
       <div v-if="showCamera" class="max-w-md mx-auto">
-        <CameraBarcodeScanner @scan="handleQuickScan" @scan-success="handleQuickScan" />
+        <CameraBarcodeScanner @scan-success="handleQuickScan" />
       </div>
 
       <!-- USB Barcode Reader & Input Form -->

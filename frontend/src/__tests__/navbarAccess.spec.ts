@@ -351,5 +351,55 @@ describe('Navbar Unified Access and Launcher Tests', () => {
       expect(hasEmsAccess.value).toBe(true);
       expect(hasAdminAccess.value).toBe(false);
     });
+
+    it('renders both Login and Register links in mobile view drawer for guest users', () => {
+      const authStore = useAuthStore();
+      authStore.token = '';
+      authStore.user = null;
+
+      const wrapper = mountNavbar();
+      const links = wrapper.findAll('a');
+      const hrefs = links.map(l => l.attributes('href'));
+
+      expect(hrefs).toContain('/login');
+      expect(hrefs).toContain('/register');
+    });
+
+    it('grants MLibMS access to MLibMS administrator staff', () => {
+      const authStore = useAuthStore();
+      authStore.token = 'mlibms-token';
+      authStore.user = {
+        id: 8,
+        uuid: 'mlibms-uuid',
+        name: 'Librarian Staff',
+        email: 'librarian@sfu.ca',
+        roles: ['mlibms-administrator'],
+        permissions: ['library.admin'],
+      };
+
+      const { hasMlibmsAccess } = useAppAccess();
+
+      expect(hasMlibmsAccess.value).toBe(true);
+    });
+
+    it('renders MLibMS Admin link for MLibMS staff user', async () => {
+      const authStore = useAuthStore();
+      authStore.token = 'mlibms-token';
+      authStore.user = {
+        id: 8,
+        uuid: 'mlibms-uuid',
+        name: 'Librarian Staff',
+        email: 'librarian@sfu.ca',
+        roles: ['mlibms-administrator'],
+        permissions: ['library.admin'],
+      };
+
+      const wrapper = mountNavbar();
+      await wrapper.find('button.cursor-pointer').trigger('click');
+
+      const menuText = wrapper.text();
+      expect(menuText).toContain('MLibMS Admin');
+      expect(wrapper.find('a[href="/library/admin"]').exists()).toBe(true);
+    });
   });
 });
