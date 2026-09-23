@@ -41,6 +41,7 @@ export interface PublicEvent {
   is_full: boolean;
   is_sold_out?: boolean;
   waitlist_enabled?: boolean;
+  show_remaining_tickets?: boolean;
   is_featured?: boolean;
   is_accepting_registrations: boolean;
   registration_label: string;

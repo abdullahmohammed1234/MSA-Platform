@@ -79,6 +79,18 @@ export function useAppAccess() {
     );
   });
 
+  const hasVolunteeringAccess = computed(() => {
+    if (authStore.user?.application_access?.volunteering) {
+      return authStore.user.application_access.volunteering.access;
+    }
+    return (
+      isSuperOrAdmin.value ||
+      authStore.roles.includes('volunteer-administrator') ||
+      authStore.roles.includes('volunteer-coordinator') ||
+      authStore.permissions.includes('volunteer.registrations.view')
+    );
+  });
+
   return {
     hasCmsAccess,
     hasDamsAccess,
@@ -88,6 +100,7 @@ export function useAppAccess() {
     hasSponsorshipAccess,
     hasAdminAccess,
     hasMlibmsAccess,
+    hasVolunteeringAccess,
     isSuperOrAdmin,
   };
 }

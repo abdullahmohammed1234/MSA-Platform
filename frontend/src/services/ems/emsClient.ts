@@ -126,6 +126,11 @@ async function request<T>(config: AxiosRequestConfig): Promise<EmsSuccessEnvelop
       url: `${EMS_PREFIX}${config.url ?? ''}`,
     });
 
+    // Handle binary file downloads (e.g. PDF/CSV/XLSX blobs) which do not carry a JSON envelope
+    if (config.responseType === 'blob' || config.responseType === 'arraybuffer') {
+      return { success: true, message: 'Download successful', data: response.data as any, meta: {} };
+    }
+
     const body = response.data;
 
     // A 2xx that is not a success envelope means the request was intercepted
@@ -152,6 +157,10 @@ async function data<T>(config: AxiosRequestConfig): Promise<T> {
 export const emsHttp = {
   /** GET returning only the payload. */
   get: <T>(url: string, params?: Record<string, unknown>) => data<T>({ method: 'get', url, params }),
+
+  /** GET returning binary Blob for file downloads. */
+  getBlob: (url: string, params?: Record<string, unknown>) =>
+    data<Blob>({ method: 'get', url, params, responseType: 'blob' }),
 
   /** GET returning the payload and the metadata, for paginated endpoints. */
   getWithMeta: <T>(url: string, params?: Record<string, unknown>) =>

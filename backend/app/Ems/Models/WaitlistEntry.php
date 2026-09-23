@@ -90,6 +90,7 @@ class WaitlistEntry extends Model
     public function scopeWaiting(Builder $query): Builder
     {
         return $query->where('status', WaitlistStatus::Waiting->value)
-            ->orderBy('position');
+            ->orderBy('created_at', 'asc')
+            ->orderBy('position', 'asc');
     }
 }

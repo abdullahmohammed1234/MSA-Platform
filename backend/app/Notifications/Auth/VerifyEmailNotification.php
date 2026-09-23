@@ -21,6 +21,11 @@ class VerifyEmailNotification extends Notification implements ShouldQueue
         $this->token = $token;
     }
 
+    public function getToken(): string
+    {
+        return $this->token;
+    }
+
     /**
      * Get the notification's delivery channels.
      *

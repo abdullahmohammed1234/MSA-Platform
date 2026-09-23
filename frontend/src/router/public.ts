@@ -190,7 +190,21 @@ const publicRoutes: Array<RouteRecordRaw> = [
       },
       {
         path: 'volunteer',
-        redirect: '/contact?volunteer=true'
+        name: 'public-volunteer-home',
+        component: () => import('@/pages/volunteer/VolunteerHomePage.vue'),
+        meta: { title: 'Volunteering | SFU MSA', desc: 'Join the SFU MSA volunteer team and serve the community.' }
+      },
+      {
+        path: 'volunteer/my-history',
+        name: 'public-volunteer-history',
+        component: () => import('@/pages/volunteer/VolunteerHistoryPage.vue'),
+        meta: { title: 'My Volunteer Activity | SFU MSA', desc: 'Track your volunteer positions and service record.', requiresAuth: true }
+      },
+      {
+        path: 'volunteer/:slug',
+        name: 'public-volunteer-detail',
+        component: () => import('@/pages/volunteer/VolunteerOpportunityDetailPage.vue'),
+        meta: { title: 'Volunteer Position | SFU MSA', desc: 'View position details and sign up.' }
       },
       // Public Store — Catalogue, Cart, Checkout, Success, My Orders
       {

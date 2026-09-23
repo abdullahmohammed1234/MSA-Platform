@@ -1069,4 +1069,29 @@ Route::prefix('v1')->group(function () {
         Route::put('/settings', [\App\Mlibms\Http\Controllers\V1\Admin\AdminSettingController::class, 'update'])->name('api.admin.library.settings.update');
     });
 
+    // --- Standalone Volunteer System Public & Portal routes ----
+    Route::prefix('volunteering')->group(function () {
+        Route::get('/opportunities', [\App\Volunteering\Http\Controllers\PublicVolunteerController::class, 'index'])->name('api.volunteering.opportunities.index');
+        Route::get('/opportunities/{slug}', [\App\Volunteering\Http\Controllers\PublicVolunteerController::class, 'show'])->name('api.volunteering.opportunities.show');
+        Route::post('/signups', [\App\Volunteering\Http\Controllers\PublicVolunteerController::class, 'signup'])->name('api.volunteering.signups.store');
+        Route::post('/signups/{uuid}/cancel', [\App\Volunteering\Http\Controllers\PublicVolunteerController::class, 'cancel'])->name('api.volunteering.signups.cancel');
+
+        Route::middleware('auth:sanctum')->group(function () {
+            Route::get('/my-history', [\App\Volunteering\Http\Controllers\PublicVolunteerController::class, 'myHistory'])->name('api.volunteering.my-history');
+        });
+    });
+
+    // --- Standalone Volunteer System Admin routes ----
+    Route::prefix('admin/volunteering')->middleware(['auth:sanctum', 'app.access:volunteering'])->group(function () {
+        Route::get('/opportunities', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'index'])->name('api.admin.volunteering.opportunities.index');
+        Route::post('/opportunities', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'store'])->name('api.admin.volunteering.opportunities.store');
+        Route::get('/opportunities/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'show'])->name('api.admin.volunteering.opportunities.show');
+        Route::put('/opportunities/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'update'])->name('api.admin.volunteering.opportunities.update');
+        Route::delete('/opportunities/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'destroy'])->name('api.admin.volunteering.opportunities.destroy');
+
+        Route::get('/opportunities/{id}/signups', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'listSignups'])->name('api.admin.volunteering.signups.index');
+        Route::put('/signups/{id}/status', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'updateSignupStatus'])->name('api.admin.volunteering.signups.update-status');
+        Route::get('/analytics', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'analytics'])->name('api.admin.volunteering.analytics');
+    });
+
 });

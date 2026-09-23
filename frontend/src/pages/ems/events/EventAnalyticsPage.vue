@@ -182,8 +182,14 @@ const breakdownSegments = computed(() => {
   ].filter((s) => s.value > 0);
 });
 
-const getDownloadLink = (uuid: string) => {
-  return analyticsService.getDownloadUrl(uuid);
+const handleDownloadReport = async (reportItem: AnalyticsReportItem) => {
+  try {
+    const format = reportItem.filters?.format || 'pdf';
+    const filename = `${reportItem.title.replace(/[^a-zA-Z0-9_-]/g, '_')}.${format}`;
+    await analyticsService.downloadReportFile(reportItem.uuid, filename);
+  } catch (err: any) {
+    toast.error(err.message || 'Failed to download report file.');
+  }
 };
 
 const getFormatBadgeColor = (format: string) => {
@@ -501,15 +507,15 @@ const getFormatBadgeColor = (format: string) => {
                   </span>
                 </td>
                 <td class="p-3 text-right">
-                  <a
+                  <button
                     v-if="r.file_path"
-                    :href="getDownloadLink(r.uuid)"
-                    target="_blank"
+                    type="button"
+                    @click="handleDownloadReport(r)"
                     class="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-neutral-background hover:bg-neutral-ivory/60 text-neutral-black hover:text-primary transition-all cursor-pointer"
                     title="Download Report File"
                   >
                     <Download class="h-3.5 w-3.5" />
-                  </a>
+                  </button>
                   <span v-else class="text-neutral-muted text-[10px]">Processing...</span>
                 </td>
               </tr>

@@ -49,10 +49,6 @@ class GenerateReportJob implements ShouldQueue
         $event = Event::where('uuid', $this->eventUuid)->firstOrFail();
         $user = $report->generatedBy;
 
-        if (!$user) {
-            return;
-        }
-
         $filters = $report->filters ?? [];
         $format = $filters['format'] ?? 'csv';
         $sections = $filters['sections'] ?? [
@@ -101,7 +97,7 @@ class GenerateReportJob implements ShouldQueue
 
         if (!empty($sections['check_ins'])) {
             $data['check_ins'] = CheckIn::whereIn('event_id', $eventIds)
-                ->with(['ticket', 'checkedInBy'])
+                ->with(['ticket', 'registration', 'checkedInBy'])
                 ->orderBy('checked_in_at', 'desc')
                 ->get();
         }
@@ -110,13 +106,22 @@ class GenerateReportJob implements ShouldQueue
         $content = '';
 
         if ($format === 'pdf') {
+            // Cap detailed log tables for PDF rendering so DomPDF executes in <1 second.
+            // Full raw datasets remain completely available in CSV and XLSX.
+            $pdfData = [
+                'registrations' => isset($data['registrations']) ? $data['registrations']->take(250) : collect(),
+                'payments' => isset($data['payments']) ? $data['payments']->take(250) : collect(),
+                'waitlist' => isset($data['waitlist']) ? $data['waitlist']->take(250) : collect(),
+                'check_ins' => isset($data['check_ins']) ? $data['check_ins']->take(250) : collect(),
+            ];
+
             $pdf = Pdf::loadView('pdf.ems_event_report', [
                 'title' => $report->title,
                 'event' => $event,
                 'kpis' => $payload['kpis'],
                 'charts' => $payload['charts'],
                 'sections' => $sections,
-                'data' => $data,
+                'data' => $pdfData,
                 'show_financial' => $showFinancial,
                 'generated_at' => now()->format('Y-m-d H:i:s'),
                 'version' => '1.0',

@@ -74,6 +74,7 @@ class Event extends Model
         'is_public',
         'is_featured',
         'is_slug_custom',
+        'show_remaining_tickets',
         'created_by',
         'updated_by',
         'series_id',
@@ -96,6 +97,7 @@ class Event extends Model
             'registration_deadline_at' => 'datetime',
             'capacity' => 'integer',
             'waitlist_enabled' => 'boolean',
+            'show_remaining_tickets' => 'boolean',
             'max_tickets_per_order' => 'integer',
             'max_registrations_per_attendee' => 'integer',
             'is_public' => 'boolean',
@@ -450,7 +452,8 @@ class Event extends Model
      */
     public function isAcceptingRegistrations(): bool
     {
-        if ($this->status !== EventStatus::RegistrationOpen) {
+        $statusVal = $this->status instanceof EventStatus ? $this->status->value : (string) $this->status;
+        if ($statusVal !== EventStatus::RegistrationOpen->value) {
             return false;
         }
 
@@ -530,5 +533,31 @@ class Event extends Model
         }
 
         return $this->start_at->copy()->endOfDay()->isPast();
+    }
+
+    public function getLifecycleStateAttribute(): string
+    {
+        $now = now();
+        if ($this->hasEnded()) {
+            return 'ENDED';
+        }
+        if ($this->start_at && $now->greaterThanOrEqualTo($this->start_at)) {
+            if ($this->end_at && $now->greaterThan($this->end_at)) {
+                return 'ENDED';
+            }
+            return 'LIVE';
+        }
+        return 'UPCOMING';
+    }
+
+    public function getRegistrationAvailabilityAttribute(): string
+    {
+        if ($this->isSoldOut()) {
+            return 'SOLD_OUT';
+        }
+        if ($this->isAcceptingRegistrations()) {
+            return 'OPEN';
+        }
+        return 'CLOSED';
     }
 }

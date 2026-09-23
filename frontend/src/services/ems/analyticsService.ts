@@ -204,4 +204,17 @@ export const analyticsService = {
     const apiBase = (window as any).EMS_CONFIG?.API_BASE_URL || '/api/v1/ems';
     return `${apiBase}/reports/${uuid}/download`;
   },
+
+  /** Authenticated download of report binary file */
+  async downloadReportFile(uuid: string, filename: string = 'report.pdf'): Promise<void> {
+    const blob = await emsHttp.getBlob(`/reports/${uuid}/download`);
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  },
 };

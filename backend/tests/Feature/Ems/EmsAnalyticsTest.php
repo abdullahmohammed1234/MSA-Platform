@@ -210,4 +210,40 @@ class EmsAnalyticsTest extends EmsTestCase
         $response->assertOk();
         $this->assertSame('PDF mock content', $response->streamedContent());
     }
+
+    public function test_event_report_export_generates_pdf_synchronously_and_downloadable(): void
+    {
+        Storage::fake('local');
+
+        $administrator = $this->emsUser(EmsRoles::EVENT_ADMINISTRATOR);
+        $event = Event::factory()->status(EventStatus::Live)->create(['name' => 'Annual Gala 2026']);
+
+        $response = $this->actingAsEms($administrator)->postJson($this->url("events/{$event->uuid}/reports/export"), [
+            'title' => 'Gala Performance Summary',
+            'format' => 'pdf',
+            'sections' => [
+                'registrations' => true,
+                'revenue' => true,
+                'attendance' => true,
+                'ticket_sales' => true,
+                'payments' => true,
+                'waitlist' => true,
+                'check_ins' => true,
+            ],
+        ]);
+
+        $response->assertOk();
+        $this->assertSuccessEnvelope($response);
+
+        $reportUuid = $response->json('data.uuid');
+        $filePath = $response->json('data.file_path');
+
+        $this->assertNotNull($filePath, 'Report file_path must be populated synchronously upon export.');
+        Storage::disk('local')->assertExists($filePath);
+
+        // Verify download endpoint returns the generated PDF binary content
+        $downloadResponse = $this->actingAsEms($administrator)->getJson($this->url("reports/{$reportUuid}/download"));
+        $downloadResponse->assertOk();
+        $this->assertStringStartsWith('%PDF-', $downloadResponse->streamedContent());
+    }
 }

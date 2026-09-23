@@ -1,0 +1,32 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('ems_events', function (Blueprint $table) {
+            if (!Schema::hasColumn('ems_events', 'show_remaining_tickets')) {
+                $table->boolean('show_remaining_tickets')->default(true)->after('is_featured');
+            }
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('ems_events', function (Blueprint $table) {
+            if (Schema::hasColumn('ems_events', 'show_remaining_tickets')) {
+                $table->dropColumn('show_remaining_tickets');
+            }
+        });
+    }
+};

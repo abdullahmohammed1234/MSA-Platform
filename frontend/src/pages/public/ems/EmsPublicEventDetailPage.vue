@@ -483,6 +483,7 @@ function capacityText(): string {
   if (!event.value) return '';
   if (event.value.capacity === null) return 'Open seating';
   if (isSoldOut.value) return event.value.waitlist_enabled ? 'Sold out — waitlist open' : 'Sold out';
+  if (event.value.show_remaining_tickets === false) return `${event.value.capacity} total spaces`;
   return `${event.value.remaining_capacity} of ${event.value.capacity} spaces remaining`;
 }
 
@@ -596,6 +597,19 @@ const previewSubtotal = computed(() =>
                 </div>
               </div>
             </div>
+          </div>
+
+          <div class="rounded-[1.75rem] border border-emerald-100 bg-emerald-50/50 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div>
+              <h3 class="font-bold text-emerald-950 text-base">Want to Volunteer with Us?</h3>
+              <p class="text-xs text-emerald-800/80 mt-0.5">Help us organize and run this event. Earn rewards and join our volunteer team.</p>
+            </div>
+            <RouterLink
+              to="/volunteer"
+              class="px-4 py-2 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl transition shrink-0"
+            >
+              Volunteer Opportunities &rarr;
+            </RouterLink>
           </div>
 
           <div v-if="event.description" class="rounded-[1.75rem] border border-neutral-ivory bg-white p-6 sm:p-8 shadow-sm">

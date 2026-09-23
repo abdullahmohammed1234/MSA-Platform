@@ -74,11 +74,11 @@ class AnalyticsService
         $checkedIn = (int) CheckIn::whereIn('event_id', $eventIds)->count();
 
         // 2. Attendance & No-Show Rates
-        // In the context of tickets, expected attendees are either issued tickets or confirmed registrations
-        $expected = $ticketsIssued > 0 ? $ticketsIssued : ($confirmedRegs > 0 ? $confirmedRegs : 0);
+        // Expected attendees are the higher of issued tickets or confirmed registrations
+        $expected = max($ticketsIssued, $confirmedRegs);
         $noShows = max(0, $expected - $checkedIn);
-        $attendanceRate = $expected > 0 ? round(($checkedIn / $expected) * 100, 1) : 0.0;
-        $noShowRate = $expected > 0 ? round(($noShows / $expected) * 100, 1) : 0.0;
+        $attendanceRate = $expected > 0 ? min(100.0, max(0.0, round(($checkedIn / $expected) * 100, 1))) : 0.0;
+        $noShowRate = $expected > 0 ? min(100.0, max(0.0, round(($noShows / $expected) * 100, 1))) : 0.0;
 
         // 3. Revenue Metrics
         $paymentsQuery = Payment::whereIn('registration_id', function ($query) use ($eventIds) {
@@ -248,9 +248,8 @@ class AnalyticsService
             $orgCheckedIn = CheckIn::whereIn('event_id', $orgEventIds)->count();
             $orgTickets = Ticket::whereIn('event_id', $orgEventIds)->where('status', 'issued')->count();
             $orgConf = Registration::whereIn('event_id', $orgEventIds)->where('status', RegistrationStatus::Confirmed->value)->sum('quantity');
-            $orgExpected = $orgTickets > 0 ? $orgTickets : ($orgConf > 0 ? $orgConf : 0);
-
-            $orgAttendanceRate = $orgExpected > 0 ? round(($orgCheckedIn / $orgExpected) * 100, 1) : 0.0;
+            $orgExpected = max($orgTickets, $orgConf);
+            $orgAttendanceRate = $orgExpected > 0 ? min(100.0, max(0.0, round(($orgCheckedIn / $orgExpected) * 100, 1))) : 0.0;
             $orgAvgRating = round(EventFeedback::whereIn('event_id', $orgEventIds)->avg('overall_rating') ?: 0.0, 2);
 
             $orgRevenue = (float) Payment::where('status', PaymentStatus::Paid->value)
@@ -290,7 +289,7 @@ class AnalyticsService
             $catCheckedIn = CheckIn::whereIn('event_id', $catEventIds)->count();
             $catTickets = Ticket::whereIn('event_id', $catEventIds)->where('status', 'issued')->count();
             $catConf = Registration::whereIn('event_id', $catEventIds)->where('status', RegistrationStatus::Confirmed->value)->sum('quantity');
-            $catExpected = $catTickets > 0 ? $catTickets : ($catConf > 0 ? $catConf : 0);
+            $catExpected = max($catTickets, $catConf);
 
             $catNoShows = max(0, $catExpected - $catCheckedIn);
             $catNoShowRate = $catExpected > 0 ? round(($catNoShows / $catExpected) * 100, 1) : 0.0;

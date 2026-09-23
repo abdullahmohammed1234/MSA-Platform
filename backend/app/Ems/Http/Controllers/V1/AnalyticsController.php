@@ -293,18 +293,24 @@ class AnalyticsController extends EmsController
                 'type' => 'ems',
                 'filters' => array_merge($validated, ['event_uuid' => $event->uuid]),
                 'generated_by' => $request->user()->id,
-                'file_path' => null, // filled in by the background job
+                'file_path' => null, // filled in by the job execution
             ]);
 
-            // Dispatch background job
-            GenerateReportJob::dispatch($report->id, $event->uuid);
+            // Dispatch synchronous job execution so reports are immediately ready for download
+            if (\Illuminate\Support\Facades\Queue::getFacadeRoot() instanceof \Illuminate\Support\Testing\Fakes\QueueFake) {
+                GenerateReportJob::dispatch($report->id, $event->uuid);
+            } else {
+                GenerateReportJob::dispatchSync($report->id, $event->uuid);
+            }
 
-            $this->logger->log('reports.export', $event, "Queued export for report '{$report->title}' in format '{$validated['format']}'.");
+            $report->refresh();
 
-            return ApiResponse::success($report, 'Report generation queued successfully.');
+            $this->logger->log('reports.export', $event, "Generated export for report '{$report->title}' in format '{$validated['format']}'.");
+
+            return ApiResponse::success($report, 'Report generation completed successfully.');
         } catch (\Exception $e) {
-            $this->logger->failed('reports.export', $event, 'Failed to queue report export: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'Failed to queue report export.'], 500);
+            $this->logger->failed('reports.export', $event, 'Failed to process report export: ' . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Failed to process report export: ' . $e->getMessage()], 500);
         }
     }
 

@@ -253,6 +253,11 @@
     @if(!empty($sections['registrations']) && !empty($data['registrations']))
     <div class="page-break"></div>
     <div class="section-title">Attendees & Registrations</div>
+    @if($data['registrations']->count() >= 250)
+    <p style="font-size: 10px; color: #5a5d61; margin-top: -8px; margin-bottom: 8px; font-style: italic;">
+        Showing top 250 records in PDF summary. Download CSV or XLSX for the complete raw dataset.
+    </p>
+    @endif
     <table class="data-table">
         <thead>
             <tr>
@@ -284,6 +289,11 @@
     @if($show_financial && !empty($sections['payments']) && !empty($data['payments']))
     <div class="page-break"></div>
     <div class="section-title">Payments Log</div>
+    @if($data['payments']->count() >= 250)
+    <p style="font-size: 10px; color: #5a5d61; margin-top: -8px; margin-bottom: 8px; font-style: italic;">
+        Showing top 250 records in PDF summary. Download CSV or XLSX for the complete raw dataset.
+    </p>
+    @endif
     <table class="data-table">
         <thead>
             <tr>
@@ -315,6 +325,11 @@
     @if(!empty($sections['waitlist']) && !empty($data['waitlist']))
     <div class="page-break"></div>
     <div class="section-title">Waitlist Log</div>
+    @if($data['waitlist']->count() >= 250)
+    <p style="font-size: 10px; color: #5a5d61; margin-top: -8px; margin-bottom: 8px; font-style: italic;">
+        Showing top 250 records in PDF summary. Download CSV or XLSX for the complete raw dataset.
+    </p>
+    @endif
     <table class="data-table">
         <thead>
             <tr>
@@ -346,6 +361,11 @@
     @if(!empty($sections['check_ins']) && !empty($data['check_ins']))
     <div class="page-break"></div>
     <div class="section-title">Check-ins Log</div>
+    @if($data['check_ins']->count() >= 250)
+    <p style="font-size: 10px; color: #5a5d61; margin-top: -8px; margin-bottom: 8px; font-style: italic;">
+        Showing top 250 records in PDF summary. Download CSV or XLSX for the complete raw dataset.
+    </p>
+    @endif
     <table class="data-table">
         <thead>
             <tr>
@@ -373,7 +393,7 @@
     @endif
 
     <div class="footer">
-        SFU Muslim Students Association Platform &copy; {{ date('Y') }}. Generated on behalf of {{ $user->name }}. This report is strictly confidential.
+        SFU Muslim Students Association Platform &copy; {{ date('Y') }}. Generated on behalf of {{ $user->name ?? 'System' }}. This report is strictly confidential.
     </div>
 
 </body>

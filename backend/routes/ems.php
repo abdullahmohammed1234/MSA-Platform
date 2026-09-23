@@ -174,6 +174,8 @@ Route::middleware(['auth:sanctum', 'throttle:' . config('ems.route.throttle', 'e
             ->name('events.operations');
         Route::get('/events/{event}/attendees', [EventOperationsController::class, 'attendees'])
             ->name('events.attendees');
+        Route::get('/events/{event}/attendees/export-csv', [\App\Ems\Http\Controllers\V1\AttendeeExportController::class, 'exportCsv'])
+            ->name('events.attendees.export-csv');
         Route::get('/events/{event}/check-ins/recent', [EventOperationsController::class, 'recentCheckIns'])
             ->name('events.check-ins.recent');
 

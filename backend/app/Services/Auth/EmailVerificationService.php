@@ -30,8 +30,8 @@ class EmailVerificationService
             'updated_at' => now(),
         ]);
 
-        // 3. Send Notification
-        $user->notify(new VerifyEmailNotification($token));
+        // 3. Send Notification synchronously so users receive verification emails immediately
+        $user->notifyNow(new VerifyEmailNotification($token));
     }
 
     /**

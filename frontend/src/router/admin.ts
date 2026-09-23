@@ -44,6 +44,18 @@ const adminRoutes: Array<RouteRecordRaw> = [
         component: () => import('@/pages/admin/volunteers/VolunteeringRegistrarDetailPage.vue'),
         meta: { title: 'Volunteer Registration Detail', adminLogin: true }
       },
+      {
+        path: 'volunteering',
+        name: 'admin-volunteering-opportunities',
+        component: () => import('@/pages/admin/volunteering/AdminVolunteerOpportunitiesPage.vue'),
+        meta: { title: 'Volunteer Opportunities | SFU MSA', appAccess: 'volunteering' }
+      },
+      {
+        path: 'volunteering/:id',
+        name: 'admin-volunteering-opportunity-detail',
+        component: () => import('@/pages/admin/volunteering/AdminVolunteerDetailPage.vue'),
+        meta: { title: 'Manage Volunteer Position | SFU MSA', appAccess: 'volunteering' }
+      },
       // CMS Engine — extracted to /cms
       { path: 'cms', redirect: '/cms' },
       { path: 'cms/homepage', redirect: '/cms/homepage' },

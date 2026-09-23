@@ -21,6 +21,7 @@ class ApplicationAccessService
         'donations',
         'sponsorship',
         'mlibms',
+        'volunteering',
         'admin-portal'
     ];
 
@@ -79,6 +80,12 @@ class ApplicationAccessService
 
         if ($application === 'mlibms') {
             if ($user->hasAnyRole(['mlibms-administrator', 'mlibms-cataloger', 'mlibms-viewer', 'library-admin', 'library-staff']) || $this->hasPermissionSafe($user, 'library.view') || $this->hasPermissionSafe($user, 'library.catalog')) {
+                return true;
+            }
+        }
+
+        if ($application === 'volunteering') {
+            if ($user->hasAnyRole(['volunteer-administrator', 'volunteer-coordinator', 'volunteer', 'ems-administrator']) || $this->hasPermissionSafe($user, 'volunteer.registrations.view') || $this->hasPermissionSafe($user, 'volunteer.registrations.update')) {
                 return true;
             }
         }

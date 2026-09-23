@@ -10,7 +10,7 @@ import { useAppAccess } from '@/composables/auth/useAppAccess';
 
 const route = useRoute();
 const authStore = useAuthStore();
-const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasStoreAccess, hasDonationsAccess, hasSponsorshipAccess, hasMlibmsAccess } = useAppAccess();
+const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasStoreAccess, hasDonationsAccess, hasSponsorshipAccess, hasMlibmsAccess, hasVolunteeringAccess } = useAppAccess();
 const isSidebarCollapsed = ref(false);
 const isMobileOpen = ref(false);
 
@@ -71,6 +71,9 @@ const adminItems = computed(() => {
   }
   if (hasMlibmsAccess.value) {
     appChildren.push({ label: 'Open MLibMS Admin', path: '/library/admin', icon: 'book' });
+  }
+  if (hasVolunteeringAccess.value) {
+    appChildren.push({ label: 'Open Volunteer Admin', path: '/admin/volunteering', icon: 'users' });
   }
   if (appChildren.length > 0) {
     items.push({
