@@ -10,7 +10,7 @@ import { useAppAccess } from '@/composables/auth/useAppAccess';
 
 const route = useRoute();
 const authStore = useAuthStore();
-const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasStoreAccess, hasDonationsAccess, hasSponsorshipAccess, hasMlibmsAccess, hasVolunteeringAccess } = useAppAccess();
+const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasStoreAccess, hasDonationsAccess, hasSponsorshipAccess, hasMlibmsAccess, hasVolunteeringAccess, hasVmsAccess } = useAppAccess();
 const isSidebarCollapsed = ref(false);
 const isMobileOpen = ref(false);
 
@@ -72,8 +72,8 @@ const adminItems = computed(() => {
   if (hasMlibmsAccess.value) {
     appChildren.push({ label: 'Open MLibMS Admin', path: '/library/admin', icon: 'book' });
   }
-  if (hasVolunteeringAccess.value) {
-    appChildren.push({ label: 'Open Volunteer Admin', path: '/admin/volunteering', icon: 'users' });
+  if (hasVolunteeringAccess.value || hasVmsAccess.value) {
+    appChildren.push({ label: 'Open VMS', path: '/vms', icon: 'users' });
   }
   if (appChildren.length > 0) {
     items.push({
@@ -129,6 +129,7 @@ const adminItems = computed(() => {
     systemChildren.push({ label: 'Donations Management System', path: '/admin/systems/donations', icon: 'heart' });
     systemChildren.push({ label: 'Sponsorship System (SPMS)', path: '/admin/systems/sponsorship', icon: 'briefcase' });
     systemChildren.push({ label: 'Library Management System (MLibMS)', path: '/admin/systems/library', icon: 'book' });
+    systemChildren.push({ label: 'Volunteer System (VMS)', path: '/admin/systems/vms', icon: 'users' });
   }
 
   if (systemChildren.length > 0) {

@@ -52,6 +52,12 @@ const cmsRoutes: Array<RouteRecordRaw> = [
         meta: { cmsPermissions: 'manage_media', title: 'Media Library' }
       },
       {
+        path: 'prayers',
+        name: 'cms-prayers',
+        component: () => import('@/pages/admin/cms/PrayerCms.vue'),
+        meta: { cmsPermissions: 'manage_homepage', title: 'Prayer & Jumu\'ah CMS' }
+      },
+      {
         path: 'unauthorized',
         name: 'cms-unauthorized',
         component: () => import('@/pages/admin/cms/CmsUnauthorizedPage.vue'),

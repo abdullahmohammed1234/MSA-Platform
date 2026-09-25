@@ -80,13 +80,13 @@ export const volunteeringService = {
 
   async submitSignup(payload: {
     opportunity_id: number;
-    team_id?: number;
-    shift_id?: number;
+    team_id?: number | null;
+    shift_id?: number | null;
     name: string;
     email: string;
-    phone?: string;
-    experience?: string;
-    notes?: string;
+    phone?: string | null;
+    experience?: string | null;
+    notes?: string | null;
   }) {
     const response = await api.post('/volunteering/signups', payload);
     return response.data;
@@ -103,6 +103,11 @@ export const volunteeringService = {
   },
 
   // Admin APIs
+  async getEligibleEvents() {
+    const response = await api.get('/admin/volunteering/eligible-events');
+    return response.data;
+  },
+
   async getAdminOpportunities(params?: { status?: string; search?: string; per_page?: number; page?: number }) {
     const response = await api.get('/admin/volunteering/opportunities', { params });
     return response.data;

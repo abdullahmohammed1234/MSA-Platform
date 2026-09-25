@@ -62,7 +62,7 @@ class AttendeeExportController extends EmsController
                             $reg->quantity,
                             $ticketCodes ?: 'N/A',
                             $checkedIn,
-                            $reg->created_at?->format('Y-m-d H:i:s'),
+                            $reg->created_at?->copy()->setTimezone($event->timezone ?? config('ems.default_timezone', 'America/Vancouver'))->format('Y-m-d H:i:s'),
                         ]);
                     }
                 });

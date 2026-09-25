@@ -5,16 +5,40 @@ namespace App\Volunteering\Services;
 use App\Volunteering\Models\Opportunity;
 use App\Volunteering\Models\Team;
 use App\Volunteering\Models\Shift;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class VolunteerOpportunityService
 {
+    public function listEligibleEvents(): Collection
+    {
+        return \App\Ems\Models\Event::select('id', 'uuid', 'name', 'slug', 'description', 'short_description', 'banner_url', 'location', 'start_at', 'end_at', 'status')
+            ->orderBy('start_at', 'desc')
+            ->get()
+            ->map(function ($event) {
+                $configuredOpportunity = Opportunity::where('event_id', $event->id)->first();
+                return [
+                    'id' => $event->id,
+                    'uuid' => $event->uuid,
+                    'name' => $event->name,
+                    'slug' => $event->slug,
+                    'description' => $event->description ?? $event->short_description,
+                    'location' => $event->location,
+                    'start_at' => $event->start_at ? $event->start_at->toIso8601String() : null,
+                    'end_at' => $event->end_at ? $event->end_at->toIso8601String() : null,
+                    'banner_url' => $event->banner_url,
+                    'status' => $event->status,
+                    'is_configured' => $configuredOpportunity !== null,
+                    'opportunity_id' => $configuredOpportunity?->id,
+                ];
+            });
+    }
+
     public function listPublicOpportunities(array $filters = []): LengthAwarePaginator
     {
-        $query = Opportunity::with(['event:id,name,slug,start_at,location', 'teams', 'shifts'])
+        $query = Opportunity::with(['event:id,name,slug,description,short_description,banner_url,start_at,end_at,location', 'teams', 'shifts'])
             ->where('status', 'open');
 
         if (!empty($filters['search'])) {
@@ -22,7 +46,11 @@ class VolunteerOpportunityService
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', $search)
                   ->orWhere('description', 'like', $search)
-                  ->orWhere('location', 'like', $search);
+                  ->orWhere('location', 'like', $search)
+                  ->orWhereHas('event', function ($eq) use ($search) {
+                      $eq->where('name', 'like', $search)
+                         ->orWhere('description', 'like', $search);
+                  });
             });
         }
 
@@ -35,7 +63,7 @@ class VolunteerOpportunityService
 
     public function listAdminOpportunities(array $filters = []): LengthAwarePaginator
     {
-        $query = Opportunity::with(['event:id,name,slug', 'teams', 'shifts', 'creator:id,name'])
+        $query = Opportunity::with(['event:id,name,slug,banner_url', 'teams', 'shifts', 'creator:id,name'])
             ->withCount(['signups' => function ($q) {
                 $q->whereIn('status', ['signed_up', 'confirmed', 'completed']);
             }]);
@@ -65,14 +93,26 @@ class VolunteerOpportunityService
     public function createOpportunity(array $data, int $userId): Opportunity
     {
         return DB::transaction(function () use ($data, $userId) {
+            $event = null;
+            if (!empty($data['event_id'])) {
+                $event = \App\Ems\Models\Event::find($data['event_id']);
+            }
+
+            $title = $data['title'] ?? ($event ? $event->name : 'Volunteer Opportunity');
+            $slug = $data['slug'] ?? ($event ? $event->slug : Str::slug($title) . '-' . Str::random(5));
+            $description = $data['description'] ?? ($event ? ($event->description ?? $event->short_description) : null);
+            $location = $data['location'] ?? ($event ? $event->location : null);
+            $startAt = $data['start_at'] ?? ($event ? $event->start_at : null);
+            $endAt = $data['end_at'] ?? ($event ? $event->end_at : null);
+
             $opportunity = Opportunity::create([
-                'title' => $data['title'],
-                'slug' => $data['slug'] ?? Str::slug($data['title']) . '-' . Str::random(5),
-                'description' => $data['description'] ?? null,
+                'title' => $title,
+                'slug' => $slug,
+                'description' => $description,
                 'event_id' => $data['event_id'] ?? null,
-                'start_at' => $data['start_at'] ?? null,
-                'end_at' => $data['end_at'] ?? null,
-                'location' => $data['location'] ?? null,
+                'start_at' => $startAt,
+                'end_at' => $endAt,
+                'location' => $location,
                 'capacity' => $data['capacity'] ?? null,
                 'status' => $data['status'] ?? 'draft',
                 'published_at' => ($data['status'] ?? 'draft') === 'open' ? now() : null,

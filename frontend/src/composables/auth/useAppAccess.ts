@@ -79,17 +79,26 @@ export function useAppAccess() {
     );
   });
 
-  const hasVolunteeringAccess = computed(() => {
+  const hasVmsAccess = computed(() => {
+    if (authStore.user?.application_access?.vms) {
+      return authStore.user.application_access.vms.access;
+    }
     if (authStore.user?.application_access?.volunteering) {
       return authStore.user.application_access.volunteering.access;
     }
     return (
       isSuperOrAdmin.value ||
+      authStore.roles.includes('vms-administrator') ||
+      authStore.roles.includes('vms-manager') ||
       authStore.roles.includes('volunteer-administrator') ||
       authStore.roles.includes('volunteer-coordinator') ||
+      authStore.permissions.includes('vms.view') ||
+      authStore.permissions.includes('vms.manage') ||
       authStore.permissions.includes('volunteer.registrations.view')
     );
   });
+
+  const hasVolunteeringAccess = hasVmsAccess;
 
   return {
     hasCmsAccess,
@@ -100,6 +109,7 @@ export function useAppAccess() {
     hasSponsorshipAccess,
     hasAdminAccess,
     hasMlibmsAccess,
+    hasVmsAccess,
     hasVolunteeringAccess,
     isSuperOrAdmin,
   };

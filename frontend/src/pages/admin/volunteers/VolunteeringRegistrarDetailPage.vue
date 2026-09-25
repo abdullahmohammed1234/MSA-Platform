@@ -96,7 +96,7 @@ const handleDelete = async () => {
   try {
     await volunteeringRegistrarsService.deleteRegistration(registration.value.uuid);
     toast.success('Volunteer application archived.');
-    void router.push({ name: 'admin-volunteering-registrars' });
+    void router.push({ name: 'vms-registrars' });
   } catch (err: any) {
     toast.error(err.message || 'Failed to archive volunteer registration.');
   }
@@ -136,7 +136,7 @@ const formatDate = (dateStr?: string | null) => {
     <!-- Navigation Back Link & Header -->
     <div class="space-y-3">
       <router-link
-        to="/admin/volunteering-registrars"
+        to="/vms/registrars"
         class="inline-flex items-center gap-2 text-xs font-bold text-neutral-muted hover:text-primary transition-colors"
       >
         <ArrowLeft :size="14" /> Back to Volunteering Registrars

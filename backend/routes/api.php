@@ -49,6 +49,10 @@ Route::prefix('v1')->group(function () {
         });
     });
 
+    // CMS Public Prayer Endpoint
+    Route::get('/cms/prayers', [\App\Http\Controllers\Api\V1\PublicPrayerController::class, 'index'])
+        ->name('api.cms.prayers.index');
+
     // 2. Users routes
     Route::prefix('users')->middleware('auth:sanctum')->group(function () {
         Route::get('/me', [UserController::class, 'me'])->name('api.users.me');
@@ -419,18 +423,6 @@ Route::prefix('v1')->group(function () {
                     ->middleware('permission:platform.view')
                     ->name('api.admin.platform.intelligence.metrics');
 
-                // Phase 23 Central Admin Platform Intelligence & Operational Analytics
-                Route::prefix('intelligence')->group(function () {
-                    Route::get('/', [\App\Http\Controllers\Api\V1\Admin\IntelligenceController::class, 'index'])->name('api.admin.intelligence.index');
-                    Route::get('/ems', [\App\Http\Controllers\Api\V1\Admin\IntelligenceController::class, 'ems'])->name('api.admin.intelligence.ems');
-                    Route::get('/donations', [\App\Http\Controllers\Api\V1\Admin\IntelligenceController::class, 'donations'])->name('api.admin.intelligence.donations');
-                    Route::get('/store', [\App\Http\Controllers\Api\V1\Admin\IntelligenceController::class, 'store'])->name('api.admin.intelligence.store');
-                    Route::get('/mlibms', [\App\Http\Controllers\Api\V1\Admin\IntelligenceController::class, 'mlibms'])->name('api.admin.intelligence.mlibms');
-                    Route::get('/communications', [\App\Http\Controllers\Api\V1\Admin\IntelligenceController::class, 'communications'])->name('api.admin.intelligence.communications');
-                    Route::get('/volunteers', [\App\Http\Controllers\Api\V1\Admin\IntelligenceController::class, 'volunteers'])->name('api.admin.intelligence.volunteers');
-                    Route::get('/feedback', [\App\Http\Controllers\Api\V1\Admin\IntelligenceController::class, 'feedback'])->name('api.admin.intelligence.feedback');
-                });
-
                 Route::post('/operations/retry-job', [PlatformOperationsController::class, 'retryJob'])
                     ->middleware('permission:platform.operations')
                     ->name('api.admin.platform.operations.retry-job');
@@ -441,12 +433,34 @@ Route::prefix('v1')->group(function () {
                     ->middleware('permission:platform.operations')
                     ->name('api.admin.platform.operations.run-task');
             });
+
+            // Phase 23 Central Admin Platform Intelligence & Operational Analytics
+            Route::prefix('intelligence')->middleware('permission:platform.view')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Api\V1\Admin\IntelligenceController::class, 'index'])->name('api.admin.intelligence.index');
+                Route::get('/ems', [\App\Http\Controllers\Api\V1\Admin\IntelligenceController::class, 'ems'])->name('api.admin.intelligence.ems');
+                Route::get('/donations', [\App\Http\Controllers\Api\V1\Admin\IntelligenceController::class, 'donations'])->name('api.admin.intelligence.donations');
+                Route::get('/store', [\App\Http\Controllers\Api\V1\Admin\IntelligenceController::class, 'store'])->name('api.admin.intelligence.store');
+                Route::get('/mlibms', [\App\Http\Controllers\Api\V1\Admin\IntelligenceController::class, 'mlibms'])->name('api.admin.intelligence.mlibms');
+                Route::get('/communications', [\App\Http\Controllers\Api\V1\Admin\IntelligenceController::class, 'communications'])->name('api.admin.intelligence.communications');
+                Route::get('/volunteers', [\App\Http\Controllers\Api\V1\Admin\IntelligenceController::class, 'volunteers'])->name('api.admin.intelligence.volunteers');
+                Route::get('/feedback', [\App\Http\Controllers\Api\V1\Admin\IntelligenceController::class, 'feedback'])->name('api.admin.intelligence.feedback');
+            });
         });
 
         Route::middleware('app.access:cms')->group(function () {
             // CMS Dashboard
             Route::get('/cms/dashboard', [\App\Http\Controllers\Admin\CMS\CmsDashboardController::class, 'index'])
                 ->name('api.admin.cms.dashboard');
+
+            // CMS Prayer Section Management
+            Route::get('/cms/prayers', [\App\Http\Controllers\Admin\CMS\CmsPrayerController::class, 'index'])
+                ->name('api.admin.cms.prayers.index');
+            Route::post('/cms/prayers', [\App\Http\Controllers\Admin\CMS\CmsPrayerController::class, 'store'])
+                ->name('api.admin.cms.prayers.store');
+            Route::put('/cms/prayers/{id}', [\App\Http\Controllers\Admin\CMS\CmsPrayerController::class, 'update'])
+                ->name('api.admin.cms.prayers.update');
+            Route::delete('/cms/prayers/{id}', [\App\Http\Controllers\Admin\CMS\CmsPrayerController::class, 'destroy'])
+                ->name('api.admin.cms.prayers.destroy');
 
             // CMS Homepage
             Route::get('/cms/homepage', [\App\Http\Controllers\Admin\CMS\HomepageController::class, 'index'])
@@ -579,6 +593,13 @@ Route::prefix('v1')->group(function () {
                 Route::get('/', [\App\Http\Controllers\Api\V1\Admin\MlibmsSystemController::class, 'index']);
                 Route::get('/health', [\App\Http\Controllers\Api\V1\Admin\MlibmsSystemController::class, 'health']);
                 Route::get('/metrics', [\App\Http\Controllers\Api\V1\Admin\MlibmsSystemController::class, 'metrics']);
+            });
+
+            // Volunteer Management System (Systems registry)
+            Route::prefix('systems/vms')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Api\V1\Admin\VmsSystemController::class, 'index']);
+                Route::get('/health', [\App\Http\Controllers\Api\V1\Admin\VmsSystemController::class, 'health']);
+                Route::get('/metrics', [\App\Http\Controllers\Api\V1\Admin\VmsSystemController::class, 'metrics']);
             });
 
 
@@ -1083,6 +1104,7 @@ Route::prefix('v1')->group(function () {
 
     // --- Standalone Volunteer System Admin routes ----
     Route::prefix('admin/volunteering')->middleware(['auth:sanctum', 'app.access:volunteering'])->group(function () {
+        Route::get('/eligible-events', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'eligibleEvents'])->name('api.admin.volunteering.eligible-events');
         Route::get('/opportunities', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'index'])->name('api.admin.volunteering.opportunities.index');
         Route::post('/opportunities', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'store'])->name('api.admin.volunteering.opportunities.store');
         Route::get('/opportunities/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'show'])->name('api.admin.volunteering.opportunities.show');

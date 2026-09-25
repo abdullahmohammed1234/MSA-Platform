@@ -190,6 +190,23 @@ return [
             'owns' => ['mlibms_books', 'mlibms_copies', 'mlibms_loans', 'mlibms_members', 'mlibms_reservations'],
             'does_not_own' => ['store_products', 'donations', 'ems_events'],
         ],
+        'vms' => [
+            'id' => 'vms',
+            'name' => 'Volunteer Management System (VMS)',
+            'description' => 'Authoritative owner of volunteer opportunities, teams, shifts, signups, waitlists, and volunteer roster management.',
+            'type' => 'application',
+            'url' => '/vms',
+            'admin_path' => '/admin/systems/vms',
+            'version' => env('VMS_VERSION', '1.0.0'),
+            'dependencies' => [
+                'platform-auth',
+                'database',
+                'ems-event-apis',
+                'email',
+            ],
+            'owns' => ['volunteering_opportunities', 'volunteering_teams', 'volunteering_shifts', 'volunteering_signups'],
+            'does_not_own' => ['ems_events', 'registrations', 'store_products'],
+        ],
     ],
 
 

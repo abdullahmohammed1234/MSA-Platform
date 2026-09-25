@@ -75,7 +75,7 @@ class ProductionReadinessCheckCommand extends Command
 
         $apps = array_keys(config('systems.applications', []));
         sort($apps);
-        if ($apps !== ['cms', 'dams', 'dawah-academy', 'donations', 'ems', 'main-website', 'mlibms', 'sponsorship', 'store']) {
+        if ($apps !== ['cms', 'dams', 'dawah-academy', 'donations', 'ems', 'main-website', 'mlibms', 'sponsorship', 'store', 'vms']) {
             $failures[] = 'Systems registry must contain the registered platform applications';
         }
 

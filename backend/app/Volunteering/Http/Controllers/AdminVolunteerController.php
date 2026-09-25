@@ -37,10 +37,20 @@ class AdminVolunteerController extends Controller
         ]);
     }
 
+    public function eligibleEvents(): JsonResponse
+    {
+        $events = $this->opportunityService->listEligibleEvents();
+
+        return response()->json([
+            'success' => true,
+            'data' => $events,
+        ]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'title' => 'required|string|max:255',
+            'title' => 'nullable|string|max:255',
             'slug' => 'nullable|string|max:255|unique:volunteering_opportunities,slug',
             'description' => 'nullable|string',
             'event_id' => 'nullable|exists:ems_events,id',
@@ -67,6 +77,13 @@ class AdminVolunteerController extends Controller
             'shifts.*.capacity' => 'nullable|integer|min:1',
             'shifts.*.status' => 'nullable|string|in:open,closed',
         ]);
+
+        if (empty($validated['title']) && empty($validated['event_id'])) {
+            return response()->json([
+                'message' => 'The title field is required when no event is selected.',
+                'errors' => ['title' => ['The title field is required when no event is selected.']],
+            ], 422);
+        }
 
         $opportunity = $this->opportunityService->createOpportunity($validated, $request->user()->id);
 

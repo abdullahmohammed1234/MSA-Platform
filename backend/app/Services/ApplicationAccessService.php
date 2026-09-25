@@ -22,6 +22,7 @@ class ApplicationAccessService
         'sponsorship',
         'mlibms',
         'volunteering',
+        'vms',
         'admin-portal'
     ];
 
@@ -47,8 +48,9 @@ class ApplicationAccessService
             return true;
         }
 
-        // Check if there is an explicit record in the table first
-        $explicitRecord = $user->applicationAccess()->where('application', $application)->first();
+        // Check if there is an explicit record in the table first (check both vms and volunteering if asking for either)
+        $appsToCheck = ($application === 'vms' || $application === 'volunteering') ? ['vms', 'volunteering'] : [$application];
+        $explicitRecord = $user->applicationAccess()->whereIn('application', $appsToCheck)->first();
         if ($explicitRecord !== null) {
             return true;
         }
@@ -84,8 +86,8 @@ class ApplicationAccessService
             }
         }
 
-        if ($application === 'volunteering') {
-            if ($user->hasAnyRole(['volunteer-administrator', 'volunteer-coordinator', 'volunteer', 'ems-administrator']) || $this->hasPermissionSafe($user, 'volunteer.registrations.view') || $this->hasPermissionSafe($user, 'volunteer.registrations.update')) {
+        if ($application === 'volunteering' || $application === 'vms') {
+            if ($user->hasAnyRole(['vms-administrator', 'vms-manager', 'volunteer-administrator', 'volunteer-coordinator', 'volunteer', 'ems-administrator']) || $this->hasPermissionSafe($user, 'vms.view') || $this->hasPermissionSafe($user, 'vms.manage') || $this->hasPermissionSafe($user, 'volunteer.registrations.view') || $this->hasPermissionSafe($user, 'volunteer.registrations.update')) {
                 return true;
             }
         }

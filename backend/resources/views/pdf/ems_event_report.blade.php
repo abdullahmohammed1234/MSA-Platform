@@ -140,9 +140,9 @@
         </tr>
         <tr>
             <td class="meta-label">Start Time</td>
-            <td class="meta-value">{{ $event->start_at ? $event->start_at->format('M d, Y H:i') : 'N/A' }}</td>
+            <td class="meta-value">{{ $event->start_at ? $event->start_at->copy()->setTimezone($event->timezone ?? 'America/Vancouver')->format('M d, Y g:i A') : 'N/A' }}</td>
             <td class="meta-label">End Time</td>
-            <td class="meta-value">{{ $event->end_at ? $event->end_at->format('M d, Y H:i') : 'N/A' }}</td>
+            <td class="meta-value">{{ $event->end_at ? $event->end_at->copy()->setTimezone($event->timezone ?? 'America/Vancouver')->format('M d, Y g:i A') : 'N/A' }}</td>
         </tr>
         <tr>
             <td class="meta-label">Organizer</td>
@@ -279,7 +279,7 @@
                 <td>{{ $reg->attendee_phone ?? 'N/A' }}</td>
                 <td>{{ $reg->ticketType->name ?? 'N/A' }}</td>
                 <td style="text-transform: capitalize;">{{ str_replace('_', ' ', $reg->status->value) }}</td>
-                <td>{{ $reg->registered_at ? $reg->registered_at->format('Y-m-d H:i') : '' }}</td>
+                <td>{{ $reg->registered_at ? $reg->registered_at->copy()->setTimezone($event->timezone ?? 'America/Vancouver')->format('Y-m-d H:i') : '' }}</td>
             </tr>
             @endforeach
         </tbody>
@@ -314,7 +314,7 @@
                 <td>${{ number_format($payment->amount, 2) }}</td>
                 <td>${{ number_format($payment->amount_refunded, 2) }}</td>
                 <td style="text-transform: capitalize;">{{ $payment->status->value }}</td>
-                <td>{{ $payment->paid_at ? $payment->paid_at->format('Y-m-d H:i') : '' }}</td>
+                <td>{{ $payment->paid_at ? $payment->paid_at->copy()->setTimezone($event->timezone ?? 'America/Vancouver')->format('Y-m-d H:i') : '' }}</td>
                 <td style="text-transform: capitalize;">{{ $payment->provider->value }}</td>
             </tr>
             @endforeach
@@ -351,7 +351,7 @@
                 <td>{{ $entry->attendee_phone ?? 'N/A' }}</td>
                 <td>{{ $entry->quantity }}</td>
                 <td style="text-transform: capitalize;">{{ $entry->status->value }}</td>
-                <td>{{ $entry->created_at ? $entry->created_at->format('Y-m-d H:i') : '' }}</td>
+                <td>{{ $entry->created_at ? $entry->created_at->copy()->setTimezone($event->timezone ?? 'America/Vancouver')->format('Y-m-d H:i') : '' }}</td>
             </tr>
             @endforeach
         </tbody>
@@ -383,7 +383,7 @@
                 <td>{{ $check->ticket->code ?? 'N/A' }}</td>
                 <td>{{ $check->ticket->holder_name ?? ($check->registration->attendee_name ?? 'N/A') }}</td>
                 <td>{{ $check->ticket->holder_email ?? ($check->registration->attendee_email ?? 'N/A') }}</td>
-                <td>{{ $check->checked_in_at ? $check->checked_in_at->format('Y-m-d H:i:s') : '' }}</td>
+                <td>{{ $check->checked_in_at ? $check->checked_in_at->copy()->setTimezone($event->timezone ?? 'America/Vancouver')->format('Y-m-d H:i:s') : '' }}</td>
                 <td style="text-transform: capitalize;">{{ $check->method->value }}</td>
                 <td>{{ $check->checkedInBy->name ?? 'System' }}</td>
             </tr>

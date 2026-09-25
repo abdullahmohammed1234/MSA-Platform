@@ -112,6 +112,14 @@ class VolunteerSignupService
                 ]);
             }
 
+            // Link user_id if not explicitly provided but email matches a registered user account
+            if (!$userId && !empty($data['email'])) {
+                $matchedUser = \App\Models\User::where('email', strtolower(trim($data['email'])))->first();
+                if ($matchedUser) {
+                    $userId = $matchedUser->id;
+                }
+            }
+
             $signup = Signup::create([
                 'opportunity_id' => $opportunity->id,
                 'team_id' => $team?->id ?? $shift?->team_id,
@@ -161,8 +169,16 @@ class VolunteerSignupService
 
     public function getUserHistory(int $userId): array
     {
+        $user = \App\Models\User::find($userId);
+        $userEmail = $user ? strtolower(trim($user->email)) : null;
+
         $signups = Signup::with(['opportunity:id,title,slug,start_at,location', 'team:id,name', 'shift:id,name,start_at,end_at'])
-            ->where('user_id', $userId)
+            ->where(function ($q) use ($userId, $userEmail) {
+                $q->where('user_id', $userId);
+                if ($userEmail) {
+                    $q->orWhere('email', $userEmail);
+                }
+            })
             ->orderBy('created_at', 'desc')
             ->get();
 

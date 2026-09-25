@@ -397,6 +397,7 @@ class SystemsControlPlaneService
                 'sponsorship' => $this->tableReachable('spms_sponsorships', \App\Spms\Models\Sponsorship::class, 'SPMS sponsorships store'),
                 'main-website' => $this->tableReachable('announcements', Announcement::class, 'CMS content consumed by Main Website'),
                 'mlibms' => $this->tableReachable('mlibms_books', \App\Mlibms\Models\Book::class, 'MLibMS books store'),
+                'vms' => $this->tableReachable('volunteering_opportunities', \App\Volunteering\Models\Opportunity::class, 'VMS opportunities store'),
                 default => [
                     'status' => self::STATUS_UNKNOWN,
                     'message' => 'No application-specific probe configured',

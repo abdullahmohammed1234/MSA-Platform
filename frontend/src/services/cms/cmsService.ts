@@ -10,7 +10,8 @@ import type {
   MediaUploadOptions,
   CmsRevision,
   CmsDashboardStats,
-  CmsDashboardActivity
+  CmsDashboardActivity,
+  CmsPrayer
 } from '@/types/cms';
 import { normalizeCmsTeamMember } from '@/utils/teamMembers';
 
@@ -23,6 +24,25 @@ export interface PaginatedResponse<T> {
 }
 
 export const cmsService = {
+  // 8. Prayer & Jumu'ah Management
+  async getPrayers(): Promise<CmsPrayer[]> {
+    const response = await client.get('/admin/cms/prayers');
+    return response.data.data ?? [];
+  },
+
+  async createPrayer(data: Partial<CmsPrayer>): Promise<CmsPrayer> {
+    const response = await client.post('/admin/cms/prayers', data);
+    return response.data.data;
+  },
+
+  async updatePrayer(id: number | string, data: Partial<CmsPrayer>): Promise<CmsPrayer> {
+    const response = await client.put(`/admin/cms/prayers/${id}`, data);
+    return response.data.data;
+  },
+
+  async deletePrayer(id: number | string): Promise<void> {
+    await client.delete(`/admin/cms/prayers/${id}`);
+  },
   // 1. Dashboard
   async getDashboard(): Promise<{ stats: CmsDashboardStats; recentLogs: CmsDashboardActivity[] }> {
     const response = await client.get('/cms/dashboard');

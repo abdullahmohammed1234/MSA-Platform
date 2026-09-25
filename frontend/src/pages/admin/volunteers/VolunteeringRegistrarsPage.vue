@@ -106,7 +106,7 @@ const formatDate = (dateStr?: string | null) => {
 };
 
 const navigateToDetail = (uuid: string) => {
-  void router.push({ name: 'admin-volunteering-registrar-detail', params: { uuid } });
+  void router.push({ name: 'vms-registrar-detail', params: { uuid } });
 };
 
 const handleDelete = async (registration: VolunteerRegistration) => {

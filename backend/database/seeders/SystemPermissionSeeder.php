@@ -24,6 +24,17 @@ class SystemPermissionSeeder extends Seeder
             ['name' => 'View Platform Audit', 'slug' => 'platform.audit', 'module' => 'Platform', 'description' => 'Search and filter platform audit logs.'],
             ['name' => 'Manage Platform Alerts', 'slug' => 'platform.alerts', 'module' => 'Platform', 'description' => 'View, acknowledge, and resolve system alerts.'],
             ['name' => 'Execute Platform Operations', 'slug' => 'platform.operations', 'module' => 'Platform', 'description' => 'Execute administrative maintenance actions.'],
+
+            // VMS Permissions
+            ['name' => 'View VMS', 'slug' => 'vms.view', 'module' => 'VMS', 'description' => 'View VMS opportunities and rosters.'],
+            ['name' => 'Create VMS Opportunities', 'slug' => 'vms.create', 'module' => 'VMS', 'description' => 'Create volunteer opportunity configurations.'],
+            ['name' => 'Update VMS Opportunities', 'slug' => 'vms.update', 'module' => 'VMS', 'description' => 'Update volunteer opportunities.'],
+            ['name' => 'Delete VMS Opportunities', 'slug' => 'vms.delete', 'module' => 'VMS', 'description' => 'Delete volunteer opportunities.'],
+            ['name' => 'Full VMS Management', 'slug' => 'vms.manage', 'module' => 'VMS', 'description' => 'Full operational administrative access to VMS.'],
+            ['name' => 'Manage VMS Teams', 'slug' => 'vms.manage_teams', 'module' => 'VMS', 'description' => 'Manage VMS teams.'],
+            ['name' => 'Manage VMS Shifts', 'slug' => 'vms.manage_shifts', 'module' => 'VMS', 'description' => 'Manage VMS shifts.'],
+            ['name' => 'Manage VMS Signups', 'slug' => 'vms.manage_signups', 'module' => 'VMS', 'description' => 'Manage volunteer signups and waitlists.'],
+            ['name' => 'Export VMS Roster', 'slug' => 'vms.export', 'module' => 'VMS', 'description' => 'Export volunteer rosters.'],
         ];
 
         foreach ($permissionsData as $permData) {

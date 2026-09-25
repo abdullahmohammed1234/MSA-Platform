@@ -28,6 +28,7 @@ const navLinks: NavLink[] = [
   { name: 'Home', href: '/' },
   { name: 'About', href: '/about' },
   { name: 'Events', href: '/events' },
+  { name: 'Volunteer', href: '/volunteer' },
   { name: 'Prayer', href: '/prayer' },
   { name: 'Team', href: '/team' },
   { name: 'Media', href: '/media' },
@@ -42,7 +43,7 @@ const navLinks: NavLink[] = [
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
-const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasStoreAccess, hasDonationsAccess, hasSponsorshipAccess, hasAdminAccess, hasMlibmsAccess } = useAppAccess();
+const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasStoreAccess, hasDonationsAccess, hasSponsorshipAccess, hasAdminAccess, hasMlibmsAccess, hasVolunteeringAccess } = useAppAccess();
 
 function isNavActive(href: string): boolean {
   if (href === '/') return route.path === '/';
@@ -242,6 +243,15 @@ const handleLogout = async () => {
                 </router-link>
 
                 <router-link
+                  to="/volunteer/my-history"
+                  class="flex items-center gap-2.5 px-4 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/70 hover:bg-neutral-background hover:text-primary transition-all"
+                  @click="closeUserMenu"
+                >
+                  <Heart class="h-4 w-4 shrink-0 text-primary" />
+                  My Volunteer History
+                </router-link>
+
+                <router-link
                   v-if="canAccessAcademy"
                   to="/academy"
                   class="flex items-center gap-2.5 px-4 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/70 hover:bg-neutral-background hover:text-primary transition-all"
@@ -343,6 +353,16 @@ const handleLogout = async () => {
                 >
                   <BookOpen class="h-4 w-4 shrink-0 text-primary" />
                   MLibMS Admin
+                </router-link>
+
+                <router-link
+                  v-if="hasVolunteeringAccess"
+                  to="/admin/volunteering"
+                  class="flex items-center gap-2.5 px-4 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/70 hover:bg-neutral-background hover:text-primary transition-all"
+                  @click="closeUserMenu"
+                >
+                  <Heart class="h-4 w-4 shrink-0 text-primary" />
+                  VMS Admin
                 </router-link>
 
                 <router-link
@@ -468,7 +488,7 @@ const handleLogout = async () => {
               </div>
 
               <!-- Accordion 2: Applications -->
-              <div v-if="!isLoading && isAuthenticated && (hasEmsAccess || hasCmsAccess || hasDamsAccess || hasStoreAccess || hasDonationsAccess || hasSponsorshipAccess || hasMlibmsAccess || canAccessAcademy)" class="border-b border-neutral-ivory/80 pb-3 mb-3">
+              <div v-if="!isLoading && isAuthenticated && (hasEmsAccess || hasCmsAccess || hasDamsAccess || hasStoreAccess || hasDonationsAccess || hasSponsorshipAccess || hasMlibmsAccess || hasVolunteeringAccess || canAccessAcademy)" class="border-b border-neutral-ivory/80 pb-3 mb-3">
                 <button
                   @click="toggleMobileAccordion('applications')"
                   class="w-full flex items-center justify-between py-2 text-[11px] font-extrabold uppercase tracking-widest text-neutral-black/50 hover:text-primary transition-colors cursor-pointer min-h-[44px]"
@@ -547,6 +567,14 @@ const handleLogout = async () => {
                     @click="closeMenu"
                   >
                     <BookOpen class="h-4 w-4" /> MLibMS (Library)
+                  </router-link>
+                  <router-link
+                    v-if="hasVolunteeringAccess"
+                    to="/admin/volunteering"
+                    class="flex items-center gap-3 px-4 min-h-[44px] rounded-xl text-xs font-bold uppercase tracking-wider bg-primary/10 text-primary hover:bg-primary/20 transition-all"
+                    @click="closeMenu"
+                  >
+                    <Heart class="h-4 w-4" /> Volunteering Admin
                   </router-link>
                 </div>
               </div>

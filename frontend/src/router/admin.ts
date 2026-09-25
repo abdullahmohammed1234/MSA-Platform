@@ -32,30 +32,11 @@ const adminRoutes: Array<RouteRecordRaw> = [
         component: () => import('@/pages/admin/Permissions.vue'),
         meta: { permissions: 'manage_permissions' }
       },
-      {
-        path: 'volunteering-registrars',
-        name: 'admin-volunteering-registrars',
-        component: () => import('@/pages/admin/volunteers/VolunteeringRegistrarsPage.vue'),
-        meta: { title: 'Volunteering Registrars', adminLogin: true }
-      },
-      {
-        path: 'volunteering-registrars/:uuid',
-        name: 'admin-volunteering-registrar-detail',
-        component: () => import('@/pages/admin/volunteers/VolunteeringRegistrarDetailPage.vue'),
-        meta: { title: 'Volunteer Registration Detail', adminLogin: true }
-      },
-      {
-        path: 'volunteering',
-        name: 'admin-volunteering-opportunities',
-        component: () => import('@/pages/admin/volunteering/AdminVolunteerOpportunitiesPage.vue'),
-        meta: { title: 'Volunteer Opportunities | SFU MSA', appAccess: 'volunteering' }
-      },
-      {
-        path: 'volunteering/:id',
-        name: 'admin-volunteering-opportunity-detail',
-        component: () => import('@/pages/admin/volunteering/AdminVolunteerDetailPage.vue'),
-        meta: { title: 'Manage Volunteer Position | SFU MSA', appAccess: 'volunteering' }
-      },
+      // VMS Engine — extracted to /vms
+      { path: 'volunteering', redirect: '/vms/opportunities' },
+      { path: 'volunteering/:id', redirect: (to) => `/vms/opportunities/${to.params.id}` },
+      { path: 'volunteering-registrars', redirect: '/vms/registrars' },
+      { path: 'volunteering-registrars/:uuid', redirect: (to) => `/vms/registrars/${to.params.uuid}` },
       // CMS Engine — extracted to /cms
       { path: 'cms', redirect: '/cms' },
       { path: 'cms/homepage', redirect: '/cms/homepage' },
@@ -131,6 +112,12 @@ const adminRoutes: Array<RouteRecordRaw> = [
         name: 'admin-systems-library',
         component: () => import('@/pages/admin/systems/MlibmsSystemOverviewPage.vue'),
         meta: { permissions: 'system.view', systemId: 'mlibms' }
+      },
+      {
+        path: 'systems/vms',
+        name: 'admin-systems-vms',
+        component: () => import('@/pages/admin/system/SystemApplicationDetailPage.vue'),
+        meta: { permissions: 'system.view', systemId: 'vms' }
       },
       {
         path: 'systems/donations/console',

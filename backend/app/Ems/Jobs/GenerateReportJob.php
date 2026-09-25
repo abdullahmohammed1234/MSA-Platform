@@ -161,6 +161,8 @@ class GenerateReportJob implements ShouldQueue
     ): string {
         $spreadsheet = new Spreadsheet();
 
+        $targetTz = $event->timezone ?? config('ems.default_timezone', 'America/Vancouver');
+
         // Sheet 1: Summary
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Event Summary');
@@ -174,9 +176,9 @@ class GenerateReportJob implements ShouldQueue
         $sheet->setCellValue('A4', 'Organizer:');
         $sheet->setCellValue('B4', $event->organizer->name ?? 'N/A');
         $sheet->setCellValue('A5', 'Date range:');
-        $sheet->setCellValue('B5', ($event->start_at ? $event->start_at->format('Y-m-d') : '') . ' to ' . ($event->end_at ? $event->end_at->format('Y-m-d') : ''));
+        $sheet->setCellValue('B5', ($event->start_at ? $event->start_at->copy()->setTimezone($targetTz)->format('Y-m-d H:i') : '') . ' to ' . ($event->end_at ? $event->end_at->copy()->setTimezone($targetTz)->format('Y-m-d H:i') : ''));
         $sheet->setCellValue('A6', 'Generated At:');
-        $sheet->setCellValue('B6', now()->format('Y-m-d H:i:s'));
+        $sheet->setCellValue('B6', now()->setTimezone($targetTz)->format('Y-m-d H:i:s T'));
 
         // KPIs section
         $sheet->setCellValue('A8', 'KPI Metric');
@@ -226,7 +228,7 @@ class GenerateReportJob implements ShouldQueue
                     $reg->attendee_phone ?? 'N/A',
                     $reg->ticketType->name ?? 'N/A',
                     $reg->status->value,
-                    $reg->registered_at ? $reg->registered_at->format('Y-m-d H:i:s') : '',
+                    $reg->registered_at ? $reg->registered_at->copy()->setTimezone($targetTz)->format('Y-m-d H:i:s') : '',
                 ];
             }
             $sheetReg->fromArray($rows, null, 'A2');
@@ -249,7 +251,7 @@ class GenerateReportJob implements ShouldQueue
                     (float) $payment->amount,
                     (float) $payment->amount_refunded,
                     $payment->status->value,
-                    $payment->paid_at ? $payment->paid_at->format('Y-m-d H:i:s') : '',
+                    $payment->paid_at ? $payment->paid_at->copy()->setTimezone($targetTz)->format('Y-m-d H:i:s') : '',
                     $payment->provider->value,
                 ];
             }
@@ -274,7 +276,7 @@ class GenerateReportJob implements ShouldQueue
                     $entry->attendee_phone ?? 'N/A',
                     (int) $entry->quantity,
                     $entry->status->value,
-                    $entry->created_at ? $entry->created_at->format('Y-m-d H:i:s') : '',
+                    $entry->created_at ? $entry->created_at->copy()->setTimezone($targetTz)->format('Y-m-d H:i:s') : '',
                 ];
             }
             $sheetWait->fromArray($rows, null, 'A2');
@@ -295,7 +297,7 @@ class GenerateReportJob implements ShouldQueue
                     $check->ticket->code ?? 'N/A',
                     $check->ticket->holder_name ?? ($check->registration->attendee_name ?? 'N/A'),
                     $check->ticket->holder_email ?? ($check->registration->attendee_email ?? 'N/A'),
-                    $check->checked_in_at ? $check->checked_in_at->format('Y-m-d H:i:s') : '',
+                    $check->checked_in_at ? $check->checked_in_at->copy()->setTimezone($targetTz)->format('Y-m-d H:i:s') : '',
                     $check->method->value,
                     $check->checkedInBy->name ?? 'System',
                 ];
@@ -322,12 +324,13 @@ class GenerateReportJob implements ShouldQueue
         array $data,
         bool $showFinancial
     ): string {
+        $targetTz = $event->timezone ?? config('ems.default_timezone', 'America/Vancouver');
         $stream = fopen('php://temp', 'r+');
 
         // Event Metadata
         fputcsv($stream, ['SFU MSA Event Summary Report']);
         fputcsv($stream, ['Event Name', $event->name]);
-        fputcsv($stream, ['Generated At', now()->format('Y-m-d H:i:s')]);
+        fputcsv($stream, ['Generated At', now()->setTimezone($targetTz)->format('Y-m-d H:i:s T')]);
         fputcsv($stream, []);
 
         // KPIs
@@ -357,7 +360,7 @@ class GenerateReportJob implements ShouldQueue
                     $reg->attendee_phone ?? 'N/A',
                     $reg->ticketType->name ?? 'N/A',
                     $reg->status->value,
-                    $reg->registered_at ? $reg->registered_at->format('Y-m-d H:i:s') : '',
+                    $reg->registered_at ? $reg->registered_at->copy()->setTimezone($targetTz)->format('Y-m-d H:i:s') : '',
                 ]);
             }
             fputcsv($stream, []);
@@ -374,7 +377,7 @@ class GenerateReportJob implements ShouldQueue
                     $payment->amount,
                     $payment->amount_refunded,
                     $payment->status->value,
-                    $payment->paid_at ? $payment->paid_at->format('Y-m-d H:i:s') : '',
+                    $payment->paid_at ? $payment->paid_at->copy()->setTimezone($targetTz)->format('Y-m-d H:i:s') : '',
                     $payment->provider->value,
                 ]);
             }
@@ -393,7 +396,7 @@ class GenerateReportJob implements ShouldQueue
                     $entry->attendee_phone ?? 'N/A',
                     $entry->quantity,
                     $entry->status->value,
-                    $entry->created_at ? $entry->created_at->format('Y-m-d H:i:s') : '',
+                    $entry->created_at ? $entry->created_at->copy()->setTimezone($targetTz)->format('Y-m-d H:i:s') : '',
                 ]);
             }
             fputcsv($stream, []);
@@ -408,7 +411,7 @@ class GenerateReportJob implements ShouldQueue
                     $check->ticket->code ?? 'N/A',
                     $check->ticket->holder_name ?? ($check->registration->attendee_name ?? 'N/A'),
                     $check->ticket->holder_email ?? ($check->registration->attendee_email ?? 'N/A'),
-                    $check->checked_in_at ? $check->checked_in_at->format('Y-m-d H:i:s') : '',
+                    $check->checked_in_at ? $check->checked_in_at->copy()->setTimezone($targetTz)->format('Y-m-d H:i:s') : '',
                     $check->method->value,
                     $check->checkedInBy->name ?? 'System',
                 ]);

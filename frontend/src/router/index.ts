@@ -9,6 +9,7 @@ import damsRoutes from './dams';
 import donationsRoutes from './donations';
 import sponsorshipRoutes from './sponsorship';
 import mlibmsRoutes from './mlibms';
+import vmsRoutes from './vms';
 import { useAuthStore } from '@/stores/auth';
 import { authGuard } from './guards/authGuard';
 import { guestGuard } from './guards/guestGuard';
@@ -23,6 +24,7 @@ import { damsGuard } from './guards/damsGuard';
 import { dmsGuard } from './guards/dmsGuard';
 import { spmsGuard } from './guards/spmsGuard';
 import { mlibmsGuard } from './guards/mlibmsGuard';
+import { vmsGuard } from './guards/vmsGuard';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -34,6 +36,7 @@ const router = createRouter({
     ...donationsRoutes,
     ...sponsorshipRoutes,
     ...mlibmsRoutes,
+    ...vmsRoutes,
     ...adminRoutes,
     ...emsRoutes,
     ...authRoutes,
@@ -102,6 +105,9 @@ router.beforeEach(async (to) => {
 
   const mlibmsResult = await mlibmsGuard(to);
   if (mlibmsResult !== true) return mlibmsResult;
+
+  const vmsResult = await vmsGuard(to);
+  if (vmsResult !== true) return vmsResult;
 
   const academyResult = academyGuard(to);
   if (academyResult !== true) return academyResult;

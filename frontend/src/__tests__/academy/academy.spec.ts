@@ -21,6 +21,24 @@ vi.mock('@/services/academy/lessonsService', () => ({
   },
 }));
 
+vi.mock('@/services/academy/dashboardService', () => ({
+  dashboardService: {
+    getDashboard: vi.fn().mockRejectedValue(new Error('API Error')),
+  },
+}));
+
+vi.mock('@/services/academy/badgesService', () => ({
+  badgesService: {
+    getBadges: vi.fn().mockResolvedValue([]),
+  },
+}));
+
+vi.mock('@/services/academy/certificatesService', () => ({
+  certificatesService: {
+    getBadges: vi.fn().mockResolvedValue([]),
+  },
+}));
+
 import { coursesService } from '../../services/academy/coursesService';
 import { lessonsService } from '../../services/academy/lessonsService';
 

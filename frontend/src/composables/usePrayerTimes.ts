@@ -167,11 +167,33 @@ async function fetchAllPrayerTimes(): Promise<PrayerTimesByCampus> {
 
 export function usePrayerTimes() {
   const times = ref<PrayerTimesByCampus>({});
+  const dynamicJumuahSessions = ref<JumuahSession[]>(jumuahSessions);
   const isLoading = ref(true);
   const error = ref<string | null>(null);
 
+  const loadCmsPrayers = async () => {
+    try {
+      const res = await api.get<{ success: boolean; data: { jumuah: any[] } }>('/cms/prayers');
+      if (res.data?.success && Array.isArray(res.data?.data?.jumuah) && res.data.data.jumuah.length > 0) {
+        dynamicJumuahSessions.value = res.data.data.jumuah.map((item: any, idx: number) => ({
+          id: item.uuid || `cms-${idx}`,
+          name: item.title,
+          location: item.location || 'TBD',
+          timings: item.timings_json || [
+            { label: 'Khutbah', time: item.khutbah_time || '1:30 PM' },
+            { label: 'Prayer', time: item.prayer_time || '2:00 PM' },
+          ],
+        }));
+      }
+    } catch {
+      // Fallback to static sessions
+    }
+  };
+
   const loadPrayerTimes = async () => {
     try {
+      await loadCmsPrayers();
+
       let nextTimes: PrayerTimesByCampus;
       try {
         nextTimes = await fetchAllPrayerTimes();
@@ -201,5 +223,5 @@ export function usePrayerTimes() {
     loadPrayerTimes();
   });
 
-  return { times, isLoading, error };
+  return { times, dynamicJumuahSessions, isLoading, error };
 }

@@ -183,3 +183,33 @@ export interface CmsCurrentUser {
   has_cms_access: boolean;
   created_at?: string;
 }
+
+export interface CmsPrayerTiming {
+  label: string;
+  time: string;
+}
+
+export interface CmsPrayer {
+  id?: number;
+  uuid: string;
+  type: 'daily' | 'jumuah';
+  title: string;
+  campus?: string | null;
+  day?: string | null;
+  is_enabled: boolean;
+  fajr_time?: string | null;
+  dhuhr_time?: string | null;
+  asr_time?: string | null;
+  maghrib_time?: string | null;
+  isha_time?: string | null;
+  khutbah_time?: string | null;
+  prayer_time?: string | null;
+  location?: string | null;
+  address?: string | null;
+  notes?: string | null;
+  timings_json?: CmsPrayerTiming[] | null;
+  display_order: number;
+  created_at?: string;
+  updated_at?: string;
+}
+

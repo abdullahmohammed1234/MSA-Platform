@@ -14,11 +14,11 @@ import ScrollReveal from '@/components/shared/ScrollReveal.vue';
 import FloatingElement from '@/components/shared/FloatingElement.vue';
 import ParallaxSection from '@/components/shared/ParallaxSection.vue';
 import PublicCard from '@/components/shared/PublicCard.vue';
-import { usePrayerTimes, campusPrayerInfo, fallbackPrayerTimes, jumuahSessions } from '@/composables/usePrayerTimes';
+import { usePrayerTimes, campusPrayerInfo, fallbackPrayerTimes } from '@/composables/usePrayerTimes';
 import type { Campus } from '@/composables/usePrayerTimes';
 import { HERO_IMAGES } from '@/constants/publicAssets';
 
-const { times, isLoading, error } = usePrayerTimes();
+const { times, dynamicJumuahSessions, isLoading, error } = usePrayerTimes();
 const campuses: Campus[] = ['Burnaby', 'Surrey', 'Vancouver'];
 const selectedSchool = ref<'hanafi' | 'shafii'>('hanafi');
 
@@ -230,7 +230,7 @@ const etiquette = [
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 text-neutral-black items-stretch">
           <PublicCard
-            v-for="session in jumuahSessions"
+            v-for="session in dynamicJumuahSessions"
             :key="session.id"
             variant="default"
             padding="none"

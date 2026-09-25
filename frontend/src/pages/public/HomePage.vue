@@ -17,7 +17,7 @@ import FloatingElement from '@/components/shared/FloatingElement.vue';
 import ParallaxSection from '@/components/shared/ParallaxSection.vue';
 import PublicButton from '@/components/shared/PublicButton.vue';
 import PublicCard from '@/components/shared/PublicCard.vue';
-import { usePrayerTimes, campusPrayerInfo, fallbackPrayerTimes, prayerTabs, jumuahSessions, type Campus, type PrayerTab } from '@/composables/usePrayerTimes';
+import { usePrayerTimes, campusPrayerInfo, fallbackPrayerTimes, prayerTabs, type Campus, type PrayerTab } from '@/composables/usePrayerTimes';
 import { useSeo } from '@/composables/useSeo';
 import websiteService from '@/services/website/websiteService';
 import { publicEventsService } from '@/services/ems/publicEventsService';
@@ -40,7 +40,7 @@ useSeo({
 
 const activeTab = ref<PrayerTab>('Burnaby');
 const selectedSchool = ref<'hanafi' | 'shafii'>('hanafi');
-const { times, isLoading, error } = usePrayerTimes();
+const { times, dynamicJumuahSessions, isLoading, error } = usePrayerTimes();
 
 const isCampusTab = computed(() => activeTab.value !== "Jumu'ah");
 const activeData = computed(() => (isCampusTab.value ? campusPrayerInfo[activeTab.value as Campus] : null));
@@ -349,7 +349,7 @@ const ctaBtnUrl = computed(() => homepageData.value?.cta?.button_url ?? '/contac
 
             <div v-else class="grid grid-cols-1 gap-4 sm:gap-5 w-full">
               <div
-                v-for="session in jumuahSessions"
+                v-for="session in dynamicJumuahSessions"
                 :key="session.id"
                 class="p-6 sm:p-8 rounded-[2rem] bg-white border border-neutral-ivory shadow-soft hover:shadow-premium transition-all duration-500 group"
               >

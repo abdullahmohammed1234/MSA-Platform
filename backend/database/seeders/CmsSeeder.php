@@ -8,6 +8,7 @@ use App\Models\CMS\Announcement;
 use App\Models\CMS\TeamMember;
 use App\Models\CMS\Resource;
 use App\Models\CMS\FeaturedOpportunity;
+use App\Models\CMS\CmsPrayer;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Str;
 
@@ -297,5 +298,87 @@ class CmsSeeder extends Seeder
                 'sort_order' => 1,
             ]
         );
+
+        // 7. Seed CMS Prayers & Friday Jumu'ah
+        $prayers = [
+            [
+                'type' => 'jumuah',
+                'title' => "Burnaby 1st Jumu'ah",
+                'campus' => 'Burnaby',
+                'location' => 'Educational Building Gym',
+                'is_enabled' => true,
+                'khutbah_time' => '1:30 PM',
+                'prayer_time' => '2:00 PM',
+                'display_order' => 1,
+                'timings_json' => [
+                    ['label' => 'Setup', 'time' => '1:00 PM'],
+                    ['label' => 'Khutbah', 'time' => '1:30 PM'],
+                    ['label' => 'Iqamah', 'time' => '2:00 PM'],
+                ],
+            ],
+            [
+                'type' => 'jumuah',
+                'title' => "Burnaby 2nd Jumu'ah",
+                'campus' => 'Burnaby',
+                'location' => 'Educational Building Gym',
+                'is_enabled' => true,
+                'khutbah_time' => '2:40 PM',
+                'prayer_time' => '2:50 PM',
+                'display_order' => 2,
+                'timings_json' => [
+                    ['label' => 'Khutbah', 'time' => '2:40 PM'],
+                    ['label' => 'Iqamah', 'time' => '2:50 PM'],
+                ],
+            ],
+            [
+                'type' => 'jumuah',
+                'title' => "Surrey 1st Jumu'ah",
+                'campus' => 'Surrey',
+                'location' => 'SRYE 1005',
+                'is_enabled' => true,
+                'khutbah_time' => '1:30 PM',
+                'prayer_time' => '2:00 PM',
+                'display_order' => 3,
+                'timings_json' => [
+                    ['label' => 'Setup', 'time' => '1:10 PM'],
+                    ['label' => 'Khutbah', 'time' => '1:30 PM'],
+                    ['label' => 'Iqamah', 'time' => '2:00 PM'],
+                ],
+            ],
+            [
+                'type' => 'daily',
+                'title' => 'SFU Burnaby Musalla',
+                'campus' => 'Burnaby',
+                'location' => 'AQ 3200, SUB 2402, Discovery 1 Room 2300, & Residence Prayer Room',
+                'notes' => 'Wudu access varies by building. Use nearby washrooms and check posted room guidance.',
+                'is_enabled' => true,
+                'display_order' => 1,
+            ],
+            [
+                'type' => 'daily',
+                'title' => 'SFU Surrey Musalla',
+                'campus' => 'Surrey',
+                'location' => 'SRYC 3002 and SRYE 3004',
+                'notes' => 'Wudu can be performed in nearby campus washrooms before entering prayer rooms.',
+                'is_enabled' => true,
+                'display_order' => 2,
+            ],
+            [
+                'type' => 'daily',
+                'title' => 'SFU Vancouver Musalla',
+                'campus' => 'Vancouver',
+                'location' => 'Harbour Centre, Room 7314',
+                'notes' => 'Use nearby Harbour Centre washrooms before entering the prayer space.',
+                'is_enabled' => true,
+                'display_order' => 3,
+            ],
+        ];
+
+        foreach ($prayers as $prayer) {
+            CmsPrayer::firstOrCreate(
+                ['title' => $prayer['title'], 'campus' => $prayer['campus']],
+                array_merge($prayer, ['uuid' => (string) Str::uuid()])
+            );
+        }
     }
 }

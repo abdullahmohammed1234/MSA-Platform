@@ -41,14 +41,14 @@ class Phase23IntelligenceTest extends TestCase
 
     public function test_unauthenticated_requests_are_rejected(): void
     {
-        $response = $this->getJson('/api/v1/admin/platform/intelligence');
+        $response = $this->getJson('/api/v1/admin/intelligence');
         $response->assertStatus(401);
     }
 
     public function test_unauthorized_users_receive_403(): void
     {
         $response = $this->actingAs($this->normalUser, 'sanctum')
-            ->getJson('/api/v1/admin/platform/intelligence');
+            ->getJson('/api/v1/admin/intelligence');
 
         $response->assertStatus(403);
     }
@@ -56,7 +56,7 @@ class Phase23IntelligenceTest extends TestCase
     public function test_authorized_admin_receives_200_with_intelligence_payload(): void
     {
         $response = $this->actingAs($this->adminUser, 'sanctum')
-            ->getJson('/api/v1/admin/platform/intelligence?period=30d');
+            ->getJson('/api/v1/admin/intelligence?period=30d');
 
         $response->assertStatus(200)
             ->assertJsonStructure([
@@ -81,43 +81,43 @@ class Phase23IntelligenceTest extends TestCase
     {
         // EMS
         $this->actingAs($this->adminUser, 'sanctum')
-            ->getJson('/api/v1/admin/platform/intelligence/ems?period=7d')
+            ->getJson('/api/v1/admin/intelligence/ems?period=7d')
             ->assertStatus(200)
             ->assertJsonStructure(['success', 'data' => ['kpis', 'funnel', 'financial', 'trends']]);
 
         // Donations
         $this->actingAs($this->adminUser, 'sanctum')
-            ->getJson('/api/v1/admin/platform/intelligence/donations?period=30d')
+            ->getJson('/api/v1/admin/intelligence/donations?period=30d')
             ->assertStatus(200)
             ->assertJsonStructure(['success', 'data' => ['kpis', 'trends']]);
 
         // Store
         $this->actingAs($this->adminUser, 'sanctum')
-            ->getJson('/api/v1/admin/platform/intelligence/store?period=90d')
+            ->getJson('/api/v1/admin/intelligence/store?period=90d')
             ->assertStatus(200)
             ->assertJsonStructure(['success', 'data' => ['kpis', 'inventory_warnings', 'trends']]);
 
         // MLibMS
         $this->actingAs($this->adminUser, 'sanctum')
-            ->getJson('/api/v1/admin/platform/intelligence/mlibms?period=this_year')
+            ->getJson('/api/v1/admin/intelligence/mlibms?period=this_year')
             ->assertStatus(200)
             ->assertJsonStructure(['success', 'data' => ['kpis', 'trends']]);
 
         // Communications
         $this->actingAs($this->adminUser, 'sanctum')
-            ->getJson('/api/v1/admin/platform/intelligence/communications?period=30d')
+            ->getJson('/api/v1/admin/intelligence/communications?period=30d')
             ->assertStatus(200)
             ->assertJsonStructure(['success', 'data' => ['kpis', 'trends']]);
 
         // Volunteers
         $this->actingAs($this->adminUser, 'sanctum')
-            ->getJson('/api/v1/admin/platform/intelligence/volunteers?period=30d')
+            ->getJson('/api/v1/admin/intelligence/volunteers?period=30d')
             ->assertStatus(200)
             ->assertJsonStructure(['success', 'data' => ['kpis', 'trends']]);
 
         // Feedback
         $this->actingAs($this->adminUser, 'sanctum')
-            ->getJson('/api/v1/admin/platform/intelligence/feedback?period=30d')
+            ->getJson('/api/v1/admin/intelligence/feedback?period=30d')
             ->assertStatus(200)
             ->assertJsonStructure(['success', 'data' => ['kpis', 'distribution', 'trends']]);
     }
@@ -128,7 +128,7 @@ class Phase23IntelligenceTest extends TestCase
         $end = now()->format('Y-m-d');
 
         $response = $this->actingAs($this->adminUser, 'sanctum')
-            ->getJson("/api/v1/admin/platform/intelligence/ems?period=custom&start_date={$start}&end_date={$end}");
+            ->getJson("/api/v1/admin/intelligence/ems?period=custom&start_date={$start}&end_date={$end}");
 
         $response->assertStatus(200);
         $this->assertEquals('custom', $response->json('data.period.type'));
