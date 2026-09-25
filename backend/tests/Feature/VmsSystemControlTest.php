@@ -97,7 +97,7 @@ class VmsSystemControlTest extends TestCase
 
         $this->assertNotNull($vmsApp, 'VMS application must be registered in Systems Control Plane overview.');
         $this->assertEquals('Volunteer Management System (VMS)', $vmsApp['name']);
-        $this->assertEquals('/admin/volunteering', $vmsApp['url']);
+        $this->assertEquals('/vms', $vmsApp['url']);
     }
 
     public function test_unauthenticated_vms_system_requests_fail(): void
