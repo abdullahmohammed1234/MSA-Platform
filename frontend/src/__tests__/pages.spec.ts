@@ -5,23 +5,26 @@ import HomeView from '../pages/public/HomePage.vue';
 import CoursesView from '../pages/academy/CourseCatalogPage.vue';
 import AcademyDashboardView from '../pages/academy/AcademyDashboardPage.vue';
 
-// Explicitly define and mock all required Lucide icons used in the views
+// Dynamically mock all Lucide icons used in the views
 vi.mock('lucide-vue-next', () => {
-  const icons = [
-    'GraduationCap', 'BookOpen', 'CheckCircle', 'Award', 'ChevronRight', 
-    'Search', 'Filter', 'Shield', 'Heart', 'MapPin', 'Calendar', 
-    'Clock', 'Mail', 'Phone', 'User', 'Users', 'LogOut', 'Settings',
-    'Menu', 'X', 'FileText', 'ChevronDown', 'Info', 'ArrowRight',
-    'Sparkles', 'Globe', 'Plus', 'Flame'
-  ];
-  const mockIcons: Record<string, any> = {};
-  icons.forEach(icon => {
-    mockIcons[icon] = {
-      name: icon,
-      template: `<div class="lucide-${icon}"><slot /></div>`
-    };
-  });
-  return mockIcons;
+  const componentCache: Record<string, any> = {};
+  return new Proxy(
+    { __esModule: true },
+    {
+      get: (target, prop: string) => {
+        if (prop in target) return (target as any)[prop];
+        if (typeof prop === 'symbol' || prop === 'default') return undefined;
+        if (!componentCache[prop]) {
+          componentCache[prop] = {
+            name: prop,
+            template: `<div class="lucide-${prop}"><slot /></div>`,
+          };
+        }
+        return componentCache[prop];
+      },
+      has: () => true,
+    }
+  );
 });
 
 // Stub components that might load child routes/complex motion
