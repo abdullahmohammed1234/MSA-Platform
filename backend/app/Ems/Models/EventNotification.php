@@ -28,6 +28,7 @@ class EventNotification extends Model
         'uuid',
         'event_id',
         'registration_id',
+        'volunteering_signup_id',
         'order_id',
         'payment_id',
         'ticket_id',
@@ -89,6 +90,11 @@ class EventNotification extends Model
     public function registration(): BelongsTo
     {
         return $this->belongsTo(Registration::class, 'registration_id');
+    }
+
+    public function volunteeringSignup(): BelongsTo
+    {
+        return $this->belongsTo(\App\Volunteering\Models\Signup::class, 'volunteering_signup_id');
     }
 
     /**

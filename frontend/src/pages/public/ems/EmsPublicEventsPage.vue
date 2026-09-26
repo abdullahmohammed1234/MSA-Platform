@@ -192,10 +192,7 @@ function openEvent(slug: string) {
 function capacityLabel(event: PublicEvent): string {
   if (event.capacity === null) return 'Open seating';
   if (event.is_full) return 'Full';
-  if (event.remaining_capacity !== null) {
-    return `${event.remaining_capacity} of ${event.capacity} left`;
-  }
-  return `${event.capacity} capacity`;
+  return 'Available';
 }
 </script>
 

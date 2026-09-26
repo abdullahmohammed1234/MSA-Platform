@@ -366,36 +366,14 @@ class QueuedEventNotificationDispatcher implements EventNotificationDispatcher
 
     private function triggerImmediateSend(EventNotification $notification): void
     {
-        // Synchronous immediate dispatch registered after transaction commit
-        \Illuminate\Support\Facades\DB::afterCommit(function () use ($notification) {
-            try {
-                $sentMessage = \Illuminate\Support\Facades\Mail::to($notification->recipient_email)
-                    ->send(new \App\Ems\Mail\EventNotificationMail($notification));
-
-                $messageId = $sentMessage?->getMessageId();
-                if ($messageId) {
-                    $notification->provider_message_id = $messageId;
-                }
-
-                $notification->markSent();
-
-                Log::channel((string) config('ems.logging.channel', 'ems'))
-                    ->info('ems.notifications.sent_immediate', [
-                        'notification_uuid' => $notification->uuid,
-                        'provider_message_id' => $messageId,
-                    ]);
-            } catch (\Throwable $e) {
-                $notification->markFailed($e->getMessage());
-
-                Log::channel((string) config('ems.logging.channel', 'ems'))
-                    ->error('ems.notifications.failed_immediate', [
-                        'notification_uuid' => $notification->uuid,
-                        'error' => $e->getMessage(),
-                    ]);
-
-                // Alert Super Admins asynchronously/safely using the failure alert service
-                app(NotificationFailureAlertService::class)->sendAlert($notification, $e->getMessage());
-            }
-        });
+        try {
+            $this->queueIfDue($notification);
+        } catch (\Throwable $e) {
+            Log::channel((string) config('ems.logging.channel', 'ems'))
+                ->warning('ems.notifications.immediate_send_exception', [
+                    'notification_uuid' => $notification->uuid,
+                    'error' => $e->getMessage(),
+                ]);
+        }
     }
 }

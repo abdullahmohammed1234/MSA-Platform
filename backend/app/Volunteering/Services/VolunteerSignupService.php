@@ -11,6 +11,14 @@ use Illuminate\Validation\ValidationException;
 
 class VolunteerSignupService
 {
+    private readonly VmsNotificationDispatcher $notificationDispatcher;
+
+    public function __construct(
+        ?VmsNotificationDispatcher $notificationDispatcher = null
+    ) {
+        $this->notificationDispatcher = $notificationDispatcher ?? app(VmsNotificationDispatcher::class);
+    }
+
     public function registerSignup(array $data, ?int $userId = null): Signup
     {
         return DB::transaction(function () use ($data, $userId) {
@@ -23,6 +31,8 @@ class VolunteerSignupService
                     'opportunity_id' => ['This volunteer opportunity is currently not accepting signups.'],
                 ]);
             }
+
+            $isFull = false;
 
             $shift = null;
             if (!empty($data['shift_id'])) {
@@ -49,9 +59,7 @@ class VolunteerSignupService
                     ->count();
 
                 if ($shift->capacity !== null && $activeShiftSignupsCount >= $shift->capacity) {
-                    throw ValidationException::withMessages([
-                        'shift_id' => ['The selected shift has reached maximum capacity.'],
-                    ]);
+                    $isFull = true;
                 }
             }
 
@@ -75,9 +83,7 @@ class VolunteerSignupService
                         ->count();
 
                     if ($activeTeamSignupsCount >= $team->capacity) {
-                        throw ValidationException::withMessages([
-                            'team_id' => ['The selected team has reached maximum capacity.'],
-                        ]);
+                        $isFull = true;
                     }
                 }
             }
@@ -90,17 +96,23 @@ class VolunteerSignupService
                     ->count();
 
                 if ($activeOppSignupsCount >= $opportunity->capacity) {
-                    throw ValidationException::withMessages([
-                        'opportunity_id' => ['This opportunity has reached maximum overall volunteer capacity.'],
-                    ]);
+                    $isFull = true;
                 }
+            }
+
+            $joinWaitlistRequested = (bool) ($data['join_waitlist'] ?? false);
+
+            if ($isFull && !$joinWaitlistRequested) {
+                throw ValidationException::withMessages([
+                    'shift_id' => ['The selected shift or opportunity has reached maximum capacity.'],
+                ]);
             }
 
             // Prevent duplicate active signups for same opportunity + email + shift
             $email = strtolower(trim($data['email']));
             $existingQuery = Signup::where('opportunity_id', $opportunity->id)
                 ->where('email', $email)
-                ->whereIn('status', ['signed_up', 'confirmed']);
+                ->whereIn('status', ['signed_up', 'confirmed', 'waitlisted']);
 
             if ($shift) {
                 $existingQuery->where('shift_id', $shift->id);
@@ -120,6 +132,8 @@ class VolunteerSignupService
                 }
             }
 
+            $status = $isFull ? 'waitlisted' : 'signed_up';
+
             $signup = Signup::create([
                 'opportunity_id' => $opportunity->id,
                 'team_id' => $team?->id ?? $shift?->team_id,
@@ -130,10 +144,21 @@ class VolunteerSignupService
                 'phone' => $data['phone'] ?? null,
                 'experience' => $data['experience'] ?? null,
                 'notes' => $data['notes'] ?? null,
-                'status' => 'signed_up',
+                'status' => $status,
             ]);
 
-            return $signup->load(['opportunity', 'team', 'shift']);
+            $signup->load(['opportunity.event', 'team', 'shift']);
+
+            DB::afterCommit(function () use ($signup, $status) {
+                if ($status === 'waitlisted') {
+                    $this->notificationDispatcher->notifyWaitlistJoined($signup);
+                } else {
+                    $this->notificationDispatcher->notifySignupConfirmed($signup);
+                    $this->notificationDispatcher->notifyAdminSignupReceived($signup);
+                }
+            });
+
+            return $signup;
         });
     }
 
@@ -144,18 +169,31 @@ class VolunteerSignupService
                 'status' => 'cancelled',
             ]);
 
+            $promoted = $this->promoteNextWaitlistedVolunteer($signup);
+
+            DB::afterCommit(function () use ($signup, $promoted) {
+                $this->notificationDispatcher->notifySignupCancelled($signup);
+                $this->notificationDispatcher->notifyAdminSignupCancelled($signup);
+
+                if ($promoted) {
+                    $this->notificationDispatcher->notifyWaitlistPromoted($promoted);
+                }
+            });
+
             return $signup->fresh();
         });
     }
 
     public function updateStatus(Signup $signup, string $status, ?string $adminNotes = null, ?int $adminId = null): Signup
     {
-        $validStatuses = ['signed_up', 'confirmed', 'cancelled', 'completed', 'no_show'];
+        $validStatuses = ['signed_up', 'confirmed', 'cancelled', 'completed', 'no_show', 'waitlisted'];
         if (!in_array($status, $validStatuses, true)) {
             throw ValidationException::withMessages([
                 'status' => ['Invalid volunteer status.'],
             ]);
         }
+
+        $oldStatus = $signup->status;
 
         $signup->update([
             'status' => $status,
@@ -164,7 +202,54 @@ class VolunteerSignupService
             'processed_at' => now(),
         ]);
 
+        $promoted = null;
+        if ($status === 'cancelled') {
+            $promoted = $this->promoteNextWaitlistedVolunteer($signup);
+        }
+
+        DB::afterCommit(function () use ($signup, $oldStatus, $status, $promoted) {
+            if (($oldStatus === 'waitlisted' || $oldStatus === 'pending') && in_array($status, ['signed_up', 'confirmed'], true)) {
+                $this->notificationDispatcher->notifyWaitlistPromoted($signup);
+            } elseif ($status === 'cancelled') {
+                $this->notificationDispatcher->notifySignupCancelled($signup);
+                $this->notificationDispatcher->notifyAdminSignupCancelled($signup);
+                if ($promoted) {
+                    $this->notificationDispatcher->notifyWaitlistPromoted($promoted);
+                }
+            } elseif ($status === 'confirmed' && $oldStatus !== 'confirmed') {
+                $this->notificationDispatcher->notifySignupConfirmed($signup);
+            }
+        });
+
         return $signup->fresh();
+    }
+
+    /**
+     * Promote next waitlisted volunteer for the same shift/opportunity if capacity allows.
+     */
+    private function promoteNextWaitlistedVolunteer(Signup $cancelledSignup): ?Signup
+    {
+        $query = Signup::where('opportunity_id', $cancelledSignup->opportunity_id)
+            ->where('status', 'waitlisted');
+
+        if ($cancelledSignup->shift_id) {
+            $query->where('shift_id', $cancelledSignup->shift_id);
+        } elseif ($cancelledSignup->team_id) {
+            $query->where('team_id', $cancelledSignup->team_id);
+        }
+
+        $nextWaitlisted = $query->orderBy('created_at', 'asc')->first();
+
+        if ($nextWaitlisted !== null) {
+            $nextWaitlisted->update([
+                'status' => 'signed_up',
+                'processed_at' => now(),
+            ]);
+
+            return $nextWaitlisted->fresh(['opportunity.event', 'team', 'shift']);
+        }
+
+        return null;
     }
 
     public function getUserHistory(int $userId): array

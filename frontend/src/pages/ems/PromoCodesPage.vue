@@ -34,6 +34,8 @@ const form = ref({
   start_date: '',
   end_date: '',
   minimum_purchase: '' as number | '',
+  min_quantity: '' as number | '',
+  max_quantity: '' as number | '',
   is_active: true,
   eligible_events: [] as string[],
 });
@@ -69,6 +71,8 @@ const openCreate = () => {
     start_date: '',
     end_date: '',
     minimum_purchase: '',
+    min_quantity: '',
+    max_quantity: '',
     is_active: true,
     eligible_events: [],
   };
@@ -88,6 +92,8 @@ const openEdit = (code: PromoCode) => {
     start_date: code.start_date ? code.start_date.slice(0, 10) : '',
     end_date: code.end_date ? code.end_date.slice(0, 10) : '',
     minimum_purchase: code.minimum_purchase ? Number(code.minimum_purchase) : '',
+    min_quantity: code.min_quantity !== null && code.min_quantity !== undefined ? code.min_quantity : '',
+    max_quantity: code.max_quantity !== null && code.max_quantity !== undefined ? code.max_quantity : '',
     is_active: code.is_active,
     eligible_events: code.events?.map(e => e.uuid) || [],
   };
@@ -109,6 +115,8 @@ const save = async () => {
       start_date: form.value.start_date ? new Date(form.value.start_date).toISOString() : null,
       end_date: form.value.end_date ? new Date(form.value.end_date).toISOString() : null,
       minimum_purchase: form.value.minimum_purchase ? Number(form.value.minimum_purchase) : null,
+      min_quantity: form.value.min_quantity !== '' && form.value.min_quantity !== null ? Number(form.value.min_quantity) : null,
+      max_quantity: form.value.max_quantity !== '' && form.value.max_quantity !== null ? Number(form.value.max_quantity) : null,
       is_active: form.value.is_active,
       eligible_events: form.value.eligible_events.length > 0 ? form.value.eligible_events : undefined,
     };
@@ -179,7 +187,7 @@ const formatDate = (val: string | null) => {
             <th class="px-5 py-4">Status</th>
             <th class="px-5 py-4">Uses</th>
             <th class="px-5 py-4">Revenue Impact</th>
-            <th class="px-5 py-4">Validity</th>
+            <th class="px-5 py-4">Validity & Rules</th>
             <th class="px-5 py-4 text-right">Actions</th>
           </tr>
         </thead>
@@ -215,6 +223,12 @@ const formatDate = (val: string | null) => {
             <td class="px-5 py-4 text-neutral-muted text-xs">
               <div>Starts: {{ formatDate(code.start_date) }}</div>
               <div>Ends: {{ formatDate(code.end_date) }}</div>
+              <div v-if="code.min_quantity || code.max_quantity" class="text-[11px] text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200 inline-block mt-1 font-medium">
+                <span v-if="code.min_quantity && code.max_quantity && code.min_quantity === code.max_quantity">Exact {{ code.min_quantity }} tickets</span>
+                <span v-else-if="code.min_quantity && code.max_quantity">Qty {{ code.min_quantity }}-{{ code.max_quantity }} tickets</span>
+                <span v-else-if="code.min_quantity">Min {{ code.min_quantity }} tickets</span>
+                <span v-else-if="code.max_quantity">Max {{ code.max_quantity }} tickets</span>
+              </div>
             </td>
             <td class="px-5 py-4 text-right space-x-1.5">
               <Button size="sm" variant="ghost" class="p-1.5" @click="openEdit(code)">
@@ -321,13 +335,38 @@ const formatDate = (val: string | null) => {
             </div>
           </div>
 
-          <Input
-            v-model="form.minimum_purchase"
-            type="number"
-            label="Minimum Purchase ($)"
-            placeholder="optional"
-            :error="fieldError('minimum_purchase')"
-          />
+          <div class="grid grid-cols-2 gap-4">
+            <Input
+              v-model="form.minimum_purchase"
+              type="number"
+              label="Minimum Purchase ($)"
+              placeholder="optional"
+              :error="fieldError('minimum_purchase')"
+            />
+            <div />
+          </div>
+
+          <!-- Quantity Conditions Section -->
+          <div class="p-3 bg-neutral-background/40 border border-neutral-ivory rounded-xl space-y-3">
+            <label class="text-[11px] font-bold uppercase tracking-wider text-neutral-muted block">Ticket Quantity Conditions</label>
+            <p class="text-[10px] text-neutral-muted">Set ticket volume rules (e.g. set both min & max to 2 for a "buying 2 tickets" condition).</p>
+            <div class="grid grid-cols-2 gap-4">
+              <Input
+                v-model="form.min_quantity"
+                type="number"
+                label="Min Ticket Quantity"
+                placeholder="e.g. 2 (optional)"
+                :error="fieldError('min_quantity')"
+              />
+              <Input
+                v-model="form.max_quantity"
+                type="number"
+                label="Max Ticket Quantity"
+                placeholder="e.g. 2 (optional)"
+                :error="fieldError('max_quantity')"
+              />
+            </div>
+          </div>
 
           <!-- Eligible Events (Multi-Select style) -->
           <div class="space-y-1.5">

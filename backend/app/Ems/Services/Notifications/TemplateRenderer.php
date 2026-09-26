@@ -74,16 +74,51 @@ class TemplateRenderer
             ? $this->ticketUrl($firstTicket)
             : '';
 
-        $start = $event?->start_at?->timezone($event->timezone ?? config('ems.defaults.timezone'));
+        $signup = ($extra['signup'] ?? null) instanceof \App\Volunteering\Models\Signup ? $extra['signup'] : null;
+        $opportunity = ($extra['opportunity'] ?? null) instanceof \App\Volunteering\Models\Opportunity ? $extra['opportunity'] : $signup?->opportunity;
+        $shift = ($extra['shift'] ?? null) instanceof \App\Volunteering\Models\Shift ? $extra['shift'] : $signup?->shift;
+        $team = ($extra['team'] ?? null) instanceof \App\Volunteering\Models\Team ? $extra['team'] : $signup?->team;
+
+        $tz = (string) ($event?->timezone ?? $opportunity?->event?->timezone ?? config('ems.defaults.timezone', 'America/Vancouver'));
+
+        $start = $event?->start_at?->timezone($tz);
+        $shiftStart = $shift?->start_at?->timezone($tz) ?? $opportunity?->start_at?->timezone($tz);
+        $shiftEnd = $shift?->end_at?->timezone($tz) ?? $opportunity?->end_at?->timezone($tz);
+
+        $shiftDateFormatted = $shiftStart?->format('l, F j, Y') ?? $start?->format('l, F j, Y') ?? '';
+        $shiftTimeFormatted = $shiftStart && $shiftEnd
+            ? $shiftStart->format('g:i A') . ' – ' . $shiftEnd->format('g:i A T')
+            : ($shiftStart?->format('g:i A T') ?? $start?->format('g:i A T') ?? '');
+
+        $volunteerName = (string) ($extra['volunteer_name'] ?? $signup?->name ?? $extra['attendee_name'] ?? $registration?->attendee_name ?? '');
+        $volunteerEmail = (string) ($extra['volunteer_email'] ?? $signup?->email ?? $extra['attendee_email'] ?? $registration?->attendee_email ?? '');
+
+        $opportunityTitle = (string) ($opportunity?->title ?? $extra['opportunity_title'] ?? $event?->name ?? '');
+        $teamName = (string) ($team?->name ?? $extra['team_name'] ?? '');
+        $shiftName = (string) ($shift?->name ?? $extra['shift_name'] ?? '');
+        $location = (string) ($shift?->location ?? $opportunity?->location ?? $event?->location ?? $extra['location'] ?? '');
+        $instructions = (string) ($extra['instructions'] ?? $opportunity?->description ?? '');
 
         return [
-            'attendee_name' => (string) ($extra['attendee_name'] ?? $registration?->attendee_name ?? ''),
-            'attendee_email' => (string) ($extra['attendee_email'] ?? $registration?->attendee_email ?? ''),
-            'event_name' => (string) ($event?->name ?? $extra['event_name'] ?? ''),
-            'event_date' => $start?->format('l, F j, Y') ?? '',
-            'event_time' => $start?->format('g:i A T') ?? '',
-            'event_location' => (string) ($event?->location ?? ''),
-            'event_timezone' => (string) ($event?->timezone ?? ''),
+            'attendee_name' => $volunteerName,
+            'attendee_email' => $volunteerEmail,
+            'volunteer_name' => $volunteerName,
+            'volunteer_email' => $volunteerEmail,
+            'event_name' => (string) ($event?->name ?? $opportunityTitle ?? ''),
+            'event_date' => $shiftDateFormatted,
+            'event_time' => $shiftTimeFormatted,
+            'event_location' => $location,
+            'event_timezone' => $tz,
+            'opportunity_title' => $opportunityTitle,
+            'team_name' => $teamName,
+            'shift_name' => $shiftName,
+            'shift_date' => $shiftDateFormatted,
+            'shift_time' => $shiftTimeFormatted,
+            'location' => $location,
+            'instructions' => $instructions,
+            'change_summary' => (string) ($extra['change_summary'] ?? ''),
+            'promotion_deadline' => (string) ($extra['promotion_deadline'] ?? ''),
+            'cancellation_reason' => (string) ($extra['cancellation_reason'] ?? $event?->cancellation_reason ?? ''),
             'ticket_type' => (string) ($registration?->ticketType?->name ?? $extra['ticket_type'] ?? ''),
             'registration_number' => (string) ($registration?->reference ?? ''),
             'ticket_number' => (string) ($firstTicket?->code ?? ''),
@@ -103,9 +138,7 @@ class TemplateRenderer
             'payment_reference' => (string) ($payment?->uuid ?? ''),
             'square_transaction_reference' => (string) ($payment?->provider_transaction_id ?? $payment?->provider_payment_id ?? ''),
             'refund_amount' => isset($extra['refund_amount']) ? number_format((float) $extra['refund_amount'], 2) : '',
-            'change_summary' => (string) ($extra['change_summary'] ?? ''),
             'organizer_name' => (string) ($event?->organizer_name ?? ($event?->organizer?->name ?? config('ems.notifications.from_name', 'SFU MSA Events'))),
-            'cancellation_reason' => (string) ($event?->cancellation_reason ?? $extra['cancellation_reason'] ?? ''),
         ];
     }
 
@@ -199,6 +232,113 @@ class TemplateRenderer
                 'body_html' => '<p>Assalamu alaikum {{ attendee_name }},</p>'
                     . '<p>Thank you for attending <strong>{{ event_name }}</strong>. We would love to hear your feedback!</p>'
                     . '<p><a href="{{ feedback_link }}">Share your feedback</a></p>',
+            ];
+        }
+
+        if ($key === NotificationType::VmsSignupConfirmed->value) {
+            return [
+                'subject' => 'Volunteer Signup Confirmed — {{ opportunity_title }}',
+                'body_html' => '<p>Assalamu alaikum {{ volunteer_name }},</p>'
+                    . '<p>Thank you for signing up to volunteer for <strong>{{ opportunity_title }}</strong>!</p>'
+                    . '<p style="background:#fffbf4;border-left:4px solid #640c0e;padding:14px 16px;margin:16px 0;">'
+                    . '<strong>Assignment Details:</strong><br>'
+                    . 'Team: {{ team_name }}<br>'
+                    . 'Shift: {{ shift_name }}<br>'
+                    . 'Date: {{ shift_date }}<br>'
+                    . 'Time: {{ shift_time }}<br>'
+                    . 'Location: {{ location }}</p>'
+                    . '<p>If you can no longer attend this shift, please cancel your signup as early as possible so waitlisted volunteers can take your spot.</p>',
+            ];
+        }
+
+        if ($key === NotificationType::VmsWaitlistJoined->value) {
+            return [
+                'subject' => 'Waitlist Joined — {{ opportunity_title }}',
+                'body_html' => '<p>Assalamu alaikum {{ volunteer_name }},</p>'
+                    . '<p>You have been added to the waitlist for <strong>{{ opportunity_title }}</strong> (Shift: {{ shift_name }}).</p>'
+                    . '<p>If capacity opens up, you will be automatically promoted and notified via email.</p>',
+            ];
+        }
+
+        if ($key === NotificationType::VmsWaitlistPromoted->value) {
+            return [
+                'subject' => 'Waitlist Promotion: Volunteer Spot Confirmed — {{ opportunity_title }}',
+                'body_html' => '<p>Assalamu alaikum {{ volunteer_name }},</p>'
+                    . '<p>Great news! A volunteer spot has opened up and your signup for <strong>{{ opportunity_title }}</strong> is now confirmed!</p>'
+                    . '<p style="background:#fffbf4;border-left:4px solid #640c0e;padding:14px 16px;margin:16px 0;">'
+                    . '<strong>Shift Details:</strong><br>'
+                    . 'Team: {{ team_name }}<br>'
+                    . 'Shift: {{ shift_name }}<br>'
+                    . 'Date: {{ shift_date }}<br>'
+                    . 'Time: {{ shift_time }}<br>'
+                    . 'Location: {{ location }}</p>',
+            ];
+        }
+
+        if ($key === NotificationType::VmsShiftReminder->value) {
+            return [
+                'subject' => 'Reminder: Upcoming Volunteer Shift — {{ opportunity_title }}',
+                'body_html' => '<p>Assalamu alaikum {{ volunteer_name }},</p>'
+                    . '<p>This is a reminder for your upcoming volunteer shift for <strong>{{ opportunity_title }}</strong>.</p>'
+                    . '<p style="background:#fffbf4;border-left:4px solid #640c0e;padding:14px 16px;margin:16px 0;">'
+                    . '<strong>Shift Details:</strong><br>'
+                    . 'Team: {{ team_name }}<br>'
+                    . 'Shift: {{ shift_name }}<br>'
+                    . 'Date: {{ shift_date }}<br>'
+                    . 'Time: {{ shift_time }}<br>'
+                    . 'Location: {{ location }}</p>'
+                    . '<p>Jazakum Allahu Khairan for your dedication and support!</p>',
+            ];
+        }
+
+        if ($key === NotificationType::VmsSignupCancelled->value) {
+            return [
+                'subject' => 'Volunteer Signup Cancelled — {{ opportunity_title }}',
+                'body_html' => '<p>Assalamu alaikum {{ volunteer_name }},</p>'
+                    . '<p>Your volunteer signup for <strong>{{ opportunity_title }}</strong> (Shift: {{ shift_name }}) has been cancelled.</p>'
+                    . '<p>We hope to see you at future MSA events!</p>',
+            ];
+        }
+
+        if ($key === NotificationType::VmsShiftUpdated->value) {
+            return [
+                'subject' => 'Important Shift Update — {{ opportunity_title }}',
+                'body_html' => '<p>Assalamu alaikum {{ volunteer_name }},</p>'
+                    . '<p>Your volunteer shift for <strong>{{ opportunity_title }}</strong> has been updated by administrators.</p>'
+                    . '<p style="background:#fffbf4;border-left:4px solid #b02e32;padding:14px 16px;margin:16px 0;">'
+                    . '<strong>Updates:</strong><br>{{ change_summary }}</p>'
+                    . '<p><strong>Current Details:</strong><br>'
+                    . 'Date: {{ shift_date }}<br>'
+                    . 'Time: {{ shift_time }}<br>'
+                    . 'Location: {{ location }}</p>',
+            ];
+        }
+
+        if ($key === NotificationType::VmsOpportunityCancelled->value) {
+            return [
+                'subject' => 'Opportunity Cancelled — {{ opportunity_title }}',
+                'body_html' => '<p>Assalamu alaikum {{ volunteer_name }},</p>'
+                    . '<p>Please note that the volunteer opportunity <strong>{{ opportunity_title }}</strong> has been cancelled and your shift is no longer scheduled.</p>'
+                    . '<p>Thank you for offering your help!</p>',
+            ];
+        }
+
+        if ($key === NotificationType::VmsAdminSignupReceived->value) {
+            return [
+                'subject' => 'Admin Notice: New Volunteer Signup — {{ opportunity_title }}',
+                'body_html' => '<p>A new volunteer signup has been received for <strong>{{ opportunity_title }}</strong>.</p>'
+                    . '<p>Volunteer: {{ volunteer_name }} ({{ volunteer_email }})<br>'
+                    . 'Team: {{ team_name }}<br>'
+                    . 'Shift: {{ shift_name }}</p>',
+            ];
+        }
+
+        if ($key === NotificationType::VmsAdminSignupCancelled->value) {
+            return [
+                'subject' => 'Admin Notice: Volunteer Cancelled — {{ opportunity_title }}',
+                'body_html' => '<p>A volunteer has cancelled their signup for <strong>{{ opportunity_title }}</strong>.</p>'
+                    . '<p>Volunteer: {{ volunteer_name }} ({{ volunteer_email }})<br>'
+                    . 'Shift: {{ shift_name }}</p>',
             ];
         }
 

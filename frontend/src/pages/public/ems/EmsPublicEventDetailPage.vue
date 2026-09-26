@@ -136,6 +136,7 @@ async function applyPromoCode() {
       ticket_type_uuid: selectedTicket.value?.uuid || null,
       email: form.email.trim() || null,
       amount: originalTotal,
+      quantity: form.quantity,
     });
 
     if (res.valid) {
@@ -483,8 +484,7 @@ function capacityText(): string {
   if (!event.value) return '';
   if (event.value.capacity === null) return 'Open seating';
   if (isSoldOut.value) return event.value.waitlist_enabled ? 'Sold out — waitlist open' : 'Sold out';
-  if (event.value.show_remaining_tickets === false) return `${event.value.capacity} total spaces`;
-  return `${event.value.remaining_capacity} of ${event.value.capacity} spaces remaining`;
+  return 'Available';
 }
 
 function ctaLabel(): string {
@@ -671,9 +671,7 @@ const previewSubtotal = computed(() =>
                     <p v-if="ticket.description" class="mt-0.5 text-xs text-neutral-black/55">{{ ticket.description }}</p>
                     <p v-if="ticket.is_sold_out" class="mt-1 text-xs font-semibold text-amber-700">Sold out</p>
                     <p v-else-if="!ticket.is_on_sale" class="mt-1 text-xs text-neutral-muted">Not on sale</p>
-                    <p v-else-if="ticket.remaining_quantity !== null" class="mt-1 text-xs text-neutral-muted">
-                      {{ ticket.remaining_quantity }} remaining
-                    </p>
+                    <p v-else class="mt-1 text-xs font-semibold text-emerald-600">Available</p>
                   </div>
                 </label>
               </div>

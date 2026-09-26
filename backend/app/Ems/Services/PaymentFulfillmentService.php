@@ -368,11 +368,6 @@ class PaymentFulfillmentService
         $this->tickets->issueFor($registration->fresh());
 
         RegistrationCreated::dispatch($registration->fresh(['tickets', 'event']), $registration->user);
-        
-        // Send critical registration confirmation email immediately (SMTP executes after transaction commits)
-        app(\App\Ems\Services\Notifications\EventCommunicationService::class)->sendRegistrationBundle($registration, true);
-        
-        // Dispatch queue job as a backup/retry mechanism
         QueueRegistrationConfirmation::dispatch($registration->id, true);
 
         Log::channel((string) config('ems.logging.channel', 'ems'))

@@ -12,6 +12,8 @@ export interface PromoCode {
   start_date: string | null;
   end_date: string | null;
   minimum_purchase: number | null;
+  min_quantity?: number | null;
+  max_quantity?: number | null;
   is_active: boolean;
   archived_at: string | null;
   created_at: string | null;
@@ -37,6 +39,8 @@ export interface PromoCodePayload {
   start_date?: string | null;
   end_date?: string | null;
   minimum_purchase?: number | null;
+  min_quantity?: number | null;
+  max_quantity?: number | null;
   is_active?: boolean;
   eligible_events?: string[];
   eligible_ticket_types?: string[];

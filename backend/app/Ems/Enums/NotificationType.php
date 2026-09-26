@@ -43,6 +43,17 @@ enum NotificationType: string
     case EventRecap = 'event_recap';
     case CertificateAvailable = 'certificate_available';
 
+    // VMS (Volunteering)
+    case VmsSignupConfirmed = 'vms_signup_confirmed';
+    case VmsWaitlistJoined = 'vms_waitlist_joined';
+    case VmsWaitlistPromoted = 'vms_waitlist_promoted';
+    case VmsShiftReminder = 'vms_shift_reminder';
+    case VmsSignupCancelled = 'vms_signup_cancelled';
+    case VmsShiftUpdated = 'vms_shift_updated';
+    case VmsOpportunityCancelled = 'vms_opportunity_cancelled';
+    case VmsAdminSignupReceived = 'vms_admin_signup_received';
+    case VmsAdminSignupCancelled = 'vms_admin_signup_cancelled';
+
     public function label(): string
     {
         return match ($this) {
@@ -68,6 +79,15 @@ enum NotificationType: string
             self::FeedbackRequest => 'Feedback request',
             self::EventRecap => 'Event recap',
             self::CertificateAvailable => 'Certificate available',
+            self::VmsSignupConfirmed => 'Volunteer signup confirmation',
+            self::VmsWaitlistJoined => 'Volunteer waitlist confirmation',
+            self::VmsWaitlistPromoted => 'Volunteer waitlist promotion',
+            self::VmsShiftReminder => 'Volunteer shift reminder',
+            self::VmsSignupCancelled => 'Volunteer signup cancellation',
+            self::VmsShiftUpdated => 'Volunteer shift update',
+            self::VmsOpportunityCancelled => 'Volunteer opportunity cancelled',
+            self::VmsAdminSignupReceived => 'Admin: Volunteer signup received',
+            self::VmsAdminSignupCancelled => 'Admin: Volunteer signup cancelled',
         };
     }
 
@@ -96,6 +116,15 @@ enum NotificationType: string
             self::FeedbackRequest,
             self::EventRecap,
             self::CertificateAvailable => 'post_event',
+            self::VmsSignupConfirmed,
+            self::VmsWaitlistJoined,
+            self::VmsWaitlistPromoted,
+            self::VmsShiftReminder,
+            self::VmsSignupCancelled,
+            self::VmsShiftUpdated,
+            self::VmsOpportunityCancelled => 'vms',
+            self::VmsAdminSignupReceived,
+            self::VmsAdminSignupCancelled => 'vms_admin',
         };
     }
 

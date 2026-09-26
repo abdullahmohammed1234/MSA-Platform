@@ -114,7 +114,7 @@ class CheckoutService
                     );
                 }
                 $originalTotal = $unitPrice * $quantity;
-                $check = $promoCode->isValidFor($locked, $ticketType, $user, $originalTotal, $email);
+                $check = $promoCode->isValidFor($locked, $ticketType, $user, $originalTotal, $email, $quantity);
                 if (!$check['valid']) {
                     throw new EmsException(
                         $check['reason'],
@@ -178,8 +178,7 @@ class CheckoutService
             $registration->load(['tickets.event.category', 'event.category', 'event.organizer', 'ticketType', 'order']);
 
             RegistrationCreated::dispatch($registration, $user);
-            app(\App\Ems\Services\Notifications\EventCommunicationService::class)->sendRegistrationBundle($registration);
-            QueueRegistrationConfirmation::dispatch($registration->id);
+            QueueRegistrationConfirmation::dispatch($registration->id, false);
 
             Log::channel((string) config('ems.logging.channel', 'ems'))
                 ->info('ems.checkout.free_completed', [
@@ -367,7 +366,6 @@ class CheckoutService
 
                 RegistrationCreated::dispatch($registration, $user);
                 app(\App\Ems\Services\Notifications\EventCommunicationService::class)->sendRegistrationBundle($registration);
-                QueueRegistrationConfirmation::dispatch($registration->id);
 
                 return [
                     'order' => $order,
@@ -898,7 +896,7 @@ class CheckoutService
 
             $alreadyApplied = $existing !== null && (int) $existing->promo_code_id === (int) $promoCode->id;
             if (! $alreadyApplied) {
-                $check = $promoCode->isValidFor($event, $ticketType, $user, $subtotal, $email);
+                $check = $promoCode->isValidFor($event, $ticketType, $user, $subtotal, $email, $quantity);
                 if (! $check['valid']) {
                     throw new EmsException(
                         $check['reason'],

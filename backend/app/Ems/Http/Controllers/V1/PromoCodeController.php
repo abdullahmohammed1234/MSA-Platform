@@ -55,6 +55,8 @@ class PromoCodeController extends EmsController
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'minimum_purchase' => 'nullable|numeric|min:0',
+            'min_quantity' => 'nullable|integer|min:1',
+            'max_quantity' => 'nullable|integer|min:1|gte:min_quantity',
             'is_active' => 'boolean',
             'eligible_events' => 'nullable|array', // list of event IDs/UUIDs
             'eligible_ticket_types' => 'nullable|array', // list of ticket type IDs/UUIDs
@@ -114,6 +116,8 @@ class PromoCodeController extends EmsController
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'minimum_purchase' => 'nullable|numeric|min:0',
+            'min_quantity' => 'nullable|integer|min:1',
+            'max_quantity' => 'nullable|integer|min:1|gte:min_quantity',
             'is_active' => 'boolean',
             'eligible_events' => 'nullable|array',
             'eligible_ticket_types' => 'nullable|array',
@@ -158,6 +162,7 @@ class PromoCodeController extends EmsController
             'ticket_type_uuid' => 'nullable|uuid',
             'email' => 'nullable|email',
             'amount' => 'nullable|numeric|min:0',
+            'quantity' => 'nullable|integer|min:1',
         ]);
 
         $promo = PromoCode::where('code', strtoupper($validated['code']))
@@ -181,7 +186,8 @@ class PromoCodeController extends EmsController
             $ticketType,
             $request->user(),
             (float) ($validated['amount'] ?? 0.0),
-            $validated['email'] ?? null
+            $validated['email'] ?? null,
+            (int) ($validated['quantity'] ?? 1)
         );
 
         if (!$check['valid']) {

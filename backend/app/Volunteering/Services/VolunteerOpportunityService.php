@@ -12,6 +12,14 @@ use Illuminate\Support\Str;
 
 class VolunteerOpportunityService
 {
+    private readonly VmsNotificationDispatcher $notificationDispatcher;
+
+    public function __construct(
+        ?VmsNotificationDispatcher $notificationDispatcher = null
+    ) {
+        $this->notificationDispatcher = $notificationDispatcher ?? app(VmsNotificationDispatcher::class);
+    }
+
     public function listEligibleEvents(): Collection
     {
         return \App\Ems\Models\Event::select('id', 'uuid', 'name', 'slug', 'description', 'short_description', 'banner_url', 'location', 'start_at', 'end_at', 'status')
@@ -163,9 +171,17 @@ class VolunteerOpportunityService
         });
     }
 
-    public function updateOpportunity(Opportunity $opportunity, array $data, int $userId): Opportunity
+    public function updateOpportunity(Opportunity $opportunity, array $data, ?int $userId = null): Opportunity
     {
         return DB::transaction(function () use ($opportunity, $data, $userId) {
+            $oldStatus = $opportunity->status;
+            $oldTitle = $opportunity->title;
+            $oldStartAt = $opportunity->start_at;
+            $oldEndAt = $opportunity->end_at;
+            $oldLocation = $opportunity->location;
+
+            $validUserId = ($userId && \App\Models\User::where('id', $userId)->exists()) ? $userId : null;
+
             $opportunity->update(array_filter([
                 'title' => $data['title'] ?? $opportunity->title,
                 'slug' => $data['slug'] ?? $opportunity->slug,
@@ -176,12 +192,45 @@ class VolunteerOpportunityService
                 'location' => $data['location'] ?? $opportunity->location,
                 'capacity' => $data['capacity'] ?? $opportunity->capacity,
                 'status' => $data['status'] ?? $opportunity->status,
-                'updated_by' => $userId,
+                'updated_by' => $validUserId ?? $opportunity->updated_by,
             ], fn ($val) => $val !== null));
 
             if (isset($data['status']) && $data['status'] === 'open' && !$opportunity->published_at) {
                 $opportunity->update(['published_at' => now()]);
             }
+
+            $newStatus = $opportunity->status;
+            $changes = [];
+
+            if ($opportunity->title !== $oldTitle) {
+                $changes['title'] = "Changed from '{$oldTitle}' to '{$opportunity->title}'";
+            }
+            if ($opportunity->start_at != $oldStartAt || $opportunity->end_at != $oldEndAt) {
+                $changes['time'] = "Schedule updated";
+            }
+            if ($opportunity->location !== $oldLocation) {
+                $changes['location'] = "Location changed from '{$oldLocation}' to '{$opportunity->location}'";
+            }
+
+            DB::afterCommit(function () use ($opportunity, $oldStatus, $newStatus, $changes, $data) {
+                $signups = $opportunity->signups()
+                    ->with(['opportunity.event', 'team', 'shift'])
+                    ->whereIn('status', ['signed_up', 'confirmed', 'waitlisted'])
+                    ->get();
+
+                if ($newStatus === 'cancelled' && $oldStatus !== 'cancelled') {
+                    foreach ($signups as $signup) {
+                        $this->notificationDispatcher->notifyOpportunityCancelled(
+                            $signup,
+                            $data['cancellation_reason'] ?? 'Opportunity cancelled by administration'
+                        );
+                    }
+                } elseif (!empty($changes)) {
+                    foreach ($signups as $signup) {
+                        $this->notificationDispatcher->notifyShiftUpdated($signup, $changes);
+                    }
+                }
+            });
 
             return $opportunity->fresh(['teams.shifts', 'shifts']);
         });

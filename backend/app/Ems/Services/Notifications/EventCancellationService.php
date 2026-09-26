@@ -43,6 +43,17 @@ class EventCancellationService
 
         $refunds = $this->initiateRefundWorkflow($event);
 
+        // Notify attached VMS volunteer opportunities
+        $vmsOpportunities = \App\Volunteering\Models\Opportunity::where('event_id', $event->id)->get();
+        foreach ($vmsOpportunities as $opp) {
+            if ($opp->status !== 'cancelled') {
+                app(\App\Volunteering\Services\VolunteerOpportunityService::class)->updateOpportunity($opp, [
+                    'status' => 'cancelled',
+                    'cancellation_reason' => $event->cancellation_reason ?? $reason ?? 'Event cancelled',
+                ], $event->created_by ?? 1);
+            }
+        }
+
         Log::channel((string) config('ems.logging.channel', 'ems'))
             ->info('ems.notifications.event_cancelled', [
                 'event_uuid' => $event->uuid,

@@ -28,6 +28,8 @@ class PromoCode extends Model
         'start_date',
         'end_date',
         'minimum_purchase',
+        'min_quantity',
+        'max_quantity',
         'is_active',
         'archived_at',
     ];
@@ -39,6 +41,8 @@ class PromoCode extends Model
         'start_date' => 'datetime',
         'end_date' => 'datetime',
         'minimum_purchase' => 'decimal:2',
+        'min_quantity' => 'integer',
+        'max_quantity' => 'integer',
         'is_active' => 'boolean',
         'archived_at' => 'datetime',
     ];
@@ -63,8 +67,14 @@ class PromoCode extends Model
         return $this->hasMany(Order::class, 'promo_code_id');
     }
 
-    public function isValidFor(Event $event, ?TicketType $ticketType = null, ?User $user = null, float $orderAmount = 0.0, ?string $email = null): array
-    {
+    public function isValidFor(
+        Event $event,
+        ?TicketType $ticketType = null,
+        ?User $user = null,
+        float $orderAmount = 0.0,
+        ?string $email = null,
+        int $quantity = 1
+    ): array {
         if (!$this->is_active || $this->archived_at !== null) {
             return ['valid' => false, 'reason' => 'This promo code is no longer active.'];
         }
@@ -80,6 +90,21 @@ class PromoCode extends Model
 
         if ($this->minimum_purchase !== null && $orderAmount < (float) $this->minimum_purchase) {
             return ['valid' => false, 'reason' => sprintf('A minimum purchase of $%s is required to use this promo code.', number_format($this->minimum_purchase, 2))];
+        }
+
+        // Check ticket quantity restrictions (e.g. min/max ticket requirements)
+        if ($this->min_quantity !== null && $quantity < (int) $this->min_quantity) {
+            if ($this->min_quantity === $this->max_quantity) {
+                return ['valid' => false, 'reason' => sprintf('This promo code is only valid when purchasing exactly %d ticket(s).', $this->min_quantity)];
+            }
+            return ['valid' => false, 'reason' => sprintf('A minimum purchase of %d ticket(s) is required to use this promo code.', $this->min_quantity)];
+        }
+
+        if ($this->max_quantity !== null && $quantity > (int) $this->max_quantity) {
+            if ($this->min_quantity === $this->max_quantity) {
+                return ['valid' => false, 'reason' => sprintf('This promo code is only valid when purchasing exactly %d ticket(s).', $this->max_quantity)];
+            }
+            return ['valid' => false, 'reason' => sprintf('This promo code is only valid for up to %d ticket(s).', $this->max_quantity)];
         }
 
         // Check events restriction

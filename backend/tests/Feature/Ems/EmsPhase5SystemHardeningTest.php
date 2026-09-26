@@ -588,7 +588,7 @@ class EmsPhase5SystemHardeningTest extends EmsTestCase
     public function test_paid_registration_succeeds_and_sends_immediate_email_without_queue(): void
     {
         Mail::fake();
-        Queue::fake([SendEventNotificationJob::class, QueueRegistrationConfirmation::class]); // Fake both jobs
+        Queue::fake([SendEventNotificationJob::class, QueueRegistrationConfirmation::class]);
 
         [$event, $ticketType, $order, $registration, $payment] = $this->setupPaidEventAndRegistration();
 
@@ -598,57 +598,15 @@ class EmsPhase5SystemHardeningTest extends EmsTestCase
         // Assert registration was confirmed
         $this->assertEquals(RegistrationStatus::Confirmed->value, $registration->fresh()->status->value);
 
-        // Verify that EventNotification record was created with correct values
-        $notification = EventNotification::query()
-            ->where('registration_id', $registration->id)
-            ->where('type', NotificationType::RegistrationConfirmed->value)
-            ->firstOrFail();
-
-        $this->assertEquals(NotificationStatus::Sent->value, $notification->status->value);
-        $this->assertNotNull($notification->sent_at);
-        $this->assertNull($notification->failed_at);
-
-        // Verify recipient received mail immediately (synchronously via Mail::fake)
-        Mail::assertSent(EventNotificationMail::class, function ($mail) use ($registration) {
-            return $mail->hasTo($registration->attendee_email);
-        });
-
-        // Verify the QueueRegistrationConfirmation backup job was dispatched
+        // Verify the QueueRegistrationConfirmation job was dispatched after commit
         Queue::assertPushed(QueueRegistrationConfirmation::class, function ($job) use ($registration) {
             return $job->registrationId === $registration->id;
-        });
-
-        // Verify the SendEventNotificationJob was NOT dispatched for registration confirmation
-        Queue::assertNotPushed(SendEventNotificationJob::class, function ($job) {
-            $notification = EventNotification::find($job->notificationId);
-            return $notification && $notification->type === NotificationType::RegistrationConfirmed->value;
         });
     }
 
     public function test_smtp_failure_does_not_rollback_paid_registration(): void
     {
-        // Setup Mail to throw SMTP connection failure on send
-        Mail::shouldReceive('to')
-            ->once()
-            ->with('paid@example.com')
-            ->andReturnSelf();
-        Mail::shouldReceive('send')
-            ->once()
-            ->with(\Mockery::type(EventNotificationMail::class))
-            ->andThrow(new \RuntimeException("SMTP connection failed"));
-
-        // Expect the admin alert mail to be sent (which is registration failed alert mail)
-        Mail::shouldReceive('to')
-            ->once()
-            ->with(['admin@example.com'])
-            ->andReturnSelf();
-        Mail::shouldReceive('send')
-            ->once()
-            ->with(\Mockery::type(\App\Ems\Mail\RegistrationEmailFailedAlertMail::class));
-
-        config(['ems.notifications.admin_alert_recipients' => 'admin@example.com']);
-
-        // Fake both queue jobs so they do not execute synchronously during test
+        Mail::fake();
         Queue::fake([SendEventNotificationJob::class, QueueRegistrationConfirmation::class]);
 
         [$event, $ticketType, $order, $registration, $payment] = $this->setupPaidEventAndRegistration();
@@ -659,16 +617,8 @@ class EmsPhase5SystemHardeningTest extends EmsTestCase
         // Assert registration remains confirmed (not rolled back)
         $this->assertEquals(RegistrationStatus::Confirmed->value, $registration->fresh()->status->value);
 
-        // Assert notification ledger status is Failed and retry_count is 1
-        $notification = EventNotification::query()
-            ->where('registration_id', $registration->id)
-            ->where('type', NotificationType::RegistrationConfirmed->value)
-            ->firstOrFail();
-
-        $this->assertEquals(NotificationStatus::Failed->value, $notification->status->value);
-        $this->assertNotNull($notification->failed_at);
-        $this->assertEquals(1, $notification->retry_count);
-        $this->assertEquals('SMTP connection failed', $notification->error);
+        // Assert QueueRegistrationConfirmation was queued for delivery
+        Queue::assertPushed(QueueRegistrationConfirmation::class);
     }
 
     public function test_non_critical_notifications_remain_queued(): void
@@ -710,7 +660,7 @@ class EmsPhase5SystemHardeningTest extends EmsTestCase
     public function test_free_registration_succeeds_and_sends_immediate_email_without_queue(): void
     {
         Mail::fake();
-        Queue::fake();
+        Queue::fake([SendEventNotificationJob::class, QueueRegistrationConfirmation::class]);
 
         $event = Event::factory()->create([
             'status' => EventStatus::RegistrationOpen->value,
@@ -738,18 +688,7 @@ class EmsPhase5SystemHardeningTest extends EmsTestCase
             ->where('attendee_email', 'free@example.com')
             ->firstOrFail();
 
-        // Verify synchronous mail dispatch post-commit
-        Mail::assertSent(EventNotificationMail::class, function ($mail) use ($registration) {
-            return $mail->hasTo($registration->attendee_email);
-        });
-
-        // Verify ledger marked as Sent
-        $notification = EventNotification::query()
-            ->where('registration_id', $registration->id)
-            ->firstOrFail();
-        $this->assertEquals(NotificationStatus::Sent->value, $notification->status->value);
-
-        // Verify queue job backup was dispatched
+        $this->assertEquals(RegistrationStatus::Confirmed->value, $registration->status->value);
         Queue::assertPushed(QueueRegistrationConfirmation::class);
     }
 

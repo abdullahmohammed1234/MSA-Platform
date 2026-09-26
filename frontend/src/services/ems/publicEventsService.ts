@@ -103,6 +103,7 @@ export const publicEventsService = {
     ticket_type_uuid?: string | null;
     email?: string | null;
     amount?: number | null;
+    quantity?: number | null;
   }): Promise<{
     valid: boolean;
     code: string;

@@ -10,7 +10,10 @@ import {
   BookOpen, 
   Heart, 
   Globe,
-  Plus
+  Plus,
+  Download,
+  FileText,
+  ExternalLink
 } from 'lucide-vue-next';
 import ScrollReveal from '@/components/shared/ScrollReveal.vue';
 import FloatingElement from '@/components/shared/FloatingElement.vue';
@@ -409,6 +412,69 @@ const ctaBtnUrl = computed(() => homepageData.value?.cta?.button_url ?? '/contac
           </PublicCard>
         </div>
       </div>
+    </section>
+
+    <!-- 3.5 WELCOME HANDBOOK SECTION -->
+    <section class="section-padding container-custom">
+      <ScrollReveal direction="up" width="100%">
+        <div class="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-primary-dark via-primary to-primary-light p-8 sm:p-12 md:p-16 text-white shadow-premium">
+          <div class="absolute inset-0 pattern-islamic opacity-[0.04] pointer-events-none" />
+          <FloatingElement :delay="0.7" class="absolute -right-10 -bottom-10 w-64 h-64 bg-accent-gold/10 rounded-full blur-3xl pointer-events-none" />
+          
+          <div class="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-10 lg:gap-16">
+            <div class="space-y-6 flex-1 text-center lg:text-left">
+              <div class="inline-flex items-center gap-2.5 px-4.5 py-2 bg-white/10 backdrop-blur border border-white/15 rounded-full text-accent-gold text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.2em]">
+                <BookOpen :size="14" class="animate-pulse" />
+                New Member Guide
+              </div>
+
+              <h2 class="text-3xl sm:text-5xl font-display font-extrabold text-white leading-tight">
+                Welcome to SFU MSA <br />
+                <span class="text-accent-gold italic font-serif font-light">Official Handbook</span>
+              </h2>
+
+              <p class="text-white/75 text-sm sm:text-base leading-relaxed font-sans max-w-2xl mx-auto lg:mx-0">
+                Are you new to Simon Fraser University or joining the MSA community? Download our official Welcome Handbook — your complete guide to campus prayer spaces, Friday Jumu'ah schedules, student mentorship, halaqas, and Muslim student life across Burnaby, Surrey, and Vancouver campuses.
+              </p>
+
+              <div class="flex flex-wrap items-center justify-center lg:justify-start gap-4 pt-2">
+                <a 
+                  href="/SFU%20MSA%20Welcome%20Handbook.pdf" 
+                  download="SFU_MSA_Welcome_Handbook.pdf" 
+                  class="inline-flex items-center gap-3 px-6 py-3.5 bg-accent-gold text-primary font-extrabold text-xs uppercase tracking-widest rounded-2xl hover:brightness-110 active:scale-[0.98] transition-all shadow-md"
+                >
+                  <Download :size="16" /> Download Handbook (PDF)
+                </a>
+                <a 
+                  href="/SFU%20MSA%20Welcome%20Handbook.pdf" 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  class="inline-flex items-center gap-3 px-6 py-3.5 bg-white/10 backdrop-blur border border-white/20 text-white font-extrabold text-xs uppercase tracking-widest rounded-2xl hover:bg-white/20 active:scale-[0.98] transition-all"
+                >
+                  <ExternalLink :size="16" /> Read Online
+                </a>
+              </div>
+            </div>
+
+            <!-- Visual Handbook Card Badge -->
+            <div class="w-full max-w-sm shrink-0">
+              <div class="relative p-6 sm:p-8 rounded-[2rem] bg-white/10 backdrop-blur-md border border-white/20 text-center space-y-5 shadow-2xl group hover:border-accent-gold/40 transition-colors">
+                <div class="w-20 h-20 mx-auto bg-accent-gold/20 text-accent-gold rounded-3xl flex items-center justify-center border border-accent-gold/30 group-hover:scale-110 transition-transform duration-500">
+                  <FileText :size="40" />
+                </div>
+                <div>
+                  <h3 class="font-display text-xl font-bold text-white">Welcome Handbook</h3>
+                  <p class="text-xs text-accent-gold/90 font-medium mt-1">Official Student Guide • PDF</p>
+                </div>
+                <div class="grid grid-cols-2 gap-2 text-[10px] font-bold uppercase tracking-wider text-white/70 pt-2 border-t border-white/10">
+                  <div class="p-2 bg-white/5 rounded-xl">SFU MSA</div>
+                  <div class="p-2 bg-white/5 rounded-xl">2026 Edition</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ScrollReveal>
     </section>
 
     <!-- 4. UPCOMING HIGHLIGHTS -->
