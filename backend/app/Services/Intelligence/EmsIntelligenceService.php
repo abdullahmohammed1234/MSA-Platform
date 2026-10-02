@@ -132,26 +132,33 @@ class EmsIntelligenceService
         // Payment Method Breakdown
         $paymentMethodsRaw = Payment::whereBetween('created_at', [$cStart, $cEnd])
             ->where('status', 'paid')
-            ->select('payment_method', DB::raw('count(*) as count'), DB::raw('sum(amount) as total_amount'))
-            ->groupBy('payment_method')
+            ->select('provider', DB::raw('count(*) as count'), DB::raw('sum(amount) as total_amount'))
+            ->groupBy('provider')
             ->get();
 
         $onlineRevenue = 0.0;
+        $cashRevenue = 0.0;
+        $guestInvitesCount = 0;
         $manualOverrideRevenue = 0.0;
         $squarePosRevenue = 0.0;
 
         $methodsBreakdown = [];
         foreach ($paymentMethodsRaw as $row) {
             $amt = (float) ($row->total_amount > 100000 ? $row->total_amount / 100 : $row->total_amount);
-            $methodsBreakdown[$row->payment_method] = [
+            $providerVal = is_object($row->provider) ? $row->provider->value : (string) $row->provider;
+            $methodsBreakdown[$providerVal] = [
                 'count' => (int) $row->count,
                 'amount' => round($amt, 2),
             ];
 
-            if (in_array($row->payment_method, ['square', 'credit_card', 'stripe', 'online'])) {
+            if (in_array($providerVal, ['square', 'credit_card', 'stripe', 'online'])) {
                 $onlineRevenue += $amt;
-            } elseif (in_array($row->payment_method, ['square_pos', 'external_square'])) {
+            } elseif (in_array($providerVal, ['square_pos', 'external_square'])) {
                 $squarePosRevenue += $amt;
+            } elseif ($providerVal === 'cash') {
+                $cashRevenue += $amt;
+            } elseif (in_array($providerVal, ['guest_invite', 'complimentary', 'waived'])) {
+                $guestInvitesCount += (int) $row->count;
             } else {
                 $manualOverrideRevenue += $amt;
             }
@@ -160,11 +167,16 @@ class EmsIntelligenceService
         $refundsCount = Payment::whereBetween('created_at', [$cStart, $cEnd])->where('status', 'refunded')->count();
 
         // 4. Upcoming & Top Events
-        $upcomingEvents = EmsEvent::where('start_date', '>=', now())
+        $upcomingEvents = EmsEvent::where('start_at', '>=', now())
             ->where('status', 'published')
-            ->orderBy('start_date', 'asc')
+            ->orderBy('start_at', 'asc')
             ->take(5)
-            ->get(['id', 'uuid', 'name', 'start_date', 'capacity', 'status']);
+            ->get(['id', 'uuid', 'name', 'start_at', 'capacity', 'status'])
+            ->map(function ($event) {
+                $arr = $event->toArray();
+                $arr['start_date'] = $event->start_at ? $event->start_at->toIso8601String() : null;
+                return $arr;
+            });
 
         // 5. Daily Trend Data for Current Period
         $trends = $this->buildRegistrationTrend($cStart, $cEnd);
@@ -208,6 +220,8 @@ class EmsIntelligenceService
             'financial' => [
                 'total_revenue' => round($currRevenue, 2),
                 'online_revenue' => round($onlineRevenue, 2),
+                'cash_revenue' => round($cashRevenue, 2),
+                'guest_invites_count' => $guestInvitesCount,
                 'square_pos_revenue' => round($squarePosRevenue, 2),
                 'manual_override_revenue' => round($manualOverrideRevenue, 2),
                 'refunds_count' => $refundsCount,

@@ -16,6 +16,8 @@ enum PaymentProvider: string
     case PayPal = 'paypal';
     case Manual = 'manual';
     case Waived = 'waived';
+    case Cash = 'cash';
+    case GuestInvite = 'guest_invite';
 
     public function label(): string
     {
@@ -25,6 +27,8 @@ enum PaymentProvider: string
             self::PayPal => 'PayPal',
             self::Manual => 'Manual / Offline',
             self::Waived => 'Waived',
+            self::Cash => 'Cash Payment',
+            self::GuestInvite => 'Guest Invite / Complimentary',
         };
     }
 

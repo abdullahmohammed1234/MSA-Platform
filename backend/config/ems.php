@@ -226,7 +226,7 @@ return [
     */
 
     'notifications' => [
-        'enabled' => (bool) env('EMS_NOTIFICATIONS_ENABLED', false),
+        'enabled' => (bool) env('EMS_NOTIFICATIONS_ENABLED', true),
         'queue' => env('EMS_NOTIFICATIONS_QUEUE', 'ems-notifications'),
         'from_address' => env('EMS_MAIL_FROM_ADDRESS', env('MAIL_FROM_ADDRESS')),
         'from_name' => env('EMS_MAIL_FROM_NAME', 'SFU MSA Events'),

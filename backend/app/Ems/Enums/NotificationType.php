@@ -53,6 +53,7 @@ enum NotificationType: string
     case VmsOpportunityCancelled = 'vms_opportunity_cancelled';
     case VmsAdminSignupReceived = 'vms_admin_signup_received';
     case VmsAdminSignupCancelled = 'vms_admin_signup_cancelled';
+    case VmsPostEventFollowup = 'vms_post_event_followup';
 
     public function label(): string
     {
@@ -88,6 +89,7 @@ enum NotificationType: string
             self::VmsOpportunityCancelled => 'Volunteer opportunity cancelled',
             self::VmsAdminSignupReceived => 'Admin: Volunteer signup received',
             self::VmsAdminSignupCancelled => 'Admin: Volunteer signup cancelled',
+            self::VmsPostEventFollowup => 'Volunteer post-event follow-up',
         };
     }
 
@@ -122,7 +124,8 @@ enum NotificationType: string
             self::VmsShiftReminder,
             self::VmsSignupCancelled,
             self::VmsShiftUpdated,
-            self::VmsOpportunityCancelled => 'vms',
+            self::VmsOpportunityCancelled,
+            self::VmsPostEventFollowup => 'vms',
             self::VmsAdminSignupReceived,
             self::VmsAdminSignupCancelled => 'vms_admin',
         };

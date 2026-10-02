@@ -263,8 +263,14 @@ class IntegrityCheckService
             return $this->makeCheckResult('Store', 'negative_stock_quantity', 'PASSED', 0, 'store_products table not present');
         }
 
+        $qtyCol = Schema::hasColumn('store_products', 'inventory_quantity') ? 'inventory_quantity' : (Schema::hasColumn('store_products', 'stock_quantity') ? 'stock_quantity' : null);
+
+        if (! $qtyCol) {
+            return $this->makeCheckResult('Store', 'negative_stock_quantity', 'PASSED', 0, 'No inventory quantity column in store_products');
+        }
+
         $count = DB::table('store_products')
-            ->where('stock_quantity', '<', 0)
+            ->where($qtyCol, '<', 0)
             ->count();
 
         return $this->makeCheckResult(

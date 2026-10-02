@@ -19,6 +19,23 @@
         </router-link>
       </div>
 
+      <!-- Status Filter Tabs -->
+      <div v-if="signups.length > 0" class="flex items-center gap-1.5 p-1.5 bg-white border border-neutral-ivory rounded-2xl shadow-soft overflow-x-auto">
+        <button
+          v-for="tab in historyTabs"
+          :key="tab.id"
+          @click="activeTab = tab.id"
+          :class="[
+            'px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap',
+            activeTab === tab.id
+              ? 'bg-primary text-white shadow-brand'
+              : 'text-neutral-black/70 hover:text-primary'
+          ]"
+        >
+          {{ tab.label }} ({{ getTabCount(tab.id) }})
+        </button>
+      </div>
+
       <!-- Loading State -->
       <div v-if="loading" class="bg-white rounded-3xl border border-neutral-ivory p-12 text-center space-y-4 shadow-soft">
         <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
@@ -32,17 +49,17 @@
         <p class="text-xs text-red-700">{{ error }}</p>
         <button
           @click="fetchHistory"
-          class="px-5 py-2.5 rounded-full bg-red-600 text-white font-extrabold text-xs uppercase tracking-wider hover:bg-red-700 transition"
+          class="px-5 py-2.5 rounded-full bg-red-600 text-white font-extrabold text-xs uppercase tracking-wider hover:bg-red-700 transition cursor-pointer"
         >
           Retry
         </button>
       </div>
 
       <!-- Empty State -->
-      <div v-else-if="signups.length === 0" class="bg-white rounded-3xl border border-neutral-ivory p-12 text-center space-y-4 max-w-lg mx-auto shadow-soft">
+      <div v-else-if="filteredSignups.length === 0" class="bg-white rounded-3xl border border-neutral-ivory p-12 text-center space-y-4 max-w-lg mx-auto shadow-soft">
         <Calendar class="w-12 h-12 text-neutral-muted mx-auto" />
-        <h3 class="text-xl font-bold text-primary">No Volunteer Signups Yet</h3>
-        <p class="text-xs text-neutral-black/70">You haven't signed up for any volunteer positions yet. Explore active opportunities and get involved!</p>
+        <h3 class="text-xl font-bold text-primary">No Volunteer Signups Found</h3>
+        <p class="text-xs text-neutral-black/70">No volunteer records matching this criteria. Explore active opportunities and get involved!</p>
         <router-link
           to="/volunteer"
           class="inline-block px-6 py-3 rounded-full text-xs font-extrabold uppercase tracking-wider text-white bg-primary hover:bg-secondary transition shadow-brand"
@@ -54,20 +71,32 @@
       <!-- Signups List -->
       <div v-else class="space-y-4">
         <div
-          v-for="signup in signups"
+          v-for="signup in filteredSignups"
           :key="signup.id"
           class="bg-white rounded-3xl border border-neutral-ivory p-6 shadow-soft hover:shadow-premium transition-all space-y-4"
         >
           <div class="flex flex-wrap items-center justify-between gap-3">
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
               <span
                 :class="[
                   'px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider border',
                   statusBadgeClass(signup.status)
                 ]"
               >
-                {{ signup.status }}
+                {{ signup.status.replace('_', ' ') }}
               </span>
+
+              <!-- Verified Attendance Badge -->
+              <span
+                v-if="signup.attendance_status && signup.attendance_status !== 'not_marked'"
+                :class="[
+                  'px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider border',
+                  attendanceBadgeClass(signup.attendance_status)
+                ]"
+              >
+                Attendance: {{ signup.attendance_status }}
+              </span>
+
               <span class="text-xs text-neutral-muted font-mono">
                 Signed up on {{ formatDate(signup.created_at) }}
               </span>
@@ -150,7 +179,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { Calendar, Sparkles, AlertCircle } from 'lucide-vue-next';
 import { volunteeringService, type VolunteerSignup } from '@/services/volunteeringService';
 
@@ -158,9 +187,42 @@ const signups = ref<VolunteerSignup[]>([]);
 const loading = ref(true);
 const error = ref<string | null>(null);
 
+const activeTab = ref<'all' | 'active' | 'waitlist' | 'completed'>('all');
+
+const historyTabs = [
+  { id: 'all' as const, label: 'All History' },
+  { id: 'active' as const, label: 'Upcoming & Active' },
+  { id: 'waitlist' as const, label: 'Waitlisted' },
+  { id: 'completed' as const, label: 'Completed & Past' },
+];
+
 const signupToCancel = ref<VolunteerSignup | null>(null);
 const cancelling = ref(false);
 const cancelError = ref<string | null>(null);
+
+const filteredSignups = computed(() => {
+  return signups.value.filter(s => {
+    const st = s.status?.toLowerCase();
+    if (activeTab.value === 'active') {
+      return st === 'signed_up' || st === 'confirmed' || st === 'approved';
+    }
+    if (activeTab.value === 'waitlist') {
+      return st === 'waitlisted';
+    }
+    if (activeTab.value === 'completed') {
+      return st === 'completed' || st === 'no_show' || st === 'cancelled';
+    }
+    return true;
+  });
+});
+
+const getTabCount = (tabId: string) => {
+  if (tabId === 'all') return signups.value.length;
+  if (tabId === 'active') return signups.value.filter(s => ['signed_up', 'confirmed', 'approved'].includes(s.status?.toLowerCase())).length;
+  if (tabId === 'waitlist') return signups.value.filter(s => s.status?.toLowerCase() === 'waitlisted').length;
+  if (tabId === 'completed') return signups.value.filter(s => ['completed', 'no_show', 'cancelled'].includes(s.status?.toLowerCase())).length;
+  return 0;
+};
 
 const fetchHistory = async () => {
   loading.value = true;
@@ -182,8 +244,17 @@ const statusBadgeClass = (status: string) => {
   if (s === 'confirmed' || s === 'approved') return 'bg-emerald-50 text-emerald-800 border-emerald-200';
   if (s === 'signed_up' || s === 'signed-up') return 'bg-sky-50 text-sky-800 border-sky-200';
   if (s === 'waitlisted') return 'bg-amber-50 text-amber-800 border-amber-200';
+  if (s === 'completed') return 'bg-purple-50 text-purple-800 border-purple-200';
   if (s === 'cancelled') return 'bg-gray-100 text-gray-600 border-gray-200';
   return 'bg-neutral-ivory/60 text-neutral-black/70 border-neutral-ivory';
+};
+
+const attendanceBadgeClass = (attStatus: string) => {
+  const s = attStatus?.toLowerCase();
+  if (s === 'present') return 'bg-emerald-100 text-emerald-900 border-emerald-300';
+  if (s === 'absent') return 'bg-rose-100 text-rose-900 border-rose-300';
+  if (s === 'excused') return 'bg-amber-100 text-amber-900 border-amber-300';
+  return 'bg-neutral-100 text-neutral-700 border-neutral-200';
 };
 
 const canCancel = (status: string) => {

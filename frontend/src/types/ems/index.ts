@@ -345,3 +345,5 @@ export interface EventTemplatePayload {
   settings?: Record<string, any> | null;
   is_default?: boolean;
 }
+
+export * from './ticketing';

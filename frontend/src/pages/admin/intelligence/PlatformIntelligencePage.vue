@@ -15,6 +15,9 @@ import {
   Loader2,
   ShieldCheck,
   Server,
+  Users,
+  Clock,
+  Award,
 } from 'lucide-vue-next';
 import DateRangeSelector from '@/components/admin/intelligence/DateRangeSelector.vue';
 import IntelligenceKpiCard from '@/components/admin/intelligence/IntelligenceKpiCard.vue';
@@ -442,32 +445,84 @@ onMounted(() => {
       <div v-else-if="activeTab === 'volunteers'" class="space-y-6">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
           <IntelligenceKpiCard
-            title="Applications"
-            :value="data.domains.volunteers?.kpis?.total_applications ?? 0"
-            :icon="HeartHandshake"
+            title="Total Volunteers"
+            :value="data.domains.volunteers?.kpis?.total_volunteers?.current ?? data.domains.volunteers?.kpis?.total_applications ?? 0"
+            :icon="Users"
           />
           <IntelligenceKpiCard
-            title="Pending Review"
-            :value="data.domains.volunteers?.kpis?.pending ?? 0"
-            :icon="Activity"
+            title="Service Hours"
+            :value="data.domains.volunteers?.kpis?.total_service_hours?.current ?? 0"
+            suffix=" hrs"
+            :pct-change="data.domains.volunteers?.kpis?.total_service_hours?.pct_change"
+            :icon="Clock"
           />
           <IntelligenceKpiCard
-            title="Approved Volunteers"
-            :value="data.domains.volunteers?.kpis?.approved ?? 0"
+            title="Attendance Rate"
+            :value="data.domains.volunteers?.kpis?.attendance_rate ?? 0"
+            suffix="%"
             :icon="ShieldCheck"
           />
           <IntelligenceKpiCard
-            title="Approval Rate"
-            :value="data.domains.volunteers?.kpis?.approval_rate ?? 0"
+            title="Completion Rate"
+            :value="data.domains.volunteers?.kpis?.completion_rate ?? 0"
             suffix="%"
-            :icon="TrendingUp"
+            :icon="Award"
           />
         </div>
 
+        <!-- Participation Funnel & Operational Summary -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="bg-white border border-neutral-ivory rounded-2xl p-6 shadow-soft space-y-4">
+            <h3 class="text-xs uppercase font-bold tracking-wider text-neutral-muted">Volunteer Participation Funnel</h3>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+              <div class="bg-neutral-background/70 p-4 rounded-xl border border-neutral-ivory">
+                <div class="text-xs text-neutral-muted font-medium">Total Signups</div>
+                <div class="text-2xl font-display font-bold text-neutral-black mt-1">{{ data.domains.volunteers?.funnel?.signups ?? 0 }}</div>
+              </div>
+              <div class="bg-neutral-background/70 p-4 rounded-xl border border-neutral-ivory">
+                <div class="text-xs text-neutral-muted font-medium">Confirmed</div>
+                <div class="text-2xl font-display font-bold text-blue-700 mt-1">{{ data.domains.volunteers?.funnel?.confirmed ?? 0 }}</div>
+              </div>
+              <div class="bg-neutral-background/70 p-4 rounded-xl border border-neutral-ivory">
+                <div class="text-xs text-neutral-muted font-medium">Attended</div>
+                <div class="text-2xl font-display font-bold text-emerald-700 mt-1">{{ data.domains.volunteers?.funnel?.attended ?? 0 }}</div>
+              </div>
+              <div class="bg-neutral-background/70 p-4 rounded-xl border border-neutral-ivory">
+                <div class="text-xs text-neutral-muted font-medium">Completed</div>
+                <div class="text-2xl font-display font-bold text-primary mt-1">{{ data.domains.volunteers?.funnel?.completed ?? 0 }}</div>
+              </div>
+            </div>
+            <div class="flex items-center justify-between text-xs text-neutral-muted border-t border-neutral-ivory pt-3 mt-2">
+              <span>Returning Volunteers: <strong class="text-neutral-black font-semibold">{{ data.domains.volunteers?.kpis?.returning_volunteers?.current ?? 0 }}</strong></span>
+              <span>First-time Volunteers: <strong class="text-neutral-black font-semibold">{{ data.domains.volunteers?.kpis?.first_time_volunteers?.current ?? 0 }}</strong></span>
+            </div>
+          </div>
+
+          <div class="bg-white border border-neutral-ivory rounded-2xl p-6 shadow-soft space-y-4">
+            <h3 class="text-xs uppercase font-bold tracking-wider text-neutral-muted">Operational Attention Required</h3>
+            <div v-if="data.domains.volunteers?.attention_required?.length > 0" class="space-y-2.5">
+              <div
+                v-for="item in data.domains.volunteers.attention_required"
+                :key="item.id"
+                class="p-3.5 bg-amber-50/80 border border-amber-200 rounded-xl flex items-start gap-3 text-xs"
+              >
+                <AlertTriangle class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <div class="font-bold text-amber-900">{{ item.title }} ({{ item.count }})</div>
+                  <div class="text-amber-800 mt-0.5">{{ item.description }}</div>
+                </div>
+              </div>
+            </div>
+            <div v-else class="p-6 text-center text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl font-medium">
+              All volunteer shifts, attendance, and waitlists are in good operational standing.
+            </div>
+          </div>
+        </div>
+
         <IntelligenceTrendChart
-          title="Volunteer Applications Submitted"
+          title="Daily Volunteer Signups & Completed Hours"
           :data="data.domains.volunteers?.trends ?? []"
-          data-key="applications"
+          data-key="signups"
           color="emerald"
         />
       </div>

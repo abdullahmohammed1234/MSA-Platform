@@ -183,6 +183,36 @@ class EventOperationsController extends EmsController
             : 'Walk-in registered successfully.');
     }
 
+    public function manualRegistration(Request $request, Event $event): JsonResponse
+    {
+        $this->authorize('createRegistration', $event);
+
+        $validated = $request->validate([
+            'first_name' => 'required|string|max:100',
+            'last_name' => 'required|string|max:100',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable|string|max:50',
+            'registration_type' => 'required|string|in:cash,guest_invite,complimentary',
+            'amount' => 'nullable|numeric|min:0',
+            'ticket_type_id' => 'nullable|string',
+            'quantity' => 'nullable|integer|min:1|max:50',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        /** @var \App\Ems\Services\ManualRegistrationService $manualService */
+        $manualService = app(\App\Ems\Services\ManualRegistrationService::class);
+        $result = $manualService->registerManual($event, $validated, $request->user());
+
+        return ApiResponse::created([
+            'registration' => new PublicRegistrationResource($result['registration']),
+            'order' => [
+                'uuid' => $result['order']->uuid,
+                'reference' => $result['order']->reference,
+            ],
+            'payment' => new \App\Ems\Http\Resources\PaymentResource($result['payment']),
+        ], 'Attendee registered successfully.');
+    }
+
     public function terminalCheckout(\App\Ems\Http\Requests\Operations\TerminalCheckoutRequest $request, Event $event): JsonResponse
     {
         $this->authorize('createRegistration', $event);

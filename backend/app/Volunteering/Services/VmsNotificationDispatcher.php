@@ -143,6 +143,16 @@ class VmsNotificationDispatcher
         );
     }
 
+    public function notifyPostEventFollowup(Signup $signup, array $payload = []): ?EventNotification
+    {
+        return $this->dispatchNotification(
+            signup: $signup,
+            type: NotificationType::VmsPostEventFollowup,
+            idempotencyKey: "vms_post_event_followup:{$signup->id}",
+            payload: $payload
+        );
+    }
+
     /**
      * Dispatch an event notification using the existing platform infrastructure.
      */
@@ -202,6 +212,7 @@ class VmsNotificationDispatcher
         $rendered = $this->renderer->render($templateKey, $mergedPayload);
 
         $notification = new EventNotification();
+        $notification->uuid = (string) \Illuminate\Support\Str::uuid();
         $notification->event_id = $signup->opportunity?->event_id;
         $notification->volunteering_signup_id = $signup->id;
         $notification->user_id = $signup->user_id;
@@ -231,7 +242,7 @@ class VmsNotificationDispatcher
         ]);
 
         $notification->markQueued();
-        SendEventNotificationJob::dispatch($notification->id);
+        SendEventNotificationJob::dispatchSync($notification->id);
 
         return $notification;
     }

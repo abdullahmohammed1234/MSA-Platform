@@ -198,7 +198,7 @@ class EmsSystemController extends Controller
         }
 
         $totalEvents = Event::count();
-        $upcomingEvents = Event::where('status', 'published')->where('start_time', '>', Carbon::now())->count();
+        $upcomingEvents = Event::where('status', 'published')->where('start_at', '>', Carbon::now())->count();
         $activeEvents = Event::where('status', 'live')->count();
         $completedEvents = Event::where('status', 'completed')->count();
         $cancelledEvents = Event::where('status', 'cancelled')->count();

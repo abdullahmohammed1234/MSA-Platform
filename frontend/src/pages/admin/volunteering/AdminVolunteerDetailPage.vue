@@ -84,10 +84,17 @@
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-neutral-ivory pb-4">
           <div>
             <h2 class="text-xl font-display font-extrabold text-primary">Volunteer Roster ({{ signups.length }})</h2>
-            <p class="text-xs text-neutral-black/70">Manage volunteer registrations, assign statuses, and review contact details.</p>
+            <p class="text-xs text-neutral-black/70">Manage volunteer registrations, attendance, waitlist promotions, and exports.</p>
           </div>
           
           <div class="flex flex-wrap items-center gap-3">
+            <button
+              @click="exportCsv"
+              class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary hover:bg-primary/20 text-xs font-extrabold uppercase tracking-wider transition cursor-pointer border border-primary/20"
+            >
+              <Download class="w-3.5 h-3.5" />
+              <span>Export CSV</span>
+            </button>
             <select
               v-model="statusFilter"
               @change="fetchSignups"
@@ -96,9 +103,22 @@
               <option value="">All Statuses</option>
               <option value="signed_up">Signed Up</option>
               <option value="confirmed">Confirmed</option>
+              <option value="waitlisted">Waitlisted</option>
               <option value="completed">Completed</option>
               <option value="no_show">No Show</option>
               <option value="cancelled">Cancelled</option>
+            </select>
+
+            <select
+              v-model="attendanceFilter"
+              @change="fetchSignups"
+              class="px-3.5 py-2 rounded-full border border-neutral-ivory text-xs font-bold uppercase tracking-wider text-neutral-black bg-white focus:outline-none focus:border-primary"
+            >
+              <option value="">All Attendance</option>
+              <option value="not_marked">Not Marked</option>
+              <option value="present">Present</option>
+              <option value="absent">Absent</option>
+              <option value="excused">Excused</option>
             </select>
           </div>
         </div>
@@ -111,13 +131,14 @@
                 <th class="px-4 py-3">Volunteer</th>
                 <th class="px-4 py-3">Team & Shift</th>
                 <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3">Attendance</th>
                 <th class="px-4 py-3">Experience / Notes</th>
                 <th class="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-neutral-ivory/60">
               <tr v-if="signups.length === 0">
-                <td colspan="5" class="px-4 py-6 text-center text-neutral-muted">No volunteer signups found for this criteria.</td>
+                <td colspan="6" class="px-4 py-6 text-center text-neutral-muted">No volunteer signups found for this criteria.</td>
               </tr>
               <tr v-for="signup in signups" :key="signup.id" class="hover:bg-neutral-background/40 transition">
                 <td class="px-4 py-3">
@@ -129,14 +150,36 @@
                   <div class="text-neutral-muted font-mono text-[11px]">{{ signup.shift?.name || 'General Shift' }}</div>
                 </td>
                 <td class="px-4 py-3">
-                  <span
-                    :class="[
-                      'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider border',
-                      statusBadgeClass(signup.status)
-                    ]"
+                  <div class="flex items-center gap-2">
+                    <span
+                      :class="[
+                        'px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider border',
+                        statusBadgeClass(signup.status)
+                      ]"
+                    >
+                      {{ signup.status.replace('_', ' ') }}
+                    </span>
+                    <button
+                      v-if="signup.status === 'waitlisted'"
+                      @click="promoteWaitlist(signup.id)"
+                      class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100 text-[10px] font-extrabold uppercase tracking-wider transition cursor-pointer"
+                      title="Promote from waitlist to confirmed"
+                    >
+                      Promote
+                    </button>
+                  </div>
+                </td>
+                <td class="px-4 py-3">
+                  <select
+                    :value="signup.attendance_status || 'not_marked'"
+                    @change="updateAttendance(signup.id, ($event.target as HTMLSelectElement).value)"
+                    class="px-2.5 py-1 rounded-full border border-neutral-ivory text-[11px] font-bold uppercase tracking-wider bg-white focus:outline-none focus:border-primary cursor-pointer"
                   >
-                    {{ signup.status.replace('_', ' ') }}
-                  </span>
+                    <option value="not_marked">Not Marked</option>
+                    <option value="present">Present</option>
+                    <option value="absent">Absent</option>
+                    <option value="excused">Excused</option>
+                  </select>
                 </td>
                 <td class="px-4 py-3 text-xs text-neutral-black/70 max-w-xs truncate">
                   {{ signup.experience || signup.notes || '-' }}
@@ -149,6 +192,7 @@
                   >
                     <option value="signed_up">Signed Up</option>
                     <option value="confirmed">Confirmed</option>
+                    <option value="waitlisted">Waitlisted</option>
                     <option value="completed">Completed</option>
                     <option value="no_show">No Show</option>
                     <option value="cancelled">Cancelled</option>
@@ -166,7 +210,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
-import { ArrowLeft } from 'lucide-vue-next';
+import { ArrowLeft, Download } from 'lucide-vue-next';
 import { volunteeringService } from '@/services/volunteeringService';
 
 const route = useRoute();
@@ -176,6 +220,7 @@ const opportunity = ref<any>(null);
 const signups = ref<any[]>([]);
 const loading = ref(true);
 const statusFilter = ref('');
+const attendanceFilter = ref('');
 
 const fetchOpportunityDetails = async () => {
   loading.value = true;
@@ -194,6 +239,7 @@ const fetchSignups = async () => {
   try {
     const res = await volunteeringService.getSignupsForOpportunity(id, {
       status: statusFilter.value || undefined,
+      attendance_status: attendanceFilter.value || undefined,
     });
     signups.value = res.data || [];
   } catch (err) {
@@ -214,6 +260,7 @@ const getTeamCapacityPercentage = (team: any) => {
 const statusBadgeClass = (status: string) => {
   const s = status?.toLowerCase();
   if (s === 'confirmed' || s === 'approved') return 'bg-emerald-50 text-emerald-800 border-emerald-200';
+  if (s === 'waitlisted') return 'bg-amber-50 text-amber-800 border-amber-200';
   if (s === 'completed') return 'bg-sky-50 text-sky-800 border-sky-200';
   if (s === 'no_show') return 'bg-amber-50 text-amber-800 border-amber-200';
   if (s === 'cancelled') return 'bg-rose-50 text-rose-800 border-rose-200';
@@ -226,6 +273,40 @@ const updateStatus = async (signupId: number, status: string) => {
     await fetchSignups();
   } catch (err) {
     alert('Failed to update volunteer status.');
+  }
+};
+
+const updateAttendance = async (signupId: number, attendanceStatus: string) => {
+  try {
+    await volunteeringService.updateAttendance(signupId, { attendance_status: attendanceStatus });
+    await fetchSignups();
+  } catch (err) {
+    alert('Failed to update attendance status.');
+  }
+};
+
+const promoteWaitlist = async (signupId: number) => {
+  try {
+    await volunteeringService.promoteWaitlistedSignup(signupId);
+    await fetchSignups();
+  } catch (err: any) {
+    alert(err?.response?.data?.message || 'Failed to promote waitlisted volunteer.');
+  }
+};
+
+const exportCsv = async () => {
+  try {
+    const blob = await volunteeringService.exportSignupsCsv({ opportunity_id: id });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `volunteers-opportunity-${id}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  } catch (err) {
+    alert('Failed to export CSV.');
   }
 };
 

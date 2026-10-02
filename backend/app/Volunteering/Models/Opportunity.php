@@ -87,6 +87,24 @@ class Opportunity extends Model
         return $this->belongsTo(User::class, 'updated_by');
     }
 
+    public function skills(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Skill::class, 'volunteering_opportunity_skills', 'opportunity_id', 'skill_id')
+            ->withPivot(['is_required', 'min_proficiency'])
+            ->withTimestamps();
+    }
+
+    public function interests(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Interest::class, 'volunteering_opportunity_interests', 'opportunity_id', 'interest_id')
+            ->withTimestamps();
+    }
+
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(VolunteerInvitation::class, 'opportunity_id');
+    }
+
     public function scopePublished(Builder $query): Builder
     {
         return $query->where('status', 'open');

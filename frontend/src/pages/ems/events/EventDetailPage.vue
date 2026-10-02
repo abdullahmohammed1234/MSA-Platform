@@ -11,6 +11,7 @@ import {
   EventLifecyclePanel,
 } from '@/components/ems';
 import TicketManagementPanel from '@/components/ems/TicketManagementPanel.vue';
+import ManualRegistrationModal from '@/components/ems/ManualRegistrationModal.vue';
 import { useEmsEventsStore } from '@/stores/ems/emsEvents';
 import { useEmsPermissions } from '@/composables/ems/useEmsPermissions';
 import { useEmsApiError } from '@/composables/ems/useEmsApiError';
@@ -28,6 +29,7 @@ const { formatDateTime } = useEventFormatting();
 
 const isDeleteOpen = ref(false);
 const isDeleting = ref(false);
+const isManualModalOpen = ref(false);
 
 const uuid = computed(() => route.params.uuid as string);
 const event = computed(() => events.current);
@@ -116,6 +118,15 @@ const confirmDelete = async () => {
         back-label="All events"
       >
         <template #actions>
+          <Button
+            v-if="canViewOperations"
+            variant="outline"
+            size="sm"
+            class="border-emerald-600/30 text-emerald-700 hover:bg-emerald-50 font-semibold"
+            @click="isManualModalOpen = true"
+          >
+            💵 Add Cash / Guest Invite
+          </Button>
           <Button
             v-if="canViewAnalytics"
             variant="outline"
@@ -302,6 +313,13 @@ const confirmDelete = async () => {
         :is-busy="isDeleting"
         @confirm="confirmDelete"
         @cancel="isDeleteOpen = false"
+      />
+
+      <ManualRegistrationModal
+        :is-open="isManualModalOpen"
+        :event-uuid="uuid"
+        @close="isManualModalOpen = false"
+        @registered="load"
       />
     </template>
   </div>

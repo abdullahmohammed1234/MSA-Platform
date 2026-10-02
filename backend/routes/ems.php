@@ -190,6 +190,8 @@ Route::middleware(['auth:sanctum', 'throttle:' . config('ems.route.throttle', 'e
             ->name('events.manual-check-in');
         Route::post('/events/{event}/walk-in', [EventOperationsController::class, 'walkIn'])
             ->name('events.walk-in');
+        Route::post('/events/{event}/manual-registration', [EventOperationsController::class, 'manualRegistration'])
+            ->name('events.manual-registration');
         Route::post('/events/{event}/terminal-checkout', [EventOperationsController::class, 'terminalCheckout'])
             ->name('events.terminal-checkout');
         Route::post('/events/{event}/undo-check-in', [EventOperationsController::class, 'undoCheckIn'])

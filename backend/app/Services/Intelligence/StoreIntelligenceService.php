@@ -42,15 +42,34 @@ class StoreIntelligenceService
         $prevRevenue = $totalCol === 'total_cents' ? $prevRevRaw / 100 : $prevRevRaw;
 
         // Pending & Unfulfilled Orders
-        $pendingOrders = StoreOrder::where('fulfillment_status', 'unfulfilled')->where('payment_status', 'paid')->count();
+        $pendingOrders = StoreOrder::whereIn('fulfillment_status', ['pending', 'unfulfilled', 'preparing'])->where('payment_status', 'paid')->count();
 
         // Inventory Warnings (Products with stock <= 5)
         $inventoryWarnings = [];
         $lowStockCount = 0;
         if (Schema::hasTable('store_products')) {
-            $lowStockProducts = StoreProduct::where('is_active', true)
-                ->where('stock_quantity', '<=', 5)
-                ->get(['id', 'name', 'stock_quantity', 'price']);
+            $qtyCol = Schema::hasColumn('store_products', 'inventory_quantity') ? 'inventory_quantity' : (Schema::hasColumn('store_products', 'stock_quantity') ? 'stock_quantity' : null);
+            $statusCol = Schema::hasColumn('store_products', 'status') ? 'status' : (Schema::hasColumn('store_products', 'is_active') ? 'is_active' : null);
+            $priceCol = Schema::hasColumn('store_products', 'price_cents') ? 'price_cents' : (Schema::hasColumn('store_products', 'price') ? 'price' : null);
+
+            $query = StoreProduct::query();
+            if ($statusCol === 'status') {
+                $query->whereIn('status', ['active', 'draft']);
+            } elseif ($statusCol === 'is_active') {
+                $query->where('is_active', true);
+            }
+
+            if ($qtyCol) {
+                $query->where($qtyCol, '<=', 5);
+            }
+
+            $selectCols = array_values(array_filter(['id', 'name', $qtyCol, $priceCol]));
+            $lowStockProducts = $query->get($selectCols)->map(function ($p) use ($qtyCol, $priceCol) {
+                $arr = $p->toArray();
+                $arr['stock_quantity'] = $qtyCol ? ($p->{$qtyCol} ?? 0) : 0;
+                $arr['price'] = $priceCol ? ($priceCol === 'price_cents' ? (($p->{$priceCol} ?? 0) / 100) : ($p->{$priceCol} ?? 0)) : 0;
+                return $arr;
+            });
             $lowStockCount = $lowStockProducts->count();
             $inventoryWarnings = $lowStockProducts;
         }

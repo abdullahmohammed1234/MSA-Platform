@@ -33,6 +33,14 @@
             </a>
 
             <router-link
+              to="/volunteer/profile"
+              class="inline-flex items-center gap-2 px-6 py-3.5 rounded-full text-xs font-extrabold uppercase tracking-wider text-emerald-700 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 transition-all"
+            >
+              <span>⚙️</span>
+              <span>My Profile & Skills</span>
+            </router-link>
+
+            <router-link
               to="/volunteer/my-history"
               class="inline-flex items-center gap-2 px-6 py-3.5 rounded-full text-xs font-extrabold uppercase tracking-wider text-primary border border-primary/30 hover:bg-primary/5 transition-all"
             >
@@ -76,19 +84,36 @@
 
           <!-- Search & Filter Controls -->
           <div class="w-full md:w-auto flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-            <div class="relative w-full sm:w-80">
+            <!-- Filter Pills -->
+            <div class="flex items-center gap-1 p-1 bg-white border border-neutral-ivory rounded-full shadow-soft">
+              <button
+                v-for="filter in statusFilters"
+                :key="filter.id"
+                @click="activeFilter = filter.id"
+                :class="[
+                  'px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer whitespace-nowrap',
+                  activeFilter === filter.id
+                    ? 'bg-primary text-white shadow-brand'
+                    : 'text-neutral-black/70 hover:text-primary'
+                ]"
+              >
+                {{ filter.label }}
+              </button>
+            </div>
+
+            <div class="relative w-full sm:w-72">
               <input
                 v-model="searchQuery"
                 type="text"
                 placeholder="Search opportunities or locations..."
-                class="w-full pl-10 pr-4 py-2.5 rounded-full bg-white border border-neutral-ivory/80 text-sm text-neutral-black placeholder-neutral-muted focus:outline-none focus:border-primary shadow-soft transition-all"
+                class="w-full pl-10 pr-4 py-2 rounded-full bg-white border border-neutral-ivory/80 text-sm text-neutral-black placeholder-neutral-muted focus:outline-none focus:border-primary shadow-soft transition-all"
                 @input="fetchOpportunities"
               />
-              <Search class="w-4 h-4 absolute left-3.5 top-3 text-neutral-muted" />
+              <Search class="w-4 h-4 absolute left-3.5 top-2.5 text-neutral-muted" />
             </div>
 
             <span class="text-xs font-extrabold text-neutral-muted uppercase tracking-wider self-center whitespace-nowrap">
-              Showing <strong class="text-primary font-bold">{{ opportunities.length }}</strong> positions
+              Showing <strong class="text-primary font-bold">{{ filteredOpportunities.length }}</strong> positions
             </span>
           </div>
         </div>
@@ -105,30 +130,30 @@
           <p class="text-xs text-red-700">{{ error }}</p>
           <button
             @click="fetchOpportunities"
-            class="px-5 py-2.5 rounded-full bg-red-600 text-white font-extrabold text-xs uppercase tracking-wider hover:bg-red-700 transition"
+            class="px-5 py-2.5 rounded-full bg-red-600 text-white font-extrabold text-xs uppercase tracking-wider hover:bg-red-700 transition cursor-pointer"
           >
             Try Again
           </button>
         </div>
 
         <!-- Empty State -->
-        <div v-else-if="opportunities.length === 0" class="bg-white rounded-3xl border border-neutral-ivory p-12 text-center space-y-4 max-w-lg mx-auto shadow-soft">
+        <div v-else-if="filteredOpportunities.length === 0" class="bg-white rounded-3xl border border-neutral-ivory p-12 text-center space-y-4 max-w-lg mx-auto shadow-soft">
           <Layers class="w-12 h-12 text-neutral-muted mx-auto" />
           <h3 class="text-xl font-bold text-primary">No Opportunities Found</h3>
-          <p class="text-xs text-neutral-black/70">There are currently no active volunteer positions matching your search query. Please check back soon or clear filters.</p>
+          <p class="text-xs text-neutral-black/70">There are currently no active volunteer positions matching your criteria. Please check back soon or clear filters.</p>
           <button
-            v-if="searchQuery"
-            @click="searchQuery = ''; fetchOpportunities();"
-            class="px-5 py-2.5 rounded-full bg-primary/10 text-primary font-extrabold text-xs uppercase tracking-wider hover:bg-primary/20 transition"
+            v-if="searchQuery || activeFilter !== 'all'"
+            @click="searchQuery = ''; activeFilter = 'all'; fetchOpportunities();"
+            class="px-5 py-2.5 rounded-full bg-primary/10 text-primary font-extrabold text-xs uppercase tracking-wider hover:bg-primary/20 transition cursor-pointer"
           >
-            Clear Search
+            Clear Filters
           </button>
         </div>
 
         <!-- Opportunities Grid -->
         <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <VolunteerOpportunityCard
-            v-for="opp in opportunities"
+            v-for="opp in filteredOpportunities"
             :key="opp.id"
             :opportunity="opp"
           />
@@ -158,15 +183,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { Heart, Search, ArrowDown, Clock, Layers, AlertCircle } from 'lucide-vue-next';
 import { volunteeringService, type VolunteerOpportunity } from '@/services/volunteeringService';
 import VolunteerOpportunityCard from '@/components/volunteering/VolunteerOpportunityCard.vue';
 
 const opportunities = ref<VolunteerOpportunity[]>([]);
 const searchQuery = ref('');
+const activeFilter = ref<'all' | 'open' | 'waitlist'>('all');
 const loading = ref(true);
 const error = ref<string | null>(null);
+
+const statusFilters = [
+  { id: 'all' as const, label: 'All Roles' },
+  { id: 'open' as const, label: 'Open Spots' },
+  { id: 'waitlist' as const, label: 'Waitlist Open' },
+];
 
 const steps = [
   { title: 'Discover', description: 'Explore open volunteer opportunities across SFU MSA events and programs.' },
@@ -174,6 +206,18 @@ const steps = [
   { title: 'Sign Up', description: 'Fill out quick contact details to instantly confirm your volunteer spot.' },
   { title: 'Serve & Connect', description: 'Attend the shift, support your brothers and sisters, and earn community credit.' },
 ];
+
+const filteredOpportunities = computed(() => {
+  return opportunities.value.filter(opp => {
+    if (activeFilter.value === 'open') {
+      return opp.status === 'open' && (!opp.capacity || !opp.signups_count || opp.signups_count < opp.capacity);
+    }
+    if (activeFilter.value === 'waitlist') {
+      return opp.status === 'open' && opp.capacity && opp.signups_count && opp.signups_count >= opp.capacity;
+    }
+    return true;
+  });
+});
 
 const fetchOpportunities = async () => {
   loading.value = true;

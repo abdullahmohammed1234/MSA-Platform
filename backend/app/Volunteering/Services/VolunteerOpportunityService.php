@@ -47,6 +47,9 @@ class VolunteerOpportunityService
     public function listPublicOpportunities(array $filters = []): LengthAwarePaginator
     {
         $query = Opportunity::with(['event:id,name,slug,description,short_description,banner_url,start_at,end_at,location', 'teams', 'shifts'])
+            ->withCount(['signups' => function ($q) {
+                $q->whereIn('status', ['signed_up', 'confirmed', 'completed']);
+            }])
             ->where('status', 'open');
 
         if (!empty($filters['search'])) {
@@ -94,6 +97,9 @@ class VolunteerOpportunityService
     public function getOpportunityBySlug(string $slug): Opportunity
     {
         return Opportunity::with(['event', 'teams.shifts', 'shifts'])
+            ->withCount(['signups' => function ($q) {
+                $q->whereIn('status', ['signed_up', 'confirmed', 'completed']);
+            }])
             ->where('slug', $slug)
             ->firstOrFail();
     }

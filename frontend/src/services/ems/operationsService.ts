@@ -107,6 +107,23 @@ export const operationsService = {
     return emsHttp.post(`/events/${eventUuid}/terminal-checkout`, payload);
   },
 
+  manualRegistration(
+    eventUuid: string,
+    payload: {
+      first_name: string;
+      last_name: string;
+      email?: string;
+      phone?: string;
+      registration_type: 'cash' | 'guest_invite' | 'complimentary';
+      amount?: number;
+      ticket_type_id?: string;
+      quantity?: number;
+      notes?: string;
+    }
+  ) {
+    return emsHttp.post(`/events/${eventUuid}/manual-registration`, payload);
+  },
+
   refundPayment(paymentUuid: string, payload: { amount?: number; reason?: string } = {}) {
     return emsHttp.post(`/payments/${encodeURIComponent(paymentUuid)}/refund`, payload);
   },

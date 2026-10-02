@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { EmsErrorState, EmsPageHeader } from '@/components/ems';
+import ManualRegistrationModal from '@/components/ems/ManualRegistrationModal.vue';
 import { operationsService } from '@/services/ems/operationsService';
 import { useEmsApiError } from '@/composables/ems/useEmsApiError';
 import { useEmsPermissions } from '@/composables/ems/useEmsPermissions';
@@ -37,6 +38,7 @@ const undoTarget = ref<EmsAttendee | null>(null);
 const refundTarget = ref<EmsAttendee | null>(null);
 const refundReason = ref('');
 const refundBusy = ref(false);
+const isManualModalOpen = ref(false);
 
 const statusOptions = [
   { value: '', label: 'All registration statuses' },
@@ -171,6 +173,13 @@ watch([registrationStatus, paymentStatus, checkInStatus, source, sortBy, sortDir
       back-label="Operations"
     >
       <template #actions>
+        <Button
+          variant="outline"
+          class="border-emerald-600/30 text-emerald-700 hover:bg-emerald-50 font-semibold"
+          @click="isManualModalOpen = true"
+        >
+          💵 Add Cash / Guest Invite
+        </Button>
         <Button
           v-if="canImportAttendees"
           variant="outline"
@@ -331,5 +340,12 @@ watch([registrationStatus, paymentStatus, checkInStatus, source, sortBy, sortDir
         </div>
       </div>
     </div>
+
+    <ManualRegistrationModal
+      :is-open="isManualModalOpen"
+      :event-uuid="uuid"
+      @close="isManualModalOpen = false"
+      @registered="load"
+    />
   </div>
 </template>

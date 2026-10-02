@@ -27,6 +27,8 @@ class Signup extends Model
         'experience',
         'notes',
         'status',
+        'attendance_status',
+        'attended_at',
         'admin_notes',
         'processed_by',
         'processed_at',
@@ -34,6 +36,15 @@ class Signup extends Model
 
     protected $casts = [
         'processed_at' => 'datetime',
+        'attended_at' => 'datetime',
+    ];
+
+    /**
+     * The attributes that should be hidden for serialization (e.g. public APIs).
+     */
+    protected $hidden = [
+        'admin_notes',
+        'processed_by',
     ];
 
     protected static function boot()

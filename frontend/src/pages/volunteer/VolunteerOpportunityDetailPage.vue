@@ -85,45 +85,49 @@
           </div>
         </div>
 
-        <!-- SIGNUP SUCCESS CONFIRMATION PANEL -->
-        <div v-if="signupSuccess" class="bg-emerald-50 border border-emerald-200 rounded-3xl p-8 sm:p-10 shadow-premium space-y-6 text-center">
-          <div class="w-16 h-16 bg-emerald-600 text-white rounded-full flex items-center justify-center mx-auto shadow-lg">
-            <CheckCircle2 class="w-10 h-10" />
-          </div>
+          <!-- SIGNUP SUCCESS CONFIRMATION PANEL -->
+          <div v-if="signupSuccess" class="bg-emerald-50 border border-emerald-200 rounded-3xl p-8 sm:p-10 shadow-premium space-y-6 text-center">
+            <div class="w-16 h-16 bg-emerald-600 text-white rounded-full flex items-center justify-center mx-auto shadow-lg">
+              <CheckCircle2 class="w-10 h-10" />
+            </div>
 
-          <div class="space-y-2">
-            <h2 class="text-2xl sm:text-3xl font-display font-extrabold text-emerald-900">
-              {{ signupResponse?.status === 'waitlisted' ? "You're on the Waitlist!" : "You're Signed Up!" }}
-            </h2>
-            <p class="text-sm text-emerald-800 max-w-lg mx-auto">
-              {{ signupResponse?.status === 'waitlisted' 
-                ? "This position is currently at capacity. We've added you to the waitlist queue and will notify you if a spot opens up!" 
-                : "Jazakum Allahu Khayran for volunteering with SFU MSA. Your signup has been recorded successfully." }}
-            </p>
-          </div>
+            <div class="space-y-2">
+              <h2 class="text-2xl sm:text-3xl font-display font-extrabold text-emerald-900">
+                {{ signupResponse?.status === 'waitlisted' ? "You're on the Waitlist!" : "You're Signed Up!" }}
+              </h2>
+              <p class="text-sm text-emerald-800 max-w-lg mx-auto">
+                {{ signupResponse?.status === 'waitlisted' 
+                  ? "This position is currently at capacity. We've added you to the waitlist queue and will notify you as soon as a spot opens up!" 
+                  : "Jazakum Allahu Khayran for volunteering with SFU MSA. Your signup has been recorded successfully and a transactional confirmation email has been queued to your inbox." }}
+              </p>
+            </div>
 
-          <div class="bg-white rounded-2xl p-6 border border-emerald-200 text-left max-w-md mx-auto space-y-3 text-xs sm:text-sm text-neutral-black/80">
-            <div><span class="text-neutral-muted uppercase tracking-wider font-bold">Opportunity:</span> {{ opportunity.title }}</div>
-            <div v-if="selectedTeamObject"><span class="text-neutral-muted uppercase tracking-wider font-bold">Team:</span> {{ selectedTeamObject.name }}</div>
-            <div v-if="selectedShiftObject"><span class="text-neutral-muted uppercase tracking-wider font-bold">Shift:</span> {{ formatShiftTime(selectedShiftObject) }}</div>
-            <div><span class="text-neutral-muted uppercase tracking-wider font-bold">Status:</span> <span class="capitalize font-bold text-primary">{{ signupResponse?.status || 'Confirmed' }}</span></div>
-          </div>
+            <div class="bg-white rounded-2xl p-6 border border-emerald-200 text-left max-w-md mx-auto space-y-3 text-xs sm:text-sm text-neutral-black/80 shadow-soft">
+              <div><span class="text-neutral-muted uppercase tracking-wider font-bold">Opportunity:</span> {{ opportunity.title }}</div>
+              <div v-if="selectedTeamObject"><span class="text-neutral-muted uppercase tracking-wider font-bold">Team:</span> {{ selectedTeamObject.name }}</div>
+              <div v-if="selectedShiftObject"><span class="text-neutral-muted uppercase tracking-wider font-bold">Shift:</span> {{ formatShiftTime(selectedShiftObject) }}</div>
+              <div><span class="text-neutral-muted uppercase tracking-wider font-bold">Status:</span> <span class="capitalize font-bold text-primary">{{ signupResponse?.status || 'Confirmed' }}</span></div>
+              <div class="text-[11px] text-emerald-700 font-semibold pt-1 border-t border-emerald-100 flex items-center gap-1.5">
+                <CheckCircle2 class="w-3.5 h-3.5" />
+                <span>Confirmation email dispatched immediately.</span>
+              </div>
+            </div>
 
-          <div class="pt-4 flex flex-wrap justify-center gap-4">
-            <router-link
-              to="/volunteer/my-history"
-              class="px-6 py-3 rounded-full text-xs font-extrabold uppercase tracking-wider text-white bg-primary hover:bg-secondary transition shadow-brand"
-            >
-              View My Volunteer History
-            </router-link>
-            <router-link
-              to="/volunteer"
-              class="px-6 py-3 rounded-full text-xs font-extrabold uppercase tracking-wider text-neutral-black/80 border border-neutral-ivory hover:bg-white transition"
-            >
-              Explore Other Roles
-            </router-link>
+            <div class="pt-4 flex flex-wrap justify-center gap-4">
+              <router-link
+                to="/volunteer/my-history"
+                class="px-6 py-3 rounded-full text-xs font-extrabold uppercase tracking-wider text-white bg-primary hover:bg-secondary transition shadow-brand"
+              >
+                View My Volunteer History
+              </router-link>
+              <router-link
+                to="/volunteer"
+                class="px-6 py-3 rounded-full text-xs font-extrabold uppercase tracking-wider text-neutral-black/80 border border-neutral-ivory hover:bg-white transition"
+              >
+                Explore Other Roles
+              </router-link>
+            </div>
           </div>
-        </div>
 
         <!-- MAIN CONTENT: TEAMS/SHIFTS & SIGNUP FORM -->
         <div v-else class="space-y-8">
@@ -313,7 +317,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { ArrowLeft, Calendar, MapPin, Sparkles, Users, Clock, AlertCircle, CheckCircle2 } from 'lucide-vue-next';
 import { volunteeringService, type VolunteerOpportunity, type VolunteerShift } from '@/services/volunteeringService';
@@ -337,6 +341,13 @@ const form = ref({
   experience: '',
   notes: '',
 });
+
+watch(() => authStore.user, (u) => {
+  if (u) {
+    if (!form.value.name) form.value.name = u.name || '';
+    if (!form.value.email) form.value.email = u.email || '';
+  }
+}, { immediate: true });
 
 const submitting = ref(false);
 const formError = ref<string | null>(null);
@@ -413,15 +424,19 @@ const handleSignup = async () => {
     const teamId = (typeof rawTeamId === 'number' && !Number.isNaN(rawTeamId)) ? rawTeamId : null;
     const shiftId = (typeof rawShiftId === 'number' && !Number.isNaN(rawShiftId)) ? rawShiftId : null;
 
+    const nameVal = form.value.name ? form.value.name.trim() : (authStore.user?.name || '');
+    const emailVal = form.value.email ? form.value.email.trim() : (authStore.user?.email || '');
+
     const payload = {
       opportunity_id: opportunity.value.id,
       team_id: teamId,
       shift_id: shiftId,
-      name: form.value.name ? form.value.name.trim() : '',
-      email: form.value.email ? form.value.email.trim() : '',
+      name: nameVal,
+      email: emailVal,
       phone: form.value.phone ? form.value.phone.trim() : null,
       experience: form.value.experience ? form.value.experience.trim() : null,
       notes: form.value.notes ? form.value.notes.trim() : null,
+      join_waitlist: true,
     };
 
     const res = await volunteeringService.submitSignup(payload);

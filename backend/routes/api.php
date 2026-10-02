@@ -1097,8 +1097,30 @@ Route::prefix('v1')->group(function () {
         Route::post('/signups', [\App\Volunteering\Http\Controllers\PublicVolunteerController::class, 'signup'])->name('api.volunteering.signups.store');
         Route::post('/signups/{uuid}/cancel', [\App\Volunteering\Http\Controllers\PublicVolunteerController::class, 'cancel'])->name('api.volunteering.signups.cancel');
 
+        Route::get('/skills', [\App\Volunteering\Http\Controllers\VolunteerProfileController::class, 'listActiveSkills'])->name('api.volunteering.skills.list');
+        Route::get('/interests', [\App\Volunteering\Http\Controllers\VolunteerProfileController::class, 'listActiveInterests'])->name('api.volunteering.interests.list');
+
         Route::middleware('auth:sanctum')->group(function () {
             Route::get('/my-history', [\App\Volunteering\Http\Controllers\PublicVolunteerController::class, 'myHistory'])->name('api.volunteering.my-history');
+
+            // VMS-7 Volunteer Profile & Recommendations
+            Route::get('/profile', [\App\Volunteering\Http\Controllers\VolunteerProfileController::class, 'getProfile'])->name('api.volunteering.profile.get');
+            Route::put('/profile', [\App\Volunteering\Http\Controllers\VolunteerProfileController::class, 'updateProfile'])->name('api.volunteering.profile.update');
+            Route::post('/profile/skills', [\App\Volunteering\Http\Controllers\VolunteerProfileController::class, 'attachSkill'])->name('api.volunteering.profile.skills.attach');
+            Route::delete('/profile/skills/{skillId}', [\App\Volunteering\Http\Controllers\VolunteerProfileController::class, 'detachSkill'])->name('api.volunteering.profile.skills.detach');
+            Route::post('/profile/interests', [\App\Volunteering\Http\Controllers\VolunteerProfileController::class, 'attachInterest'])->name('api.volunteering.profile.interests.attach');
+            Route::delete('/profile/interests/{interestId}', [\App\Volunteering\Http\Controllers\VolunteerProfileController::class, 'detachInterest'])->name('api.volunteering.profile.interests.detach');
+            Route::post('/profile/experiences', [\App\Volunteering\Http\Controllers\VolunteerProfileController::class, 'addExperience'])->name('api.volunteering.profile.experiences.add');
+            Route::delete('/profile/experiences/{experienceId}', [\App\Volunteering\Http\Controllers\VolunteerProfileController::class, 'deleteExperience'])->name('api.volunteering.profile.experiences.delete');
+
+            Route::get('/recommendations', [\App\Volunteering\Http\Controllers\VolunteerProfileController::class, 'getRecommendations'])->name('api.volunteering.recommendations');
+            Route::get('/invitations', [\App\Volunteering\Http\Controllers\VolunteerProfileController::class, 'getInvitations'])->name('api.volunteering.invitations.index');
+            Route::post('/invitations/{uuid}/accept', [\App\Volunteering\Http\Controllers\VolunteerProfileController::class, 'acceptInvitation'])->name('api.volunteering.invitations.accept');
+            Route::post('/invitations/{uuid}/decline', [\App\Volunteering\Http\Controllers\VolunteerProfileController::class, 'declineInvitation'])->name('api.volunteering.invitations.decline');
+
+            // VMS-8 Volunteer Recognition & Progression
+            Route::get('/recognition', [\App\Volunteering\Http\Controllers\VolunteerRecognitionController::class, 'index'])->name('api.volunteering.recognition.index');
+            Route::post('/recognition/evaluate', [\App\Volunteering\Http\Controllers\VolunteerRecognitionController::class, 'evaluate'])->name('api.volunteering.recognition.evaluate');
         });
     });
 
@@ -1111,9 +1133,41 @@ Route::prefix('v1')->group(function () {
         Route::put('/opportunities/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'update'])->name('api.admin.volunteering.opportunities.update');
         Route::delete('/opportunities/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'destroy'])->name('api.admin.volunteering.opportunities.destroy');
 
+        Route::get('/signups', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'indexSignups'])->name('api.admin.volunteering.signups.global');
         Route::get('/opportunities/{id}/signups', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'listSignups'])->name('api.admin.volunteering.signups.index');
         Route::put('/signups/{id}/status', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'updateSignupStatus'])->name('api.admin.volunteering.signups.update-status');
+        Route::put('/signups/{id}/attendance', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'updateAttendance'])->name('api.admin.volunteering.signups.update-attendance');
+        Route::post('/signups/batch-attendance', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'batchAttendance'])->name('api.admin.volunteering.signups.batch-attendance');
+        Route::post('/signups/{id}/promote', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'promoteWaitlist'])->name('api.admin.volunteering.signups.promote');
+        Route::get('/export', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'export'])->name('api.admin.volunteering.export');
         Route::get('/analytics', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'analytics'])->name('api.admin.volunteering.analytics');
+
+        // VMS-7 Admin Taxonomy, Matching & Profile Management
+        Route::get('/skills', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'listSkills'])->name('api.admin.volunteering.skills.index');
+        Route::post('/skills', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'storeSkill'])->name('api.admin.volunteering.skills.store');
+        Route::put('/skills/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'updateSkill'])->name('api.admin.volunteering.skills.update');
+        Route::delete('/skills/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'destroySkill'])->name('api.admin.volunteering.skills.destroy');
+
+        Route::get('/interests', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'listInterests'])->name('api.admin.volunteering.interests.index');
+        Route::post('/interests', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'storeInterest'])->name('api.admin.volunteering.interests.store');
+        Route::put('/interests/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'updateInterest'])->name('api.admin.volunteering.interests.update');
+        Route::delete('/interests/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'destroyInterest'])->name('api.admin.volunteering.interests.destroy');
+
+        Route::put('/opportunities/{id}/requirements', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'updateOpportunityRequirements'])->name('api.admin.volunteering.opportunities.requirements');
+        Route::get('/opportunities/{id}/matches', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'getOpportunityMatches'])->name('api.admin.volunteering.opportunities.matches');
+        Route::post('/opportunities/{id}/invite', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'inviteVolunteer'])->name('api.admin.volunteering.opportunities.invite');
+
+        Route::get('/profiles', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'listProfiles'])->name('api.admin.volunteering.profiles.index');
+        Route::get('/profiles/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'showProfile'])->name('api.admin.volunteering.profiles.show');
+
+        // VMS-8 Admin Recognition, Retention & Re-engagement
+        Route::get('/achievements', [\App\Volunteering\Http\Controllers\AdminVolunteerRecognitionController::class, 'listAchievements'])->name('api.admin.volunteering.achievements.index');
+        Route::post('/achievements', [\App\Volunteering\Http\Controllers\AdminVolunteerRecognitionController::class, 'storeAchievement'])->name('api.admin.volunteering.achievements.store');
+        Route::put('/achievements/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerRecognitionController::class, 'updateAchievement'])->name('api.admin.volunteering.achievements.update');
+        Route::post('/volunteers/{userId}/award', [\App\Volunteering\Http\Controllers\AdminVolunteerRecognitionController::class, 'awardVolunteer'])->name('api.admin.volunteering.volunteers.award');
+        Route::get('/retention', [\App\Volunteering\Http\Controllers\AdminVolunteerRecognitionController::class, 'retentionOverview'])->name('api.admin.volunteering.retention.overview');
+        Route::get('/reengagement', [\App\Volunteering\Http\Controllers\AdminVolunteerRecognitionController::class, 'reengagementCandidates'])->name('api.admin.volunteering.reengagement.candidates');
+        Route::post('/reengagement/outreach', [\App\Volunteering\Http\Controllers\AdminVolunteerRecognitionController::class, 'logOutreach'])->name('api.admin.volunteering.reengagement.outreach');
     });
 
 });

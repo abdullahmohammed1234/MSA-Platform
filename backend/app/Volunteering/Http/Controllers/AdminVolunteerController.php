@@ -200,9 +200,126 @@ class AdminVolunteerController extends Controller
         ]);
     }
 
-    public function analytics(): JsonResponse
+    public function indexSignups(Request $request): JsonResponse
     {
-        $analytics = $this->opportunityService->getAnalytics();
+        $filters = [
+            'opportunity_id' => $request->query('opportunity_id'),
+            'team_id' => $request->query('team_id'),
+            'shift_id' => $request->query('shift_id'),
+            'status' => $request->query('status'),
+            'attendance_status' => $request->query('attendance_status'),
+            'search' => $request->query('search'),
+            'sort_by' => $request->query('sort_by', 'created_at'),
+            'sort_order' => $request->query('sort_order', 'desc'),
+            'per_page' => (int) $request->query('per_page', 15),
+        ];
+
+        $signups = $this->signupService->listAllSignups($filters);
+
+        $items = collect($signups->items())->each(function ($signup) {
+            $signup->makeVisible(['admin_notes', 'processed_by']);
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $items,
+            'meta' => [
+                'current_page' => $signups->currentPage(),
+                'last_page' => $signups->lastPage(),
+                'per_page' => $signups->perPage(),
+                'total' => $signups->total(),
+            ],
+        ]);
+    }
+
+    public function updateAttendance(Request $request, int $signupId): JsonResponse
+    {
+        $signup = Signup::findOrFail($signupId);
+
+        $validated = $request->validate([
+            'attendance_status' => 'required|string|in:not_marked,present,absent,excused',
+            'admin_notes' => 'nullable|string',
+        ]);
+
+        $updated = $this->signupService->updateAttendance(
+            $signup,
+            $validated['attendance_status'],
+            $validated['admin_notes'] ?? null,
+            $request->user()->id
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Volunteer attendance status updated.',
+            'data' => $updated,
+        ]);
+    }
+
+    public function batchAttendance(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'signup_ids' => 'required|array|min:1',
+            'signup_ids.*' => 'required|integer|exists:volunteering_signups,id',
+            'attendance_status' => 'required|string|in:not_marked,present,absent,excused',
+            'admin_notes' => 'nullable|string',
+        ]);
+
+        $count = $this->signupService->batchAttendance(
+            $validated['signup_ids'],
+            $validated['attendance_status'],
+            $validated['admin_notes'] ?? null,
+            $request->user()->id
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => "Updated attendance for {$count} volunteer(s).",
+            'count' => $count,
+        ]);
+    }
+
+    public function promoteWaitlist(Request $request, int $signupId): JsonResponse
+    {
+        $signup = Signup::findOrFail($signupId);
+
+        $promoted = $this->signupService->promoteWaitlistedSignup($signup, $request->user()->id);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Waitlisted volunteer promoted successfully.',
+            'data' => $promoted,
+        ]);
+    }
+
+    public function export(Request $request)
+    {
+        $filters = [
+            'opportunity_id' => $request->query('opportunity_id'),
+            'team_id' => $request->query('team_id'),
+            'shift_id' => $request->query('shift_id'),
+            'status' => $request->query('status'),
+            'attendance_status' => $request->query('attendance_status'),
+            'search' => $request->query('search'),
+        ];
+
+        $csv = $this->signupService->exportSignupsCsv($filters);
+        $filename = 'volunteer-signups-' . date('Y-m-d') . '.csv';
+
+        return response($csv, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ]);
+    }
+
+    public function analytics(Request $request): JsonResponse
+    {
+        $period = (string) $request->query('period', '30d');
+        $startDate = $request->query('start_date');
+        $endDate = $request->query('end_date');
+        $opportunityId = $request->query('opportunity_id') ? (int) $request->query('opportunity_id') : null;
+
+        $intelligenceService = app(\App\Services\Intelligence\VolunteerIntelligenceService::class);
+        $analytics = $intelligenceService->getAnalytics($period, $startDate, $endDate, $opportunityId);
 
         return response()->json([
             'success' => true,

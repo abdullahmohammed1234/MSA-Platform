@@ -248,5 +248,29 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(ApplicationAccess::class);
     }
+
+    /**
+     * Get the volunteer profile for the user.
+     */
+    public function volunteerProfile()
+    {
+        return $this->hasOne(\App\Volunteering\Models\VolunteerProfile::class, 'user_id');
+    }
+
+    /**
+     * Get the volunteer invitations for the user.
+     */
+    public function volunteerInvitations()
+    {
+        return $this->hasMany(\App\Volunteering\Models\VolunteerInvitation::class, 'user_id');
+    }
+
+    /**
+     * Get the volunteering signups for the user.
+     */
+    public function volunteeringSignups()
+    {
+        return $this->hasMany(\App\Volunteering\Models\Signup::class, 'user_id');
+    }
 }
 

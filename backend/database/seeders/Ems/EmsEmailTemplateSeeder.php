@@ -17,7 +17,7 @@ class EmsEmailTemplateSeeder extends Seeder
             'ticket_download_link', 'event_details_link', 'order_number',
             'amount_paid', 'currency', 'payment_reference', 'square_transaction_reference',
             'refund_amount', 'change_summary', 'feedback_link', 'organizer_name',
-            'cancellation_reason',
+            'cancellation_reason', 'volunteer_signup_link', 'volunteer_link',
         ];
 
         foreach ($this->templates() as $row) {
@@ -43,8 +43,8 @@ class EmsEmailTemplateSeeder extends Seeder
                 'name' => 'Registration Confirmation',
                 'category' => 'registration',
                 'subject' => 'Registration confirmed — {{ event_name }}',
-                'body_html' => '<p>Assalamu alaikum {{ attendee_name }},</p><p>Your registration <strong>{{ registration_number }}</strong> for <strong>{{ event_name }}</strong> is confirmed.</p><p>Date: {{ event_date }}<br>Time: {{ event_time }}<br>Location: {{ event_location }}<br>Ticket type: {{ ticket_type }}<br>Tickets: {{ ticket_count }}</p><p><a href="{{ event_details_link }}">Event details</a></p>{{ ticket_list_html }}',
-                'body_text' => "Assalamu alaikum {{ attendee_name }},\n\nYour registration {{ registration_number }} for {{ event_name }} is confirmed.\nDate: {{ event_date }}\nTime: {{ event_time }}\nLocation: {{ event_location }}\nTicket type: {{ ticket_type }}\nTickets ({{ ticket_count }}):\n{{ ticket_list_text }}",
+                'body_html' => '<p>Assalamu alaikum {{ attendee_name }},</p><p>Your registration <strong>{{ registration_number }}</strong> for <strong>{{ event_name }}</strong> is confirmed.</p><p>Date: {{ event_date }}<br>Time: {{ event_time }}<br>Location: {{ event_location }}<br>Ticket type: {{ ticket_type }}<br>Tickets: {{ ticket_count }}</p><p><a href="{{ event_details_link }}">Event details</a></p>{{ ticket_list_html }}<div style="margin-top:24px;padding:16px;background:#f9f8f3;border-radius:8px;border:1px solid #e8e2d6;"><h4 style="margin:0 0 8px;color:#640c0e;">Want to Volunteer with us?</h4><p style="margin:0 0 12px;font-size:14px;color:#555;">Help us make this event a success by joining our volunteer team!</p><a href="{{ volunteer_signup_link }}" style="display:inline-block;padding:8px 16px;background:#640c0e;color:#ffffff;text-decoration:none;border-radius:6px;font-size:13px;font-weight:600;">Sign Up to Volunteer</a></div>',
+                'body_text' => "Assalamu alaikum {{ attendee_name }},\n\nYour registration {{ registration_number }} for {{ event_name }} is confirmed.\nDate: {{ event_date }}\nTime: {{ event_time }}\nLocation: {{ event_location }}\nTicket type: {{ ticket_type }}\nTickets ({{ ticket_count }}):\n{{ ticket_list_text }}\n\nWant to volunteer? {{ volunteer_signup_link }}",
             ],
             [
                 'key' => NotificationType::TicketEmail->value,
@@ -91,8 +91,8 @@ class EmsEmailTemplateSeeder extends Seeder
                 'name' => 'Event Reminder',
                 'category' => 'reminder',
                 'subject' => 'Reminder: {{ event_name }}',
-                'body_html' => '<p>Assalamu alaikum {{ attendee_name }},</p><p>This is a reminder that <strong>{{ event_name }}</strong> is coming up.</p><p>Date: {{ event_date }}<br>Time: {{ event_time }}<br>Location: {{ event_location }}</p><p><a href="{{ ticket_download_link }}">Your ticket</a></p>',
-                'body_text' => "Reminder: {{ event_name }} on {{ event_date }} at {{ event_time }}. Location: {{ event_location }}.",
+                'body_html' => '<p>Assalamu alaikum {{ attendee_name }},</p><p>This is a reminder that <strong>{{ event_name }}</strong> is coming up.</p><p>Date: {{ event_date }}<br>Time: {{ event_time }}<br>Location: {{ event_location }}</p><p><a href="{{ ticket_download_link }}">Your ticket</a></p><div style="margin-top:24px;padding:16px;background:#f9f8f3;border-radius:8px;border:1px solid #e8e2d6;"><h4 style="margin:0 0 8px;color:#640c0e;">Want to Volunteer with us?</h4><p style="margin:0 0 12px;font-size:14px;color:#555;">Help us make {{ event_name }} a success by joining our volunteer team!</p><a href="{{ volunteer_signup_link }}" style="display:inline-block;padding:8px 16px;background:#640c0e;color:#ffffff;text-decoration:none;border-radius:6px;font-size:13px;font-weight:600;">Sign Up to Volunteer</a></div>',
+                'body_text' => "Reminder: {{ event_name }} on {{ event_date }} at {{ event_time }}. Location: {{ event_location }}.\nWant to volunteer? {{ volunteer_signup_link }}",
             ],
             [
                 'key' => NotificationType::EventUpdated->value,

@@ -201,6 +201,12 @@ const publicRoutes: Array<RouteRecordRaw> = [
         meta: { title: 'My Volunteer Activity | SFU MSA', desc: 'Track your volunteer positions and service record.', requiresAuth: true }
       },
       {
+        path: 'volunteer/profile',
+        name: 'public-volunteer-profile',
+        component: () => import('@/pages/volunteer/VolunteerProfilePage.vue'),
+        meta: { title: 'My Volunteer Profile & Skills | SFU MSA', desc: 'Manage your volunteer skills, interests, and preferences.', requiresAuth: true }
+      },
+      {
         path: 'volunteer/:slug',
         name: 'public-volunteer-detail',
         component: () => import('@/pages/volunteer/VolunteerOpportunityDetailPage.vue'),

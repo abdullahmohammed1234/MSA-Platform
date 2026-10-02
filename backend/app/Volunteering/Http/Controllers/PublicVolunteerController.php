@@ -49,6 +49,14 @@ class PublicVolunteerController extends Controller
 
     public function signup(Request $request): JsonResponse
     {
+        $user = $request->user();
+        if ($user) {
+            $request->merge([
+                'name' => filled($request->input('name')) ? $request->input('name') : $user->name,
+                'email' => filled($request->input('email')) ? $request->input('email') : $user->email,
+            ]);
+        }
+
         $validated = $request->validate([
             'opportunity_id' => 'required|exists:volunteering_opportunities,id',
             'team_id' => 'nullable|exists:volunteering_teams,id',
@@ -58,6 +66,7 @@ class PublicVolunteerController extends Controller
             'phone' => 'nullable|string|max:32',
             'experience' => 'nullable|string',
             'notes' => 'nullable|string',
+            'join_waitlist' => 'nullable|boolean',
         ]);
 
         $userId = $request->user()?->id;
@@ -74,14 +83,45 @@ class PublicVolunteerController extends Controller
     {
         $signup = Signup::where('uuid', $uuid)->firstOrFail();
 
-        if ($request->user() && $signup->user_id && $signup->user_id !== $request->user()->id) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized action.',
-            ], 403);
+        $currentUser = $request->user();
+
+        // 1. If signup belongs to a registered user account
+        if ($signup->user_id !== null) {
+            $isOwner = $currentUser && (int) $currentUser->id === (int) $signup->user_id;
+            $isAdmin = $currentUser && (
+                $currentUser->hasRole('admin') ||
+                $currentUser->hasRole('super-admin') ||
+                $currentUser->hasPermissionTo('manage_volunteers')
+            );
+
+            if (!$isOwner && !$isAdmin) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized action.',
+                ], 403);
+            }
+        } else {
+            // 2. Guest signup: require authenticated match or matching email parameter
+            $inputEmail = strtolower(trim((string) $request->input('email')));
+            $userEmail = $currentUser ? strtolower(trim($currentUser->email)) : null;
+
+            $isGuestOwner = ($userEmail && $userEmail === strtolower(trim($signup->email)))
+                || ($inputEmail !== '' && $inputEmail === strtolower(trim($signup->email)));
+            $isAdmin = $currentUser && (
+                $currentUser->hasRole('admin') ||
+                $currentUser->hasRole('super-admin') ||
+                $currentUser->hasPermissionTo('manage_volunteers')
+            );
+
+            if (!$isGuestOwner && !$isAdmin) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized action. Please provide the email address used during signup.',
+                ], 403);
+            }
         }
 
-        $cancelledSignup = $this->signupService->cancelSignup($signup, $request->user()?->id);
+        $cancelledSignup = $this->signupService->cancelSignup($signup, $currentUser?->id);
 
         return response()->json([
             'success' => true,

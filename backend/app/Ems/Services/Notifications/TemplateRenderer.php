@@ -76,8 +76,23 @@ class TemplateRenderer
 
         $signup = ($extra['signup'] ?? null) instanceof \App\Volunteering\Models\Signup ? $extra['signup'] : null;
         $opportunity = ($extra['opportunity'] ?? null) instanceof \App\Volunteering\Models\Opportunity ? $extra['opportunity'] : $signup?->opportunity;
+        if ($opportunity === null && $event !== null) {
+            $opportunity = \App\Volunteering\Models\Opportunity::query()
+                ->where('event_id', $event->id)
+                ->where('status', 'open')
+                ->first()
+                ?? \App\Volunteering\Models\Opportunity::query()
+                    ->where('event_id', $event->id)
+                    ->first();
+        }
+
         $shift = ($extra['shift'] ?? null) instanceof \App\Volunteering\Models\Shift ? $extra['shift'] : $signup?->shift;
         $team = ($extra['team'] ?? null) instanceof \App\Volunteering\Models\Team ? $extra['team'] : $signup?->team;
+
+        $frontendUrl = rtrim((string) config('ems.public.frontend_url'), '/');
+        $volunteerSignupLink = $opportunity?->slug
+            ? $frontendUrl . '/volunteer/' . $opportunity->slug
+            : $frontendUrl . '/volunteer';
 
         $tz = (string) ($event?->timezone ?? $opportunity?->event?->timezone ?? config('ems.defaults.timezone', 'America/Vancouver'));
 
@@ -131,6 +146,8 @@ class TemplateRenderer
             'ticket_list_text' => $this->ticketListText($tickets),
             'event_details_link' => $event ? $this->eventPublicUrl($event) : '',
             'feedback_link' => $event ? $this->feedbackUrl($event) : '',
+            'volunteer_signup_link' => $volunteerSignupLink,
+            'volunteer_link' => $volunteerSignupLink,
             'order_number' => (string) ($order?->reference ?? ''),
             'payment_status' => (string) ($payment?->status?->value ?? ''),
             'amount_paid' => $payment ? number_format((float) $payment->amount, 2) : '',
@@ -339,6 +356,15 @@ class TemplateRenderer
                 'body_html' => '<p>A volunteer has cancelled their signup for <strong>{{ opportunity_title }}</strong>.</p>'
                     . '<p>Volunteer: {{ volunteer_name }} ({{ volunteer_email }})<br>'
                     . 'Shift: {{ shift_name }}</p>',
+            ];
+        }
+
+        if ($key === NotificationType::VmsPostEventFollowup->value) {
+            return [
+                'subject' => 'Thank you for volunteering — {{ opportunity_title }}',
+                'body_html' => '<p>Assalamu alaikum {{ volunteer_name }},</p>'
+                    . '<p>Jazakum Allahu Khairan for volunteering for <strong>{{ opportunity_title }}</strong>!</p>'
+                    . '<p>Your time and effort are greatly appreciated by the SFU MSA community. May Allah reward you for your contribution.</p>',
             ];
         }
 

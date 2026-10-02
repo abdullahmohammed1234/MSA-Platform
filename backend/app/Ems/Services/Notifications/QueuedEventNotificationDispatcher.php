@@ -367,7 +367,8 @@ class QueuedEventNotificationDispatcher implements EventNotificationDispatcher
     private function triggerImmediateSend(EventNotification $notification): void
     {
         try {
-            $this->queueIfDue($notification);
+            $notification->markQueued();
+            SendEventNotificationJob::dispatchSync($notification->id);
         } catch (\Throwable $e) {
             Log::channel((string) config('ems.logging.channel', 'ems'))
                 ->warning('ems.notifications.immediate_send_exception', [

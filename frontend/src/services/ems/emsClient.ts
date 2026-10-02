@@ -102,6 +102,8 @@ export function toEmsApiError(error: unknown): EmsApiError {
 
 function defaultMessageFor(status: number | null): string {
   switch (status) {
+    case 204:
+      return 'No content.';
     case 401:
       return 'Your session has expired. Please sign in again.';
     case 403:
@@ -131,12 +133,17 @@ async function request<T>(config: AxiosRequestConfig): Promise<EmsSuccessEnvelop
       return { success: true, message: 'Download successful', data: response.data as any, meta: {} };
     }
 
+    // Handle 204 No Content / 205 Reset Content responses smoothly without throwing body error
+    if (response.status === 204 || response.status === 205) {
+      return { success: true, message: 'No content', data: null as any, meta: {} };
+    }
+
     const body = response.data;
 
     // A 2xx that is not a success envelope means the request was intercepted
     // by something other than the EMS API — treat it as a failure rather than
     // handing malformed data to a view.
-    if (!body || body.success !== true) {
+    if (!body || (typeof body === 'object' && body.success !== true)) {
       throw new EmsApiError(
         (body as unknown as { message?: string })?.message || 'The API returned an unexpected response.',
         response.status
