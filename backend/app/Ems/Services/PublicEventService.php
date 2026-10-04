@@ -53,7 +53,12 @@ class PublicEventService
         $event = Event::query()
             ->publiclyDiscoverable()
             ->where('slug', $slug)
-            ->with(['category', 'organizer', 'ticketTypes' => fn ($q) => $q->publiclyAvailable()])
+            ->with([
+                'category',
+                'organizer',
+                'ticketTypes' => fn ($q) => $q->publiclyAvailable(),
+                'documents' => fn ($q) => $q->where('is_active', true)->whereNull('deleted_at')->orderBy('sort_order', 'asc'),
+            ])
             ->withSum(['registrations as occupied_seats' => fn (Builder $q) => $q->occupyingCapacity()], 'quantity')
             ->first();
 

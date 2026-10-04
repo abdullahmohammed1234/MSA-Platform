@@ -23,6 +23,8 @@ use App\Ems\Http\Controllers\V1\PromoCodeController;
 use App\Ems\Http\Controllers\V1\FeedbackController;
 use App\Ems\Http\Controllers\V1\EventVolunteerController;
 use App\Ems\Http\Controllers\V1\CalendarController;
+use App\Ems\Http\Controllers\V1\EventDocumentController;
+use App\Ems\Http\Controllers\V1\Public\PublicDocumentAccessController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -99,6 +101,9 @@ Route::prefix('public')
             ->name('tickets.show');
         Route::get('/tickets/{code}/qr', [PublicEventController::class, 'ticketQr'])
             ->name('tickets.qr');
+
+        Route::get('/documents/{documentUuid}/{token}', [PublicDocumentAccessController::class, 'access'])
+            ->name('documents.access');
     });
 
 // --- Authenticated operations (Phase 1 / 3) -----------------------------
@@ -168,6 +173,23 @@ Route::middleware(['auth:sanctum', 'throttle:' . config('ems.route.throttle', 'e
             ->name('events.tickets.import-square');
         Route::get('/events/{event}/payment-summary', [TicketTypeController::class, 'paymentSummary'])
             ->name('events.payment-summary');
+
+        // --- Event Documents --------------------------------------------
+        Route::get('/events/{event}/documents', [EventDocumentController::class, 'index'])
+            ->name('events.documents.index');
+        Route::post('/events/{event}/documents', [EventDocumentController::class, 'store'])
+            ->name('events.documents.store');
+        Route::get('/events/{event}/documents/{document}/qr', [EventDocumentController::class, 'showQr'])
+            ->name('events.documents.qr');
+        Route::patch('/events/{event}/documents/{document}', [EventDocumentController::class, 'update'])
+            ->name('events.documents.update');
+        Route::put('/events/{event}/documents/{document}', [EventDocumentController::class, 'update']);
+        Route::post('/events/{event}/documents/{document}/replace', [EventDocumentController::class, 'replace'])
+            ->name('events.documents.replace');
+        Route::post('/events/{event}/documents/{document}/rotate-access', [EventDocumentController::class, 'rotateAccess'])
+            ->name('events.documents.rotate-access');
+        Route::delete('/events/{event}/documents/{document}', [EventDocumentController::class, 'destroy'])
+            ->name('events.documents.destroy');
 
         // --- Phase 4: Operations, attendees, import, check-in --------------
         Route::get('/events/{event}/operations', [EventOperationsController::class, 'operations'])

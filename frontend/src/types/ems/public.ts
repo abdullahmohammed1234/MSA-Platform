@@ -47,6 +47,17 @@ export interface PublicEvent {
   registration_label: string;
 }
 
+export interface PublicEventDocument {
+  uuid: string;
+  name: string;
+  document_type: 'itinerary' | 'menu' | 'schedule' | 'map' | 'program' | 'information' | 'other';
+  description: string | null;
+  original_filename: string;
+  mime_type: string;
+  file_size: number;
+  sort_order: number;
+}
+
 export interface PublicEventDetail extends PublicEvent {
   description: string | null;
   organizer: { name: string } | null;
@@ -58,6 +69,7 @@ export interface PublicEventDetail extends PublicEvent {
   max_registrations_per_attendee?: number | null;
   payments_enabled?: boolean;
   ticket_types?: import('@/types/ems/ticketing').PublicTicketType[];
+  documents?: PublicEventDocument[];
 }
 
 export interface PublicCalendarEvent {

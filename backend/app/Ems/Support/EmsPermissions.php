@@ -91,6 +91,10 @@ final class EmsPermissions
 
     public const PAYMENTS_REFUND = 'payments.refund';
 
+    // Event Documents
+    public const DOCUMENTS_VIEW = 'event_documents.view';
+    public const DOCUMENTS_MANAGE = 'event_documents.manage';
+
     // Volunteering Registrars
     public const VOLUNTEERS_VIEW = 'volunteer.registrations.view';
     public const VOLUNTEERS_UPDATE = 'volunteer.registrations.update';
@@ -442,6 +446,19 @@ final class EmsPermissions
                 'name' => 'EMS: Delete Volunteer Registrations',
                 'group' => 'Volunteering Registrars',
                 'description' => 'Archive or soft delete volunteer submissions.',
+            ],
+            // --- Event Documents --------------------------------------------
+            [
+                'slug' => self::DOCUMENTS_VIEW,
+                'name' => 'EMS: View Event Documents',
+                'group' => 'Event Documents',
+                'description' => 'View event documents and QR codes.',
+            ],
+            [
+                'slug' => self::DOCUMENTS_MANAGE,
+                'name' => 'EMS: Manage Event Documents',
+                'group' => 'Event Documents',
+                'description' => 'Upload, replace, edit, and delete supplementary event documents.',
             ],
         ];
     }

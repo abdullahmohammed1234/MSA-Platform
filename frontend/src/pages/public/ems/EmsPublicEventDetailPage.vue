@@ -30,6 +30,13 @@ const { formatDateRange, formatTimeRange, categorySolidStyle } = useEventFormatt
 
 const slug = computed(() => String(route.params.slug || ''));
 const event = ref<PublicEventDetail | null>(null);
+
+function formatFileSize(bytes: number): string {
+  if (!bytes) return '0 B';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 const loading = ref(true);
 const error = ref('');
 const submitting = ref(false);
@@ -616,6 +623,40 @@ const previewSubtotal = computed(() =>
             <h2 class="font-display text-2xl font-bold mb-4">About this event</h2>
             <div class="prose prose-sm max-w-none text-neutral-black/75 whitespace-pre-wrap leading-relaxed">
               {{ event.description }}
+            </div>
+          </div>
+
+          <!-- Event Documents Section -->
+          <div v-if="event.documents && event.documents.length > 0" class="rounded-[1.75rem] border border-neutral-ivory bg-white p-6 sm:p-8 shadow-sm space-y-4">
+            <div class="flex items-center justify-between">
+              <h2 class="font-display text-2xl font-bold">Event Documents</h2>
+              <span class="text-xs font-semibold px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100">
+                {{ event.documents.length }} {{ event.documents.length === 1 ? 'Document' : 'Documents' }}
+              </span>
+            </div>
+            <p class="text-sm text-neutral-black/60">
+              Supplementary guides and resources for this event. Tap to view or download details.
+            </p>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <div
+                v-for="doc in event.documents"
+                :key="doc.uuid"
+                class="rounded-xl border border-neutral-200 bg-neutral-50/50 p-4 hover:border-emerald-500/40 hover:bg-emerald-50/20 transition flex flex-col justify-between"
+              >
+                <div class="space-y-1">
+                  <div class="flex items-center gap-2">
+                    <span class="text-xl">📄</span>
+                    <h3 class="font-bold text-sm text-neutral-900">{{ doc.name }}</h3>
+                  </div>
+                  <p v-if="doc.description" class="text-xs text-neutral-600 line-clamp-2">
+                    {{ doc.description }}
+                  </p>
+                  <p class="text-[11px] font-mono text-neutral-400">
+                    {{ doc.original_filename }} ({{ formatFileSize(doc.file_size) }})
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

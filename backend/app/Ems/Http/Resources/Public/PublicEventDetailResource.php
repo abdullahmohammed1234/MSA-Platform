@@ -36,6 +36,9 @@ class PublicEventDetailResource extends PublicEventResource
             'ticket_types' => PublicTicketTypeResource::collection(
                 $this->whenLoaded('ticketTypes')
             ),
+            'documents' => PublicEventDocumentResource::collection(
+                $this->whenLoaded('documents')
+            ),
         ]);
     }
 }

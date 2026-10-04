@@ -346,4 +346,45 @@ export interface EventTemplatePayload {
   is_default?: boolean;
 }
 
+export type EventDocumentType =
+  | 'itinerary'
+  | 'menu'
+  | 'schedule'
+  | 'map'
+  | 'program'
+  | 'information'
+  | 'other';
+
+export interface EventDocument {
+  id: number;
+  uuid: string;
+  event_id: number;
+  event_uuid?: string;
+  name: string;
+  document_type: EventDocumentType;
+  description: string | null;
+  original_filename: string;
+  mime_type: string;
+  file_size: number;
+  is_active: boolean;
+  sort_order: number;
+  uploaded_by?: number | null;
+  uploader_name?: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface QrCodeResponse {
+  document: EventDocument;
+  qr_url: string;
+  qr_data_uri: string;
+  raw_token: string;
+}
+
+export interface UploadDocumentResponse {
+  document: EventDocument;
+  raw_token: string;
+  qr_url: string;
+}
+
 export * from './ticketing';

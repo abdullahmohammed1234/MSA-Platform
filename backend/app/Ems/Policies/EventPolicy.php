@@ -53,6 +53,22 @@ class EventPolicy
             && $this->inScope($user, $event);
     }
 
+    public function viewDocuments(User $user, Event $event): bool
+    {
+        return (
+            $user->hasPermission(EmsPermissions::DOCUMENTS_VIEW)
+            || $user->hasPermission(EmsPermissions::EVENTS_VIEW)
+        ) && $this->inScope($user, $event);
+    }
+
+    public function manageDocuments(User $user, Event $event): bool
+    {
+        return (
+            $user->hasPermission(EmsPermissions::DOCUMENTS_MANAGE)
+            || $user->hasPermission(EmsPermissions::EVENTS_UPDATE)
+        ) && $this->inScope($user, $event);
+    }
+
     public function viewAttendees(User $user, Event $event): bool
     {
         return $user->hasPermission(EmsPermissions::REGISTRATIONS_VIEW)

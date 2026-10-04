@@ -11,6 +11,7 @@ import {
   EventLifecyclePanel,
 } from '@/components/ems';
 import TicketManagementPanel from '@/components/ems/TicketManagementPanel.vue';
+import EventDocumentsPanel from '@/components/ems/EventDocumentsPanel.vue';
 import ManualRegistrationModal from '@/components/ems/ManualRegistrationModal.vue';
 import { useEmsEventsStore } from '@/stores/ems/emsEvents';
 import { useEmsPermissions } from '@/composables/ems/useEmsPermissions';
@@ -302,6 +303,10 @@ const confirmDelete = async () => {
 
       <div class="mt-6">
         <TicketManagementPanel :event-uuid="uuid" />
+      </div>
+
+      <div class="mt-6">
+        <EventDocumentsPanel :event-uuid="uuid" :can-manage="canUpdateEvents" />
       </div>
 
       <EmsConfirmDialog

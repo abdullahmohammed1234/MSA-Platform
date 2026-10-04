@@ -203,6 +203,14 @@ class Event extends Model
     }
 
     /**
+     * @return HasMany<EventDocument, $this>
+     */
+    public function documents(): HasMany
+    {
+        return $this->hasMany(EventDocument::class, 'event_id')->orderBy('sort_order', 'asc')->orderBy('created_at', 'asc');
+    }
+
+    /**
      * @return HasMany<TicketType, $this>
      */
     public function ticketTypes(): HasMany
