@@ -11,6 +11,22 @@ class UpdateEventDocumentRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('sort_order')) {
+            $val = $this->input('sort_order');
+            if ($val === '' || $val === null || !is_numeric($val)) {
+                $this->merge(['sort_order' => 0]);
+            } else {
+                $this->merge(['sort_order' => (int) $val]);
+            }
+        }
+
+        if ($this->has('description') && trim((string) $this->input('description')) === '') {
+            $this->merge(['description' => null]);
+        }
+    }
+
     /**
      * @return array<string, mixed>
      */

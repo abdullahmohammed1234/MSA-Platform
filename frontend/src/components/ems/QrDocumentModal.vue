@@ -99,18 +99,18 @@ async function copyUrl() {
     size="md"
     @close="$emit('close')"
   >
-    <div v-if="isLoading" class="py-12 text-center text-neutral-400">
-      <div class="inline-block animate-spin w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full mb-2"></div>
-      <p class="text-sm">Generating high-resolution QR code...</p>
+    <div v-if="isLoading" class="py-12 text-center text-neutral-muted">
+      <div class="inline-block animate-spin w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full mb-2"></div>
+      <p class="text-sm font-medium">Generating high-resolution QR code...</p>
     </div>
 
-    <div v-else-if="errorMessage" class="p-4 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-sm">
+    <div v-else-if="errorMessage" class="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm font-medium">
       {{ errorMessage }}
     </div>
 
     <div v-else-if="qrData" class="flex flex-col items-center gap-4 py-2">
       <!-- High-res QR Display -->
-      <div class="p-4 bg-white rounded-2xl shadow-xl border border-neutral-200">
+      <div class="p-4 bg-white rounded-2xl shadow-sm border border-neutral-200">
         <img
           :src="qrData.qr_data_uri"
           :alt="`QR code for ${document?.name}`"
@@ -119,25 +119,25 @@ async function copyUrl() {
       </div>
 
       <div class="text-center space-y-1">
-        <h4 class="text-base font-semibold text-white">{{ document?.name }}</h4>
-        <p class="text-xs text-neutral-400">Scan to view document inline on any mobile device</p>
+        <h4 class="text-base font-bold text-neutral-black">{{ document?.name }}</h4>
+        <p class="text-xs text-neutral-muted">Scan to view document inline on any mobile device</p>
       </div>
 
       <!-- Access URL snippet -->
-      <div class="w-full bg-neutral-900 border border-neutral-800 rounded-xl p-3 flex items-center justify-between gap-2">
-        <span class="text-xs font-mono text-neutral-300 truncate select-all">
+      <div class="w-full bg-neutral-50 border border-neutral-ivory rounded-xl p-3 flex items-center justify-between gap-2">
+        <span class="text-xs font-mono text-neutral-black truncate select-all">
           {{ qrData.qr_url }}
         </span>
         <button
           type="button"
           @click="copyUrl"
-          class="px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs rounded-md transition-colors font-medium shrink-0"
+          class="px-2.5 py-1 bg-white hover:bg-neutral-100 border border-neutral-ivory text-neutral-black text-xs rounded-md transition-colors font-medium shrink-0"
         >
           {{ copied ? 'Copied!' : 'Copy Link' }}
         </button>
       </div>
 
-      <div class="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-xs text-amber-300/90 leading-relaxed text-left">
+      <div class="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 leading-relaxed text-left">
         <strong>Security Notice:</strong> This QR URL contains an access token bearer credential. Anyone with this QR code can view the attached PDF. Rotate access token if printed material or link is leaked.
       </div>
     </div>
@@ -149,7 +149,7 @@ async function copyUrl() {
           size="sm"
           :is-loading="isRotating"
           @click="handleRotate"
-          class="text-amber-400 border-amber-500/30 hover:bg-amber-500/10"
+          class="text-amber-800 border-amber-300 hover:bg-amber-50"
         >
           Regenerate QR / Rotate Token
         </Button>

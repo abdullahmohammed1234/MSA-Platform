@@ -30,13 +30,13 @@ const docToDelete = ref<EventDocument | null>(null);
 const isDeleting = ref(false);
 
 const typeBadges: Record<string, { label: string; class: string }> = {
-  itinerary: { label: 'Itinerary', class: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
-  menu: { label: 'Menu', class: 'bg-purple-500/10 text-purple-400 border-purple-500/20' },
-  schedule: { label: 'Schedule', class: 'bg-blue-500/10 text-blue-400 border-blue-500/20' },
-  map: { label: 'Map', class: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
-  program: { label: 'Program', class: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' },
-  information: { label: 'Info', class: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20' },
-  other: { label: 'Other', class: 'bg-neutral-500/10 text-neutral-400 border-neutral-500/20' },
+  itinerary: { label: 'Itinerary', class: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  menu: { label: 'Menu', class: 'bg-purple-50 text-purple-700 border-purple-200' },
+  schedule: { label: 'Schedule', class: 'bg-blue-50 text-blue-700 border-blue-200' },
+  map: { label: 'Map', class: 'bg-amber-50 text-amber-800 border-amber-200' },
+  program: { label: 'Program', class: 'bg-cyan-50 text-cyan-800 border-cyan-200' },
+  information: { label: 'Info', class: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  other: { label: 'Other', class: 'bg-neutral-100 text-neutral-700 border-neutral-200' },
 };
 
 async function loadDocuments() {
@@ -139,16 +139,16 @@ function formatFileSize(bytes: number): string {
     <!-- Section Header -->
     <div class="flex items-center justify-between">
       <div>
-        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+        <h3 class="text-lg font-bold text-neutral-black flex items-center gap-2">
           <span>📄 Event Documents</span>
           <span
             v-if="documents.length > 0"
-            class="px-2 py-0.5 text-xs font-semibold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+            class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200"
           >
             {{ documents.length }}
           </span>
         </h3>
-        <p class="text-xs text-neutral-400">
+        <p class="text-xs text-neutral-muted">
           Supplementary PDF documents (itineraries, menus, venue maps, schedules). Stored privately with secure QR access.
         </p>
       </div>
@@ -159,26 +159,26 @@ function formatFileSize(bytes: number): string {
     </div>
 
     <!-- Error State -->
-    <div v-if="errorMessage" class="p-4 bg-red-500/10 border border-red-500/20 text-red-400 rounded-xl text-sm">
+    <div v-if="errorMessage" class="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl text-sm font-medium">
       {{ errorMessage }}
     </div>
 
     <!-- Loading State -->
-    <div v-if="isLoading" class="py-12 text-center text-neutral-400">
-      <div class="inline-block animate-spin w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full mb-2"></div>
-      <p class="text-sm">Loading event documents...</p>
+    <div v-if="isLoading" class="py-12 text-center text-neutral-muted">
+      <div class="inline-block animate-spin w-8 h-8 border-2 border-emerald-600 border-t-transparent rounded-full mb-2"></div>
+      <p class="text-sm font-medium">Loading event documents...</p>
     </div>
 
     <!-- Empty State -->
     <div
       v-else-if="documents.length === 0"
-      class="py-12 text-center border-2 border-dashed border-neutral-800 rounded-2xl bg-neutral-950/40 p-6"
+      class="py-12 text-center border-2 border-dashed border-neutral-ivory rounded-2xl bg-neutral-50/50 p-6"
     >
-      <div class="w-12 h-12 rounded-full bg-neutral-900 border border-neutral-800 text-2xl flex items-center justify-center mx-auto mb-3">
+      <div class="w-12 h-12 rounded-full bg-white border border-neutral-ivory text-2xl flex items-center justify-center mx-auto mb-3 shadow-xs">
         📄
       </div>
-      <h4 class="text-sm font-semibold text-neutral-300">No Event Documents Attached</h4>
-      <p class="text-xs text-neutral-400 mt-1 max-w-sm mx-auto">
+      <h4 class="text-sm font-bold text-neutral-black">No Event Documents Attached</h4>
+      <p class="text-xs text-neutral-muted mt-1 max-w-sm mx-auto">
         Upload supplementary PDF itineraries, menus, venue maps, or schedule guides for attendees.
       </p>
 
@@ -192,22 +192,22 @@ function formatFileSize(bytes: number): string {
       <div
         v-for="doc in documents"
         :key="doc.uuid"
-        class="bg-neutral-900/80 border border-neutral-800 hover:border-neutral-700 rounded-xl p-4 transition-all flex flex-col justify-between"
+        class="bg-white border border-neutral-ivory hover:border-neutral-300 rounded-xl p-4 transition-all shadow-xs flex flex-col justify-between"
       >
         <div class="space-y-2">
           <!-- Top Row: Name + Type Badge -->
           <div class="flex items-start justify-between gap-2">
             <div class="space-y-0.5">
-              <h4 class="text-sm font-bold text-white flex items-center gap-2">
+              <h4 class="text-sm font-bold text-neutral-black flex items-center gap-2">
                 {{ doc.name }}
               </h4>
-              <p v-if="doc.description" class="text-xs text-neutral-400 line-clamp-2">
+              <p v-if="doc.description" class="text-xs text-neutral-muted line-clamp-2">
                 {{ doc.description }}
               </p>
             </div>
             <span
               :class="[
-                'px-2 py-0.5 text-xs font-medium rounded-md border shrink-0',
+                'px-2 py-0.5 text-xs font-semibold rounded-md border shrink-0',
                 typeBadges[doc.document_type]?.class || typeBadges.other.class
               ]"
             >
@@ -216,20 +216,20 @@ function formatFileSize(bytes: number): string {
           </div>
 
           <!-- Metadata info -->
-          <div class="flex items-center gap-3 text-xs text-neutral-400 pt-1">
+          <div class="flex items-center gap-3 text-xs text-neutral-muted pt-1">
             <span class="flex items-center gap-1 font-mono">
               📎 {{ doc.original_filename }}
             </span>
             <span>•</span>
             <span>{{ formatFileSize(doc.file_size) }}</span>
-            <span v-if="!doc.is_active" class="px-1.5 py-0.2 text-[10px] uppercase tracking-wider font-semibold bg-red-500/20 text-red-400 rounded">
-              Inactive
+            <span v-if="!doc.is_active" class="px-1.5 py-0.5 text-[10px] uppercase tracking-wider font-bold bg-neutral-100 text-neutral-500 rounded border border-neutral-200">
+              Hidden
             </span>
           </div>
         </div>
 
         <!-- Action Bar -->
-        <div class="flex items-center justify-between pt-4 mt-3 border-t border-neutral-800/80">
+        <div class="flex items-center justify-between pt-3 mt-3 border-t border-neutral-ivory">
           <Button variant="outline" size="sm" @click="openQrModal(doc)">
             <span>📱 QR Code</span>
           </Button>
@@ -242,8 +242,8 @@ function formatFileSize(bytes: number): string {
               :class="[
                 'px-2 py-1 text-xs font-medium rounded-md transition-colors border',
                 doc.is_active
-                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
-                  : 'bg-neutral-800 text-neutral-400 border-neutral-700 hover:text-white'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                  : 'bg-neutral-100 text-neutral-600 border-neutral-200 hover:bg-neutral-200'
               ]"
             >
               {{ doc.is_active ? 'Active' : 'Hidden' }}
@@ -253,7 +253,7 @@ function formatFileSize(bytes: number): string {
               type="button"
               @click="openReplaceModal(doc)"
               title="Replace PDF File"
-              class="px-2 py-1 text-xs font-medium text-neutral-300 hover:text-white bg-neutral-800/60 hover:bg-neutral-800 rounded-md transition-colors"
+              class="px-2 py-1 text-xs font-medium text-neutral-700 hover:text-neutral-black bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 rounded-md transition-colors"
             >
               Replace
             </button>
@@ -262,7 +262,7 @@ function formatFileSize(bytes: number): string {
               type="button"
               @click="openEditModal(doc)"
               title="Edit Details"
-              class="px-2 py-1 text-xs font-medium text-neutral-300 hover:text-white bg-neutral-800/60 hover:bg-neutral-800 rounded-md transition-colors"
+              class="px-2 py-1 text-xs font-medium text-neutral-700 hover:text-neutral-black bg-neutral-100 hover:bg-neutral-200 border border-neutral-200 rounded-md transition-colors"
             >
               Edit
             </button>
@@ -271,7 +271,7 @@ function formatFileSize(bytes: number): string {
               type="button"
               @click="confirmDelete(doc)"
               title="Delete Document"
-              class="px-2 py-1 text-xs font-medium text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 rounded-md transition-colors"
+              class="px-2 py-1 text-xs font-medium text-red-700 hover:text-red-800 bg-red-50 hover:bg-red-100 border border-red-200 rounded-md transition-colors"
             >
               Delete
             </button>

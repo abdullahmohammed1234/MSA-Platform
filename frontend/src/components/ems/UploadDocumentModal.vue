@@ -47,7 +47,7 @@ watch(
         name.value = props.documentToEdit.name;
         documentType.value = props.documentToEdit.document_type;
         description.value = props.documentToEdit.description || '';
-        sortOrder.value = props.documentToEdit.sort_order || 0;
+        sortOrder.value = props.documentToEdit.sort_order ?? 0;
       } else {
         name.value = '';
         documentType.value = 'itinerary';
@@ -97,6 +97,7 @@ async function handleSubmit() {
   isSubmitting.value = true;
   try {
     let savedDoc: EventDocument;
+    const finalSort = Number.isFinite(Number(sortOrder.value)) ? Number(sortOrder.value) : 0;
 
     if (props.mode === 'create') {
       const formData = new FormData();
@@ -106,7 +107,7 @@ async function handleSubmit() {
       if (description.value.trim()) {
         formData.append('description', description.value.trim());
       }
-      formData.append('sort_order', String(sortOrder.value));
+      formData.append('sort_order', String(finalSort));
 
       const res = await documentsService.upload(props.eventUuid, formData);
       savedDoc = res.document;
@@ -124,7 +125,7 @@ async function handleSubmit() {
         name: name.value.trim(),
         document_type: documentType.value,
         description: description.value.trim() || null,
-        sort_order: Number(sortOrder.value),
+        sort_order: finalSort,
       });
     } else {
       throw new Error('Invalid modal configuration.');
@@ -132,7 +133,11 @@ async function handleSubmit() {
 
     emit('saved', savedDoc);
   } catch (err: any) {
-    errorMessage.value = err?.message || 'Failed to save document. Please check inputs and try again.';
+    if (err?.errors && typeof err.errors === 'object' && Object.keys(err.errors).length > 0) {
+      errorMessage.value = Object.values(err.errors).flat().join(' ');
+    } else {
+      errorMessage.value = err?.message || 'Failed to save document. Please check inputs and try again.';
+    }
   } finally {
     isSubmitting.value = false;
   }
@@ -153,31 +158,31 @@ async function handleSubmit() {
     @close="$emit('cancel')"
   >
     <form @submit.prevent="handleSubmit" class="space-y-4">
-      <div v-if="errorMessage" class="p-3 bg-red-500/10 border border-red-500/20 text-red-400 rounded-lg text-sm">
+      <div v-if="errorMessage" class="p-3.5 bg-red-50 border border-red-200 text-red-700 rounded-xl text-xs font-medium leading-relaxed">
         {{ errorMessage }}
       </div>
 
       <template v-if="mode !== 'replace'">
         <div>
-          <label class="block text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-1">
-            Document Name <span class="text-red-400">*</span>
+          <label class="block text-xs font-semibold text-neutral-black mb-1">
+            Document Name <span class="text-brand-burgundy">*</span>
           </label>
           <input
             v-model="name"
             type="text"
             required
             placeholder="e.g. Event Itinerary & Schedule"
-            class="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
+            class="w-full px-3 py-2 bg-white border border-neutral-ivory rounded-lg text-neutral-black text-sm focus:outline-none focus:border-brand-burgundy focus:ring-1 focus:ring-brand-burgundy placeholder-neutral-muted"
           />
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-1">
-            Document Type <span class="text-red-400">*</span>
+          <label class="block text-xs font-semibold text-neutral-black mb-1">
+            Document Type <span class="text-brand-burgundy">*</span>
           </label>
           <select
             v-model="documentType"
-            class="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
+            class="w-full px-3 py-2 bg-white border border-neutral-ivory rounded-lg text-neutral-black text-sm focus:outline-none focus:border-brand-burgundy focus:ring-1 focus:ring-brand-burgundy"
           >
             <option v-for="t in documentTypes" :key="t.value" :value="t.value">
               {{ t.label }}
@@ -186,37 +191,37 @@ async function handleSubmit() {
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-1">
+          <label class="block text-xs font-semibold text-neutral-black mb-1">
             Description
           </label>
           <textarea
             v-model="description"
             rows="2"
             placeholder="Optional summary or notes for attendees"
-            class="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
+            class="w-full px-3 py-2 bg-white border border-neutral-ivory rounded-lg text-neutral-black text-sm focus:outline-none focus:border-brand-burgundy focus:ring-1 focus:ring-brand-burgundy placeholder-neutral-muted"
           ></textarea>
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-1">
+          <label class="block text-xs font-semibold text-neutral-black mb-1">
             Display Order
           </label>
           <input
             v-model.number="sortOrder"
             type="number"
             min="0"
-            class="w-full px-3 py-2 bg-neutral-900 border border-neutral-700 rounded-lg text-white text-sm focus:outline-none focus:border-emerald-500"
+            class="w-full px-3 py-2 bg-white border border-neutral-ivory rounded-lg text-neutral-black text-sm focus:outline-none focus:border-brand-burgundy focus:ring-1 focus:ring-brand-burgundy"
           />
         </div>
       </template>
 
       <template v-if="mode === 'create' || mode === 'replace'">
         <div>
-          <label class="block text-xs font-semibold text-neutral-300 uppercase tracking-wider mb-1">
-            PDF File <span class="text-red-400">*</span>
+          <label class="block text-xs font-semibold text-neutral-black mb-1">
+            PDF File <span class="text-brand-burgundy">*</span>
           </label>
           <div
-            class="border-2 border-dashed border-neutral-700 hover:border-emerald-500/50 rounded-xl p-4 text-center transition-colors bg-neutral-900/50"
+            class="border-2 border-dashed border-neutral-ivory hover:border-brand-burgundy/50 rounded-xl p-5 text-center transition-colors bg-neutral-50/60"
           >
             <input
               id="document-pdf-input"
@@ -225,17 +230,17 @@ async function handleSubmit() {
               class="hidden"
               @change="handleFileChange"
             />
-            <label for="document-pdf-input" class="cursor-pointer flex flex-col items-center justify-center gap-2">
-              <div class="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-lg font-bold">
+            <label for="document-pdf-input" class="cursor-pointer flex flex-col items-center justify-center gap-1.5">
+              <div class="w-10 h-10 rounded-full bg-brand-burgundy/10 text-brand-burgundy flex items-center justify-center text-lg font-bold">
                 📄
               </div>
-              <span class="text-sm font-medium text-neutral-200">
+              <span class="text-sm font-semibold text-neutral-black">
                 {{ selectedFile ? selectedFile.name : 'Click to choose a PDF file' }}
               </span>
-              <span class="text-xs text-neutral-400">PDF documents only (max 10 MB)</span>
+              <span class="text-xs text-neutral-muted">PDF documents only (max 10 MB)</span>
             </label>
           </div>
-          <p v-if="fileError" class="mt-1 text-xs text-red-400">{{ fileError }}</p>
+          <p v-if="fileError" class="mt-1 text-xs text-red-600 font-medium">{{ fileError }}</p>
         </div>
       </template>
     </form>
