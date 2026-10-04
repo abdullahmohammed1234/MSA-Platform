@@ -123,8 +123,14 @@ function defaultMessageFor(status: number | null): string {
 
 async function request<T>(config: AxiosRequestConfig): Promise<EmsSuccessEnvelope<T>> {
   try {
+    const headers: Record<string, any> = { ...(config.headers || {}) };
+    if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+      headers['Content-Type'] = 'multipart/form-data';
+    }
+
     const response = await client.request<EmsSuccessEnvelope<T>>({
       ...config,
+      headers,
       url: `${EMS_PREFIX}${config.url ?? ''}`,
     });
 
