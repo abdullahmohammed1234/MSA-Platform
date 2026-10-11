@@ -199,11 +199,6 @@ const ctaBtnUrl = computed(() => homepageData.value?.cta?.button_url ?? '/contac
         <div class="absolute inset-0 bg-gradient-to-r from-primary-dark/80 via-transparent to-primary-dark/65 z-10 mix-blend-multiply" />
         <div class="absolute inset-0 pattern-islamic opacity-[0.03] z-10" />
       </div>
-      
-      <!-- Decorative Glass Elements -->
-      <FloatingElement class="absolute top-1/4 right-[8%] w-36 h-36 glass rounded-[2.5rem] opacity-35 hidden lg:block" />
-      <FloatingElement :delay="1.2" class="absolute bottom-1/4 left-[6%] w-28 h-28 bg-accent-gold/15 blur-2xl rounded-full hidden lg:block" />
-      <FloatingElement :delay="2.5" class="absolute top-1/3 left-[12%] w-20 h-20 border border-white/15 rounded-full hidden lg:block" />
 
       <div class="container-custom relative z-20 text-center">
         <ScrollReveal direction="down" width="100%">

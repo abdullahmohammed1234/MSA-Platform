@@ -305,19 +305,42 @@ const handleLogout = async () => {
         </div>
       </nav>
 
-      <!-- Mobile & Tablet Toggle -->
-      <div class="flex xl:hidden items-center shrink-0">
+      <!-- Mobile & Tablet Actions & Toggle -->
+      <div class="flex xl:hidden items-center gap-1.5 sm:gap-2 shrink-0">
+        <!-- Mobile Search Button -->
         <button
-          class="p-2 sm:p-3 text-primary hover:bg-primary/5 rounded-xl transition-all cursor-pointer shrink-0"
+          type="button"
+          @click="isSearchModalOpen = true"
+          class="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-white/80 hover:bg-white text-primary rounded-full border border-neutral-ivory/80 shadow-soft transition-all shrink-0"
+          title="Search Platform"
+          aria-label="Search Platform"
+        >
+          <Search class="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
+        </button>
+
+        <!-- Mobile Profile / Dashboard Shortcut (Authenticated) -->
+        <router-link
+          v-if="isAuthenticated"
+          to="/account"
+          class="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 bg-primary text-white rounded-full border border-primary/20 shadow-soft transition-all hover:bg-secondary shrink-0"
+          title="My Profile & Dashboard"
+          aria-label="My Profile & Dashboard"
+        >
+          <User class="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" />
+        </router-link>
+
+        <!-- Mobile Menu Toggle Button -->
+        <button
+          class="p-2 sm:p-2.5 text-primary hover:bg-primary/5 rounded-xl transition-all shrink-0"
           @click="isOpen = !isOpen"
           :aria-label="isOpen ? 'Close menu' : 'Open menu'"
           :aria-expanded="isOpen"
           aria-controls="mobile-menu-drawer"
         >
-          <div class="w-6 h-6 flex flex-col justify-center items-center relative">
-            <span :class="['w-6 h-0.5 bg-current rounded-full transition-all duration-300 absolute', isOpen ? 'rotate-45' : '-translate-y-1.5']" />
-            <span :class="['w-6 h-0.5 bg-current rounded-full transition-all duration-300 absolute', isOpen ? 'opacity-0' : 'opacity-100']" />
-            <span :class="['w-6 h-0.5 bg-current rounded-full transition-all duration-300 absolute', isOpen ? '-rotate-45' : 'translate-y-1.5']" />
+          <div class="w-5 h-5 sm:w-6 sm:h-6 flex flex-col justify-center items-center relative">
+            <span :class="['w-5 sm:w-6 h-0.5 bg-current rounded-full transition-all duration-300 absolute', isOpen ? 'rotate-45' : '-translate-y-1.5']" />
+            <span :class="['w-5 sm:w-6 h-0.5 bg-current rounded-full transition-all duration-300 absolute', isOpen ? 'opacity-0' : 'opacity-100']" />
+            <span :class="['w-5 sm:w-6 h-0.5 bg-current rounded-full transition-all duration-300 absolute', isOpen ? '-rotate-45' : 'translate-y-1.5']" />
           </div>
         </button>
       </div>
@@ -350,7 +373,7 @@ const handleLogout = async () => {
             class="absolute top-0 right-0 bottom-0 w-[85%] max-w-sm bg-neutral-background shadow-2xl flex flex-col"
           >
             <div class="p-8 flex flex-col h-full border-l border-neutral-gray/20 overflow-y-auto">
-              <div class="flex justify-between items-center mb-12">
+              <div class="flex justify-between items-center mb-6">
                 <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-black/30">Menu</span>
                 <button 
                   @click="closeMenu"
@@ -359,6 +382,68 @@ const handleLogout = async () => {
                 >
                   <X :size="20" />
                 </button>
+              </div>
+
+              <!-- Mobile Search Trigger Bar -->
+              <button
+                type="button"
+                @click="closeMenu(); isSearchModalOpen = true;"
+                class="w-full flex items-center gap-3 px-4 py-3 mb-4 rounded-2xl bg-white border border-neutral-ivory/80 text-neutral-black/60 hover:text-primary hover:border-primary/30 shadow-soft transition-all text-left text-xs font-medium"
+                aria-label="Search Platform"
+              >
+                <Search class="h-4 w-4 text-primary shrink-0" />
+                <span class="flex-1 truncate">Search events, books, resources...</span>
+                <span class="text-[9px] font-mono bg-neutral-background px-1.5 py-0.5 rounded text-neutral-black/40">Search</span>
+              </button>
+
+              <!-- Member Profile & Dashboard Card (Authenticated) -->
+              <div v-if="isAuthenticated" class="mb-4 p-4 rounded-2xl bg-primary/5 border border-primary/15 flex flex-col gap-3">
+                <div class="flex items-center gap-3">
+                  <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold text-xs uppercase shrink-0">
+                    {{ authStore.user?.name?.charAt(0) || 'U' }}
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <p class="text-xs font-bold text-neutral-black truncate">{{ authStore.user?.name || 'Member' }}</p>
+                    <p class="text-[10px] text-neutral-black/50 truncate">{{ authStore.user?.email }}</p>
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2 pt-2 border-t border-primary/10">
+                  <router-link
+                    to="/account"
+                    class="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-primary text-white text-[10px] font-extrabold uppercase tracking-wider hover:bg-secondary transition-all"
+                    @click="closeMenu"
+                  >
+                    <User class="h-3.5 w-3.5" />
+                    Dashboard
+                  </router-link>
+                  <router-link
+                    to="/my-tickets"
+                    class="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-white text-primary border border-primary/20 text-[10px] font-extrabold uppercase tracking-wider hover:bg-primary/5 transition-all"
+                    @click="closeMenu"
+                  >
+                    Tickets
+                  </router-link>
+                </div>
+              </div>
+
+              <!-- Guest Member Portal Card (Unauthenticated) -->
+              <div v-else-if="showPublicAuth" class="mb-4 p-3.5 rounded-2xl bg-white border border-neutral-ivory/80 shadow-soft flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+                    <User class="h-4 w-4" />
+                  </div>
+                  <div class="min-w-0">
+                    <p class="text-xs font-bold text-neutral-black">Member Portal</p>
+                    <p class="text-[10px] text-neutral-black/50">Access your dashboard</p>
+                  </div>
+                </div>
+                <router-link
+                  to="/login"
+                  class="py-1.5 px-3 rounded-xl bg-primary text-white text-[10px] font-extrabold uppercase tracking-wider hover:bg-secondary transition-all shrink-0"
+                  @click="closeMenu"
+                >
+                  Sign In
+                </router-link>
               </div>
 
               <!-- Accordion 1: Main Navigation -->
