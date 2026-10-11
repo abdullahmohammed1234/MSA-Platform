@@ -39,6 +39,13 @@ class PublicEventResource extends JsonResource
                 'color' => $this->category->color,
             ] : null),
 
+            'series' => $this->whenLoaded('series', fn () => $this->series ? [
+                'uuid' => $this->series->uuid,
+                'name' => $this->series->name,
+                'description' => $this->series->description,
+                'recurrence_pattern' => $this->series->recurrence_pattern,
+            ] : null),
+
             'location' => $this->location,
             'start_at' => $this->start_at?->toIso8601String(),
             'end_at' => $this->end_at?->toIso8601String(),

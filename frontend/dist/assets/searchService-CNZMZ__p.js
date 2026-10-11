@@ -1,0 +1,1 @@
+import{t as e}from"./api-B188DF1Y.js";var t=new class{async search(t){let n={q:t.q};return t.type&&t.type!==`all`&&(n.type=t.type),t.sort_by&&(n.sort_by=t.sort_by),t.page&&(n.page=t.page),t.per_page&&(n.per_page=t.per_page),(await e.get(`/search`,{params:n})).data}};export{t};

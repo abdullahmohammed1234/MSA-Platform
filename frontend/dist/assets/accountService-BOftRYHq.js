@@ -1,0 +1,1 @@
+import{t as e}from"./api-B188DF1Y.js";var t={async getSummary(){return(await e.get(`/account/summary`)).data.data},async updatePassword(t){return(await e.put(`/account/password`,t)).data},async updateProfile(t){return(await e.put(`/users/profile`,t)).data}};export{t};

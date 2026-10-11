@@ -67,8 +67,10 @@ onMounted(() => {
         :checked="isChecked"
         :disabled="disabled"
         @change="handleChange"
+        :aria-invalid="error ? 'true' : undefined"
+        :aria-describedby="error ? `${checkboxId}-error` : (description ? `${checkboxId}-desc` : undefined)"
         :class="[
-          'h-5 w-5 rounded border border-neutral-ivory text-primary focus:ring-primary/20 bg-white transition-all cursor-pointer accent-primary appearance-none flex items-center justify-center',
+          'h-5 w-5 rounded border border-neutral-ivory text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 bg-white transition-all cursor-pointer accent-primary appearance-none flex items-center justify-center',
           error ? 'border-secondary' : '',
           disabled ? 'cursor-not-allowed opacity-50 bg-neutral-gray/10' : ''
         ]"
@@ -76,6 +78,7 @@ onMounted(() => {
       <!-- Checkmark SVG when checked (since appearance-none hides browser defaults) -->
       <svg
         v-if="isChecked && !indeterminate"
+        aria-hidden="true"
         class="absolute pointer-events-none h-3 w-3 text-primary left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2"
         fill="none"
         stroke="currentColor"
@@ -86,6 +89,7 @@ onMounted(() => {
       <!-- Dash SVG when indeterminate -->
       <svg
         v-if="indeterminate"
+        aria-hidden="true"
         class="absolute pointer-events-none h-3.5 w-3.5 text-primary left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2"
         fill="none"
         stroke="currentColor"
@@ -106,10 +110,10 @@ onMounted(() => {
         <slot>{{ label }}</slot> <span v-if="required" class="text-secondary">*</span>
       </label>
       
-      <p v-if="error" class="text-[10.5px] text-secondary font-semibold mt-0.5">
+      <p v-if="error" :id="`${checkboxId}-error`" class="text-[10.5px] text-secondary font-semibold mt-0.5" aria-live="assertive">
         {{ error }}
       </p>
-      <p v-else-if="description" class="text-[11px] text-neutral-muted leading-relaxed mt-0.5">
+      <p v-else-if="description" :id="`${checkboxId}-desc`" class="text-[11px] text-neutral-muted leading-relaxed mt-0.5">
         {{ description }}
       </p>
     </div>

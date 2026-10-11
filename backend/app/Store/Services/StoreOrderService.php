@@ -86,6 +86,32 @@ class StoreOrderService
                 userId: $adminUserId
             );
 
+            DB::afterCommit(function () use ($order, $newStatus) {
+                if ($order->user_id) {
+                    $user = \App\Models\User::find($order->user_id);
+                    if ($user) {
+                        $idempotencyKey = "store_order_in_app:{$order->id}:{$newStatus->value}";
+                        $exists = \App\Models\Notification::where('user_id', $user->id)
+                            ->where('data->idempotency_key', $idempotencyKey)
+                            ->exists();
+
+                        if (!$exists) {
+                            $user->notify(new \App\Notifications\PlatformNotification(
+                                "Store Order Update (#{$order->order_number})",
+                                "Your merchandise order #{$order->order_number} status is now: " . ucfirst($newStatus->value) . ".",
+                                [
+                                    'type' => 'store',
+                                    'order_number' => $order->order_number,
+                                    'order_id' => $order->id,
+                                    'status' => $newStatus->value,
+                                    'idempotency_key' => $idempotencyKey,
+                                ]
+                            ));
+                        }
+                    }
+                }
+            });
+
             return $order->fresh(['items']);
         });
     }

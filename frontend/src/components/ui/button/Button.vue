@@ -19,7 +19,7 @@ const emit = defineEmits<{
 }>();
 
 const buttonClasses = computed(() => {
-  const base = 'inline-flex items-center justify-center gap-2 whitespace-nowrap font-bold transition-colors outline-none focus:outline-none focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer relative overflow-hidden shadow-none hover:shadow-none focus:shadow-none active:shadow-none';
+  const base = 'inline-flex items-center justify-center gap-2 whitespace-nowrap font-bold transition-colors outline-none focus:outline-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer relative overflow-hidden shadow-none hover:shadow-none focus:shadow-none active:shadow-none';
   
   const variants = {
     primary: 'bg-primary text-white hover:bg-primary/95',
@@ -88,6 +88,7 @@ const handleClick = (e: MouseEvent) => {
       :disabled="disabled || isLoading"
       @click="handleClick"
       :aria-busy="isLoading"
+      :aria-label="ariaLabel || undefined"
       aria-live="polite"
     >
       <span v-if="isLoading" class="mr-1.5 inline-flex items-center">

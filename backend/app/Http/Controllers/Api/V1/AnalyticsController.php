@@ -15,6 +15,7 @@ use App\Services\Analytics\AnalyticsService;
 use Illuminate\Http\Request;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 use Illuminate\Support\Facades\Cache;
@@ -111,7 +112,7 @@ class AnalyticsController extends Controller
 
             $certificates = CertificateAward::whereBetween('issued_at', [$start, $end])->count();
 
-            // Calculate trends (comparing to previous period)
+            // Previous Period Trends
             $diff = $start->diffInDays($end) + 1;
             $prevStart = $start->copy()->subDays($diff);
             $prevEnd = $start->copy()->subMicrosecond();
@@ -127,26 +128,78 @@ class AnalyticsController extends Controller
                 ->count();
             $prevCertificates = CertificateAward::whereBetween('issued_at', [$prevStart, $prevEnd])->count();
 
-            // Recent Activity Feed
-            $recentCompletions = Enrollment::with('user', 'course')
+            // Scope B: CMS Content Impact
+            $announcementsCount = DB::table('announcements')
+                ->whereBetween('created_at', [$start, $end])
+                ->count();
+            $resourcesCount = DB::table('resources')
+                ->whereBetween('created_at', [$start, $end])
+                ->count();
+            $featuredOppCount = 0;
+            if (Schema::hasTable('featured_opportunities')) {
+                $query = DB::table('featured_opportunities');
+                if (Schema::hasColumn('featured_opportunities', 'is_published')) {
+                    $query->where('is_published', true);
+                } elseif (Schema::hasColumn('featured_opportunities', 'is_active')) {
+                    $query->where('is_active', true);
+                }
+                $featuredOppCount = $query->count();
+            }
+
+            // Scope C: EMS Event Impact
+            $emsEventsCount = DB::table('ems_events')
+                ->where('status', 'published')
+                ->whereBetween('created_at', [$start, $end])
+                ->count();
+            $emsRegistrationsCount = DB::table('ems_registrations')
+                ->where('status', '!=', 'cancelled')
+                ->whereBetween('created_at', [$start, $end])
+                ->count();
+            $rawCheckIns = DB::table('ems_check_ins')
+                ->whereBetween('created_at', [$start, $end])
+                ->count();
+            $emsAttendanceCount = $rawCheckIns;
+            $emsAttendanceRate = $emsRegistrationsCount > 0
+                ? min(100.0, round(($emsAttendanceCount / $emsRegistrationsCount) * 100, 1))
+                : 0;
+
+            // Scope D: VMS Volunteer Impact
+            $vmsActiveOpps = DB::table('volunteering_opportunities')
+                ->whereIn('status', ['published', 'open'])
+                ->count();
+            $vmsApplicationsCount = DB::table('volunteering_signups')
+                ->where('status', '!=', 'cancelled')
+                ->whereBetween('created_at', [$start, $end])
+                ->count();
+            $vmsConfirmedCount = DB::table('volunteering_signups')
+                ->whereIn('status', ['confirmed', 'approved'])
+                ->whereBetween('created_at', [$start, $end])
+                ->count();
+            $vmsAttendedCount = DB::table('volunteering_signups')
+                ->where('attendance_status', 'attended')
+                ->whereBetween('created_at', [$start, $end])
+                ->count();
+            $vmsServiceHours = $vmsAttendedCount * 3; // Estimated standard 3-hour shift participation
+
+            // Aggregate Privacy-Preserving Recent Activity Feed
+            $recentCompletions = Enrollment::with('course')
                 ->where('status', 'completed')
                 ->orderBy('completed_at', 'desc')
                 ->limit(5)
                 ->get()
                 ->map(fn($e) => [
                     'type' => 'completion',
-                    'user' => $e->user->name ?? 'Anonymous',
+                    'user' => 'Member',
                     'detail' => $e->course->title ?? 'Course',
                     'time' => $e->completed_at ? $e->completed_at->diffForHumans() : 'Recently',
                 ]);
 
-            $recentCertificates = CertificateAward::with('user')
-                ->orderBy('issued_at', 'desc')
+            $recentCertificates = CertificateAward::orderBy('issued_at', 'desc')
                 ->limit(5)
                 ->get()
                 ->map(fn($c) => [
                     'type' => 'certificate',
-                    'user' => $c->user->name ?? 'Anonymous',
+                    'user' => 'Member',
                     'detail' => $c->title,
                     'time' => $c->issued_at ? $c->issued_at->diffForHumans() : 'Recently',
                 ]);
@@ -156,11 +209,10 @@ class AnalyticsController extends Controller
                 ->limit(5)
                 ->get()
                 ->map(function($ev) {
-                    $user = $ev->user ? $ev->user->name : 'Anonymous Guest';
                     $eventName = $ev->metadata['event_title'] ?? 'Public Event';
                     return [
                         'type' => 'registration',
-                        'user' => $user,
+                        'user' => 'Member',
                         'detail' => $eventName,
                         'time' => $ev->occurred_at ? $ev->occurred_at->diffForHumans() : 'Recently',
                     ];
@@ -177,6 +229,24 @@ class AnalyticsController extends Controller
                     'page_views' => ['value' => $pageViews, 'change' => $this->percentChange($pageViews, $prevPageViews)],
                     'active_learners' => ['value' => $activeLearners, 'change' => $this->percentChange($activeLearners, $prevActiveLearners)],
                     'certificates' => ['value' => $certificates, 'change' => $this->percentChange($certificates, $prevCertificates)],
+                ],
+                'cms' => [
+                    'announcements_published' => $announcementsCount,
+                    'resources_published' => $resourcesCount,
+                    'featured_opportunities' => $featuredOppCount,
+                ],
+                'ems' => [
+                    'published_events' => $emsEventsCount,
+                    'total_registrations' => $emsRegistrationsCount,
+                    'verified_attendance' => $emsAttendanceCount,
+                    'attendance_rate' => $emsAttendanceRate,
+                ],
+                'volunteering' => [
+                    'active_opportunities' => $vmsActiveOpps,
+                    'applications_received' => $vmsApplicationsCount,
+                    'confirmed_assignments' => $vmsConfirmedCount,
+                    'verified_attendees' => $vmsAttendedCount,
+                    'verified_service_hours' => $vmsServiceHours,
                 ],
                 'recent_activity' => $recentActivity,
             ];
@@ -366,20 +436,21 @@ class AnalyticsController extends Controller
         $cacheKey = 'analytics_events_' . md5($start->toDateTimeString() . '_' . $end->toDateTimeString());
 
         $data = Cache::remember($cacheKey, 300, function () use ($start, $end) {
-            $popularEvents = DB::table('analytics_events')
-                ->select('entity_id', DB::raw('COUNT(*) as registrations_count'))
-                ->where('event_name', 'event_registered')
-                ->whereBetween('occurred_at', [$start, $end])
-                ->groupBy('entity_id')
-                ->orderByDesc('registrations_count')
-                ->limit(5)
+            $popularEvents = DB::table('ems_events')
+                ->select('id', 'name as title', 'start_at', 'status')
+                ->where('status', 'published')
+                ->whereBetween('created_at', [$start, $end])
+                ->limit(10)
                 ->get()
                 ->map(function($ev) {
-                    $title = DB::table('cms_events')->where('id', $ev->entity_id)->value('title') ?? 'Event #' . $ev->entity_id;
+                    $regs = DB::table('ems_registrations')->where('event_id', $ev->id)->where('status', '!=', 'cancelled')->count();
+                    $checkIns = DB::table('ems_check_ins')->where('event_id', $ev->id)->count();
                     return [
-                        'event_id' => $ev->entity_id,
-                        'title' => $title,
-                        'registrations' => $ev->registrations_count,
+                        'event_id' => $ev->id,
+                        'title' => $ev->title,
+                        'start_at' => $ev->start_at,
+                        'registrations' => $regs,
+                        'attendance' => $checkIns,
                     ];
                 });
 
@@ -421,18 +492,20 @@ class AnalyticsController extends Controller
 
         $validated = $request->validate([
             'format' => 'required|in:csv,pdf',
-            'type' => 'required|in:website,academy,events,overview',
+            'type' => 'nullable|in:website,academy,events,volunteering,overview',
         ]);
+
+        $type = $validated['type'] ?? 'overview';
 
         $range = $this->getDateRange($request);
         $start = $range['start'];
         $end = $range['end'];
 
         if ($validated['format'] === 'csv') {
-            return $this->exportCSV($validated['type'], $start, $end);
+            return $this->exportCSV($type, $start, $end);
         }
 
-        return $this->exportPDF($validated['type'], $start, $end);
+        return $this->exportPDF($type, $start, $end);
     }
 
     private function exportCSV(string $type, Carbon $start, Carbon $end)
@@ -451,51 +524,61 @@ class AnalyticsController extends Controller
             $file = fopen('php://output', 'w');
 
             if ($type === 'website') {
-                fputcsv($file, ['Date', 'URL', 'Event Name', 'User ID', 'Browser', 'Referrer']);
+                fputcsv($file, [$this->sanitizeCsvField('Date'), $this->sanitizeCsvField('URL'), $this->sanitizeCsvField('Event Name'), $this->sanitizeCsvField('Browser'), $this->sanitizeCsvField('Referrer')]);
                 AnalyticsEvent::with('session')
                     ->where('module', 'website')
                     ->whereBetween('occurred_at', [$start, $end])
                     ->chunk(500, function ($events) use ($file) {
                         foreach ($events as $e) {
                             fputcsv($file, [
-                                $e->occurred_at,
-                                $e->metadata['url'] ?? '/',
-                                $e->event_name,
-                                $e->user_id,
-                                $e->session->browser ?? 'Unknown',
-                                $e->session->referrer ?? 'Direct',
+                                $this->sanitizeCsvField($e->occurred_at),
+                                $this->sanitizeCsvField($e->metadata['url'] ?? '/'),
+                                $this->sanitizeCsvField($e->event_name),
+                                $this->sanitizeCsvField($e->session->browser ?? 'Unknown'),
+                                $this->sanitizeCsvField($e->session->referrer ?? 'Direct'),
                             ]);
                         }
                     });
-            } elseif ($type === 'academy') {
-                fputcsv($file, ['Enrollment Date', 'User Name', 'Course Title', 'Status', 'Completed Date']);
-                Enrollment::with('user', 'course')
-                    ->whereBetween('created_at', [$start, $end])
-                    ->chunk(500, function ($enrollments) use ($file) {
-                        foreach ($enrollments as $e) {
-                            fputcsv($file, [
-                                $e->created_at,
-                                $e->user->name ?? 'Deleted User',
-                                $e->course->title ?? 'Deleted Course',
-                                $e->status,
-                                $e->completed_at,
-                            ]);
-                        }
-                    });
+            } elseif ($type === 'events') {
+                fputcsv($file, [$this->sanitizeCsvField('Event Title'), $this->sanitizeCsvField('Start Date'), $this->sanitizeCsvField('Registrations'), $this->sanitizeCsvField('Verified Attendance')]);
+                $events = DB::table('ems_events')->whereBetween('created_at', [$start, $end])->get();
+                foreach ($events as $ev) {
+                    $regs = DB::table('ems_registrations')->where('event_id', $ev->id)->where('status', '!=', 'cancelled')->count();
+                    $checkIns = DB::table('ems_check_ins')->where('event_id', $ev->id)->count();
+                    fputcsv($file, [
+                        $this->sanitizeCsvField($ev->name),
+                        $this->sanitizeCsvField($ev->start_at),
+                        $this->sanitizeCsvField($regs),
+                        $this->sanitizeCsvField($checkIns),
+                    ]);
+                }
+            } elseif ($type === 'volunteering') {
+                fputcsv($file, [$this->sanitizeCsvField('Opportunity Title'), $this->sanitizeCsvField('Category'), $this->sanitizeCsvField('Status'), $this->sanitizeCsvField('Signups'), $this->sanitizeCsvField('Verified Attendance')]);
+                $opps = DB::table('volunteering_opportunities')->whereBetween('created_at', [$start, $end])->get();
+                foreach ($opps as $op) {
+                    $signups = DB::table('volunteering_signups')->where('opportunity_id', $op->id)->where('status', '!=', 'cancelled')->count();
+                    $attended = DB::table('volunteering_signups')->where('opportunity_id', $op->id)->where('attendance_status', 'attended')->count();
+                    fputcsv($file, [
+                        $this->sanitizeCsvField($op->title),
+                        $this->sanitizeCsvField($op->category ?? 'General'),
+                        $this->sanitizeCsvField($op->status),
+                        $this->sanitizeCsvField($signups),
+                        $this->sanitizeCsvField($attended),
+                    ]);
+                }
             } else {
-                fputcsv($file, ['Event Date', 'Event Type', 'Event Name', 'User ID', 'Module']);
-                AnalyticsEvent::whereBetween('occurred_at', [$start, $end])
-                    ->chunk(500, function ($events) use ($file) {
-                        foreach ($events as $e) {
-                            fputcsv($file, [
-                                $e->occurred_at,
-                                $e->event_type,
-                                $e->event_name,
-                                $e->user_id,
-                                $e->module,
-                            ]);
-                        }
-                    });
+                fputcsv($file, [$this->sanitizeCsvField('Metric Category'), $this->sanitizeCsvField('Metric Name'), $this->sanitizeCsvField('Count Value')]);
+                $uniqueVisitors = AnalyticsSession::whereBetween('started_at', [$start, $end])->count();
+                $pageViews = AnalyticsEvent::where('event_name', 'page_view')->whereBetween('occurred_at', [$start, $end])->count();
+                $emsEvents = DB::table('ems_events')->where('status', 'published')->whereBetween('created_at', [$start, $end])->count();
+                $emsRegistrations = DB::table('ems_registrations')->where('status', '!=', 'cancelled')->whereBetween('created_at', [$start, $end])->count();
+                $vmsSignups = DB::table('volunteering_signups')->where('status', '!=', 'cancelled')->whereBetween('created_at', [$start, $end])->count();
+
+                fputcsv($file, ['Traffic', 'Unique Visitors', $this->sanitizeCsvField($uniqueVisitors)]);
+                fputcsv($file, ['Traffic', 'Page Views', $this->sanitizeCsvField($pageViews)]);
+                fputcsv($file, ['EMS Events', 'Published Events', $this->sanitizeCsvField($emsEvents)]);
+                fputcsv($file, ['EMS Events', 'Total Registrations', $this->sanitizeCsvField($emsRegistrations)]);
+                fputcsv($file, ['VMS Volunteering', 'Applications Received', $this->sanitizeCsvField($vmsSignups)]);
             }
 
             fclose($file);
@@ -527,6 +610,19 @@ class AnalyticsController extends Controller
         return $pdf->download("analytics_{$type}_" . now()->format('Y-m-d') . ".pdf");
     }
 
+    private function sanitizeCsvField(mixed $value): string
+    {
+        $str = (string) $value;
+        $trimmed = ltrim($str, " \t\r\n\v\0");
+        $firstChar = substr($trimmed, 0, 1);
+        if (in_array($firstChar, ['=', '+', '-', '@'], true)) {
+            if ($firstChar === '=' || $firstChar === '@' || !is_numeric($trimmed)) {
+                return "'" . $str;
+            }
+        }
+        return $str;
+    }
+
     private function getDateRange(Request $request): array
     {
         $startStr = $request->query('start_date');
@@ -534,6 +630,12 @@ class AnalyticsController extends Controller
 
         $start = $startStr ? Carbon::parse($startStr)->startOfDay() : Carbon::now()->subDays(30)->startOfDay();
         $end = $endStr ? Carbon::parse($endStr)->endOfDay() : Carbon::now()->endOfDay();
+
+        if ($start->greaterThan($end)) {
+            $tmp = $start;
+            $start = $end->copy()->startOfDay();
+            $end = $tmp->copy()->endOfDay();
+        }
 
         return ['start' => $start, 'end' => $end];
     }

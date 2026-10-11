@@ -36,6 +36,10 @@ const adminItems = computed(() => {
   const adminGroup = items[0].children;
   const isSuper = authStore.roles.includes('super-admin');
 
+  if (isSuper || authStore.permissions.includes('view_analytics') || authStore.permissions.includes('platform.view') || authStore.permissions.includes('system.view')) {
+    adminGroup.push({ label: 'Platform Analytics', path: '/admin/analytics', icon: 'trending-up' });
+  }
+
   if (isSuper || authStore.permissions.includes('manage_roles')) {
     adminGroup.push({ label: 'Manage Roles', path: '/admin/roles', icon: 'shield' });
     if (isSuper) {

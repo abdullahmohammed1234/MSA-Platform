@@ -6,4 +6,5 @@ export interface ButtonProps {
   isFullWidth?: boolean;
   isShiny?: boolean;
   type?: 'button' | 'submit' | 'reset';
+  ariaLabel?: string;
 }

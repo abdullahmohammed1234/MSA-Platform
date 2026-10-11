@@ -76,6 +76,8 @@ watch(() => props.modelValue, () => {
           @input="handleInput"
           @focus="handleFocus"
           @blur="handleBlur"
+          :aria-invalid="error ? 'true' : undefined"
+          :aria-describedby="error ? `${textareaId}-error` : (description ? `${textareaId}-desc` : undefined)"
           :class="[
             'w-full px-4 py-3 bg-white border rounded-xl outline-none transition-all duration-300 text-neutral-black text-sm resize-y',
             props.autoResize ? 'resize-none overflow-hidden' : '',
@@ -97,10 +99,10 @@ watch(() => props.modelValue, () => {
     </div>
 
     <!-- Error or Help Text -->
-    <p v-if="error" class="text-[10.5px] text-secondary font-semibold block mt-1" aria-live="assertive">
+    <p v-if="error" :id="`${textareaId}-error`" class="text-[10.5px] text-secondary font-semibold block mt-1" aria-live="assertive">
       {{ error }}
     </p>
-    <p v-else-if="description" class="text-[11px] text-neutral-muted leading-relaxed mt-1">
+    <p v-else-if="description" :id="`${textareaId}-desc`" class="text-[11px] text-neutral-muted leading-relaxed mt-1">
       {{ description }}
     </p>
   </div>

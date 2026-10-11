@@ -267,4 +267,139 @@ class NotificationSystemTest extends TestCase
 
         LaravelNotification::assertNotSentTo($this->user, CourseCompletedNotification::class);
     }
+
+    /**
+     * Test User A cannot read or delete User B notification (IDOR isolation).
+     */
+    public function test_user_cannot_access_or_mutate_other_users_notification()
+    {
+        $otherUser = User::factory()->create(['is_active' => true]);
+
+        $notif = Notification::create([
+            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+            'user_id' => $otherUser->id,
+            'type' => CourseCompletedNotification::class,
+            'title' => 'Other User Private Notification',
+            'message' => 'Private message',
+        ]);
+
+        // Attempt read
+        $response = $this->actingAs($this->user, 'sanctum')
+            ->postJson("/api/v1/notifications/{$notif->uuid}/read");
+        $response->assertStatus(403);
+
+        // Attempt delete
+        $response = $this->actingAs($this->user, 'sanctum')
+            ->deleteJson("/api/v1/notifications/{$notif->uuid}");
+        $response->assertStatus(403);
+    }
+
+    /**
+     * Test EMS registration event dispatches in-app notification to canonical user.
+     */
+    public function test_ems_registration_event_dispatches_in_app_notification()
+    {
+        $event = \App\Ems\Models\Event::factory()->create(['name' => 'MSA Test Gathering']);
+
+        $registration = new \App\Ems\Models\Registration();
+        $registration->uuid = (string) \Illuminate\Support\Str::uuid();
+        $registration->event_id = $event->id;
+        $registration->user_id = $this->user->id;
+        $registration->reference = 'REG-TEST-100';
+        $registration->attendee_name = $this->user->name;
+        $registration->attendee_email = $this->user->email;
+        $registration->type = \App\Ems\Enums\RegistrationType::Free;
+        $registration->status = \App\Ems\Enums\RegistrationStatus::Confirmed;
+        $registration->save();
+
+        event(new \App\Ems\Events\RegistrationCreated($registration, $this->user));
+
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $this->user->id,
+            'title' => 'Registration Confirmed: MSA Test Gathering',
+        ]);
+    }
+
+    /**
+     * Test Store order fulfillment status update dispatches in-app notification.
+     */
+    public function test_store_order_fulfillment_update_dispatches_in_app_notification()
+    {
+        $order = \App\Store\Models\StoreOrder::create([
+            'user_id' => $this->user->id,
+            'order_number' => 'ORD-TEST-999',
+            'subtotal_cents' => 2500,
+            'tax_cents' => 125,
+            'total_cents' => 2625,
+            'currency' => 'CAD',
+            'payment_status' => \App\Store\Enums\StorePaymentStatus::Paid,
+            'fulfillment_status' => \App\Store\Enums\StoreFulfillmentStatus::Pending,
+            'customer_name' => $this->user->name,
+            'customer_email' => $this->user->email,
+        ]);
+
+        $service = app(\App\Store\Services\StoreOrderService::class);
+        $service->updateFulfillmentStatus($order, \App\Store\Enums\StoreFulfillmentStatus::Completed);
+
+        $this->assertDatabaseHas('notifications', [
+            'user_id' => $this->user->id,
+            'title' => 'Store Order Update (#ORD-TEST-999)',
+        ]);
+    }
+
+    /**
+     * Test guest EMS registration does not notify an account even if email matches.
+     */
+    public function test_guest_registration_does_not_notify_unrelated_account()
+    {
+        $event = \App\Ems\Models\Event::factory()->create(['name' => 'MSA Guest Event']);
+
+        $registration = new \App\Ems\Models\Registration();
+        $registration->uuid = (string) \Illuminate\Support\Str::uuid();
+        $registration->event_id = $event->id;
+        $registration->user_id = null; // Guest registration
+        $registration->reference = 'REG-GUEST-101';
+        $registration->attendee_name = $this->user->name;
+        $registration->attendee_email = $this->user->email; // Matching email
+        $registration->type = \App\Ems\Enums\RegistrationType::Free;
+        $registration->status = \App\Ems\Enums\RegistrationStatus::Confirmed;
+        $registration->save();
+
+        event(new \App\Ems\Events\RegistrationCreated($registration, null));
+
+        $this->assertDatabaseMissing('notifications', [
+            'title' => 'Registration Confirmed: MSA Guest Event',
+        ]);
+    }
+
+    /**
+     * Test PlatformNotification honors in_app_enabled disabled preference.
+     */
+    public function test_platform_notification_honors_in_app_disabled_preference()
+    {
+        NotificationPreference::updateOrCreate(
+            ['user_id' => $this->user->id],
+            ['in_app_enabled' => false, 'email_enabled' => true]
+        );
+
+        $event = \App\Ems\Models\Event::factory()->create(['name' => 'MSA Opt-Out Gathering']);
+
+        $registration = new \App\Ems\Models\Registration();
+        $registration->uuid = (string) \Illuminate\Support\Str::uuid();
+        $registration->event_id = $event->id;
+        $registration->user_id = $this->user->id;
+        $registration->reference = 'REG-OPTOUT-102';
+        $registration->attendee_name = $this->user->name;
+        $registration->attendee_email = $this->user->email;
+        $registration->type = \App\Ems\Enums\RegistrationType::Free;
+        $registration->status = \App\Ems\Enums\RegistrationStatus::Confirmed;
+        $registration->save();
+
+        event(new \App\Ems\Events\RegistrationCreated($registration, $this->user));
+
+        $this->assertDatabaseMissing('notifications', [
+            'user_id' => $this->user->id,
+            'title' => 'Registration Confirmed: MSA Opt-Out Gathering',
+        ]);
+    }
 }

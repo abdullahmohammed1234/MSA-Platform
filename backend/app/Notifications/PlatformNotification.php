@@ -7,10 +7,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class PlatformNotification extends Notification implements ShouldQueue
+class PlatformNotification extends BaseNotification
 {
-    use Queueable;
-
     protected $title;
 
     protected $message;
@@ -24,9 +22,47 @@ class PlatformNotification extends Notification implements ShouldQueue
         $this->data = $data;
     }
 
+    public function getCategory(): string
+    {
+        $type = $this->data['type'] ?? 'event';
+
+        return match ($type) {
+            'announcement' => 'new_announcements',
+            'course' => 'course_completion',
+            'certificate' => 'certificate_earned',
+            default => 'upcoming_training',
+        };
+    }
+
     public function via($notifiable): array
     {
-        return ['database', 'mail'];
+        if (!$notifiable instanceof \App\Models\User) {
+            return [\App\Services\Notifications\CustomDatabaseChannel::class, 'mail'];
+        }
+
+        $preferences = $notifiable->notificationPreferences;
+
+        if (!$preferences) {
+            return [\App\Services\Notifications\CustomDatabaseChannel::class, 'mail'];
+        }
+
+        $category = $this->getCategory();
+
+        if (isset($preferences->$category) && !$preferences->$category) {
+            return [];
+        }
+
+        $channels = [];
+
+        if ($preferences->in_app_enabled) {
+            $channels[] = \App\Services\Notifications\CustomDatabaseChannel::class;
+        }
+
+        if ($preferences->email_enabled) {
+            $channels[] = 'mail';
+        }
+
+        return $channels;
     }
 
     public function toMail($notifiable): MailMessage

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import {
   ArrowRight,
   Bell,
@@ -10,6 +10,11 @@ import {
   MapPin,
   Search,
   Users,
+  Sparkles,
+  BookOpen,
+  ExternalLink,
+  Compass,
+  AlertCircle,
 } from 'lucide-vue-next';
 import ScrollReveal from '@/components/shared/ScrollReveal.vue';
 import ParallaxSection from '@/components/shared/ParallaxSection.vue';
@@ -17,18 +22,39 @@ import { useSeo } from '@/composables/useSeo';
 import { useEventFormatting } from '@/composables/ems/useEventFormatting';
 import { EmsApiError } from '@/services/ems/emsClient';
 import publicEventsService from '@/services/ems/publicEventsService';
+import websiteService, { type PublicFeaturedOpportunity } from '@/services/website/websiteService';
 import { EMS_PUBLIC_CALENDAR_PATH, emsPublicEventPath } from '@/constants/ems';
 import { resolvePublicImagePath } from '@/constants/publicAssets';
 import type { PublicCategory, PublicEvent } from '@/types/ems/public';
 import pendingCheckoutStorage, { type StoredPendingCheckout } from '@/services/ems/pendingCheckoutStorage';
 
 useSeo({
-  title: 'Events | SFU MSA',
-  description: 'Browse upcoming SFU MSA community events and register for free.',
+  title: 'Community Events & Programs | SFU MSA',
+  description: 'Discover SFU MSA community events, ongoing programs, and halaqas.',
 });
 
+const route = useRoute();
 const router = useRouter();
 const { formatDateRange, formatTimeRange, categoryTintStyle, categorySolidStyle } = useEventFormatting();
+
+const discoveryTab = ref<'events' | 'programs'>('events');
+
+// Ongoing Programs (CMS Featured Opportunities)
+const programs = ref<PublicFeaturedOpportunity[]>([]);
+const programsLoading = ref(false);
+const programsError = ref('');
+
+async function loadPrograms() {
+  programsLoading.value = true;
+  programsError.value = '';
+  try {
+    programs.value = await websiteService.getFeaturedOpportunities();
+  } catch {
+    programsError.value = 'Unable to load community programs. Please check back shortly.';
+  } finally {
+    programsLoading.value = false;
+  }
+}
 
 const events = ref<PublicEvent[]>([]);
 const categories = ref<PublicCategory[]>([]);
@@ -42,6 +68,17 @@ const page = ref(1);
 const lastPage = ref(1);
 const total = ref(0);
 const savedCheckouts = ref<StoredPendingCheckout[]>([]);
+
+
+
+watch(discoveryTab, (newTab) => {
+  if (route.query.tab !== newTab) {
+    router.replace({ query: { ...route.query, tab: newTab } });
+  }
+  if (newTab === 'programs' && programs.value.length === 0) {
+    void loadPrograms();
+  }
+});
 
 const categoryChips = computed(() => [
   { label: 'All', value: 'all', color: null as string | null },
@@ -176,9 +213,16 @@ onMounted(async () => {
     now.value = Date.now();
   }, 1000);
 
+  if (route.query.tab && ['events', 'programs'].includes(route.query.tab as string)) {
+    discoveryTab.value = route.query.tab as 'events' | 'programs';
+  }
+
   savedCheckouts.value = pendingCheckoutStorage.list();
   await Promise.all([loadCategories(), loadHeroCandidates()]);
   await loadEvents();
+  if (discoveryTab.value === 'programs') {
+    void loadPrograms();
+  }
 });
 
 onUnmounted(() => {
@@ -329,7 +373,47 @@ function capacityLabel(event: PublicEvent): string {
       </div>
     </section>
 
-    <div class="sticky top-20 z-40 max-w-full overflow-x-clip bg-neutral-background/95 backdrop-blur-md border-b border-neutral-ivory/60">
+    <!-- Unified Community Discovery Hub Navigation Bar -->
+    <div class="bg-primary/5 border-b border-neutral-ivory/80 py-4">
+      <div class="container-custom flex items-center justify-between gap-4 flex-wrap">
+        <div class="flex items-center gap-1.5 p-1 bg-white rounded-2xl border border-neutral-ivory shadow-soft">
+          <button
+            type="button"
+            @click="discoveryTab = 'events'"
+            :class="[
+              'px-4 sm:px-5 py-2.5 rounded-xl text-[10px] sm:text-xs font-extrabold uppercase tracking-widest transition-all cursor-pointer inline-flex items-center gap-2',
+              discoveryTab === 'events' ? 'bg-primary text-white shadow-sm' : 'text-neutral-black/60 hover:text-primary'
+            ]"
+          >
+            <Calendar :size="14" />
+            Community Events
+          </button>
+
+          <button
+            type="button"
+            @click="discoveryTab = 'programs'"
+            :class="[
+              'px-4 sm:px-5 py-2.5 rounded-xl text-[10px] sm:text-xs font-extrabold uppercase tracking-widest transition-all cursor-pointer inline-flex items-center gap-2',
+              discoveryTab === 'programs' ? 'bg-primary text-white shadow-sm' : 'text-neutral-black/60 hover:text-primary'
+            ]"
+          >
+            <Sparkles :size="14" />
+            Ongoing Programs
+          </button>
+        </div>
+
+        <RouterLink
+          :to="EMS_PUBLIC_CALENDAR_PATH"
+          class="px-5 py-2.5 rounded-2xl bg-white border border-neutral-ivory text-primary hover:bg-primary/5 text-[10px] sm:text-xs font-extrabold uppercase tracking-widest transition-all inline-flex items-center gap-2 shadow-soft"
+        >
+          <CalendarDays :size="14" />
+          Interactive Calendar →
+        </RouterLink>
+      </div>
+    </div>
+
+    <!-- Category Chips & Search Sticky Filter Bar (Active in Events Tab) -->
+    <div v-if="discoveryTab === 'events'" class="sticky top-20 z-40 max-w-full overflow-x-clip bg-neutral-background/95 backdrop-blur-md border-b border-neutral-ivory/60">
       <div class="container-custom py-4 sm:py-5 flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
         <div
           class="min-w-0 w-full md:flex-1 flex items-center gap-2 overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
@@ -377,7 +461,7 @@ function capacityLabel(event: PublicEvent): string {
 
     <section class="container-custom pt-10">
       <div
-        v-if="savedCheckouts.length"
+        v-if="savedCheckouts.length && discoveryTab === 'events'"
         class="mb-6 rounded-[1.75rem] border border-amber-200 bg-amber-50 p-5 sm:p-6"
       >
         <p class="text-[10px] font-extrabold uppercase tracking-widest text-amber-800">Saved payments</p>
@@ -396,146 +480,223 @@ function capacityLabel(event: PublicEvent): string {
           </RouterLink>
         </div>
       </div>
-      <div v-if="loading" class="grid gap-6 sm:grid-cols-2 xl:grid-cols-3" aria-busy="true">
+
+      <!-- Tab: Community Events -->
+      <template v-if="discoveryTab === 'events'">
+        <div v-if="loading" class="grid gap-6 sm:grid-cols-2 xl:grid-cols-3" aria-busy="true">
+          <div
+            v-for="n in 6"
+            :key="n"
+            class="h-72 rounded-[1.75rem] bg-white border border-neutral-ivory animate-pulse"
+          />
+        </div>
+
         <div
-          v-for="n in 6"
-          :key="n"
-          class="h-72 rounded-[1.75rem] bg-white border border-neutral-ivory animate-pulse"
-        />
-      </div>
-
-      <div
-        v-else-if="error"
-        class="rounded-[1.75rem] border border-red-200 bg-red-50 p-8 text-center"
-        role="alert"
-      >
-        <p class="text-red-800 font-semibold">{{ error }}</p>
-        <button
-          type="button"
-          class="mt-4 text-sm font-bold text-primary underline cursor-pointer"
-          @click="loadEvents"
+          v-else-if="error"
+          class="rounded-[1.75rem] border border-red-200 bg-red-50 p-8 text-center"
+          role="alert"
         >
-          Try again
-        </button>
-      </div>
-
-      <div
-        v-else-if="events.length === 0"
-        class="rounded-[1.75rem] border border-neutral-ivory bg-white p-12 text-center"
-      >
-        <Calendar class="mx-auto text-neutral-black/25 mb-4" :size="36" />
-        <h2 class="font-display text-2xl font-bold text-neutral-black">No events found</h2>
-        <p class="mt-2 text-neutral-black/55 text-sm max-w-md mx-auto">
-          Try a different category, clear your search, or check past events.
-        </p>
-      </div>
-
-      <div v-else class="space-y-6">
-        <p class="text-xs font-semibold uppercase tracking-widest text-neutral-black/40">
-          {{ total }} event{{ total === 1 ? '' : 's' }}
-        </p>
-
-        <div class="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-          <article
-            v-for="event in events"
-            :key="event.uuid"
-            class="group flex min-w-0 flex-col overflow-hidden rounded-[1.75rem] border border-neutral-ivory bg-white hover:border-primary/20 hover:shadow-lg transition cursor-pointer"
-            @click="openEvent(event.slug)"
+          <p class="text-red-800 font-semibold">{{ error }}</p>
+          <button
+            type="button"
+            class="mt-4 text-sm font-bold text-primary underline cursor-pointer"
+            @click="loadEvents"
           >
-            <div class="relative aspect-[16/10] bg-gradient-to-br from-primary to-primary-light overflow-hidden">
-              <template v-if="event.banner_url">
-                <!-- Blurred fill so non-matching ratios don't leave empty bars -->
-                <img
-                  :src="resolvePublicImagePath(event.banner_url)"
-                  alt=""
-                  aria-hidden="true"
-                  class="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl"
-                  loading="lazy"
-                />
-                <img
-                  :src="resolvePublicImagePath(event.banner_url)"
-                  :alt="event.name"
-                  class="relative z-[1] h-full w-full object-contain opacity-95 transition duration-500 group-hover:scale-[1.03]"
-                  loading="lazy"
-                />
-              </template>
-              <div class="absolute inset-0 z-[2] bg-gradient-to-t from-primary/80 via-primary/10 to-transparent" />
-              <div class="absolute bottom-3 left-3 right-3 z-[3] flex items-center justify-between gap-2 min-w-0">
-                <span
-                  v-if="event.category"
-                  class="text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded-full truncate max-w-[55%]"
-                  :style="categorySolidStyle(event.category.color)"
+            Try again
+          </button>
+        </div>
+
+        <div
+          v-else-if="events.length === 0"
+          class="rounded-[1.75rem] border border-neutral-ivory bg-white p-12 text-center"
+        >
+          <Calendar class="mx-auto text-neutral-black/25 mb-4" :size="36" />
+          <h2 class="font-display text-2xl font-bold text-neutral-black">No events found</h2>
+          <p class="mt-2 text-neutral-black/55 text-sm max-w-md mx-auto">
+            Try a different category, clear your search, or check past events.
+          </p>
+        </div>
+
+        <div v-else class="space-y-6">
+          <p class="text-xs font-semibold uppercase tracking-widest text-neutral-black/40">
+            {{ total }} event{{ total === 1 ? '' : 's' }}
+          </p>
+
+          <div class="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            <article
+              v-for="event in events"
+              :key="event.uuid"
+              class="group flex min-w-0 flex-col overflow-hidden rounded-[1.75rem] border border-neutral-ivory bg-white hover:border-primary/20 hover:shadow-lg transition cursor-pointer"
+              @click="openEvent(event.slug)"
+            >
+              <div class="relative aspect-[16/10] bg-gradient-to-br from-primary to-primary-light overflow-hidden">
+                <template v-if="event.banner_url">
+                  <!-- Blurred fill so non-matching ratios don't leave empty bars -->
+                  <img
+                    :src="resolvePublicImagePath(event.banner_url)"
+                    alt=""
+                    aria-hidden="true"
+                    class="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl"
+                    loading="lazy"
+                  />
+                  <img
+                    :src="resolvePublicImagePath(event.banner_url)"
+                    :alt="event.name"
+                    class="relative z-[1] h-full w-full object-contain opacity-95 transition duration-500 group-hover:scale-[1.03]"
+                    loading="lazy"
+                  />
+                </template>
+                <div class="absolute inset-0 z-[2] bg-gradient-to-t from-primary/80 via-primary/10 to-transparent" />
+                <div class="absolute bottom-3 left-3 right-3 z-[3] flex items-center justify-between gap-2 min-w-0">
+                  <span
+                    v-if="event.category"
+                    class="text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded-full truncate max-w-[55%]"
+                    :style="categorySolidStyle(event.category.color)"
+                  >
+                    {{ event.category.name }}
+                  </span>
+                  <span class="text-[10px] font-bold uppercase tracking-wider text-accent-gold bg-primary/80 px-3 py-1 rounded-full truncate max-w-[45%] shrink-0">
+                    {{ event.registration_label }}
+                  </span>
+                </div>
+              </div>
+
+              <div class="flex flex-1 flex-col p-5 gap-3 min-w-0">
+                <h2 class="font-display text-xl font-bold text-neutral-black leading-snug group-hover:text-primary transition break-words">
+                  {{ event.name }}
+                </h2>
+                <p v-if="event.short_description" class="text-sm text-neutral-black/55 line-clamp-2">
+                  {{ event.short_description }}
+                </p>
+
+                <div class="mt-auto space-y-2 pt-2 text-xs text-neutral-black/60">
+                  <div class="flex items-center gap-2">
+                    <Calendar :size="14" class="text-primary shrink-0" />
+                    <span>{{ formatDateRange(event.start_at, event.end_at) }}</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <Clock :size="14" class="text-primary shrink-0" />
+                    <span>{{ formatTimeRange(event.start_at, event.end_at) }}</span>
+                  </div>
+                  <div v-if="event.location" class="flex items-center gap-2">
+                    <MapPin :size="14" class="text-primary shrink-0" />
+                    <span class="truncate">{{ event.location }}</span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <Users :size="14" class="text-primary shrink-0" />
+                    <span>{{ capacityLabel(event) }}</span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  class="mt-3 inline-flex items-center justify-center gap-2 w-full py-3 rounded-2xl text-xs font-extrabold uppercase tracking-widest transition"
+                  :class="event.is_accepting_registrations && !event.is_full
+                    ? 'bg-primary text-white hover:brightness-110'
+                    : 'bg-neutral-ivory text-neutral-black/50'"
+                  @click.stop="openEvent(event.slug)"
                 >
-                  {{ event.category.name }}
-                </span>
-                <span class="text-[10px] font-bold uppercase tracking-wider text-accent-gold bg-primary/80 px-3 py-1 rounded-full truncate max-w-[45%] shrink-0">
-                  {{ event.registration_label }}
-                </span>
+                  {{ event.is_accepting_registrations && !event.is_full ? 'Register' : 'View details' }}
+                  <ArrowRight :size="14" />
+                </button>
               </div>
-            </div>
+            </article>
+          </div>
 
-            <div class="flex flex-1 flex-col p-5 gap-3 min-w-0">
-              <h2 class="font-display text-xl font-bold text-neutral-black leading-snug group-hover:text-primary transition break-words">
-                {{ event.name }}
-              </h2>
-              <p v-if="event.short_description" class="text-sm text-neutral-black/55 line-clamp-2">
-                {{ event.short_description }}
-              </p>
+          <div v-if="lastPage > 1" class="flex items-center justify-center gap-3 pt-4">
+            <button
+              type="button"
+              class="px-4 py-2 rounded-xl border border-neutral-ivory text-xs font-bold disabled:opacity-40 cursor-pointer"
+              :disabled="page <= 1"
+              @click="page -= 1; loadEvents()"
+            >
+              Previous
+            </button>
+            <span class="text-xs text-neutral-black/50">Page {{ page }} of {{ lastPage }}</span>
+            <button
+              type="button"
+              class="px-4 py-2 rounded-xl border border-neutral-ivory text-xs font-bold disabled:opacity-40 cursor-pointer"
+              :disabled="page >= lastPage"
+              @click="page += 1; loadEvents()"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </template>
 
-              <div class="mt-auto space-y-2 pt-2 text-xs text-neutral-black/60">
-                <div class="flex items-center gap-2">
-                  <Calendar :size="14" class="text-primary shrink-0" />
-                  <span>{{ formatDateRange(event.start_at, event.end_at) }}</span>
-                </div>
-                <div class="flex items-center gap-2">
-                  <Clock :size="14" class="text-primary shrink-0" />
-                  <span>{{ formatTimeRange(event.start_at, event.end_at) }}</span>
-                </div>
-                <div v-if="event.location" class="flex items-center gap-2">
-                  <MapPin :size="14" class="text-primary shrink-0" />
-                  <span class="truncate">{{ event.location }}</span>
-                </div>
-                <div class="flex items-center gap-2">
-                  <Users :size="14" class="text-primary shrink-0" />
-                  <span>{{ capacityLabel(event) }}</span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                class="mt-3 inline-flex items-center justify-center gap-2 w-full py-3 rounded-2xl text-xs font-extrabold uppercase tracking-widest transition"
-                :class="event.is_accepting_registrations && !event.is_full
-                  ? 'bg-primary text-white hover:brightness-110'
-                  : 'bg-neutral-ivory text-neutral-black/50'"
-                @click.stop="openEvent(event.slug)"
-              >
-                {{ event.is_accepting_registrations && !event.is_full ? 'Register' : 'View details' }}
-                <ArrowRight :size="14" />
-              </button>
-            </div>
-          </article>
+      <!-- Tab: Ongoing Programs (CMS Featured Opportunities) -->
+      <template v-else-if="discoveryTab === 'programs'">
+        <div v-if="programsLoading" class="grid gap-6 sm:grid-cols-2" aria-busy="true">
+          <div v-for="n in 4" :key="n" class="h-64 rounded-[1.75rem] bg-white border border-neutral-ivory animate-pulse" />
         </div>
 
-        <div v-if="lastPage > 1" class="flex items-center justify-center gap-3 pt-4">
-          <button
-            type="button"
-            class="px-4 py-2 rounded-xl border border-neutral-ivory text-xs font-bold disabled:opacity-40 cursor-pointer"
-            :disabled="page <= 1"
-            @click="page -= 1; loadEvents()"
-          >
-            Previous
-          </button>
-          <span class="text-xs text-neutral-black/50">Page {{ page }} of {{ lastPage }}</span>
-          <button
-            type="button"
-            class="px-4 py-2 rounded-xl border border-neutral-ivory text-xs font-bold disabled:opacity-40 cursor-pointer"
-            :disabled="page >= lastPage"
-            @click="page += 1; loadEvents()"
-          >
-            Next
+        <div v-else-if="programsError" class="rounded-[1.75rem] border border-red-200 bg-red-50 p-8 text-center" role="alert">
+          <AlertCircle class="w-8 h-8 text-red-600 mx-auto mb-2" />
+          <p class="text-red-800 font-semibold">{{ programsError }}</p>
+          <button type="button" class="mt-4 px-5 py-2.5 bg-primary text-white text-xs font-bold uppercase rounded-xl cursor-pointer" @click="loadPrograms">
+            Retry
           </button>
         </div>
-      </div>
+
+        <div v-else-if="programs.length === 0" class="rounded-[1.75rem] border border-neutral-ivory bg-white p-12 text-center">
+          <Compass class="mx-auto text-primary/40 mb-4" :size="36" />
+          <h2 class="font-display text-2xl font-bold text-neutral-black">No active programs</h2>
+          <p class="mt-2 text-neutral-black/55 text-sm max-w-md mx-auto">
+            Check back soon for upcoming community programs and educational initiatives!
+          </p>
+        </div>
+
+        <div v-else class="space-y-8">
+          <p class="text-xs font-semibold uppercase tracking-widest text-neutral-black/40">
+            {{ programs.length }} community program{{ programs.length === 1 ? '' : 's' }}
+          </p>
+
+          <div class="grid gap-8 sm:grid-cols-2">
+            <article
+              v-for="prog in programs"
+              :key="prog.id"
+              class="flex flex-col justify-between rounded-[2rem] border border-neutral-ivory bg-white p-6 sm:p-8 shadow-soft hover:shadow-lg hover:border-primary/20 transition"
+            >
+              <div class="space-y-4">
+                <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-primary/5 text-primary text-[10px] font-extrabold uppercase tracking-widest">
+                  <BookOpen :size="12" />
+                  {{ prog.eyebrow || 'Featured Program' }}
+                </div>
+
+                <h3 class="font-display text-2xl font-bold text-neutral-black leading-snug">
+                  {{ prog.title }}
+                </h3>
+
+                <p v-if="prog.short_description || prog.description" class="text-sm text-neutral-black/65 leading-relaxed font-light line-clamp-3">
+                  {{ prog.short_description || prog.description }}
+                </p>
+
+                <div v-if="prog.features?.length" class="space-y-1.5 pt-2">
+                  <div v-for="(feat, idx) in prog.features" :key="idx" class="flex items-center gap-2 text-xs text-neutral-black/80 font-medium">
+                    <span class="w-1.5 h-1.5 rounded-full bg-accent-gold shrink-0" />
+                    <span>{{ feat }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pt-6 mt-4 border-t border-neutral-ivory/60 flex items-center justify-between">
+                <a
+                  v-if="prog.external_url"
+                  :href="prog.external_url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white rounded-xl text-xs font-extrabold uppercase tracking-widest hover:bg-secondary transition"
+                >
+                  Explore Program
+                  <ExternalLink :size="14" />
+                </a>
+                <span v-else class="text-xs text-neutral-black/40 italic font-light">Information only</span>
+              </div>
+            </article>
+          </div>
+        </div>
+      </template>
     </section>
   </div>
 </template>

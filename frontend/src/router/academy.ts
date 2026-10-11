@@ -97,13 +97,13 @@ const academyRoutes: Array<RouteRecordRaw> = [
       },
       {
         path: 'notifications',
-        name: 'notifications-center',
+        name: 'academy-notifications-center',
         component: () => import('@/pages/academy/NotificationCenterPage.vue'),
         meta: { title: 'Notification Center | SFU MSA', desc: 'View and manage all your notifications.', requiresStudent: true }
       },
       {
         path: 'settings/notifications',
-        name: 'notifications-preferences',
+        name: 'academy-notifications-preferences',
         component: () => import('@/pages/academy/NotificationPreferencesPage.vue'),
         meta: { title: 'Notification Settings | SFU MSA', desc: 'Manage your notification preferences.', requiresStudent: true }
       },

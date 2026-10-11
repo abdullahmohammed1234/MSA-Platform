@@ -55,6 +55,8 @@ class AnnouncementService
             $this->dispatchPublishedEvent($announcement);
         }
 
+        \Illuminate\Support\Facades\Cache::forget('website_announcements');
+
         return $announcement;
     }
 
@@ -87,6 +89,8 @@ class AnnouncementService
             $this->dispatchPublishedEvent($announcement);
         }
 
+        \Illuminate\Support\Facades\Cache::forget('website_announcements');
+
         return $announcement;
     }
 
@@ -97,6 +101,7 @@ class AnnouncementService
 
         if ($deleted) {
             $this->revisionService->logAction($userId, 'delete_announcement', $announcement, "Deleted announcement: {$title}");
+            \Illuminate\Support\Facades\Cache::forget('website_announcements');
         }
 
         return $deleted;

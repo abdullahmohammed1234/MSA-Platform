@@ -606,17 +606,26 @@ const previewSubtotal = computed(() =>
             </div>
           </div>
 
-          <div class="rounded-[1.75rem] border border-emerald-100 bg-emerald-50/50 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div class="rounded-[1.75rem] border border-primary/15 bg-primary/5 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div>
-              <h3 class="font-bold text-emerald-950 text-base">Want to Volunteer with Us?</h3>
-              <p class="text-xs text-emerald-800/80 mt-0.5">Help us organize and run this event. Earn rewards and join our volunteer team.</p>
+              <h3 class="font-bold text-neutral-black text-base">Want to Volunteer for this Event?</h3>
+              <p class="text-xs text-neutral-black/70 mt-0.5">Help us organize and run {{ event.name }}. Join our event volunteer team.</p>
             </div>
-            <RouterLink
-              to="/volunteer"
-              class="px-4 py-2 text-xs font-bold text-white bg-emerald-700 hover:bg-emerald-800 rounded-xl transition shrink-0"
-            >
-              Volunteer Opportunities &rarr;
-            </RouterLink>
+            <div class="flex flex-wrap items-center gap-2 shrink-0">
+              <RouterLink
+                v-if="event.slug"
+                :to="`/volunteer/${event.slug}`"
+                class="px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider text-white bg-primary hover:bg-secondary rounded-xl transition shadow-sm"
+              >
+                Volunteer for this Event &rarr;
+              </RouterLink>
+              <RouterLink
+                to="/volunteer"
+                class="px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider text-primary bg-white border border-primary/20 hover:bg-primary/5 rounded-xl transition"
+              >
+                All Opportunities
+              </RouterLink>
+            </div>
           </div>
 
           <div v-if="event.description" class="rounded-[1.75rem] border border-neutral-ivory bg-white p-6 sm:p-8 shadow-sm">
@@ -982,6 +991,7 @@ const previewSubtotal = computed(() =>
           </div>
         </aside>
       </section>
+
     </template>
   </div>
 </template>

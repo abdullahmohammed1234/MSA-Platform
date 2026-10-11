@@ -11,14 +11,13 @@
   },
   "dependencies": {
     "@motionone/vue": "^10.16.4",
-    "axios": "^1.17.0",
+    "axios": "^1.20.0",
     "html5-qrcode": "^2.3.8",
     "lucide-vue-next": "^1.0.0",
     "motion": "^13.2.0",
     "pinia": "^3.0.4",
-    "vue": "^3.5.34",
-    "vue-router": "^5.1.0",
-    "xlsx": "^0.18.5"
+    "vue": "^3.5.43",
+    "vue-router": "^5.1.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.0",
@@ -30,12 +29,20 @@
     "autoprefixer": "^10.5.0",
     "eslint": "^10.4.1",
     "jsdom": "^29.1.1",
-    "postcss": "^8.5.15",
+    "postcss": "^8.5.29",
     "prettier": "^3.8.3",
     "tailwindcss": "^4.3.0",
     "typescript": "~6.0.2",
     "vite": "^8.0.12",
-    "vitest": "^4.1.8",
+    "vitest": "^4.1.11",
     "vue-tsc": "^3.2.8"
+  },
+  "overrides": {
+    "source-map-js": "^1.2.2",
+    "nanoid": "^3.3.18",
+    "browserslist": "^4.29.3",
+    "baseline-browser-mapping": "^2.11.26",
+    "undici": "^7.30.0",
+    "@vue/server-renderer": "^3.5.43"
   }
 }

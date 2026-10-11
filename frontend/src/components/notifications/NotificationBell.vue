@@ -34,7 +34,7 @@ onUnmounted(() => {
   <div ref="bellRef" class="relative">
     <button
       @click="toggleDropdown"
-      class="relative p-2 text-neutral-muted hover:text-primary rounded-full hover:bg-neutral-ivory/50 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+      class="relative p-2 text-neutral-muted hover:text-primary rounded-full hover:bg-neutral-ivory/50 transition-all focus:outline-none focus:ring-2 focus:ring-primary/20"
       aria-label="View notifications"
     >
       <!-- Bell Icon SVG -->
@@ -52,14 +52,14 @@ onUnmounted(() => {
         />
       </svg>
 
-      <!-- Badge Ping Animation & Count -->
+      <!-- Badge Ping Animation & Count (Red Badge) -->
       <span
         v-if="notificationsStore.unreadCount > 0"
-        class="absolute top-1 right-1 flex h-4 w-4"
+        class="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 px-1"
       >
-        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-        <span class="relative inline-flex rounded-full h-4 w-4 bg-primary text-[9px] font-bold text-white items-center justify-center font-mono">
-          {{ notificationsStore.unreadCount > 9 ? '9+' : notificationsStore.unreadCount }}
+        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+        <span class="relative inline-flex rounded-full h-4 min-w-4 px-1 bg-red-500 text-[9px] font-black text-white items-center justify-center font-mono shadow-sm">
+          {{ notificationsStore.unreadCount > 99 ? '99+' : notificationsStore.unreadCount }}
         </span>
       </span>
     </button>

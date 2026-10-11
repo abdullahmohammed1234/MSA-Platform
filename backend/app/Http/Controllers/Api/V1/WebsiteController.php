@@ -100,11 +100,75 @@ class WebsiteController extends Controller
         ]);
     }
 
-    public function announcements(): JsonResponse
+    private function deriveCategory(string $title, ?string $summary): string
     {
-        $announcements = Cache::remember('website_announcements', 43200, function () {
+        $combined = strtolower($title . ' ' . ($summary ?? ''));
+        if (str_contains($combined, 'jumuah') || str_contains($combined, 'prayer') || str_contains($combined, 'khutbah')) {
+            return 'Prayer';
+        }
+        if (str_contains($combined, 'volunteer') || str_contains($combined, 'board') || str_contains($combined, 'committee')) {
+            return 'Board';
+        }
+        if (str_contains($combined, 'event') || str_contains($combined, 'halaqah') || str_contains($combined, 'social')) {
+            return 'Events';
+        }
+        if (str_contains($combined, 'course') || str_contains($combined, 'study') || str_contains($combined, 'workshop')) {
+            return 'Education';
+        }
+        if ($summary && strlen($summary) <= 20 && !str_contains($summary, ' ')) {
+            return ucfirst($summary);
+        }
+        return 'General';
+    }
+
+    public function announcements(Request $request): JsonResponse
+    {
+        $hasFilters = $request->filled('search') || $request->filled('category');
+
+        if ($hasFilters) {
+            $query = Announcement::where('status', 'published')
+                ->whereNotNull('published_at')
+                ->where('published_at', '<=', now());
+
+            if ($request->filled('search')) {
+                $search = $request->input('search');
+                $query->where(function ($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                      ->orWhere('summary', 'like', "%{$search}%")
+                      ->orWhere('content', 'like', "%{$search}%");
+                });
+            }
+
+            if ($request->filled('category')) {
+                $category = strtolower($request->input('category'));
+                $query->where(function ($q) use ($category) {
+                    $q->where('title', 'like', "%{$category}%")
+                      ->orWhere('summary', 'like', "%{$category}%");
+                });
+            }
+
+            $announcements = $query->orderBy('published_at', 'desc')->get()->map(function ($item) {
+                return [
+                    'id' => $item->uuid,
+                    'title' => $item->title,
+                    'slug' => $item->slug,
+                    'content' => $item->content ?: $item->summary,
+                    'summary' => $item->summary ?? 'General',
+                    'date' => $item->published_at ? $item->published_at->format('Y-m-d') : null,
+                    'category' => $this->deriveCategory($item->title, $item->summary),
+                    'featured_image' => CmsAssetUrl::resolve($item->featured_image),
+                ];
+            })->values()->toArray();
+
+            return response()->json([
+                'announcements' => $announcements,
+            ]);
+        }
+
+        $announcements = Cache::remember('website_announcements', 3600, function () {
             $dbAnnouncements = Announcement::where('status', 'published')
                 ->whereNotNull('published_at')
+                ->where('published_at', '<=', now())
                 ->orderBy('published_at', 'desc')
                 ->get();
 
@@ -113,16 +177,22 @@ class WebsiteController extends Controller
                     [
                         'id' => 'ann-1',
                         'title' => "Jumu'ah Location Update",
+                        'slug' => 'jumuah-location-update',
                         'content' => "Jumu'ah prayers this week will be held in the West Gym to accommodate more students.",
+                        'summary' => 'Jumu\'ah prayers this week will be held in the West Gym.',
                         'date' => '2026-06-08',
-                        'category' => 'Prayer'
+                        'category' => 'Prayer',
+                        'featured_image' => null,
                     ],
                     [
                         'id' => 'ann-2',
                         'title' => 'Volunteering Open',
+                        'slug' => 'volunteering-open',
                         'content' => 'Applications are now open for the 2026 MSA Board committees. Apply today!',
+                        'summary' => 'Applications are now open for the 2026 MSA Board committees.',
                         'date' => '2026-06-05',
-                        'category' => 'Board'
+                        'category' => 'Board',
+                        'featured_image' => null,
                     ]
                 ];
             }
@@ -131,16 +201,121 @@ class WebsiteController extends Controller
                 return [
                     'id' => $item->uuid,
                     'title' => $item->title,
-                    'content' => $item->content,
-                    'date' => $item->published_at->format('Y-m-d'),
-                    'category' => $item->summary ?? 'General',
+                    'slug' => $item->slug,
+                    'content' => $item->content ?: $item->summary,
+                    'summary' => $item->summary ?? 'General',
+                    'date' => $item->published_at ? $item->published_at->format('Y-m-d') : null,
+                    'category' => $this->deriveCategory($item->title, $item->summary),
                     'featured_image' => CmsAssetUrl::resolve($item->featured_image),
                 ];
-            })->toArray();
+            })->values()->toArray();
         });
 
         return response()->json([
             'announcements' => $announcements,
+        ]);
+    }
+
+    public function showAnnouncement(string $slug): JsonResponse
+    {
+        $announcement = Announcement::with('author:id,name')
+            ->where(function ($query) use ($slug) {
+                $query->where('slug', $slug)
+                      ->orWhere('uuid', $slug);
+            })
+            ->where('status', 'published')
+            ->whereNotNull('published_at')
+            ->where('published_at', '<=', now())
+            ->first();
+
+        if (!$announcement) {
+            $fallbacks = [
+                'jumuah-location-update' => [
+                    'id' => 'ann-1',
+                    'uuid' => 'ann-1',
+                    'title' => "Jumu'ah Location Update",
+                    'slug' => 'jumuah-location-update',
+                    'content' => "Jumu'ah prayers this week will be held in the West Gym to accommodate more students.\n\nPlease arrive early to ensure seating and follow the instructions of MSA volunteers. Sisters' prayer space will be designated on the upper level with dedicated entrance signage.\n\nFirst Khutbah begins promptly at 1:15 PM, followed by the second congregation at 2:00 PM. Wudu facilities are available in the adjacent athletic center change rooms.\n\nJazakum Allahu Khairan for your cooperation as we work to provide safe and spacious Friday prayer spaces for the SFU community!",
+                    'summary' => 'Jumu\'ah prayers this week will be held in the West Gym.',
+                    'category' => 'Prayer',
+                    'date' => '2026-06-08',
+                    'published_at' => '2026-06-08T12:00:00Z',
+                    'featured_image' => null,
+                    'author' => ['name' => 'SFU MSA Executive Board'],
+                ],
+                'volunteering-open' => [
+                    'id' => 'ann-2',
+                    'uuid' => 'ann-2',
+                    'title' => 'Volunteering Open',
+                    'slug' => 'volunteering-open',
+                    'content' => "Applications are now open for the 2026 MSA Board committees. Apply today to serve our campus Muslim community!\n\nPositions are open in Logistics, Media, Dawah, and Event Management. Gain leadership experience, earn volunteer certificates, and give back to your community.",
+                    'summary' => 'Applications are now open for the 2026 MSA Board committees.',
+                    'category' => 'Board',
+                    'date' => '2026-06-05',
+                    'published_at' => '2026-06-05T12:00:00Z',
+                    'featured_image' => null,
+                    'author' => ['name' => 'VMS Committee'],
+                ],
+            ];
+
+            $fallbackItem = $fallbacks[$slug] ?? null;
+            if (!$fallbackItem && ($slug === 'ann-1' || $slug === 'ann-2')) {
+                $fallbackItem = $slug === 'ann-1' ? $fallbacks['jumuah-location-update'] : $fallbacks['volunteering-open'];
+            }
+
+            if ($fallbackItem) {
+                $relatedFallback = array_values(array_filter($fallbacks, fn($f) => $f['slug'] !== $fallbackItem['slug']));
+                return response()->json([
+                    'announcement' => $fallbackItem,
+                    'related' => $relatedFallback,
+                ]);
+            }
+
+            return response()->json([
+                'message' => 'Announcement not found.',
+            ], 404);
+        }
+
+        $related = Announcement::where('status', 'published')
+            ->whereNotNull('published_at')
+            ->where('published_at', '<=', now())
+            ->where('id', '!=', $announcement->id)
+            ->orderBy('published_at', 'desc')
+            ->take(3)
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'id' => $item->uuid,
+                    'title' => $item->title,
+                    'slug' => $item->slug,
+                    'summary' => $item->summary ?? 'General',
+                    'date' => $item->published_at ? $item->published_at->format('Y-m-d') : null,
+                    'category' => $this->deriveCategory($item->title, $item->summary),
+                    'featured_image' => CmsAssetUrl::resolve($item->featured_image),
+                ];
+            })
+            ->values()
+            ->toArray();
+
+        return response()->json([
+            'announcement' => [
+                'id' => $announcement->uuid,
+                'uuid' => $announcement->uuid,
+                'title' => $announcement->title,
+                'slug' => $announcement->slug,
+                'content' => $announcement->content ?: ($announcement->summary ?: 'Official announcement update from SFU Muslim Students\' Association.'),
+                'summary' => $announcement->summary ?? 'General',
+                'category' => $this->deriveCategory($announcement->title, $announcement->summary),
+                'date' => $announcement->published_at ? $announcement->published_at->format('Y-m-d') : null,
+                'published_at' => $announcement->published_at ? $announcement->published_at->toIso8601String() : null,
+                'featured_image' => CmsAssetUrl::resolve($announcement->featured_image),
+                'author' => $announcement->author ? [
+                    'name' => $announcement->author->name,
+                ] : [
+                    'name' => 'SFU MSA Team',
+                ],
+            ],
+            'related' => $related,
         ]);
     }
 

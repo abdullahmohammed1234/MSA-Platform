@@ -135,6 +135,12 @@ export const operationsService = {
     return emsHttp.post(`/events/${eventUuid}/undo-check-in`, payload);
   },
 
+  inspectHeaders(eventUuid: string, file: File): Promise<{ headers: string[] }> {
+    const form = new FormData();
+    form.append('file', file);
+    return postForm(`/events/${eventUuid}/import/inspect-headers`, form);
+  },
+
   previewImport(
     eventUuid: string,
     file: File,

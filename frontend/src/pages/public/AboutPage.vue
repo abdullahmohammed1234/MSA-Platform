@@ -346,7 +346,7 @@ const impactLightboxImages = computed(() =>
             class="relative aspect-[4/3] rounded-[2rem] overflow-hidden cursor-zoom-in shadow-soft group border border-neutral-ivory/60 bg-primary/5 text-left"
             @click="selectedPhotoIndex = i"
           >
-            <img :src="photo" class="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-all duration-700" alt="Community moment" />
+            <img :src="photo" class="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-all duration-700" alt="Community moment" loading="lazy" decoding="async" />
             <div class="absolute inset-0 bg-primary/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           </button>
         </div>

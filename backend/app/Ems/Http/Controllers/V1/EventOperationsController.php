@@ -7,6 +7,7 @@ use App\Ems\Exceptions\CheckInException;
 use App\Ems\Http\Controllers\EmsController;
 use App\Ems\Http\Requests\Operations\CheckInRequest;
 use App\Ems\Http\Requests\Operations\CommitImportRequest;
+use App\Ems\Http\Requests\Operations\InspectImportHeadersRequest;
 use App\Ems\Http\Requests\Operations\ManualCheckInRequest;
 use App\Ems\Http\Requests\Operations\PreviewImportRequest;
 use App\Ems\Http\Requests\Operations\SaveImportMappingRequest;
@@ -254,6 +255,17 @@ class EventOperationsController extends EmsController
             'message' => 'Check-in undone.',
             'audit_uuid' => $result['audit']->uuid,
         ], 'Check-in undone.');
+    }
+
+    public function inspectHeaders(InspectImportHeadersRequest $request, Event $event): JsonResponse
+    {
+        $this->authorize('importAttendees', $event);
+
+        $headers = $this->imports->inspectHeaders($request->file('file'));
+
+        return ApiResponse::success([
+            'headers' => $headers,
+        ], 'Spreadsheet headers extracted.');
     }
 
     public function previewImport(PreviewImportRequest $request, Event $event): JsonResponse

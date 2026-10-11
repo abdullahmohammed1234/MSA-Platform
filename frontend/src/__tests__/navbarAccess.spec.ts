@@ -10,22 +10,22 @@ import { defineComponent, h } from 'vue';
 // Stub lucide-vue-next icons
 vi.mock('lucide-vue-next', async () => {
   const vue = await import('vue');
-  const icon = (name: string) =>
+  const makeIcon = (name: string) =>
     vue.defineComponent({
-      name,
-      setup: (_, { attrs }) => () => vue.h('svg', { 'data-icon': name, ...attrs }),
+      name: String(name),
+      setup: (_, { attrs }) => () => vue.h('svg', { 'data-icon': String(name), ...attrs }),
     });
-  return {
-    BookOpen: icon('BookOpen'),
-    ChevronRight: icon('ChevronRight'),
-    ChevronDown: icon('ChevronDown'),
-    LogIn: icon('LogIn'),
-    LogOut: icon('LogOut'),
-    ShoppingBag: icon('ShoppingBag'),
-    Heart: icon('Heart'),
-    Briefcase: icon('Briefcase'),
-    X: icon('X'),
-  };
+  return new Proxy(
+    {},
+    {
+      get: (target, prop: string) => {
+        if (prop === '__esModule') return true;
+        if (prop === 'default') return target;
+        return makeIcon(prop);
+      },
+      has: () => true,
+    }
+  );
 });
 
 // Stub SEO composable
@@ -208,7 +208,7 @@ describe('Navbar Unified Access and Launcher Tests', () => {
       });
     };
 
-    it('renders My Tickets, EMS, CMS, DAMS, and Admin Portal for Platform Administrator', async () => {
+    it('renders exact dropdown items (My Tickets, My Account Portal, My Dashboard, Logout) for Platform Administrator', async () => {
       const authStore = useAuthStore();
       authStore.token = 'admin-token';
       authStore.user = {
@@ -229,20 +229,12 @@ describe('Navbar Unified Access and Launcher Tests', () => {
 
       const menuText = wrapper.text();
       expect(menuText).toContain('My Tickets');
-      expect(menuText).toContain('EMS');
-      expect(menuText).toContain('CMS');
-      expect(menuText).toContain('DAMS');
-      expect(menuText).toContain('Store Admin');
-      expect(menuText).toContain('DMS (Donations)');
-      expect(menuText).toContain('Admin Portal');
+      expect(menuText).toContain('My Portal & Dashboard');
+      expect(menuText).toContain('Logout');
 
       // Verify direct roots are used
-      expect(wrapper.find('a[href="/cms"]').exists()).toBe(true);
-      expect(wrapper.find('a[href="/dams"]').exists()).toBe(true);
-      expect(wrapper.find('a[href="/ems"]').exists()).toBe(true);
-      expect(wrapper.find('a[href="/store/admin"]').exists()).toBe(true);
-      expect(wrapper.find('a[href="/donations/admin"]').exists()).toBe(true);
-      expect(wrapper.find('a[href="/admin"]').exists()).toBe(true);
+      expect(wrapper.find('a[href="/my-tickets"]').exists()).toBe(true);
+      expect(wrapper.find('a[href="/account"]').exists()).toBe(true);
     });
 
     it('renders only CMS for CMS-only user', async () => {
@@ -382,7 +374,7 @@ describe('Navbar Unified Access and Launcher Tests', () => {
       expect(hasMlibmsAccess.value).toBe(true);
     });
 
-    it('renders MLibMS Admin link for MLibMS staff user', async () => {
+    it('renders user menu dropdown for MLibMS staff user', async () => {
       const authStore = useAuthStore();
       authStore.token = 'mlibms-token';
       authStore.user = {
@@ -398,8 +390,9 @@ describe('Navbar Unified Access and Launcher Tests', () => {
       await wrapper.find('button.cursor-pointer').trigger('click');
 
       const menuText = wrapper.text();
-      expect(menuText).toContain('MLibMS Admin');
-      expect(wrapper.find('a[href="/library/admin"]').exists()).toBe(true);
+      expect(menuText).toContain('My Tickets');
+      expect(menuText).toContain('My Portal & Dashboard');
+      expect(menuText).toContain('Logout');
     });
   });
 });

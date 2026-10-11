@@ -73,10 +73,15 @@ const closeDropdown = () => {
       <div
         :id="selectId"
         tabindex="0"
+        role="combobox"
+        :aria-expanded="isOpen"
+        aria-haspopup="listbox"
+        :aria-invalid="error ? 'true' : undefined"
+        :aria-describedby="error ? `${selectId}-error` : (description ? `${selectId}-desc` : undefined)"
         @click="toggleDropdown"
         @blur="closeDropdown"
         :class="[
-          'w-full px-4 py-3 bg-white border rounded-xl outline-none transition-all duration-300 text-neutral-black text-sm flex items-center justify-between cursor-pointer select-none',
+          'w-full px-4 py-3 bg-white border rounded-xl outline-none transition-all duration-300 text-neutral-black text-sm flex items-center justify-between cursor-pointer select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
           error ? 'border-secondary focus:ring-2 focus:ring-secondary/15' : 'border-neutral-ivory focus:ring-2 focus:ring-primary/15 focus:border-primary',
           disabled && 'bg-neutral-gray/10 cursor-not-allowed opacity-50 pointer-events-none'
         ]"
@@ -86,6 +91,7 @@ const closeDropdown = () => {
         
         <!-- Chevron Icon -->
         <svg
+          aria-hidden="true"
           class="h-4 w-4 text-neutral-muted transition-transform duration-300"
           :class="{ 'transform rotate-180': isOpen }"
           fill="none"
@@ -110,10 +116,12 @@ const closeDropdown = () => {
             @click.stop
           />
         </div>
-        <ul class="py-1">
+        <ul class="py-1" role="listbox">
           <li
             v-for="option in filteredOptions"
             :key="option.value"
+            role="option"
+            :aria-selected="option.value === modelValue"
             @click.stop="selectOption(option)"
             :class="[
               'px-4 py-2 text-sm text-neutral-black cursor-pointer transition-colors',
@@ -144,6 +152,8 @@ const closeDropdown = () => {
         :id="selectId"
         :value="modelValue"
         :disabled="disabled"
+        :aria-invalid="error ? 'true' : undefined"
+        :aria-describedby="error ? `${selectId}-error` : (description ? `${selectId}-desc` : undefined)"
         @change="handleNativeChange"
         @focus="isFocused = true"
         @blur="isFocused = false"
@@ -167,7 +177,7 @@ const closeDropdown = () => {
       </select>
 
       <!-- Custom Chevron overlay for native select -->
-      <div class="absolute inset-y-0 right-4 flex items-center pointer-events-none text-neutral-muted">
+      <div class="absolute inset-y-0 right-4 flex items-center pointer-events-none text-neutral-muted" aria-hidden="true">
         <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
         </svg>
@@ -183,10 +193,10 @@ const closeDropdown = () => {
     </div>
 
     <!-- Error or Help Text -->
-    <p v-if="error" class="text-[10.5px] text-secondary font-semibold block mt-1" aria-live="assertive">
+    <p v-if="error" :id="`${selectId}-error`" class="text-[10.5px] text-secondary font-semibold block mt-1" aria-live="assertive">
       {{ error }}
     </p>
-    <p v-else-if="description" class="text-[11px] text-neutral-muted leading-relaxed mt-1">
+    <p v-else-if="description" :id="`${selectId}-desc`" class="text-[11px] text-neutral-muted leading-relaxed mt-1">
       {{ description }}
     </p>
   </div>

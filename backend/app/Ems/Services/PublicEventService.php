@@ -36,7 +36,7 @@ class PublicEventService
         $perPage = $this->resolvePerPage($filters['per_page'] ?? null);
 
         return $this->baseQuery($filters)
-            ->with(['category'])
+            ->with(['category', 'series'])
             ->withSum(['registrations as occupied_seats' => fn (Builder $q) => $q->occupyingCapacity()], 'quantity')
             ->orderBy($sortBy, $direction)
             ->orderBy('id', 'desc')
@@ -55,6 +55,7 @@ class PublicEventService
             ->where('slug', $slug)
             ->with([
                 'category',
+                'series',
                 'organizer',
                 'ticketTypes' => fn ($q) => $q->publiclyAvailable(),
                 'documents' => fn ($q) => $q->where('is_active', true)->whereNull('deleted_at')->orderBy('sort_order', 'asc'),

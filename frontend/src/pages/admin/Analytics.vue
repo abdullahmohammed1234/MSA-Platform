@@ -75,6 +75,75 @@
           />
         </div>
 
+        <!-- Scope B, C, D: Subsystem Impact Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <!-- CMS Content Impact -->
+          <div class="bg-white border border-neutral-ivory rounded-2xl shadow-soft p-6 space-y-4">
+            <h3 class="text-sm font-bold uppercase tracking-wider text-primary flex items-center justify-between">
+              <span>CMS Content Reach</span>
+              <span class="text-xs text-neutral-muted font-normal">Public Web</span>
+            </h3>
+            <div class="space-y-3 divide-y divide-neutral-ivory/50">
+              <div class="flex justify-between items-center pt-2">
+                <span class="text-xs font-semibold text-neutral-black">Published Announcements</span>
+                <span class="text-sm font-black text-primary">{{ store.overview?.cms?.announcements_published ?? 0 }}</span>
+              </div>
+              <div class="flex justify-between items-center pt-2">
+                <span class="text-xs font-semibold text-neutral-black">Published Resources</span>
+                <span class="text-sm font-black text-primary">{{ store.overview?.cms?.resources_published ?? 0 }}</span>
+              </div>
+              <div class="flex justify-between items-center pt-2">
+                <span class="text-xs font-semibold text-neutral-black">Featured Initiatives</span>
+                <span class="text-sm font-black text-primary">{{ store.overview?.cms?.featured_opportunities ?? 0 }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- EMS Event Impact -->
+          <div class="bg-white border border-neutral-ivory rounded-2xl shadow-soft p-6 space-y-4">
+            <h3 class="text-sm font-bold uppercase tracking-wider text-emerald-800 flex items-center justify-between">
+              <span>EMS Event Impact</span>
+              <span class="text-xs text-neutral-muted font-normal">Events & Ticketing</span>
+            </h3>
+            <div class="space-y-3 divide-y divide-neutral-ivory/50">
+              <div class="flex justify-between items-center pt-2">
+                <span class="text-xs font-semibold text-neutral-black">Published Events</span>
+                <span class="text-sm font-black text-emerald-800">{{ store.overview?.ems?.published_events ?? 0 }}</span>
+              </div>
+              <div class="flex justify-between items-center pt-2">
+                <span class="text-xs font-semibold text-neutral-black">Total Registrations</span>
+                <span class="text-sm font-black text-emerald-800">{{ store.overview?.ems?.total_registrations ?? 0 }}</span>
+              </div>
+              <div class="flex justify-between items-center pt-2">
+                <span class="text-xs font-semibold text-neutral-black">Verified Check-Ins</span>
+                <span class="text-sm font-black text-emerald-800">{{ store.overview?.ems?.verified_attendance ?? 0 }} ({{ store.overview?.ems?.attendance_rate ?? 0 }}%)</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- VMS Volunteer Impact -->
+          <div class="bg-white border border-neutral-ivory rounded-2xl shadow-soft p-6 space-y-4">
+            <h3 class="text-sm font-bold uppercase tracking-wider text-purple-900 flex items-center justify-between">
+              <span>VMS Volunteer Service</span>
+              <span class="text-xs text-neutral-muted font-normal">Volunteering</span>
+            </h3>
+            <div class="space-y-3 divide-y divide-neutral-ivory/50">
+              <div class="flex justify-between items-center pt-2">
+                <span class="text-xs font-semibold text-neutral-black">Active Opportunities</span>
+                <span class="text-sm font-black text-purple-900">{{ store.overview?.volunteering?.active_opportunities ?? 0 }}</span>
+              </div>
+              <div class="flex justify-between items-center pt-2">
+                <span class="text-xs font-semibold text-neutral-black">Applications Received</span>
+                <span class="text-sm font-black text-purple-900">{{ store.overview?.volunteering?.applications_received ?? 0 }}</span>
+              </div>
+              <div class="flex justify-between items-center pt-2">
+                <span class="text-xs font-semibold text-neutral-black">Verified Service Hours</span>
+                <span class="text-sm font-black text-purple-900">{{ store.overview?.volunteering?.verified_service_hours ?? 0 }} hrs</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <!-- Recent Activity Feed -->
         <div class="bg-white border border-neutral-ivory rounded-2xl shadow-soft p-6">
           <h3 class="text-sm font-bold uppercase tracking-wider text-neutral-black mb-4">Recent Activity Feed</h3>

@@ -53,6 +53,10 @@ Route::prefix('v1')->group(function () {
     Route::get('/cms/prayers', [\App\Http\Controllers\Api\V1\PublicPrayerController::class, 'index'])
         ->name('api.cms.prayers.index');
 
+    // Unified Platform Discovery Search (Phase 36)
+    Route::get('/search', [\App\Http\Controllers\Api\V1\UnifiedSearchController::class, 'search'])
+        ->name('api.search');
+
     // 2. Users routes
     Route::prefix('users')->middleware('auth:sanctum')->group(function () {
         Route::get('/me', [UserController::class, 'me'])->name('api.users.me');
@@ -60,6 +64,19 @@ Route::prefix('v1')->group(function () {
         Route::post('/academy-onboarding/complete', [UserController::class, 'completeAcademyOnboarding'])
             ->name('api.users.academy-onboarding.complete');
     });
+
+    // 2b. Account routes (Phase 31)
+    Route::prefix('account')->middleware('auth:sanctum')->group(function () {
+        Route::get('/summary', [\App\Http\Controllers\Api\V1\AccountController::class, 'summary'])->name('api.account.summary');
+        Route::put('/password', [\App\Http\Controllers\Api\V1\AccountController::class, 'updatePassword'])
+            ->middleware('throttle:auth')
+            ->name('api.account.password');
+    });
+
+    // 2c. Member Dashboard route (Phase 32)
+    Route::get('/dashboard', [\App\Http\Controllers\Api\V1\MemberDashboardController::class, 'index'])
+        ->middleware('auth:sanctum')
+        ->name('api.dashboard');
 
     // 3. Academy routes (volunteers, mentors, and admins only)
     Route::prefix('academy')->middleware(['auth:sanctum', 'app.access:dawah-academy', 'role:volunteer|mentor|admin|super-admin'])->group(function () {
@@ -108,6 +125,7 @@ Route::prefix('v1')->group(function () {
     Route::prefix('website')->group(function () {
         Route::get('/homepage', [WebsiteController::class, 'homepage'])->name('api.website.homepage');
         Route::get('/announcements', [WebsiteController::class, 'announcements'])->name('api.website.announcements');
+        Route::get('/announcements/{slug}', [WebsiteController::class, 'showAnnouncement'])->name('api.website.announcements.show');
         // Phase 9 — legacy CMS events retired (410 Gone). Main Website uses EMS /ems/public/events.
         Route::get('/events', [WebsiteController::class, 'legacyCmsEventsRetired'])->name('api.website.events');
         Route::get('/events/registrations', [WebsiteController::class, 'legacyCmsEventsRetired'])->name('api.website.events.registrations');

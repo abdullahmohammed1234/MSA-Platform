@@ -26,9 +26,15 @@ const toggle = () => {
     <div
       :id="switchId"
       role="switch"
+      :tabindex="disabled ? -1 : 0"
       :aria-checked="modelValue"
+      :aria-disabled="disabled ? 'true' : undefined"
+      :aria-labelledby="label ? `${switchId}-label` : undefined"
+      :aria-describedby="description ? `${switchId}-desc` : undefined"
+      @keydown.space.prevent="toggle"
+      @keydown.enter.prevent="toggle"
       :class="[
-        'relative inline-flex items-center w-9 h-5 rounded-full transition-colors duration-300 outline-none',
+        'relative inline-flex items-center w-9 h-5 rounded-full transition-colors duration-300 outline-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
         modelValue ? 'bg-primary' : 'bg-neutral-ivory',
         disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
       ]"
@@ -44,6 +50,7 @@ const toggle = () => {
     <!-- Toggle Labels -->
     <div v-if="label" class="flex flex-col">
       <span
+        :id="`${switchId}-label`"
         :class="[
           'text-sm font-medium text-neutral-black leading-tight',
           disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
@@ -51,7 +58,7 @@ const toggle = () => {
       >
         {{ label }}
       </span>
-      <span v-if="description" class="text-[11px] text-neutral-muted leading-relaxed mt-0.5">
+      <span v-if="description" :id="`${switchId}-desc`" class="text-[11px] text-neutral-muted leading-relaxed mt-0.5">
         {{ description }}
       </span>
     </div>

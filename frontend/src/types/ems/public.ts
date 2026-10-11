@@ -22,6 +22,13 @@ export interface PublicEventCategoryRef {
   color: string | null;
 }
 
+export interface PublicEventSeriesRef {
+  uuid: string;
+  name: string;
+  description?: string | null;
+  recurrence_pattern?: string | null;
+}
+
 export interface PublicEvent {
   uuid: string;
   name: string;
@@ -29,6 +36,7 @@ export interface PublicEvent {
   short_description: string | null;
   banner_url: string | null;
   category: PublicEventCategoryRef | null;
+  series?: PublicEventSeriesRef | null;
   location: string | null;
   start_at: string | null;
   end_at: string | null;

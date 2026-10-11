@@ -32,7 +32,7 @@ api.interceptors.response.use(
 
     if (error.code === 'ECONNABORTED') {
       error.message = 'The server took too long to respond. Please try again.';
-    } else if (!error.response) {
+    } else if (!error.response || error.code === 'ERR_NETWORK') {
       error.message = 'Unable to reach the API server. Check your connection and try again.';
     }
 

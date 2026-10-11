@@ -56,8 +56,8 @@ const handleLogin = async () => {
     if (redirectPath) {
       router.push(redirectPath);
     } else {
-      // All roles land on the main MSA website after login.
-      // Admin/CMS access remains available via /admin (authorization unchanged).
+      // Authenticated users return to the public homepage (/).
+      // Dashboard, Account, and Admin features are accessible via user menu & navigation.
       router.push({ path: '/' });
     }
   } catch (error: any) {

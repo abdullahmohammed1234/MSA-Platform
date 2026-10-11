@@ -10,6 +10,15 @@
       </div>
 
       <div class="flex items-center gap-3 self-start sm:self-auto">
+        <router-link
+          to="/admin/analytics"
+          class="px-4 py-2 text-sm font-semibold text-primary bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 rounded-xl shadow-soft transition cursor-pointer flex items-center gap-2"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+          </svg>
+          Platform Analytics
+        </router-link>
         <button
           type="button"
           @click="triggerSnapshot"

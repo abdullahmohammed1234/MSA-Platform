@@ -111,6 +111,58 @@ class VolunteerRegistrationTest extends EmsTestCase
         $response->assertJsonValidationErrors(['email', 'student_number']);
     }
 
+    public function test_volunteer_registration_email_boundary_cases(): void
+    {
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
+
+        // 1. Valid SFU variations must succeed
+        $validEmails = [
+            'valid.user@sfu.ca',
+            'UPPERCASE@SFU.CA',
+            'mixed.case@Sfu.Ca',
+            'student@mail.sfu.ca',
+            'alumni@alumni.sfu.ca',
+            'cs.student@cs.sfu.ca',
+            '  spaced@sfu.ca  ',
+        ];
+
+        foreach ($validEmails as $email) {
+            $response = $this->postJson('/api/v1/website/volunteer', [
+                'name' => 'Valid Applicant',
+                'email' => $email,
+                'student_number' => '301234567',
+                'department' => 'General Inquiries',
+                'interests' => 'Interest description.',
+            ]);
+            $response->assertStatus(200);
+        }
+
+        // 2. Prohibited or lookalike domains must fail validation on email
+        $invalidEmails = [
+            'user@gmail.com',
+            'user@yahoo.ca',
+            'not-an-email',
+            '',
+            'user@@sfu.ca',
+            'user@sfu.ca.attacker.com',
+            'user@not-sfu.ca',
+            'user@evilsfu.ca',
+            'user@sfu.ca@other.com',
+        ];
+
+        foreach ($invalidEmails as $email) {
+            $response = $this->postJson('/api/v1/website/volunteer', [
+                'name' => 'Invalid Applicant',
+                'email' => $email,
+                'student_number' => '301234567',
+                'department' => 'General Inquiries',
+                'interests' => 'Interest description.',
+            ]);
+            $response->assertStatus(422);
+            $response->assertJsonValidationErrors(['email']);
+        }
+    }
+
     public function test_unauthenticated_and_unauthorized_users_cannot_access_admin_endpoints(): void
     {
         $registration = VolunteerRegistration::factory()->create([

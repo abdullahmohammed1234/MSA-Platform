@@ -18,14 +18,10 @@ class StoreVolunteerRegistrationRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'email' => [
                 'required',
+                'string',
                 'email',
                 'max:255',
-                function ($attribute, $value, $fail) {
-                    $email = trim(strtolower($value));
-                    if (!preg_match('/^[a-zA-Z0-9._%+-]+@(?:[a-zA-Z0-9-]+\.)*sfu\.ca$/i', $email)) {
-                        $fail('Volunteers must register with an @sfu.ca email address.');
-                    }
-                },
+                'regex:/^[a-zA-Z0-9._%+-]+@(?:[a-zA-Z0-9-]+\.)*sfu\.ca$/i',
             ],
             'phone' => ['nullable', 'string', 'max:50'],
             'student_number' => ['required', 'string', 'regex:/^\d{9}$/'],
@@ -49,6 +45,7 @@ class StoreVolunteerRegistrationRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'email.regex' => 'Volunteers must apply with an @sfu.ca email address.',
             'student_number.regex' => 'Student number must be exactly 9 digits.',
             'department.in' => 'Selected department is invalid.',
         ];

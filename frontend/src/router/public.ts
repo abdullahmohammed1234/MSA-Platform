@@ -138,6 +138,24 @@ const publicRoutes: Array<RouteRecordRaw> = [
       //   component: () => import('@/pages/public/ResourcesPage.vue'), 
       //   meta: { title: 'Resources | SFU MSA', desc: 'Student accommodation guides, halal food maps, and mental health directories.' } 
       // },
+      {
+        path: 'search',
+        name: 'search',
+        component: () => import('@/pages/public/SearchPage.vue'),
+        meta: { title: 'Search & Platform Discovery | SFU MSA', desc: 'Search events, announcements, learning programs, and resources.' }
+      },
+      {
+        path: 'announcements',
+        name: 'announcements',
+        component: () => import('@/pages/public/AnnouncementsPage.vue'),
+        meta: { title: 'Announcements & News | SFU MSA', desc: 'Official updates, notices, and communications from SFU Muslim Students\' Association.' }
+      },
+      {
+        path: 'announcements/:slug',
+        name: 'announcement-detail',
+        component: () => import('@/pages/public/AnnouncementDetailPage.vue'),
+        meta: { title: 'Announcement | SFU MSA', desc: 'Read official announcement details from SFU MSA.' }
+      },
       { 
         path: 'contact', 
         name: 'contact', 
@@ -248,6 +266,77 @@ const publicRoutes: Array<RouteRecordRaw> = [
         name: 'public-store-my-orders',
         component: () => import('@/pages/public/store/StoreMyOrdersPage.vue'),
         meta: { title: 'My Store Orders | SFU MSA', desc: 'View past merchandise purchases.', requiresAuth: true },
+      },
+      // Member Dashboard (Phase 32) — Redirect to Unified Member Portal /account
+      {
+        path: 'dashboard',
+        redirect: '/account',
+      },
+      {
+        path: 'profile',
+        redirect: '/account/profile',
+      },
+      // Notification Center (Phase 33)
+      {
+        path: 'notifications',
+        name: 'notifications-center',
+        component: () => import('@/pages/academy/NotificationCenterPage.vue'),
+        meta: { title: 'Notification Center | SFU MSA', desc: 'View and manage all your notifications.', requiresAuth: true },
+      },
+      // Member Account & Dashboard Portal (Unified Member Hub)
+      {
+        path: 'account',
+        component: () => import('@/layouts/AccountLayout.vue'),
+        meta: { requiresAuth: true },
+        children: [
+          {
+            path: '',
+            name: 'account-overview',
+            alias: ['/dashboard'],
+            component: () => import('@/pages/dashboard/MemberDashboardView.vue'),
+            meta: { title: 'Member Portal & Dashboard | SFU MSA', desc: 'Your personalized SFU MSA member portal, dashboard, and activity overview.', requiresAuth: true },
+          },
+          {
+            path: 'activity',
+            name: 'account-activity',
+            component: () => import('@/pages/account/AccountActivityView.vue'),
+            meta: { title: 'Activity History | SFU MSA Account', desc: 'View your event tickets, store orders, and participation.', requiresAuth: true },
+          },
+          {
+            path: 'profile',
+            name: 'account-profile',
+            component: () => import('@/pages/account/AccountProfileView.vue'),
+            meta: { title: 'Profile Settings | SFU MSA Account', desc: 'Update your display name and email address.', requiresAuth: true },
+          },
+          {
+            path: 'security',
+            name: 'account-security',
+            component: () => import('@/pages/account/AccountSecurityView.vue'),
+            meta: { title: 'Security & Password | SFU MSA Account', desc: 'Update your account password.', requiresAuth: true },
+          },
+          {
+            path: 'apps',
+            name: 'account-apps',
+            component: () => import('@/pages/account/AccountAppsView.vue'),
+            meta: { title: 'My Applications | SFU MSA Account', desc: 'Launch accessible platform applications.', requiresAuth: true },
+          },
+          {
+            path: 'volunteer',
+            name: 'account-volunteering',
+            component: () => import('@/pages/account/AccountVolunteeringView.vue'),
+            meta: { title: 'Volunteering | SFU MSA Account', desc: 'View volunteer profile, skills, and shift records.', requiresAuth: true },
+          },
+          {
+            path: 'notifications',
+            name: 'account-notifications-preferences',
+            component: () => import('@/pages/account/AccountNotificationsPreferencesView.vue'),
+            meta: { title: 'Notification Settings | SFU MSA Account', desc: 'Manage your email and in-app notification preferences.', requiresAuth: true },
+          },
+          {
+            path: 'settings/notifications',
+            redirect: { name: 'account-notifications-preferences' },
+          },
+        ],
       },
       // Public Donations
       {

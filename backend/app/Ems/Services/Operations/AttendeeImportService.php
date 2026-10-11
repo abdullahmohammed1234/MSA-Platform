@@ -234,6 +234,92 @@ class AttendeeImportService
     }
 
     /**
+     * Inspect uploaded spreadsheet and extract sanitized column headers without persisting data.
+     *
+     * @return list<string>
+     */
+    public function inspectHeaders(UploadedFile $file): array
+    {
+        $ext = strtolower($file->getClientOriginalExtension() ?: '');
+
+        if (! in_array($ext, ['csv', 'txt', 'xlsx', 'xls'], true)) {
+            throw new EmsException(
+                'Unsupported file type. Upload a CSV or Excel (.xlsx/.xls) file.',
+                ['file' => ['Must be .csv or .xlsx/.xls']],
+                Response::HTTP_UNPROCESSABLE_ENTITY
+            );
+        }
+
+        $path = $file->getRealPath();
+        $rawHeaders = [];
+
+        if (in_array($ext, ['csv', 'txt'], true)) {
+            $handle = fopen($path, 'rb');
+            if ($handle === false) {
+                throw new EmsException('Unable to read CSV file.', [], Response::HTTP_UNPROCESSABLE_ENTITY);
+            }
+            try {
+                while (($data = fgetcsv($handle)) !== false) {
+                    if (! $this->rowIsEmpty($data)) {
+                        $rawHeaders = $data;
+                        break;
+                    }
+                }
+            } finally {
+                fclose($handle);
+            }
+        } else {
+            $spreadsheet = null;
+            try {
+                $reader = IOFactory::createReaderForFile($path);
+                $reader->setReadDataOnly(true);
+                $reader->setReadEmptyCells(false);
+                $spreadsheet = $reader->load($path);
+                $sheet = $spreadsheet->getActiveSheet();
+
+                foreach ($sheet->getRowIterator(1, 10) as $row) {
+                    $cells = [];
+                    $cellIterator = $row->getCellIterator();
+                    $cellIterator->setIterateOnlyExistingCells(false);
+                    foreach ($cellIterator as $cell) {
+                        $val = $cell->getValue();
+                        $cells[] = $val !== null ? (string) $val : '';
+                    }
+                    if (! $this->rowIsEmpty($cells)) {
+                        $rawHeaders = $cells;
+                        break;
+                    }
+                }
+            } catch (\Throwable $e) {
+                throw new EmsException(
+                    'Failed to inspect spreadsheet headers: ' . $e->getMessage(),
+                    ['file' => ['Corrupted or unreadable workbook']],
+                    Response::HTTP_UNPROCESSABLE_ENTITY
+                );
+            } finally {
+                if ($spreadsheet !== null) {
+                    $spreadsheet->disconnectWorksheets();
+                    unset($spreadsheet);
+                }
+            }
+        }
+
+        $sanitized = [];
+        foreach ($rawHeaders as $header) {
+            if ($header === null) {
+                continue;
+            }
+            $clean = preg_replace('/[\x00-\x1F\x7F]/u', '', (string) $header);
+            $clean = trim($clean ?? '');
+            if ($clean !== '') {
+                $sanitized[] = mb_substr($clean, 0, 120);
+            }
+        }
+
+        return array_values(array_unique($sanitized));
+    }
+
+    /**
      * @return list<array<string, mixed>>
      */
     public function readSpreadsheet(UploadedFile $file): array

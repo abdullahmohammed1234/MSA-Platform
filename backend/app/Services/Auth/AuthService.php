@@ -82,18 +82,14 @@ class AuthService
 
     private function canUseNonSfuEmail(User $user): bool
     {
-        $allowedNonSfuRoles = [
-            'super-admin',
-            'admin',
-            'director',
-            'dawah-coordinator',
-            'mentor',
-            'member',
-            'event-administrator',
-            'event-organizer',
-            'event-staff',
-        ];
+        if ($user->hasAnyRole(User::STAFF_ROLES) || $user->hasRole('member')) {
+            return true;
+        }
 
-        return $user->hasAnyRole($allowedNonSfuRoles);
+        if ($user->hasRole('volunteer')) {
+            return false;
+        }
+
+        return true;
     }
 }

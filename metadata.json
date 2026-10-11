@@ -1,0 +1,6 @@
+{
+  "name": "MSA Connect",
+  "description": "Mentorship and onboarding platform for new Muslim reverts at SFU MSA",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

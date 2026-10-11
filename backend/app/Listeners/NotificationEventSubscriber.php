@@ -146,6 +146,49 @@ class NotificationEventSubscriber
     }
 
     /**
+     * Handle EMS registration created event.
+     */
+    public function handleEmsRegistrationCreated(\App\Ems\Events\RegistrationCreated $event): void
+    {
+        /** @var \App\Ems\Models\Registration $registration */
+        $registration = $event->subject;
+
+        if (!$registration || !$registration->user_id) {
+            return;
+        }
+
+        $user = User::find($registration->user_id);
+        if (!$user) {
+            return;
+        }
+
+        $idempotencyKey = "ems_registration_in_app:" . $registration->uuid;
+        $alreadyExists = \App\Models\Notification::where('user_id', $user->id)
+            ->where('data->idempotency_key', $idempotencyKey)
+            ->exists();
+
+        if ($alreadyExists) {
+            return;
+        }
+
+        $registration->loadMissing(['event']);
+        $eventTitle = $registration->event?->name ?? $registration->event?->title ?? 'MSA Event';
+        $eventSlug = $registration->event?->slug;
+
+        $user->notify(new \App\Notifications\PlatformNotification(
+            "Registration Confirmed: {$eventTitle}",
+            "Your registration (#{$registration->reference}) for {$eventTitle} has been confirmed.",
+            [
+                'type' => 'event',
+                'event_slug' => $eventSlug,
+                'registration_uuid' => $registration->uuid,
+                'reference' => $registration->reference,
+                'idempotency_key' => $idempotencyKey,
+            ]
+        ));
+    }
+
+    /**
      * Register the listeners for the subscriber.
      */
     public function subscribe($events): array
@@ -157,6 +200,7 @@ class NotificationEventSubscriber
             AnnouncementPublishedEvent::class => 'handleAnnouncementPublished',
             TrainingScheduledEvent::class => 'handleTrainingScheduled',
             CertificateAwardedEvent::class => 'handleCertificateAwarded',
+            \App\Ems\Events\RegistrationCreated::class => 'handleEmsRegistrationCreated',
         ];
     }
 }

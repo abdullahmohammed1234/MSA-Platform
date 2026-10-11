@@ -219,6 +219,8 @@ Route::middleware(['auth:sanctum', 'throttle:' . config('ems.route.throttle', 'e
         Route::post('/events/{event}/undo-check-in', [EventOperationsController::class, 'undoCheckIn'])
             ->name('events.undo-check-in');
 
+        Route::post('/events/{event}/import/inspect-headers', [EventOperationsController::class, 'inspectHeaders'])
+            ->name('events.import.inspect-headers');
         Route::post('/events/{event}/import/preview', [EventOperationsController::class, 'previewImport'])
             ->name('events.import.preview');
         Route::post('/events/{event}/import', [EventOperationsController::class, 'commitImport'])

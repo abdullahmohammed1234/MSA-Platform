@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import * as XLSX from 'xlsx';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -72,17 +71,17 @@ const onFile = async (event: Event) => {
   const chosen = input.files?.[0];
   if (!chosen) return;
   file.value = chosen;
+  busy.value = true;
 
   try {
-    const buffer = await chosen.arrayBuffer();
-    const workbook = XLSX.read(buffer, { type: 'array' });
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
-    headers.value = rows[0] ? Object.keys(rows[0]) : [];
+    const res = await operationsService.inspectHeaders(uuid.value, chosen);
+    headers.value = res.headers;
     guessMapping(headers.value);
     step.value = 'map';
   } catch (error) {
     handle(error);
+  } finally {
+    busy.value = false;
   }
 };
 
@@ -129,10 +128,38 @@ const downloadReport = () => {
     ...preview.value.invalid_rows.map((r) => ({ ...r, kind: 'invalid' })),
     ...preview.value.duplicate_rows.map((r) => ({ ...r, kind: 'duplicate' })),
   ];
-  const sheet = XLSX.utils.json_to_sheet(rows);
-  const book = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(book, sheet, 'Validation');
-  XLSX.writeFile(book, 'import-validation-report.csv');
+  if (!rows.length) return;
+
+  const escapeCell = (val: unknown): string => {
+    const str = val === null || val === undefined ? '' : String(val);
+    if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  };
+
+  const columns = ['row_number', 'kind', 'name', 'email', 'phone', 'ticket_type', 'errors', 'warnings'];
+  const headerLine = columns.join(',');
+  const lines = rows.map((r) =>
+    columns
+      .map((col) => {
+        const val = (r as Record<string, unknown>)[col];
+        if (Array.isArray(val)) return escapeCell(val.join('; '));
+        return escapeCell(val);
+      })
+      .join(',')
+  );
+
+  const csv = [headerLine, ...lines].join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', 'import-validation-report.csv');
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 };
 </script>
 

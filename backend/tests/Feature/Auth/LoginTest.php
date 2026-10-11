@@ -179,6 +179,46 @@ class LoginTest extends TestCase
             ]);
     }
 
+    public function test_volunteer_login_email_domain_boundary_cases(): void
+    {
+        Role::firstOrCreate(['name' => 'Volunteer', 'slug' => 'volunteer']);
+
+        // 1. Volunteer with valid SFU subdomain can log in
+        $subdomainVolunteer = User::create([
+            'name' => 'Subdomain Vol',
+            'email' => 'subvol@mail.sfu.ca',
+            'password' => Hash::make('password123'),
+            'is_active' => true,
+        ]);
+        $subdomainVolunteer->roles()->sync(Role::where('slug', 'volunteer')->pluck('id'));
+
+        $this->postJson(route('api.auth.login'), [
+            'email' => 'subvol@mail.sfu.ca',
+            'password' => 'password123',
+        ])->assertStatus(200)->assertJsonStructure(['token', 'user']);
+
+        // 2. Volunteer with uppercase/mixed SFU email can log in
+        $this->postJson(route('api.auth.login'), [
+            'email' => 'SUBVOL@MAIL.SFU.CA',
+            'password' => 'password123',
+        ])->assertStatus(200);
+
+        // 3. Lookalike domain volunteer is rejected
+        $lookalikeVolunteer = User::create([
+            'name' => 'Lookalike Vol',
+            'email' => 'attacker@sfu.ca.evil.com',
+            'password' => Hash::make('password123'),
+            'is_active' => true,
+        ]);
+        $lookalikeVolunteer->roles()->sync(Role::where('slug', 'volunteer')->pluck('id'));
+
+        $this->postJson(route('api.auth.login'), [
+            'email' => 'attacker@sfu.ca.evil.com',
+            'password' => 'password123',
+        ])->assertStatus(422)
+          ->assertJsonValidationErrors(['email']);
+    }
+
     public function test_member_can_login_with_non_sfu_email(): void
     {
         Role::create(['name' => 'Member', 'slug' => 'member']);

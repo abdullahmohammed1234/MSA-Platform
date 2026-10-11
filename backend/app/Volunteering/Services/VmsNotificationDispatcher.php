@@ -244,6 +244,39 @@ class VmsNotificationDispatcher
         $notification->markQueued();
         SendEventNotificationJob::dispatchSync($notification->id);
 
+        // Dispatch dual in-app Notification for canonical user account
+        if ($signup->user_id) {
+            $user = \App\Models\User::find($signup->user_id);
+            if ($user) {
+                $inAppIdempotency = "in_app:" . $idempotencyKey;
+                $alreadyCreated = \App\Models\Notification::where('user_id', $user->id)
+                    ->where('data->idempotency_key', $inAppIdempotency)
+                    ->exists();
+
+                if (!$alreadyCreated) {
+                    $prefs = $user->notificationPreferences;
+                    $inAppEnabled = $prefs ? (bool) $prefs->in_app_enabled : true;
+                    $trainingEnabled = $prefs ? (bool) $prefs->upcoming_training : true;
+
+                    if ($inAppEnabled && $trainingEnabled) {
+                        \App\Models\Notification::create([
+                            'uuid' => (string) \Illuminate\Support\Str::uuid(),
+                            'user_id' => $user->id,
+                            'type' => 'App\\Notifications\\VmsInAppNotification',
+                            'title' => $rendered['subject'] ?? 'Volunteering Update',
+                            'message' => \Illuminate\Support\Str::limit($rendered['body_text'] ?? 'Update regarding your volunteer shift.', 250),
+                            'data' => [
+                                'type' => 'volunteer',
+                                'opportunity_slug' => $signup->opportunity?->slug,
+                                'idempotency_key' => $inAppIdempotency,
+                                'vms_type' => $type->value,
+                            ],
+                        ]);
+                    }
+                }
+            }
+        }
+
         return $notification;
     }
 

@@ -5,10 +5,15 @@ import { resolvePublicImagePath } from '@/constants/publicAssets';
 export interface AnnouncementItem {
   id: string;
   title: string;
+  slug?: string;
   content: string;
+  summary?: string;
   date: string;
   category?: string;
   featured_image?: string | null;
+  author?: {
+    name: string;
+  } | null;
 }
 
 export interface MediaGalleryItem {
@@ -110,12 +115,28 @@ export const websiteService = {
     return homepage;
   },
 
-  async getAnnouncements(): Promise<AnnouncementItem[]> {
-    const response = await api.get('/website/announcements');
+  async getAnnouncements(params?: { search?: string; category?: string }): Promise<AnnouncementItem[]> {
+    const response = await api.get('/website/announcements', { params });
     return (response.data?.announcements ?? []).map((item: AnnouncementItem) => ({
       ...item,
       featured_image: item.featured_image ? resolvePublicImagePath(item.featured_image) : null,
     }));
+  },
+
+  async getAnnouncementBySlug(slug: string): Promise<{ announcement: AnnouncementItem; related: AnnouncementItem[] }> {
+    const response = await api.get(`/website/announcements/${slug}`);
+    const announcement = response.data?.announcement;
+    const related = response.data?.related ?? [];
+    return {
+      announcement: {
+        ...announcement,
+        featured_image: announcement?.featured_image ? resolvePublicImagePath(announcement.featured_image) : null,
+      },
+      related: related.map((item: AnnouncementItem) => ({
+        ...item,
+        featured_image: item.featured_image ? resolvePublicImagePath(item.featured_image) : null,
+      })),
+    };
   },
 
 
