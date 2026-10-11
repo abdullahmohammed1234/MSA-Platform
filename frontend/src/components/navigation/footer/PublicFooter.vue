@@ -51,7 +51,7 @@ const handleSubmit = async () => {
     <!-- Subtle Background Pattern -->
     <div class="absolute inset-0 opacity-[0.03] pointer-events-none pattern-islamic scale-150" />
     
-    <div class="max-w-7xl mx-auto px-6 md:px-12 relative z-10">
+    <div class="max-w-7xl mx-auto px-5 sm:px-8 md:px-12 relative z-10">
       <!-- Top Section: Branding & Newsletter -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 pb-16 border-b border-white/10">
         <div class="lg:col-span-5 space-y-8">
@@ -87,7 +87,7 @@ const handleSubmit = async () => {
         </div>
 
         <div class="lg:col-span-7 space-y-6">
-          <div class="bg-primary-dark/20 border border-white/10 rounded-3xl p-8 md:p-10">
+          <div class="bg-primary-dark/20 border border-white/10 rounded-3xl p-6 sm:p-8 md:p-10">
             <h4 class="text-xl font-display font-bold text-white mb-2">Join our Newsletter</h4>
             <p class="text-white/50 text-sm mb-6">Stay updated with our latest events, prayer times, and community news.</p>
             <form @submit.prevent="handleSubmit" class="flex flex-col sm:flex-row gap-3">
@@ -126,8 +126,9 @@ const handleSubmit = async () => {
       </div>
 
       <!-- Middle Section: Columns -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-12 py-16 border-b border-white/10">
-        <div class="space-y-6">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-10 lg:gap-12 py-12 sm:py-16 border-b border-white/10">
+        <!-- 1. MSA Pages -->
+        <div class="space-y-5 sm:space-y-6">
           <h5 class="text-accent-gold text-[10px] uppercase tracking-[0.3em] font-black">MSA Pages</h5>
           <ul class="space-y-3">
             <li v-for="item in [
@@ -143,7 +144,8 @@ const handleSubmit = async () => {
           </ul>
         </div>
 
-        <div class="space-y-6">
+        <!-- 2. Prayer & Services -->
+        <div class="space-y-5 sm:space-y-6">
           <h5 class="text-accent-gold text-[10px] uppercase tracking-[0.3em] font-black">Prayer & Services</h5>
           <ul class="space-y-3">
             <li v-for="item in [
@@ -157,9 +159,10 @@ const handleSubmit = async () => {
           </ul>
         </div>
 
-        <div class="space-y-6">
+        <!-- 3. Volunteer -->
+        <div class="col-span-2 sm:col-span-1 space-y-5 sm:space-y-6">
           <h5 class="text-accent-gold text-[10px] uppercase tracking-[0.3em] font-black">Volunteer</h5>
-          <ul class="space-y-3">
+          <ul class="grid grid-cols-2 sm:grid-cols-1 gap-3 sm:space-y-3 sm:gap-0">
             <li v-for="item in [
               { name: 'Become a Member', link: '/contact' },
               { name: 'Join Committees', link: '/contact' },
@@ -173,11 +176,12 @@ const handleSubmit = async () => {
           </ul>
         </div>
 
-        <div class="space-y-6">
+        <!-- 4. Get in Touch -->
+        <div class="col-span-2 sm:col-span-1 space-y-5 sm:space-y-6">
           <h5 class="text-accent-gold text-[10px] uppercase tracking-[0.3em] font-black">Get in Touch</h5>
           <ul class="space-y-4">
-            <li class="flex items-start gap-4">
-              <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
+            <li class="flex items-start gap-3 sm:gap-4 min-w-0">
+              <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0 mt-0.5">
                 <MapPin :size="14" class="text-accent-gold" />
               </div>
               <span class="text-white/40 text-sm leading-relaxed">
@@ -186,11 +190,16 @@ const handleSubmit = async () => {
                 AQ 3200
               </span>
             </li>
-            <li class="flex items-center gap-4">
+            <li class="flex items-center gap-3 sm:gap-4 min-w-0">
               <div class="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center shrink-0">
                 <Mail :size="14" class="text-accent-gold" />
               </div>
-              <a href="mailto:sfumsa@hotmail.com" class="text-white/40 text-sm hover:text-white transition-colors">sfumsa@hotmail.com</a>
+              <a 
+                href="mailto:sfumsa@hotmail.com" 
+                class="text-white/40 text-sm hover:text-white transition-colors whitespace-nowrap overflow-visible font-medium"
+              >
+                sfumsa@hotmail.com
+              </a>
             </li>
           </ul>
         </div>
