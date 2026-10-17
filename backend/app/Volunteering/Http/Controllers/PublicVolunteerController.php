@@ -3,6 +3,8 @@
 namespace App\Volunteering\Http\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\VolunteeringPermission;
+use App\Models\User;
 use App\Volunteering\Models\Opportunity;
 use App\Volunteering\Models\Signup;
 use App\Volunteering\Services\VolunteerOpportunityService;
@@ -88,11 +90,7 @@ class PublicVolunteerController extends Controller
         // 1. If signup belongs to a registered user account
         if ($signup->user_id !== null) {
             $isOwner = $currentUser && (int) $currentUser->id === (int) $signup->user_id;
-            $isAdmin = $currentUser && (
-                $currentUser->hasRole('admin') ||
-                $currentUser->hasRole('super-admin') ||
-                $currentUser->hasPermissionTo('manage_volunteers')
-            );
+            $isAdmin = $currentUser && $this->canManageSignups($currentUser);
 
             if (!$isOwner && !$isAdmin) {
                 return response()->json([
@@ -107,11 +105,7 @@ class PublicVolunteerController extends Controller
 
             $isGuestOwner = ($userEmail && $userEmail === strtolower(trim($signup->email)))
                 || ($inputEmail !== '' && $inputEmail === strtolower(trim($signup->email)));
-            $isAdmin = $currentUser && (
-                $currentUser->hasRole('admin') ||
-                $currentUser->hasRole('super-admin') ||
-                $currentUser->hasPermissionTo('manage_volunteers')
-            );
+            $isAdmin = $currentUser && $this->canManageSignups($currentUser);
 
             if (!$isGuestOwner && !$isAdmin) {
                 return response()->json([
@@ -146,5 +140,10 @@ class PublicVolunteerController extends Controller
             'success' => true,
             'data' => $history,
         ]);
+    }
+
+    private function canManageSignups(User $user): bool
+    {
+        return VolunteeringPermission::permits($user, ['vms.manage_signups', 'volunteer.registrations.update']);
     }
 }

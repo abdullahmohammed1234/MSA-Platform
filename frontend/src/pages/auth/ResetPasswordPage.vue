@@ -85,11 +85,13 @@ const handleResetPassword = async () => {
       router.push({ name: 'login' });
     }, 3000);
   } catch (error: any) {
-    console.error('Password reset failed', error);
-    if (error.response?.data?.errors?.password) {
+    console.error('Password reset failed');
+    if (error.response?.data?.errors?.token) {
+      errorMsg.value = error.response.data.errors.token[0];
+    } else if (error.response?.data?.errors?.password) {
       errorMsg.value = error.response.data.errors.password[0];
     } else {
-      errorMsg.value = error.response?.data?.message || 'Failed to reset password. The link may have expired.';
+      errorMsg.value = 'This password reset link is invalid or has expired. Request a new one.';
     }
   }
 };

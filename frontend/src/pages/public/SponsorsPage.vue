@@ -158,18 +158,20 @@ const handleSubmit = async () => {
               Platinum Sponsors
             </h3>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              <a 
+              <component
+                :is="sp.websiteUrl ? 'a' : 'div'"
                 v-for="sp in groupedSponsors.Platinum" 
                 :key="sp.id"
-                :href="sp.websiteUrl || '#'"
-                target="_blank"
+                :href="sp.websiteUrl || undefined"
+                :target="sp.websiteUrl ? '_blank' : undefined"
+                :rel="sp.websiteUrl ? 'noopener noreferrer' : undefined"
                 class="block"
               >
                 <PublicCard variant="premium" class="bg-neutral-white p-6 sm:p-8 border border-neutral-gray/20 flex flex-col items-center justify-center min-h-[180px] hover:border-primary/40 transition-all">
                   <img :src="sp.logoUrl" :alt="sp.name" class="max-h-16 max-w-full object-contain mb-4 filter grayscale group-hover:grayscale-0 transition-all duration-300" loading="lazy" decoding="async" />
                   <span class="font-bold text-primary text-lg">{{ sp.name }}</span>
                 </PublicCard>
-              </a>
+              </component>
             </div>
           </div>
 
@@ -179,18 +181,20 @@ const handleSubmit = async () => {
               Gold Sponsors
             </h3>
             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-8">
-              <a 
+              <component
+                :is="sp.websiteUrl ? 'a' : 'div'"
                 v-for="sp in groupedSponsors.Gold" 
                 :key="sp.id"
-                :href="sp.websiteUrl || '#'"
-                target="_blank"
+                :href="sp.websiteUrl || undefined"
+                :target="sp.websiteUrl ? '_blank' : undefined"
+                :rel="sp.websiteUrl ? 'noopener noreferrer' : undefined"
                 class="block"
               >
                 <PublicCard variant="default" class="bg-neutral-white p-5 sm:p-6 border border-neutral-gray/20 flex flex-col items-center justify-center min-h-[140px] hover:border-primary/30 transition-all">
                   <img :src="sp.logoUrl" :alt="sp.name" class="max-h-12 max-w-full object-contain mb-3" loading="lazy" decoding="async" />
                   <span class="font-semibold text-primary text-sm text-center">{{ sp.name }}</span>
                 </PublicCard>
-              </a>
+              </component>
             </div>
           </div>
 

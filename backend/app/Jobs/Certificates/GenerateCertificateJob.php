@@ -45,7 +45,7 @@ class GenerateCertificateJob implements ShouldQueue
      */
     public function handle(CertificateGenerationService $generator): void
     {
-        Log::info("Asynchronously generating certificate for user: {$this->user->email} for course: {$this->course->title}");
+        Log::info("Asynchronously generating certificate for user: #{$this->user->id} for course: {$this->course->title}");
 
         // 1. Get or create certificate definition for the course
         $certificate = Certificate::where('course_id', $this->course->id)->first();
@@ -102,7 +102,7 @@ class GenerateCertificateJob implements ShouldQueue
         $pdfPath = $generator->generatePdf($award);
 
         // 4. Notify User (dispatched to high-priority queue or sent immediately)
-        Log::info("Notifying user {$this->user->email} of certificate earned.");
+        Log::info("Notifying user #{$this->user->id} of certificate earned.");
         $this->user->notify(new CertificateEarnedNotification($award));
 
         // 5. Evaluate achievements and badges
@@ -117,6 +117,6 @@ class GenerateCertificateJob implements ShouldQueue
      */
     public function failed(Throwable $exception): void
     {
-        Log::error("Failed to generate certificate for user {$this->user->email} for course {$this->course->title}: " . $exception->getMessage());
+        Log::error("Failed to generate certificate for user #{$this->user->id} for course {$this->course->title}: " . $exception->getMessage());
     }
 }

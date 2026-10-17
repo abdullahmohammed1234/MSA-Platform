@@ -57,6 +57,16 @@ class StaleCaptureController extends EmsController
         );
     }
 
+    public function buyerNotified(Request $request, Payment $payment, string $squarePaymentId): JsonResponse
+    {
+        $validated = $request->validate(['note' => ['nullable', 'string', 'max:500']]);
+
+        return ApiResponse::success(
+            $this->staleCaptures->markBuyerNotified($request->user(), $payment, $squarePaymentId, $validated['note'] ?? null),
+            'Buyer notification recorded.'
+        );
+    }
+
     public function resolve(ResolveStaleCaptureRequest $request, Payment $payment, string $squarePaymentId): JsonResponse
     {
         $resource = $this->staleCaptures->resolveWithoutRefund(

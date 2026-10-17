@@ -40,7 +40,7 @@ class SendCourseCompletionEmailJob implements ShouldQueue
      */
     public function handle(): void
     {
-        Log::info("Sending course completion email to user: {$this->user->email} for course: {$this->course->title}");
+        Log::info("Sending course completion email to user: #{$this->user->id} for course: {$this->course->title}");
         
         // Use notifyNow to send synchronously inside the queue worker thread (avoids double queuing)
         $this->user->notifyNow(new CourseCompletedNotification($this->course->title, $this->completionDate));
@@ -51,6 +51,6 @@ class SendCourseCompletionEmailJob implements ShouldQueue
      */
     public function failed(Throwable $exception): void
     {
-        Log::error("Failed to send course completion email to {$this->user->email}: " . $exception->getMessage());
+        Log::error("Failed to send course completion email to #{$this->user->id}: " . $exception->getMessage());
     }
 }

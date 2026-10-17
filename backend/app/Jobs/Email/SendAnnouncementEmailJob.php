@@ -43,7 +43,7 @@ class SendAnnouncementEmailJob implements ShouldQueue
      */
     public function handle(): void
     {
-        Log::info("Sending announcement email to user: {$this->user->email} for announcement: {$this->title}");
+        Log::info("Sending announcement email to user: #{$this->user->id} for announcement: {$this->title}");
         
         $this->user->notifyNow(new NewAnnouncementNotification(
             $this->title,
@@ -58,6 +58,6 @@ class SendAnnouncementEmailJob implements ShouldQueue
      */
     public function failed(Throwable $exception): void
     {
-        Log::error("Failed to send announcement email to {$this->user->email}: " . $exception->getMessage());
+        Log::error("Failed to send announcement email to #{$this->user->id}: " . $exception->getMessage());
     }
 }

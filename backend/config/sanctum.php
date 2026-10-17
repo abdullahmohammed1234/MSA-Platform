@@ -5,7 +5,7 @@ use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Laravel\Sanctum\Http\Middleware\AuthenticateSession;
 use Laravel\Sanctum\Sanctum;
 
-$statefulHosts = 'localhost,localhost:5173,127.0.0.1,127.0.0.1:8000,::1';
+$statefulHosts = 'localhost,localhost:5173,localhost:5174,127.0.0.1,127.0.0.1:5173,127.0.0.1:5174,127.0.0.1:8000,::1';
 $appHost = Sanctum::currentApplicationUrlWithPort();
 
 if ($appHost) {
@@ -18,6 +18,14 @@ $frontendHost = parse_url($frontendUrl, PHP_URL_HOST);
 if ($frontendHost) {
     $frontendPort = parse_url($frontendUrl, PHP_URL_PORT);
     $statefulHosts .= ','.$frontendHost.($frontendPort ? ':'.$frontendPort : '');
+}
+
+$connectUrl = (string) env('CONNECT_URL', 'http://localhost:5174');
+$connectHost = parse_url($connectUrl, PHP_URL_HOST);
+
+if ($connectHost) {
+    $connectPort = parse_url($connectUrl, PHP_URL_PORT);
+    $statefulHosts .= ','.$connectHost.($connectPort ? ':'.$connectPort : '');
 }
 
 return [
@@ -55,12 +63,13 @@ return [
     |--------------------------------------------------------------------------
     |
     | This value controls the number of minutes until an issued token will be
-    | considered expired. This will override any values set in the token's
-    | "expires_at" attribute, but first-party sessions are not affected.
+    | considered expired, measured from the token's creation time. In this
+    | Sanctum version a token's own "expires_at" is also enforced; whichever
+    | limit is reached first wins. First-party sessions are not affected.
     |
     */
 
-    'expiration' => null,
+    'expiration' => 10080,
 
     /*
     |--------------------------------------------------------------------------

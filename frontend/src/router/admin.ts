@@ -32,6 +32,12 @@ const adminRoutes: Array<RouteRecordRaw> = [
         component: () => import('@/pages/admin/Permissions.vue'),
         meta: { permissions: 'manage_permissions' }
       },
+      {
+        path: 'messages',
+        name: 'admin-messages',
+        component: () => import('@/pages/admin/messaging/AdminMessagingView.vue'),
+        meta: { adminLogin: true }
+      },
       // VMS Engine — extracted to /vms
       { path: 'volunteering', redirect: '/vms/opportunities' },
       { path: 'volunteering/:id', redirect: (to) => `/vms/opportunities/${to.params.id}` },
@@ -119,6 +125,14 @@ const adminRoutes: Array<RouteRecordRaw> = [
         component: () => import('@/pages/admin/system/SystemApplicationDetailPage.vue'),
         meta: { permissions: 'system.view', systemId: 'vms' }
       },
+      {
+        path: 'systems/connect',
+        name: 'admin-systems-connect',
+        component: () => import('@/pages/admin/system/SystemApplicationDetailPage.vue'),
+        meta: { permissions: 'system.view', systemId: 'connect' }
+      },
+      { path: 'connect', redirect: '/connect/admin' },
+      { path: 'connect/dashboard', redirect: '/connect/admin' },
       {
         path: 'systems/donations/console',
         name: 'admin-systems-donations-console',

@@ -71,8 +71,7 @@ class NewsletterService
             Mail::to($email)->send(new NewsletterWelcome($email));
         } catch (Throwable $exception) {
             Log::error('Newsletter welcome email failed', [
-                'email' => $email,
-                'error' => $exception->getMessage(),
+                'exception' => $exception::class,
             ]);
         }
     }

@@ -73,8 +73,8 @@ const isActive = (path: string, exact = false) => {
 
       <!-- Footer & Return to Main -->
       <div class="p-4 border-t border-neutral-ivory space-y-2">
-        <a
-          href="/"
+        <router-link
+          to="/"
           class="flex items-center justify-between px-3.5 py-2 rounded-xl text-xs text-neutral-muted hover:text-neutral-black hover:bg-neutral-background transition-colors font-medium"
         >
           <span class="flex items-center space-x-2">
@@ -82,10 +82,10 @@ const isActive = (path: string, exact = false) => {
             <span>Main Website</span>
           </span>
           <ChevronRight class="w-3 h-3 text-neutral-muted" />
-        </a>
+        </router-link>
 
-        <a
-          href="/admin"
+        <router-link
+          to="/admin"
           class="flex items-center justify-between px-3.5 py-2 rounded-xl text-xs text-neutral-muted hover:text-neutral-black hover:bg-neutral-background transition-colors font-medium"
         >
           <span class="flex items-center space-x-2">
@@ -93,11 +93,12 @@ const isActive = (path: string, exact = false) => {
             <span>MSA Admin Portal</span>
           </span>
           <ChevronRight class="w-3 h-3 text-neutral-muted" />
-        </a>
+        </router-link>
 
         <a
           href="/library"
           target="_blank"
+          rel="noopener noreferrer"
           class="flex items-center justify-between px-3.5 py-2 rounded-xl text-xs text-neutral-muted hover:text-neutral-black hover:bg-neutral-background transition-colors font-medium"
         >
           <span class="flex items-center space-x-2">

@@ -35,6 +35,10 @@ class SystemPermissionSeeder extends Seeder
             ['name' => 'Manage VMS Shifts', 'slug' => 'vms.manage_shifts', 'module' => 'VMS', 'description' => 'Manage VMS shifts.'],
             ['name' => 'Manage VMS Signups', 'slug' => 'vms.manage_signups', 'module' => 'VMS', 'description' => 'Manage volunteer signups and waitlists.'],
             ['name' => 'Export VMS Roster', 'slug' => 'vms.export', 'module' => 'VMS', 'description' => 'Export volunteer rosters.'],
+
+            // MSA Connect Management Permissions (Phase 14)
+            ['name' => 'View MSA Connect Management', 'slug' => 'connect.view', 'module' => 'Connect', 'description' => 'View MSA Connect application settings, feeds, and health.'],
+            ['name' => 'Manage MSA Connect System', 'slug' => 'connect.manage', 'module' => 'Connect', 'description' => 'Configure and administer MSA Connect application settings.'],
         ];
 
         foreach ($permissionsData as $permData) {

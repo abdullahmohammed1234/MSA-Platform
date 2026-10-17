@@ -151,7 +151,9 @@ class AcademyController extends Controller
      */
     public function completeLesson(Request $request, int $courseId, int $lessonId): JsonResponse
     {
-        $lesson = Lesson::find($lessonId);
+        $lesson = Lesson::whereKey($lessonId)
+            ->whereHas('module', fn ($q) => $q->where('course_id', $courseId))
+            ->first();
         if (!$lesson) {
             return response()->json(['success' => false, 'message' => 'Lesson not found.'], 404);
         }
@@ -178,7 +180,10 @@ class AcademyController extends Controller
      */
     public function submitQuiz(SubmitQuizRequest $request, int $courseId, int $quizId): JsonResponse
     {
-        $quiz = Quiz::find($quizId);
+        $quiz = Quiz::whereKey($quizId)
+            ->where('course_id', $courseId)
+            ->where('status', 'published')
+            ->first();
         if (!$quiz) {
             return response()->json(['success' => false, 'message' => 'Quiz not found.'], 404);
         }

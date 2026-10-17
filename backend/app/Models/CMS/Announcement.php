@@ -25,6 +25,7 @@ class Announcement extends Model
 
     protected $casts = [
         'published_at' => 'datetime',
+        'notified_at' => 'datetime',
     ];
 
     public function author()

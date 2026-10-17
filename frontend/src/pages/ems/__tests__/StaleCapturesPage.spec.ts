@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import { defineComponent, h } from 'vue';
+import StaleCapturesPage from '@/pages/ems/StaleCapturesPage.vue';
+import StaleCaptureDetailPage from '@/pages/ems/StaleCaptureDetailPage.vue';
 import type { StaleCapture } from '@/types/ems/staleCaptures';
 
 const list = vi.fn();
@@ -100,7 +102,6 @@ describe('StaleCapturesPage', () => {
 
   it('renders stale capture list rows', async () => {
     list.mockResolvedValue({ items: [sampleCapture()], total: 1 });
-    const StaleCapturesPage = (await import('@/pages/ems/StaleCapturesPage.vue')).default;
     const wrapper = mount(StaleCapturesPage);
     await flushPromises();
 
@@ -122,7 +123,6 @@ describe('StaleCaptureDetailPage', () => {
 
   it('shows unresolved actions', async () => {
     get.mockResolvedValue(sampleCapture());
-    const StaleCaptureDetailPage = (await import('@/pages/ems/StaleCaptureDetailPage.vue')).default;
     const wrapper = mount(StaleCaptureDetailPage);
     await flushPromises();
 
@@ -132,7 +132,6 @@ describe('StaleCaptureDetailPage', () => {
 
   it('requires a reason before resolve submission', async () => {
     get.mockResolvedValue(sampleCapture());
-    const StaleCaptureDetailPage = (await import('@/pages/ems/StaleCaptureDetailPage.vue')).default;
     const wrapper = mount(StaleCaptureDetailPage);
     await flushPromises();
 
@@ -151,7 +150,6 @@ describe('StaleCaptureDetailPage', () => {
       resolution_reason: 'Handled offline.',
     });
 
-    const StaleCaptureDetailPage = (await import('@/pages/ems/StaleCaptureDetailPage.vue')).default;
     const wrapper = mount(StaleCaptureDetailPage);
     await flushPromises();
 
@@ -173,7 +171,6 @@ describe('StaleCaptureDetailPage', () => {
       resolution_reason: 'Done.',
     });
 
-    const StaleCaptureDetailPage = (await import('@/pages/ems/StaleCaptureDetailPage.vue')).default;
     const wrapper = mount(StaleCaptureDetailPage);
     await flushPromises();
 
@@ -183,7 +180,6 @@ describe('StaleCaptureDetailPage', () => {
 
   it('handles API failure', async () => {
     get.mockRejectedValue(new Error('Forbidden'));
-    const StaleCaptureDetailPage = (await import('@/pages/ems/StaleCaptureDetailPage.vue')).default;
     const wrapper = mount(StaleCaptureDetailPage);
     await flushPromises();
 

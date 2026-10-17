@@ -153,6 +153,16 @@ return [
         'queue' => env('EMS_PAYMENTS_QUEUE', 'ems-payments'),
         'webhook_throttle' => env('EMS_WEBHOOK_THROTTLE', 'ems_webhooks'),
         'webhook_rate_limit_per_minute' => (int) env('EMS_WEBHOOK_RATE_LIMIT', 120),
+        // A row left in "processing" longer than this is presumed crashed and may be reclaimed.
+        'webhook_processing_lease_seconds' => (int) env('EMS_WEBHOOK_PROCESSING_LEASE_SECONDS', 300),
+        // Automatic attempts (queue retries plus recovery sweeps) before a row stays failed for staff.
+        'webhook_max_attempts' => (int) env('EMS_WEBHOOK_MAX_ATTEMPTS', 5),
+        'webhook_recovery_received_grace_minutes' => (int) env('EMS_WEBHOOK_RECOVERY_RECEIVED_GRACE_MINUTES', 5),
+        'webhook_recovery_failed_after_minutes' => (int) env('EMS_WEBHOOK_RECOVERY_FAILED_AFTER_MINUTES', 60),
+        // A supported event with no local record yet (e.g. it arrived before checkout
+        // persisted) is retried on this schedule, then moved to needs_review.
+        'webhook_unmatched_max_attempts' => (int) env('EMS_WEBHOOK_UNMATCHED_MAX_ATTEMPTS', 6),
+        'webhook_unmatched_backoff_minutes' => [5, 15, 60, 240, 720],
         'checkout_ttl_minutes' => (int) env('EMS_CHECKOUT_TTL_MINUTES', 1440),
 
         'square' => [
@@ -242,6 +252,9 @@ return [
         'from_address' => env('EMS_MAIL_FROM_ADDRESS', env('MAIL_FROM_ADDRESS')),
         'from_name' => env('EMS_MAIL_FROM_NAME', 'SFU MSA Events'),
         'max_retries' => (int) env('EMS_NOTIFICATIONS_MAX_RETRIES', 3),
+        // Must exceed the worker --timeout so a live send is never treated as abandoned.
+        'processing_lease_seconds' => (int) env('EMS_NOTIFICATIONS_PROCESSING_LEASE_SECONDS', 300),
+        'requeue_after_minutes' => (int) env('EMS_NOTIFICATIONS_REQUEUE_AFTER_MINUTES', 30),
         'process_due_every_minutes' => (int) env('EMS_NOTIFICATIONS_PROCESS_EVERY', 1),
         'default_reminders_enabled' => (bool) env('EMS_DEFAULT_REMINDERS_ENABLED', false),
         'bcc_archive_address' => env('EMS_MAIL_BCC_ARCHIVE'),

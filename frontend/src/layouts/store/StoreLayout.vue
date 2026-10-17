@@ -11,7 +11,7 @@ import {
   ArrowLeft,
 } from 'lucide-vue-next';
 import { ToastContainer, useToastStore } from '@/components/feedback/toast';
-import { useAuthStore } from '@/stores/auth';
+import { useAuthStore, UNCONFIRMED_LOGOUT_MESSAGE } from '@/stores/auth';
 
 const route = useRoute();
 const router = useRouter();
@@ -45,8 +45,12 @@ const navigation = [
 
 const handleLogout = async () => {
   try {
-    await authStore.logout();
-    toast.success('Logged out successfully.');
+    const serverConfirmed = await authStore.logout();
+    if (serverConfirmed) {
+      toast.success('Logged out successfully.');
+    } else {
+      toast.warning(UNCONFIRMED_LOGOUT_MESSAGE, 8000);
+    }
     void router.push('/');
   } catch (error) {
     void router.push('/');

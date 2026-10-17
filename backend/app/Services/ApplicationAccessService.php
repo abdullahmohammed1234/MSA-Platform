@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\User;
 use App\Models\ApplicationAccess;
 use App\Services\Security\AuditLogger;
+use App\Support\AuthorizationMemo;
 use Illuminate\Support\Facades\Auth;
 
 class ApplicationAccessService
@@ -23,6 +24,7 @@ class ApplicationAccessService
         'mlibms',
         'volunteering',
         'vms',
+        'connect',
         'admin-portal'
     ];
 
@@ -50,8 +52,7 @@ class ApplicationAccessService
 
         // Check if there is an explicit record in the table first (check both vms and volunteering if asking for either)
         $appsToCheck = ($application === 'vms' || $application === 'volunteering') ? ['vms', 'volunteering'] : [$application];
-        $explicitRecord = $user->applicationAccess()->whereIn('application', $appsToCheck)->first();
-        if ($explicitRecord !== null) {
+        if ($this->hasExplicitGrant($user, $appsToCheck)) {
             return true;
         }
 
@@ -86,13 +87,34 @@ class ApplicationAccessService
             }
         }
 
+        // 'volunteer' is self-service at registration, so it is deliberately
+        // excluded: this application is the volunteering administration API.
         if ($application === 'volunteering' || $application === 'vms') {
-            if ($user->hasAnyRole(['vms-administrator', 'vms-manager', 'volunteer-administrator', 'volunteer-coordinator', 'volunteer', 'ems-administrator']) || $this->hasPermissionSafe($user, 'vms.view') || $this->hasPermissionSafe($user, 'vms.manage') || $this->hasPermissionSafe($user, 'volunteer.registrations.view') || $this->hasPermissionSafe($user, 'volunteer.registrations.update')) {
+            if ($user->hasAnyRole(['vms-administrator', 'vms-manager', 'volunteer-administrator', 'volunteer-coordinator', 'ems-administrator']) || $this->hasPermissionSafe($user, 'vms.view') || $this->hasPermissionSafe($user, 'vms.manage') || $this->hasPermissionSafe($user, 'volunteer.registrations.view') || $this->hasPermissionSafe($user, 'volunteer.registrations.update')) {
+                return true;
+            }
+        }
+
+        if ($application === 'connect') {
+            if ($user->hasAnyRole(['connect-administrator', 'connect-staff']) || $this->hasPermissionSafe($user, 'connect.view') || $this->hasPermissionSafe($user, 'connect.manage')) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    /**
+     * @param  list<string>  $applications
+     */
+    private function hasExplicitGrant(User $user, array $applications): bool
+    {
+        $memo = app(AuthorizationMemo::class);
+        if ($memo->active() && $user->exists) {
+            return $memo->hasApplicationGrant($user, $applications);
+        }
+
+        return $user->applicationAccess()->whereIn('application', $applications)->exists();
     }
 
     private function hasPermissionSafe(User $user, string $permission): bool
@@ -117,7 +139,7 @@ class ApplicationAccessService
             if ($access) {
                 if ($user->hasAnyRole(self::PRIVILEGED_ROLES)) {
                     $source = 'privileged';
-                } elseif ($user->applicationAccess()->where('application', $app)->exists()) {
+                } elseif ($this->hasExplicitGrant($user, [$app])) {
                     $source = 'explicit';
                 } else {
                     $source = 'role';

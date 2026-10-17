@@ -30,7 +30,7 @@ class SendVmsRemindersCommand extends Command
      */
     public function handle(VmsNotificationDispatcher $dispatcher): int
     {
-        if (! config('vms.notifications.reminders.enabled', true)) {
+        if (! config('vms.notifications.reminders.enabled', false)) {
             $this->info('VMS shift reminders are disabled in configuration.');
 
             return self::SUCCESS;
@@ -83,7 +83,7 @@ class SendVmsRemindersCommand extends Command
                 }
 
                 if ($isDryRun) {
-                    $this->info("[DRY RUN] Would send {$hours}h reminder to {$signup->email} for Signup #{$signup->id}");
+                    $this->info("[DRY RUN] Would send {$hours}h reminder for Signup #{$signup->id}");
                     $dispatchedCount++;
                     continue;
                 }
@@ -94,7 +94,6 @@ class SendVmsRemindersCommand extends Command
                 Log::info('vms.reminders.dispatched', [
                     'signup_id' => $signup->id,
                     'hours_before' => $hours,
-                    'email' => $signup->email,
                 ]);
             }
         }

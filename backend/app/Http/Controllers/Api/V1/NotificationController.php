@@ -37,7 +37,9 @@ class NotificationController extends Controller
             });
         }
 
-        return response()->json($query->paginate(15));
+        $perPage = min(max((int) $request->input('per_page', 15), 1), 50);
+
+        return response()->json($query->paginate($perPage));
     }
 
     /**
@@ -58,6 +60,7 @@ class NotificationController extends Controller
 
     /**
      * Mark a single notification as read.
+     * Scoped strictly to the authenticated user to prevent ID enumeration/leakage.
      */
     public function read(Request $request, $id)
     {
@@ -119,8 +122,11 @@ class NotificationController extends Controller
                 'new_announcements' => true,
                 'upcoming_training' => true,
                 'certificate_earned' => true,
+                'support_updates' => true,
+                'direct_messages' => true,
                 'email_enabled' => true,
                 'in_app_enabled' => true,
+                'push_enabled' => true,
             ]);
         }
 
@@ -139,8 +145,11 @@ class NotificationController extends Controller
             'new_announcements' => 'sometimes|boolean',
             'upcoming_training' => 'sometimes|boolean',
             'certificate_earned' => 'sometimes|boolean',
+            'support_updates' => 'sometimes|boolean',
+            'direct_messages' => 'sometimes|boolean',
             'email_enabled' => 'sometimes|boolean',
             'in_app_enabled' => 'sometimes|boolean',
+            'push_enabled' => 'sometimes|boolean',
         ]);
 
         $preferences = $user->notificationPreferences;
@@ -151,8 +160,11 @@ class NotificationController extends Controller
                 'new_announcements' => true,
                 'upcoming_training' => true,
                 'certificate_earned' => true,
+                'support_updates' => true,
+                'direct_messages' => true,
                 'email_enabled' => true,
                 'in_app_enabled' => true,
+                'push_enabled' => true,
             ]);
         }
 

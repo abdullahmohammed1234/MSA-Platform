@@ -44,7 +44,7 @@ class ArchiveOldLogsJob implements ShouldQueue
             
             $query->chunk(500, function ($logs) use ($fp) {
                 foreach ($logs as $log) {
-                    fwrite($fp, json_encode($log->toArray()) . "\n");
+                    fwrite($fp, json_encode(\Illuminate\Support\Arr::except($log->toArray(), ['payload'])) . "\n");
                 }
             });
             

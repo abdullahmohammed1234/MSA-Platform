@@ -75,7 +75,7 @@ class SquareRefundService
             $lockedPayment = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
             $lockedPayment->loadMissing(['order', 'registration']);
 
-            if ($lockedPayment->status !== PaymentStatus::Cancelled || ! $lockedPayment->wasBuyerCancelled()) {
+            if (! $lockedPayment->holdsUnfulfilledCaptures()) {
                 throw new EmsException(
                     'Only buyer-cancelled payments can receive stale capture refunds.',
                     ['payment' => ['Invalid payment state for stale capture refund.']],
@@ -726,7 +726,7 @@ class SquareRefundService
     private function fulfillStaleCaptureCompleted(SquareRefund $refund): void
     {
         $payment = Payment::query()->whereKey($refund->payment_id)->lockForUpdate()->first();
-        if ($payment === null || $payment->status !== PaymentStatus::Cancelled) {
+        if ($payment === null || ! $payment->holdsUnfulfilledCaptures()) {
             return;
         }
 

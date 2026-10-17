@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\DiscussionThread;
+use App\Models\MentorAssignment;
 use App\Models\Quiz;
 use App\Models\QuizAttempt;
 use App\Services\MentorAssignmentService;
@@ -30,6 +31,7 @@ class MentorController extends Controller
 
         $profile = $this->mentorAssignmentService->getMentorProfile($mentor);
         $studentIds = collect($profile['students'])->pluck('id');
+        $seesAllStudents = $mentor->hasRole('admin') || $mentor->hasRole('super-admin');
 
         $courseQuery = Course::with(['modules.lessons', 'quizzes']);
         if ($mentor->hasRole('admin') || $mentor->hasRole('super-admin')) {
@@ -88,9 +90,9 @@ class MentorController extends Controller
 
         $quizAnalytics = Quiz::with('course')
             ->get()
-            ->map(function (Quiz $quiz) use ($studentIds) {
+            ->map(function (Quiz $quiz) use ($studentIds, $seesAllStudents) {
                 $attemptQuery = QuizAttempt::where('quiz_id', $quiz->id);
-                if ($studentIds->isNotEmpty()) {
+                if (! $seesAllStudents) {
                     $attemptQuery->whereIn('user_id', $studentIds);
                 }
 
@@ -116,7 +118,7 @@ class MentorController extends Controller
             ->values();
 
         $submissions = QuizAttempt::with(['user', 'quiz.course'])
-            ->when($studentIds->isNotEmpty(), fn ($q) => $q->whereIn('user_id', $studentIds))
+            ->when(! $seesAllStudents, fn ($q) => $q->whereIn('user_id', $studentIds))
             ->orderByDesc('submitted_at')
             ->limit(25)
             ->get()
@@ -166,6 +168,16 @@ class MentorController extends Controller
         $mentor = $request->user();
         if (!$mentor->hasRole('mentor') && !$mentor->hasRole('admin') && !$mentor->hasRole('super-admin')) {
             return response()->json(['success' => false, 'message' => 'Mentor access required.'], 403);
+        }
+
+        $isAdmin = $mentor->hasRole('admin') || $mentor->hasRole('super-admin');
+        $isAssigned = MentorAssignment::where('mentor_id', $mentor->id)
+            ->where('student_id', $attempt->user_id)
+            ->where('status', 'active')
+            ->exists();
+
+        if (! $isAdmin && ! $isAssigned) {
+            return response()->json(['success' => false, 'message' => 'You can only grade your assigned students.'], 403);
         }
 
         $validated = $request->validate([

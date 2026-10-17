@@ -22,6 +22,12 @@ class ProcessOverdueAndRemindersCommand extends Command
 
     public function handle(): int
     {
+        if (! config('features.mlibms_overdue_processing_enabled', false)) {
+            $this->info('MLibMS overdue processing is disabled (MLIBMS_OVERDUE_PROCESSING_ENABLED).');
+
+            return self::SUCCESS;
+        }
+
         $this->info('Starting MLibMS daily overdue and reminder processing...');
 
         $reminderCount = $this->processTwoDayReminders();
@@ -49,15 +55,24 @@ class ProcessOverdueAndRemindersCommand extends Command
 
         $count = 0;
         foreach ($eligibleLoans as $loan) {
+            $claimedAt = now();
+            $claimed = Loan::whereKey($loan->id)
+                ->where('status', 'active')
+                ->whereNull('returned_at')
+                ->whereNull('reminder_sent_at')
+                ->update(['reminder_sent_at' => $claimedAt]) === 1;
+
+            if (! $claimed) {
+                continue;
+            }
+
             try {
-                Mail::to($loan->member->email)->queue(new LoanDueDateReminderMail($loan));
-                
-                // Atomically update timestamp ONLY after successful queue dispatch
-                $loan->update(['reminder_sent_at' => now()]);
+                Mail::to($loan->member->email)->queue(new LoanDueDateReminderMail($loan->fresh()));
                 $count++;
             } catch (\Throwable $e) {
-                Log::error("Failed to queue 2-day due reminder for loan {$loan->uuid}: " . $e->getMessage());
-                // Intentionally omit reminder_sent_at update to remain retry-eligible
+                Log::error('mlibms.reminder_queue_failed', ['loan_uuid' => $loan->uuid, 'exception' => $e::class]);
+                // Release the claim so the loan stays retry-eligible.
+                Loan::whereKey($loan->id)->where('reminder_sent_at', $claimedAt)->update(['reminder_sent_at' => null]);
             }
         }
 
@@ -76,11 +91,22 @@ class ProcessOverdueAndRemindersCommand extends Command
 
         $count = 0;
         foreach ($overdueLoans as $loan) {
-            $loan->update(['status' => 'overdue']);
+            $claimed = Loan::whereKey($loan->id)
+                ->where('status', 'active')
+                ->whereNull('returned_at')
+                ->update(['status' => 'overdue', 'updated_at' => now()]) === 1;
+
+            if (! $claimed) {
+                continue;
+            }
+
             try {
-                Mail::to($loan->member->email)->queue(new LoanOverdueNoticeMail($loan));
+                Mail::to($loan->member->email)->queue(new LoanOverdueNoticeMail($loan->fresh()));
             } catch (\Throwable $e) {
-                Log::error("Failed to queue overdue notice for loan {$loan->uuid}: " . $e->getMessage());
+                Log::error('mlibms.overdue_notice_queue_failed', ['loan_uuid' => $loan->uuid, 'exception' => $e::class]);
+                // Revert so the next run retries the notice instead of silently dropping it.
+                Loan::whereKey($loan->id)->where('status', 'overdue')->update(['status' => 'active']);
+                continue;
             }
             $count++;
         }
@@ -125,8 +151,20 @@ class ProcessOverdueAndRemindersCommand extends Command
             ->get();
 
         $count = 0;
-        foreach ($expiredHolds as $hold) {
-            DB::transaction(function () use ($hold, &$count) {
+        foreach ($expiredHolds as $candidate) {
+            DB::transaction(function () use ($candidate, &$count) {
+                // Re-check under lock: a concurrent run or a pickup may have
+                // already moved this hold on.
+                $hold = Reservation::whereKey($candidate->id)
+                    ->where('status', 'ready_for_pickup')
+                    ->where('expires_at', '<', now())
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($hold === null) {
+                    return;
+                }
+
                 $hold->update([
                     'status' => 'expired',
                 ]);
@@ -143,6 +181,7 @@ class ProcessOverdueAndRemindersCommand extends Command
                     $nextHold = Reservation::where('book_id', $hold->book_id)
                         ->where('status', 'pending')
                         ->orderBy('queue_position')
+                        ->lockForUpdate()
                         ->first();
 
                     if ($nextHold) {

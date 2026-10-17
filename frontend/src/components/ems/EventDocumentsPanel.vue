@@ -230,7 +230,7 @@ function formatFileSize(bytes: number): string {
 
         <!-- Action Bar -->
         <div class="flex items-center justify-between pt-3 mt-3 border-t border-neutral-ivory">
-          <Button variant="outline" size="sm" @click="openQrModal(doc)">
+          <Button v-if="canManage" variant="outline" size="sm" @click="openQrModal(doc)">
             <span>📱 QR Code</span>
           </Button>
 

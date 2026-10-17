@@ -3,13 +3,18 @@
 namespace App\Notifications\Auth;
 
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
-class VerifyEmailNotification extends Notification implements ShouldQueue
+class VerifyEmailNotification extends Notification implements ShouldQueue, ShouldBeEncrypted
 {
     use Queueable;
+
+    public $tries = 3;
+
+    public $backoff = [30, 120];
 
     protected $token;
 
@@ -62,8 +67,6 @@ class VerifyEmailNotification extends Notification implements ShouldQueue
      */
     public function toArray(object $notifiable): array
     {
-        return [
-            'token' => $this->token,
-        ];
+        return [];
     }
 }

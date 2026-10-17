@@ -117,6 +117,15 @@ class Payment extends Model
     }
 
     /**
+     * Unfulfilled payment with recorded Square captures awaiting staff refund or resolution.
+     */
+    public function holdsUnfulfilledCaptures(): bool
+    {
+        return in_array($this->status, [PaymentStatus::Cancelled, PaymentStatus::Failed], true)
+            && $this->staleCaptureEntries() !== [];
+    }
+
+    /**
      * @return list<array<string, mixed>>
      */
     public function staleCaptureEntries(): array

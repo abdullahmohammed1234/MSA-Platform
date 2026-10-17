@@ -278,6 +278,8 @@ class LoanService
                 'due_at' => $newDue,
                 'renewed_count' => $lockedLoan->renewed_count + 1,
                 'last_renewed_at' => now(),
+                // The reminder belonged to the previous due date.
+                'reminder_sent_at' => null,
             ]);
 
             Renewal::create([

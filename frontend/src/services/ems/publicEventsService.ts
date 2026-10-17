@@ -78,10 +78,9 @@ export const publicEventsService = {
     );
   },
 
-  async leaveWaitlist(slug: string, entryUuid: string, email?: string): Promise<void> {
-    const params = email ? `?email=${encodeURIComponent(email)}` : '';
+  async leaveWaitlist(slug: string, entryUuid: string, email: string): Promise<void> {
     await emsHttp.delete(
-      `/public/events/${encodeURIComponent(slug)}/waitlist/${encodeURIComponent(entryUuid)}${params}`
+      `/public/events/${encodeURIComponent(slug)}/waitlist/${encodeURIComponent(entryUuid)}?email=${encodeURIComponent(email)}`
     );
   },
 

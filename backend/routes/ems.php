@@ -283,6 +283,8 @@ Route::middleware(['auth:sanctum', 'throttle:' . config('ems.route.throttle', 'e
             ->name('stale-captures.refund');
         Route::post('/stale-captures/{payment}/{squarePaymentId}/resolve', [StaleCaptureController::class, 'resolve'])
             ->name('stale-captures.resolve');
+        Route::post('/stale-captures/{payment}/{squarePaymentId}/buyer-notified', [StaleCaptureController::class, 'buyerNotified'])
+            ->name('stale-captures.buyer-notified');
 
         Route::get('/registrations/{registration}', [RegistrationController::class, 'show'])
             ->name('registrations.show');

@@ -68,12 +68,8 @@ class EventVolunteerController extends EmsController
      */
     public function index(Request $request, int|string $eventId): JsonResponse
     {
-        $user = $request->user();
-        if (!$user || (!$user->hasRole('super-admin') && !$user->roles()->where('slug', 'super-admin')->exists() && !$user->hasPermissionTo('manage-events'))) {
-            // Also allow if user is assigned to event team/organizer
-        }
-
         $event = Event::findOrFail($eventId);
+        $this->authorize('viewAttendees', $event);
 
         $query = EventVolunteer::where('event_id', $event->id);
 
@@ -110,12 +106,15 @@ class EventVolunteerController extends EmsController
      */
     public function updateStatus(Request $request, int|string $eventId, int $volunteerId): JsonResponse
     {
+        $event = Event::findOrFail($eventId);
+        $this->authorize('update', $event);
+
         $validated = $request->validate([
             'status' => 'required|string|in:pending,approved,declined',
             'admin_notes' => 'nullable|string|max:1000',
         ]);
 
-        $volunteer = EventVolunteer::where('event_id', $eventId)
+        $volunteer = EventVolunteer::where('event_id', $event->id)
             ->where('id', $volunteerId)
             ->firstOrFail();
 
@@ -136,6 +135,8 @@ class EventVolunteerController extends EmsController
     public function exportCsv(Request $request, int|string $eventId): StreamedResponse
     {
         $event = Event::findOrFail($eventId);
+        $this->authorize('viewAttendees', $event);
+
         $volunteers = EventVolunteer::where('event_id', $event->id)->orderBy('created_at', 'desc')->get();
 
         $headers = [

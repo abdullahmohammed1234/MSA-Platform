@@ -56,7 +56,7 @@ class JobMonitoringService
             ->avg('duration') ?? 0;
 
         // 3. Queue-specific metrics
-        $queues = ['high', 'default', 'low'];
+        $queues = ['ems-payments', 'ems-notifications', 'ems-operations', 'high', 'default', 'low'];
         $queueMetrics = [];
 
         foreach ($queues as $q) {
@@ -73,9 +73,13 @@ class JobMonitoringService
         }
 
         // 4. Job processing count over time (hourly for last 24 hours)
+        $hourExpression = in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)
+            ? "DATE_FORMAT(created_at, '%Y-%m-%d %H:00:00')"
+            : "strftime('%Y-%m-%d %H:00:00', created_at)";
+
         $hourlyThroughput = DB::table('job_logs')
             ->select(
-                DB::raw("strftime('%Y-%m-%d %H:00:00', created_at) as hour"), // For SQLite fallback
+                DB::raw("{$hourExpression} as hour"),
                 DB::raw("COUNT(*) as total_jobs"),
                 DB::raw("SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed_jobs")
             )
@@ -83,21 +87,6 @@ class JobMonitoringService
             ->groupBy('hour')
             ->orderBy('hour', 'asc')
             ->get();
-
-        // Check if database driver is mysql to correct date expression
-        $driver = DB::connection()->getDriverName();
-        if ($driver === 'mysql') {
-            $hourlyThroughput = DB::table('job_logs')
-                ->select(
-                    DB::raw("DATE_FORMAT(created_at, '%Y-%m-%d %H:00:00') as hour"),
-                    DB::raw("COUNT(*) as total_jobs"),
-                    DB::raw("SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed_jobs")
-                )
-                ->where('created_at', '>=', $cutoff24h)
-                ->groupBy('hour')
-                ->orderBy('hour', 'asc')
-                ->get();
-        }
 
         return [
             'total_jobs_24h' => $total24h,

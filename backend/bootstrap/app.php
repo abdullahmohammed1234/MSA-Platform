@@ -9,15 +9,21 @@ return Application::configure(basePath: dirname(__DIR__))
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
-        health: '/up',
+        then: function (): void {
+            \Illuminate\Foundation\Http\Middleware\PreventRequestsDuringMaintenance::except('/up');
+            \Illuminate\Support\Facades\Route::get('/up', \App\Http\Controllers\HealthController::class);
+        },
     )
+    // Listeners are registered explicitly in AppServiceProvider. With discovery on,
+    // `event:cache` also captured the subscriber's handle* methods, registering each
+    // handler twice so every domain event sent its notifications twice.
+    ->withEvents(discover: false)
     ->withMiddleware(function (Middleware $middleware): void {
-        // cPanel / reverse proxies: trust X-Forwarded-* so $request->ip(),
-        // secure(), rate limits, and HSTS behave correctly in production.
-        // Override via TRUSTED_PROXIES (comma-separated IPs) if locking down.
-        $trusted = env('TRUSTED_PROXIES', '*');
+        // TRUSTED_PROXIES: comma-separated proxy IPs/CIDRs. Unset or invalid
+        // trusts nobody, so forwarded headers from direct clients are ignored.
+        // Set it only to the verified address of a proxy in front of the app.
         $middleware->trustProxies(
-            at: $trusted === '*' ? '*' : array_values(array_filter(array_map('trim', explode(',', (string) $trusted)))),
+            at: \App\Support\TrustedProxies::resolve(env('TRUSTED_PROXIES')),
             headers: \Illuminate\Http\Request::HEADER_X_FORWARDED_FOR
                 | \Illuminate\Http\Request::HEADER_X_FORWARDED_HOST
                 | \Illuminate\Http\Request::HEADER_X_FORWARDED_PORT
@@ -25,18 +31,23 @@ return Application::configure(basePath: dirname(__DIR__))
                 | \Illuminate\Http\Request::HEADER_X_FORWARDED_AWS_ELB
         );
 
+        $middleware->statefulApi();
+        $middleware->prepend(\App\Http\Middleware\ScopeAuthorizationMemo::class);
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
         $middleware->append(\App\Http\Middleware\PerformanceMonitoringMiddleware::class);
         $middleware->alias([
+            'auth' => \App\Http\Middleware\Authenticate::class,
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'permission' => \App\Http\Middleware\PermissionMiddleware::class,
             'verified' => \App\Http\Middleware\VerifiedMiddleware::class,
             'app.access' => \App\Http\Middleware\ApplicationAccessMiddleware::class,
+            'vms.can' => \App\Http\Middleware\VolunteeringPermission::class,
         ]);
     })
     ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule) {
         // Analytics
-        $schedule->job(new \App\Jobs\Analytics\AggregateAnalyticsMetricsJob)->daily()->description('Aggregate Analytics Metrics');
+        // Runs at 00:00, so it aggregates the day that just finished.
+        $schedule->job(new \App\Jobs\Analytics\AggregateAnalyticsMetricsJob(\Illuminate\Support\Carbon::yesterday()))->daily()->description('Aggregate Analytics Metrics');
         
         // Maintenance
         $schedule->job(new \App\Jobs\Maintenance\CertificateVerificationCleanupJob)->daily()->description('Clean Certificate Verification Logs');
@@ -48,6 +59,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $schedule->job(new \App\Jobs\Reports\GenerateDailyReportJob)->dailyAt('23:55')->description('Generate Daily Analytics Report');
         $schedule->job(new \App\Jobs\Reports\GenerateWeeklyReportJob)->weeklyOn(7, '23:59')->description('Generate Weekly Analytics/Engagement Report');
         $schedule->job(new \App\Jobs\Reports\GenerateMonthlyReportJob)->lastDayOfMonth('23:59')->description('Generate Monthly Statistics & Leadership Report');
+
+        // Announcements
+        $schedule->job(new \App\Jobs\Announcements\RecoverAnnouncementDeliveriesJob)
+            ->everyFiveMinutes()
+            ->withoutOverlapping()
+            ->description('Announcements: Resume interrupted deliveries and due retries');
 
         // EMS Phase 5 — communications
         $schedule->job(new \App\Ems\Jobs\ProcessDueRemindersJob)
@@ -64,6 +81,11 @@ return Application::configure(basePath: dirname(__DIR__))
             ->withoutOverlapping()
             ->description('EMS: Expire abandoned Square checkouts');
 
+        $schedule->job(new \App\Ems\Jobs\RecoverSquareWebhookEventsJob)
+            ->everyFiveMinutes()
+            ->withoutOverlapping()
+            ->description('EMS: Recover stuck or failed Square webhooks');
+
         $schedule->job(new \App\Ems\Jobs\ExpireStalePromotionsJob)
             ->everyFifteenMinutes()
             ->withoutOverlapping()
@@ -78,6 +100,9 @@ return Application::configure(basePath: dirname(__DIR__))
             ->hourly()
             ->withoutOverlapping()
             ->description('EMS: Clean up stale uncommitted import preview files');
+
+        // Must stay last: routes/console.php tasks are registered before this callback runs.
+        \App\Support\ScheduleCadence::align($schedule, (int) config('app.scheduler_cron_interval_minutes', 1));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Scoped to /api/v1/ems/* — every other module keeps the framework

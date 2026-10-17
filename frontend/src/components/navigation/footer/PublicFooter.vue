@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
+import { useAuthStore } from '@/stores/auth';
 import {
   Instagram,
   Facebook,
@@ -12,6 +13,14 @@ import {
   AlertCircle,
 } from 'lucide-vue-next';
 import websiteService from '@/services/website/websiteService';
+
+const authStore = useAuthStore();
+const logoDestination = computed(() => {
+  return authStore.isAuthenticated ? { name: 'account-overview' } : { name: 'home' };
+});
+const logoAriaLabel = computed(() => {
+  return authStore.isAuthenticated ? 'SFU MSA Member Dashboard' : 'SFU MSA Homepage';
+});
 
 const currentYear = new Date().getFullYear();
 const email = ref('');
@@ -55,7 +64,7 @@ const handleSubmit = async () => {
       <!-- Top Section: Branding & Newsletter -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 pb-16 border-b border-white/10">
         <div class="lg:col-span-5 space-y-8">
-          <router-link to="/" class="flex items-center gap-4 group">
+          <router-link :to="logoDestination" :aria-label="logoAriaLabel" class="flex items-center gap-4 group">
             <div class="h-14 w-14 shrink-0 flex items-center justify-center">
               <img
                 src="/logo.webp"

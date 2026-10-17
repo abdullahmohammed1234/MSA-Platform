@@ -27,6 +27,7 @@ class VmsNotificationsTest extends TestCase
 
         Config::set('ems.notifications.enabled', true);
         Config::set('vms.notifications.enabled', true);
+        Config::set('vms.notifications.reminders.enabled', true);
     }
 
     public function test_signup_creates_confirmation_and_admin_notification_in_ledger(): void

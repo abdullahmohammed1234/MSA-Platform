@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth';
+import { useAuthStore, UNCONFIRMED_LOGOUT_MESSAGE } from '@/stores/auth';
 import { useToastStore } from '@/components/feedback/toast';
 import {
   Briefcase,
@@ -48,8 +48,12 @@ const isCurrentRoute = (path: string) => {
 
 const handleLogout = async () => {
   try {
-    await authStore.logout();
-    toast.success('Signed out from SPMS.');
+    const serverConfirmed = await authStore.logout();
+    if (serverConfirmed) {
+      toast.success('Signed out from SPMS.');
+    } else {
+      toast.warning(UNCONFIRMED_LOGOUT_MESSAGE, 8000);
+    }
     void router.push('/');
   } catch (error) {
     void router.push('/');

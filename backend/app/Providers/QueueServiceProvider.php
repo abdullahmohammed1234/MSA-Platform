@@ -38,7 +38,7 @@ class QueueServiceProvider extends ServiceProvider
                     'status' => 'processing',
                     'started_at' => now(),
                     'attempts' => $event->job->attempts(),
-                    'payload' => $event->job->payload(),
+                    'payload' => self::payloadSummary($event->job->payload()),
                 ]
             );
         });
@@ -79,5 +79,20 @@ class QueueServiceProvider extends ServiceProvider
                 ]);
             }
         });
+    }
+
+    /**
+     * The serialized command can carry tokens, recipients and other secrets,
+     * so only operational metadata is persisted in job logs.
+     */
+    public static function payloadSummary(array $payload): array
+    {
+        return array_filter([
+            'displayName' => $payload['displayName'] ?? null,
+            'maxTries' => $payload['maxTries'] ?? null,
+            'maxExceptions' => $payload['maxExceptions'] ?? null,
+            'timeout' => $payload['timeout'] ?? null,
+            'backoff' => $payload['backoff'] ?? null,
+        ], fn ($value) => $value !== null);
     }
 }

@@ -41,6 +41,7 @@ class SystemsControlPlaneService
         'ems-event-apis' => 'EMS Event APIs',
         'academy-shared-schema' => 'Academy Shared Schema',
         'square-payments' => 'Square Payment Integration',
+        'web-push' => 'Web Push Service',
     ];
 
     public function overview(bool $refresh = false): array
@@ -398,6 +399,11 @@ class SystemsControlPlaneService
                 'main-website' => $this->tableReachable('announcements', Announcement::class, 'CMS content consumed by Main Website'),
                 'mlibms' => $this->tableReachable('mlibms_books', \App\Mlibms\Models\Book::class, 'MLibMS books store'),
                 'vms' => $this->tableReachable('volunteering_opportunities', \App\Volunteering\Models\Opportunity::class, 'VMS opportunities store'),
+                'connect' => Schema::hasTable('device_subscriptions')
+                    ? $this->tableReachable('device_subscriptions', \App\Models\DeviceSubscription::class, 'MSA Connect device subscriptions store')
+                    : (Schema::hasTable('conversations')
+                        ? $this->tableReachable('conversations', \App\Models\Conversation::class, 'MSA Connect conversations store')
+                        : $this->tableReachable('device_subscriptions', \App\Models\DeviceSubscription::class, 'MSA Connect device subscriptions store')),
                 default => [
                     'status' => self::STATUS_UNKNOWN,
                     'message' => 'No application-specific probe configured',
@@ -444,6 +450,7 @@ class SystemsControlPlaneService
             'ems-event-apis' => $infra['database'],
             'academy-shared-schema' => $infra['database'],
             'square-payments' => $infra['square'],
+            'web-push' => $infra['database'],
         ];
 
         $out = [];

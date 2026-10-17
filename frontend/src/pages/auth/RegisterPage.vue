@@ -16,6 +16,7 @@ const email = ref('');
 const password = ref('');
 const passwordConfirmation = ref('');
 const termsAccepted = ref(false);
+const activeLegalModal = ref<'terms' | 'privacy' | null>(null);
 const selectedRole = ref<'member' | 'volunteer'>('member');
 
 const formError = ref<string | null>(null);
@@ -78,7 +79,7 @@ const handleRegister = async () => {
       return;
     }
 
-    router.push({ path: '/' });
+    router.push({ name: 'account-overview' });
   } catch (error: any) {
     console.error('Registration failed', error);
     if (error.response?.data?.errors) {
@@ -255,9 +256,17 @@ const handleRegister = async () => {
           >
             <span class="text-xs text-neutral-muted">
               I accept the 
-              <a href="#" class="text-secondary hover:text-primary hover:underline font-semibold">Terms of Service</a> 
+              <button
+                type="button"
+                @click.stop="activeLegalModal = 'terms'"
+                class="text-secondary hover:text-primary hover:underline font-semibold cursor-pointer focus:outline-none"
+              >Terms of Service</button> 
               and 
-              <a href="#" class="text-secondary hover:text-primary hover:underline font-semibold">Privacy Policy</a>
+              <button
+                type="button"
+                @click.stop="activeLegalModal = 'privacy'"
+                class="text-secondary hover:text-primary hover:underline font-semibold cursor-pointer focus:outline-none"
+              >Privacy Policy</button>
             </span>
           </Checkbox>
         </div>
@@ -278,6 +287,54 @@ const handleRegister = async () => {
           <router-link to="/login" class="text-secondary hover:underline font-semibold hover:text-primary transition-colors">Sign In</router-link>
         </p>
       </form>
+
+      <!-- Terms & Privacy Modal -->
+      <Teleport to="body">
+        <div
+          v-if="activeLegalModal"
+          class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          @click.self="activeLegalModal = null"
+        >
+          <div class="bg-white rounded-2xl max-w-lg w-full p-6 sm:p-8 max-h-[80vh] flex flex-col shadow-2xl border border-neutral-ivory">
+            <div class="flex items-center justify-between pb-4 border-b border-neutral-ivory">
+              <h3 class="text-lg font-bold text-primary font-display">
+                {{ activeLegalModal === 'terms' ? 'SFU MSA Terms of Service' : 'SFU MSA Privacy Policy' }}
+              </h3>
+              <button
+                type="button"
+                @click="activeLegalModal = null"
+                class="text-neutral-muted hover:text-neutral-black p-1 rounded-lg text-lg font-bold leading-none cursor-pointer"
+                aria-label="Close dialog"
+              >
+                &times;
+              </button>
+            </div>
+            <div class="overflow-y-auto py-4 text-xs leading-relaxed text-neutral-black/80 space-y-3 font-sans">
+              <template v-if="activeLegalModal === 'terms'">
+                <p>Welcome to the Simon Fraser University Muslim Students Association (SFU MSA) Digital Platform.</p>
+                <p><strong>1. Community Code:</strong> By accessing the SFU MSA website and member portal, you agree to treat all members, volunteers, and executives with mutual respect and adhere to the SFU Student Code of Conduct and MSA Constitution.</p>
+                <p><strong>2. Account Usage:</strong> You are responsible for safeguarding your login credentials. Automated access, scraping, or misuse of member services and event ticketing is prohibited.</p>
+                <p><strong>3. Events & Ticketing:</strong> Event registrations and ticket purchases through SFU MSA are subject to event-specific attendance policies and verification of SFU student standing where applicable.</p>
+              </template>
+              <template v-else>
+                <p>The Simon Fraser University Muslim Students Association (SFU MSA) respects your personal privacy.</p>
+                <p><strong>1. Information Collection:</strong> We collect only necessary details (such as your name, student email address, and program details) to administer memberships, facilitate event ticketing, and deliver announcements.</p>
+                <p><strong>2. Information Protection:</strong> Your personal information is encrypted in transit and at rest. We never sell, rent, or share personal data with external third parties or advertisers.</p>
+                <p><strong>3. Data Retention & Deletion:</strong> You may request review or deletion of your account information at any time by contacting us at sfumsa@hotmail.com.</p>
+              </template>
+            </div>
+            <div class="pt-4 border-t border-neutral-ivory flex justify-end">
+              <button
+                type="button"
+                @click="activeLegalModal = null"
+                class="px-5 py-2 bg-primary text-white rounded-xl text-xs font-bold hover:bg-secondary transition-all cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </Teleport>
     </div>
   </Motion>
 </template>

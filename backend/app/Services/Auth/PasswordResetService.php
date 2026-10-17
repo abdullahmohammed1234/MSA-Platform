@@ -12,33 +12,42 @@ use Illuminate\Validation\ValidationException;
 class PasswordResetService
 {
     /**
-     * Send password reset link to user.
+     * Shown for every syntactically valid forgot-password request.
+     * Known and unknown addresses must produce this same message.
+     */
+    public const GENERIC_RESET_REQUEST_MESSAGE = 'If an account matches that email address, password reset instructions will be sent.';
+
+    /**
+     * Accept a reset request without revealing whether the address is registered.
+     *
+     * Mail is queued only for a matching account. A missing account, or a
+     * failure while queueing mail, still returns normally so the HTTP response
+     * stays identical. This does not make response timing identical: a matching
+     * account performs extra writes and queues a notification.
      */
     public function sendResetLink(string $email): void
     {
-        $user = User::where('email', $email)->first();
+        $user = $this->findUserByEmail($email);
 
         if (!$user) {
-            throw ValidationException::withMessages([
-                'email' => ['We could not find a user with that email address.'],
-            ]);
+            return;
         }
 
-        // Delete old password reset tokens
-        DB::table('password_reset_tokens')->where('email', $email)->delete();
+        DB::table('password_reset_tokens')->where('email', $user->email)->delete();
 
-        // Generate token
         $token = Str::random(64);
 
-        // Store token
         DB::table('password_reset_tokens')->insert([
-            'email' => $email,
-            'token' => Hash::make($token), // Hash token for database security
+            'email' => $user->email,
+            'token' => Hash::make($token),
             'created_at' => now(),
         ]);
 
-        // Send reset email with plain token
-        $user->notify(new ResetPasswordNotification($token, $email));
+        try {
+            $user->notify(new ResetPasswordNotification($token, $user->email));
+        } catch (\Throwable $exception) {
+            report($exception);
+        }
     }
 
     /**
@@ -46,8 +55,10 @@ class PasswordResetService
      */
     public function resetPassword(array $data): bool
     {
+        $email = strtolower(trim((string) $data['email']));
+
         $record = DB::table('password_reset_tokens')
-            ->where('email', $data['email'])
+            ->whereRaw('LOWER(email) = ?', [$email])
             ->first();
 
         if (!$record) {
@@ -56,33 +67,43 @@ class PasswordResetService
             ]);
         }
 
-        // Check if token matches
         if (!Hash::check($data['token'], $record->token)) {
             throw ValidationException::withMessages([
                 'token' => ['This password reset token is invalid.'],
             ]);
         }
 
-        // Check if expired (60 minutes)
         if (now()->subMinutes(60)->gt($record->created_at)) {
-            DB::table('password_reset_tokens')->where('email', $data['email'])->delete();
+            DB::table('password_reset_tokens')->where('email', $record->email)->delete();
             throw ValidationException::withMessages([
                 'token' => ['This password reset token has expired.'],
             ]);
         }
 
-        $user = User::where('email', $data['email'])->first();
-        if ($user) {
-            $user->password = Hash::make($data['password']);
-            $user->save();
-
-            // Clear tokens
-            DB::table('password_reset_tokens')->where('email', $data['email'])->delete();
-            
-            // Delete all personal access tokens to force relogging
-            $user->tokens()->delete();
+        $user = $this->findUserByEmail($record->email);
+        if (!$user) {
+            DB::table('password_reset_tokens')->where('email', $record->email)->delete();
+            throw ValidationException::withMessages([
+                'token' => ['This password reset token is invalid.'],
+            ]);
         }
 
+        $user->password = Hash::make($data['password']);
+        $user->save();
+
+        DB::table('password_reset_tokens')->where('email', $record->email)->delete();
+        $user->tokens()->delete();
+
         return true;
+    }
+
+    private function findUserByEmail(string $email): ?User
+    {
+        $normalized = strtolower(trim($email));
+        if ($normalized === '') {
+            return null;
+        }
+
+        return User::whereRaw('LOWER(email) = ?', [$normalized])->first();
     }
 }

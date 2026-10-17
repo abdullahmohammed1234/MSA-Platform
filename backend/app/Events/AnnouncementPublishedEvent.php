@@ -16,9 +16,18 @@ class AnnouncementPublishedEvent
 
     /**
      * Create a new event instance.
+     *
+     * $announcementId identifies a CMS announcement's first publication; without it the
+     * event is a one-off admin broadcast.
      */
-    public function __construct(string $announcementTitle, string $announcementExcerpt, string $announcementSlug, string $audience = 'All')
-    {
+    public function __construct(
+        string $announcementTitle,
+        string $announcementExcerpt,
+        string $announcementSlug,
+        string $audience = 'All',
+        public ?int $announcementId = null,
+        public ?int $actorId = null,
+    ) {
         $this->announcementTitle = $announcementTitle;
         $this->announcementExcerpt = $announcementExcerpt;
         $this->announcementSlug = $announcementSlug;

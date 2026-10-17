@@ -1,0 +1,187 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Outfit", "Space Grotesk", "Inter", sans-serif;
+  --font-serif: "Playfair Display", "Cormorant Garamond", Georgia, Cambria, serif;
+  --font-editorial: "Cormorant Garamond", Georgia, serif;
+
+  /* SFU MSA Brand Color Palette */
+  --color-primary: #640c0e;
+  --color-primary-dark: #49080a;
+  --color-primary-light: #7e1012;
+
+  --color-secondary: #b02e32;
+  --color-secondary-dark: #911e22;
+  --color-secondary-light: #c84045;
+
+  --color-accent-gold: #ffdc83;
+  --color-accent-gold-dark: #e5b955;
+  --color-accent-gold-light: #fff0bd;
+  --color-accent-red: #ea2128;
+
+  --color-neutral-background: #fffbf4;
+  --color-neutral-ivory: #ebe8de;
+  --color-neutral-ivory-dark: #ded9cb;
+  --color-neutral-gray: #c2c4c7;
+  --color-neutral-muted: #6b7280;
+  --color-neutral-charcoal: #1e1e1e;
+  --color-neutral-white: #ffffff;
+
+  /* Compatibility Aliases */
+  --color-burgundy: #640c0e;
+  --color-burgundy-600: #7a0f12;
+  --color-academic: #b02e32;
+  --color-academic-400: #c43e42;
+  --color-red-accent: #ea2128;
+  --color-gold-accent: #ffdc83;
+  --color-cream: #fffbf4;
+  --color-beige: #ebe8de;
+
+  /* Radius Tokens */
+  --radius-xs: 0.25rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1.0rem;
+  --radius-xl: 1.25rem;
+  --radius-2xl: 1.75rem;
+  --radius-3xl: 2.5rem;
+
+  /* Shadows System */
+  --shadow-premium: 0 10px 40px -10px rgba(100, 12, 14, 0.18);
+  --shadow-brand: 0 8px 30px -8px rgba(176, 46, 50, 0.2);
+  --shadow-soft: 0 2px 16px rgba(0, 0, 0, 0.04);
+  --shadow-elevated: 0 12px 32px -4px rgba(30, 30, 30, 0.08);
+}
+
+@layer base {
+  html,
+  body {
+    background-color: var(--color-neutral-background);
+    color: var(--color-neutral-charcoal);
+    font-family: var(--font-sans);
+    overflow-x: clip;
+    max-width: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    color: var(--color-primary);
+    letter-spacing: -0.02em;
+  }
+
+  /* Accessible interactive focus default */
+  :focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-neutral-background), 0 0 0 4px var(--color-primary);
+  }
+}
+
+/* Background Motifs & Accents */
+.pattern-dots {
+  background-image: radial-gradient(rgba(100, 12, 14, 0.08) 1.25px, transparent 1.25px);
+  background-size: 24px 24px;
+}
+
+.pattern-dots-subtle {
+  background-image: radial-gradient(rgba(100, 12, 14, 0.04) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.pattern-islamic-stars {
+  background-color: var(--color-neutral-background);
+  background-image: radial-gradient(rgba(176, 46, 50, 0.06) 1.5px, transparent 1.5px),
+                    radial-gradient(rgba(100, 12, 14, 0.06) 1.5px, transparent 1.5px);
+  background-size: 32px 32px;
+  background-position: 0 0, 16px 16px;
+}
+
+/* Authentic SFU MSA 8-pointed star lattice pattern */
+.pattern-islamic-lattice {
+  background-image: url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M40 0l3.5 17.5L57.5 21l-17.5 3.5L40 40l-3.5-17.5L19 21l17.5-3.5z' fill='%23640c0e' fill-opacity='0.035' fill-rule='evenodd'/%3E%3C/svg%3E");
+}
+
+/* Surfaces & Card Primitives */
+.premium-card,
+.community-card {
+  background-color: #ffffff;
+  border: 1px solid var(--color-neutral-ivory);
+  border-radius: 1.25rem;
+  box-shadow: var(--shadow-soft);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.premium-card:hover,
+.community-card:hover {
+  border-color: rgba(100, 12, 14, 0.22);
+  box-shadow: var(--shadow-premium);
+}
+
+/* Digital Ticket / Pass Aesthetic with Perforation Notch */
+.ticket-pass {
+  background-color: #ffffff;
+  border: 1px solid var(--color-neutral-ivory);
+  border-radius: 1.25rem;
+  box-shadow: var(--shadow-soft);
+  position: relative;
+  overflow: hidden;
+}
+
+.ticket-notch-left,
+.ticket-notch-right {
+  position: absolute;
+  width: 1.25rem;
+  height: 1.25rem;
+  background-color: var(--color-neutral-background);
+  border-radius: 9999px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+}
+.ticket-notch-left {
+  left: -0.625rem;
+  border-right: 1px solid var(--color-neutral-ivory);
+}
+.ticket-notch-right {
+  right: -0.625rem;
+  border-left: 1px solid var(--color-neutral-ivory);
+}
+
+/* Glass Surfaces */
+.glass {
+  background-color: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.7);
+}
+
+.glass-header {
+  background-color: rgba(255, 251, 244, 0.94);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(235, 232, 222, 0.85);
+}
+
+/* Editorial / Welcoming Serif Touches */
+.font-serif-welcoming {
+  font-family: var(--font-serif);
+  font-style: italic;
+}
+
+.font-cormorant {
+  font-family: var(--font-editorial);
+}
+
+/* Accessible reduced-motion handling */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

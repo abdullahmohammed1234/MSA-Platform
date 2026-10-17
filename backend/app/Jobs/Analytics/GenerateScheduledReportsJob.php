@@ -21,12 +21,21 @@ class GenerateScheduledReportsJob implements ShouldQueue
 
     protected string $period;
 
+    // Fixed at dispatch: the worker may run the job after midnight.
+    protected ?string $referenceDate = null;
+
     /**
      * Create a new job instance.
      */
-    public function __construct(string $period = 'daily')
+    public function __construct(string $period = 'daily', ?string $referenceDate = null)
     {
         $this->period = $period;
+        $this->referenceDate = $referenceDate ?? Carbon::today()->toDateString();
+    }
+
+    private function referenceDay(): Carbon
+    {
+        return $this->referenceDate !== null ? Carbon::parse($this->referenceDate)->startOfDay() : Carbon::today();
     }
 
     /**
@@ -35,7 +44,7 @@ class GenerateScheduledReportsJob implements ShouldQueue
     public function handle(): void
     {
         $uuid = (string) Str::uuid();
-        $title = ucfirst($this->period) . " Analytics Summary - " . Carbon::today()->format('Y-m-d');
+        $title = ucfirst($this->period) . " Analytics Summary - " . $this->referenceDay()->format('Y-m-d');
         
         // 1. Gather report metrics
         $metrics = $this->gatherMetrics();
@@ -64,7 +73,7 @@ class GenerateScheduledReportsJob implements ShouldQueue
             'type' => $this->period,
             'filters' => [
                 'period' => $this->period,
-                'date' => Carbon::today()->toDateString(),
+                'date' => $this->referenceDay()->toDateString(),
             ],
             'generated_by' => null, // null means system-generated
             'generated_at' => Carbon::now(),
@@ -84,8 +93,8 @@ class GenerateScheduledReportsJob implements ShouldQueue
     private function gatherMetrics(): array
     {
         $days = $this->period === 'monthly' ? 30 : ($this->period === 'weekly' ? 7 : 1);
-        $startDate = Carbon::today()->subDays($days - 1)->startOfDay();
-        $endDate = Carbon::today()->endOfDay();
+        $startDate = $this->referenceDay()->subDays($days - 1)->startOfDay();
+        $endDate = $this->referenceDay()->endOfDay();
 
         // Query metrics inside this period
         $metricModels = AnalyticsMetric::whereBetween('recorded_at', [$startDate, $endDate])

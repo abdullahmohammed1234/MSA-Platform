@@ -147,10 +147,84 @@ class EventNotification extends Model
             });
     }
 
+    public static function processingLeaseSeconds(): int
+    {
+        return max(60, (int) config('ems.notifications.processing_lease_seconds', 300));
+    }
+
+    public static function requeueAfterMinutes(): int
+    {
+        return max(1, (int) config('ems.notifications.requeue_after_minutes', 30));
+    }
+
+    /**
+     * Atomically mark a due row as queued. Returns false when another
+     * dispatcher already holds a fresh queued/processing claim, so callers
+     * never push a second delivery job for the same row.
+     */
+    public static function claimForDispatch(int $id): bool
+    {
+        $now = now();
+
+        return static::query()
+            ->whereKey($id)
+            ->awaitingDispatch()
+            ->update(['queue_status' => 'queued', 'queued_at' => $now, 'updated_at' => $now]) === 1;
+    }
+
+    /**
+     * Due rows with no fresh queued/processing claim.
+     *
+     * @param  Builder<EventNotification>  $query
+     * @return Builder<EventNotification>
+     */
+    public function scopeAwaitingDispatch(Builder $query): Builder
+    {
+        $now = now();
+
+        return $query
+            ->due()
+            ->where(function (Builder $q) use ($now): void {
+                $q->whereNull('queue_status')
+                    ->orWhereNotIn('queue_status', ['queued', 'processing'])
+                    ->orWhere(function (Builder $q) use ($now): void {
+                        $q->where('queue_status', 'queued')
+                            ->where(function (Builder $q) use ($now): void {
+                                $q->whereNull('queued_at')
+                                    ->orWhere('queued_at', '<', $now->copy()->subMinutes(static::requeueAfterMinutes()));
+                            });
+                    })
+                    ->orWhere(function (Builder $q) use ($now): void {
+                        $q->where('queue_status', 'processing')
+                            ->where(function (Builder $q) use ($now): void {
+                                $q->whereNull('last_attempt_at')
+                                    ->orWhere('last_attempt_at', '<', $now->copy()->subSeconds(static::processingLeaseSeconds()));
+                            });
+                    });
+            });
+    }
+
+    public function isProcessingLeaseHeld(): bool
+    {
+        return $this->queue_status === 'processing'
+            && $this->last_attempt_at !== null
+            && $this->last_attempt_at->gt(now()->subSeconds(static::processingLeaseSeconds()));
+    }
+
     public function markQueued(): void
     {
         $this->queue_status = 'queued';
         $this->queued_at = now();
+        $this->save();
+    }
+
+    /**
+     * A delivery attempt failed but another attempt is scheduled.
+     */
+    public function markRetryPending(string $reason): void
+    {
+        $this->markFailed($reason);
+        $this->queue_status = 'retry_pending';
         $this->save();
     }
 

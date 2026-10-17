@@ -15,10 +15,12 @@ class DailyVolunteerDigestMail extends Mailable
 
     /**
      * @param Collection<int, \App\Models\VolunteerRegistration> $registrations
+     * @param list<int> $possibleRepeatIds registrations that may also be in the final legacy digest
      */
     public function __construct(
         public Collection $registrations,
-        public string $dateStr
+        public string $dateStr,
+        public array $possibleRepeatIds = [],
     ) {}
 
     public function envelope(): Envelope

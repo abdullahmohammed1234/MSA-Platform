@@ -151,8 +151,9 @@ class EventDocumentController extends EmsController
         // If requested with a valid token query param or rotate flag, use or generate token
         $rawToken = (string) $request->query('token', '');
         if ($rawToken === '') {
-            // Generate a fresh temporary token session for viewing QR if user manages documents,
-            // or rotate access to get a clean raw_token
+            // Only the hash is stored, so a QR without a token means rotating it,
+            // which invalidates every QR already distributed.
+            $this->authorize('manageDocuments', $event);
             $result = $this->documentService->rotateAccessToken($document, $request->user());
             $rawToken = $result['raw_token'];
             $document = $result['document'];

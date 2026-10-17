@@ -25,7 +25,7 @@ class PasswordResetController extends Controller
         $this->passwordResetService->sendResetLink($request->input('email'));
 
         return response()->json([
-            'message' => 'Check your email for reset instructions.',
+            'message' => PasswordResetService::GENERIC_RESET_REQUEST_MESSAGE,
         ]);
     }
 

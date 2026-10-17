@@ -34,6 +34,10 @@ class PlatformAlertService
      */
     public function evaluateAndTriggerAlerts(): array
     {
+        // Read before recording: recording first made the stale check below unreachable.
+        // This runs inside the scheduler, so a gap is only reported once cron resumes;
+        // detecting cron that never resumes needs an external monitor.
+        $previousHeartbeat = Cache::get(self::CRON_HEARTBEAT_CACHE_KEY);
         $this->recordCronHeartbeat();
         $generatedAlerts = [];
 
@@ -54,7 +58,7 @@ class PlatformAlertService
         }
 
         // 2. Check cPanel cron heartbeat stale status (> 10 minutes)
-        $lastHeartbeat = Cache::get(self::CRON_HEARTBEAT_CACHE_KEY);
+        $lastHeartbeat = $previousHeartbeat;
         if ($lastHeartbeat) {
             $diffMinutes = Carbon::parse($lastHeartbeat)->diffInMinutes(Carbon::now());
             if ($diffMinutes > 10) {
@@ -65,6 +69,28 @@ class PlatformAlertService
                     title: 'cPanel Scheduled Cron Timeout',
                     message: "The cPanel cron scheduler heartbeat has not executed for {$diffMinutes} minutes.",
                     context: ['last_heartbeat' => $lastHeartbeat, 'diff_minutes' => $diffMinutes]
+                );
+                if ($alert) $generatedAlerts[] = $alert;
+            }
+        }
+
+        // 2b. Queue stall: work is waiting but no worker has picked it up.
+        if (Schema::hasTable('jobs')) {
+            $stallMinutes = max(1, (int) config('queue.stall_alert_minutes', 15));
+            $oldestAvailableAt = DB::table('jobs')
+                ->whereNull('reserved_at')
+                ->where('available_at', '<=', Carbon::now()->subMinutes($stallMinutes)->getTimestamp())
+                ->min('available_at');
+
+            if ($oldestAvailableAt !== null) {
+                $waitingMinutes = (int) floor((Carbon::now()->getTimestamp() - (int) $oldestAvailableAt) / 60);
+                $alert = $this->createDeduplicatedAlert(
+                    key: 'queue.stalled',
+                    application: 'queues',
+                    severity: AlertSeverity::CRITICAL,
+                    title: 'Queue Worker Stalled',
+                    message: "The oldest runnable queued job has been waiting {$waitingMinutes} minutes without a worker.",
+                    context: ['oldest_wait_minutes' => $waitingMinutes, 'threshold_minutes' => $stallMinutes]
                 );
                 if ($alert) $generatedAlerts[] = $alert;
             }

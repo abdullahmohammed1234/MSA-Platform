@@ -12,7 +12,7 @@ return [
         'enabled' => (bool) env('VMS_NOTIFICATIONS_ENABLED', true),
 
         'reminders' => [
-            'enabled' => (bool) env('VMS_REMINDERS_ENABLED', true),
+            'enabled' => (bool) env('VMS_REMINDERS_ENABLED', false),
             // Timing offsets (in hours before shift start_at) to send reminders
             'timings' => [24, 2],
         ],

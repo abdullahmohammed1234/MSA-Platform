@@ -20,6 +20,11 @@ use App\Http\Controllers\Api\V1\Admin\PlatformAuditController;
 use App\Http\Controllers\Api\V1\Admin\PlatformAlertController;
 use App\Http\Controllers\Api\V1\Admin\PlatformIntelligenceController;
 use App\Http\Controllers\Api\V1\Admin\PlatformOperationsController;
+use App\Http\Controllers\Api\V1\Support\SupportInquiryController;
+use App\Http\Controllers\Api\V1\Support\StaffSupportController;
+use App\Http\Controllers\Api\V1\Messaging\ConversationController;
+use App\Http\Controllers\Api\V1\Messaging\AdminMessagingController;
+use App\Http\Controllers\Api\V1\Push\PushSubscriptionController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -266,6 +271,22 @@ Route::prefix('v1')->group(function () {
                 Route::get('/stats', [\App\Http\Controllers\Api\V1\Admin\AdminNotificationController::class, 'stats'])
                     ->middleware('permission:manage_notifications')
                     ->name('api.admin.notifications.stats');
+
+                Route::get('/announcement-dispatches', [\App\Http\Controllers\Api\V1\Admin\AdminAnnouncementDeliveryController::class, 'index'])
+                    ->middleware('permission:manage_notifications')
+                    ->name('api.admin.notifications.announcement-dispatches.index');
+
+                Route::get('/announcement-dispatches/{dispatch}', [\App\Http\Controllers\Api\V1\Admin\AdminAnnouncementDeliveryController::class, 'show'])
+                    ->middleware('permission:manage_notifications')
+                    ->name('api.admin.notifications.announcement-dispatches.show');
+
+                Route::post('/announcement-dispatches/{dispatch}/retry-failed', [\App\Http\Controllers\Api\V1\Admin\AdminAnnouncementDeliveryController::class, 'retryFailed'])
+                    ->middleware('permission:send_notifications')
+                    ->name('api.admin.notifications.announcement-dispatches.retry-failed');
+
+                Route::post('/announcements/{announcement}/resend', [\App\Http\Controllers\Api\V1\Admin\AdminAnnouncementDeliveryController::class, 'resend'])
+                    ->middleware('permission:send_notifications')
+                    ->name('api.admin.notifications.announcements.resend');
             });
 
             // Role & Permission Management
@@ -557,6 +578,8 @@ Route::prefix('v1')->group(function () {
                 Route::get('/logs', [\App\Http\Controllers\Api\V1\Admin\EmsSystemController::class, 'logs']);
                 Route::get('/integrations', [\App\Http\Controllers\Api\V1\Admin\EmsSystemController::class, 'integrations']);
                 Route::get('/webhooks', [\App\Http\Controllers\Api\V1\Admin\EmsSystemController::class, 'webhooks']);
+                Route::post('/webhooks/{uuid}/requeue', [\App\Http\Controllers\Api\V1\Admin\EmsSystemController::class, 'requeueWebhook'])
+                    ->name('api.admin.systems.ems.webhooks.requeue');
                 Route::get('/config', [\App\Http\Controllers\Api\V1\Admin\EmsSystemController::class, 'getConfig']);
                 Route::put('/config', [\App\Http\Controllers\Api\V1\Admin\EmsSystemController::class, 'updateConfig']);
             });
@@ -629,6 +652,18 @@ Route::prefix('v1')->group(function () {
                 Route::get('/integrations', [\App\Http\Controllers\Api\V1\Admin\DawahAcademySystemController::class, 'integrations']);
                 Route::get('/config', [\App\Http\Controllers\Api\V1\Admin\DawahAcademySystemController::class, 'getConfig']);
                 Route::put('/config', [\App\Http\Controllers\Api\V1\Admin\DawahAcademySystemController::class, 'updateConfig']);
+            });
+
+            // MSA Connect Management (Systems registry)
+            Route::prefix('systems/connect')->group(function () {
+                Route::get('/', [\App\Http\Controllers\Api\V1\Admin\ConnectSystemController::class, 'index']);
+                Route::get('/health', [\App\Http\Controllers\Api\V1\Admin\ConnectSystemController::class, 'health']);
+                Route::get('/metrics', [\App\Http\Controllers\Api\V1\Admin\ConnectSystemController::class, 'metrics']);
+                Route::get('/config', [\App\Http\Controllers\Api\V1\Admin\ConnectSystemController::class, 'getConfig']);
+                Route::put('/config', [\App\Http\Controllers\Api\V1\Admin\ConnectSystemController::class, 'updateConfig']);
+                Route::get('/events', [\App\Http\Controllers\Api\V1\Admin\ConnectSystemController::class, 'events']);
+                Route::get('/announcements', [\App\Http\Controllers\Api\V1\Admin\ConnectSystemController::class, 'announcements']);
+                Route::get('/audit', [\App\Http\Controllers\Api\V1\Admin\ConnectSystemController::class, 'audit']);
             });
         });
 
@@ -742,6 +777,67 @@ Route::prefix('v1')->group(function () {
         Route::delete('/{id}', [NotificationController::class, 'destroy'])->name('api.notifications.destroy');
         Route::get('/preferences', [NotificationController::class, 'getPreferences'])->name('api.notifications.get-preferences');
         Route::put('/preferences', [NotificationController::class, 'updatePreferences'])->name('api.notifications.update-preferences');
+    });
+
+    // 6c. Device Push Notifications routes (Phase 13)
+    Route::prefix('push')->middleware('auth:sanctum')->group(function () {
+        Route::get('/config', [PushSubscriptionController::class, 'config'])->name('api.push.config');
+        Route::get('/subscriptions', [PushSubscriptionController::class, 'index'])->name('api.push.subscriptions.index');
+        Route::post('/subscriptions', [PushSubscriptionController::class, 'store'])->name('api.push.subscriptions.store');
+        Route::delete('/subscriptions/{uuid}', [PushSubscriptionController::class, 'destroy'])->name('api.push.subscriptions.destroy');
+        Route::delete('/subscriptions', [PushSubscriptionController::class, 'destroyAll'])->name('api.push.subscriptions.destroy-all');
+        Route::post('/test', [PushSubscriptionController::class, 'sendTest'])->name('api.push.test');
+    });
+
+    // 6b. Member Support & Messaging routes (Phase 7)
+    Route::prefix('support')->group(function () {
+        Route::get('/categories', [SupportInquiryController::class, 'categories'])->name('api.support.categories');
+        Route::get('/resources/status', [SupportInquiryController::class, 'resourcesStatus'])->name('api.support.resources.status');
+
+        Route::middleware('auth:sanctum')->group(function () {
+            Route::get('/inquiries', [SupportInquiryController::class, 'index'])->name('api.support.inquiries.index');
+            Route::post('/inquiries', [SupportInquiryController::class, 'store'])
+                ->middleware('throttle:public_forms')
+                ->name('api.support.inquiries.store');
+            Route::get('/inquiries/{id}', [SupportInquiryController::class, 'show'])->name('api.support.inquiries.show');
+            Route::post('/inquiries/{id}/messages', [SupportInquiryController::class, 'sendMessage'])
+                ->middleware('throttle:public_forms')
+                ->name('api.support.inquiries.messages.store');
+            Route::post('/inquiries/{id}/close', [SupportInquiryController::class, 'close'])->name('api.support.inquiries.close');
+        });
+    });
+
+    // 6c. Staff Support Management routes (Phase 7)
+    Route::prefix('staff/support')->middleware(['auth:sanctum', 'throttle:admin_api'])->group(function () {
+        Route::get('/stats', [StaffSupportController::class, 'stats'])->name('api.staff.support.stats');
+        Route::get('/inquiries', [StaffSupportController::class, 'index'])->name('api.staff.support.inquiries.index');
+        Route::get('/inquiries/{id}', [StaffSupportController::class, 'show'])->name('api.staff.support.inquiries.show');
+        Route::post('/inquiries/{id}/messages', [StaffSupportController::class, 'reply'])->name('api.staff.support.inquiries.reply');
+        Route::patch('/inquiries/{id}/status', [StaffSupportController::class, 'updateStatus'])->name('api.staff.support.inquiries.status');
+        Route::patch('/inquiries/{id}/assign', [StaffSupportController::class, 'assign'])->name('api.staff.support.inquiries.assign');
+    });
+
+    // 6d. Direct Messaging routes (Phase 12)
+    Route::prefix('conversations')->middleware('auth:sanctum')->group(function () {
+        Route::get('/recipients/admins', [ConversationController::class, 'availableAdmins'])
+            ->middleware('throttle:dm_search')
+            ->name('api.conversations.admins');
+        Route::get('/unread-count', [ConversationController::class, 'unreadCount'])->name('api.conversations.unread-count');
+        Route::get('/', [ConversationController::class, 'index'])->name('api.conversations.index');
+        Route::post('/', [ConversationController::class, 'store'])
+            ->middleware('throttle:dm_create')
+            ->name('api.conversations.store');
+        Route::get('/{identifier}', [ConversationController::class, 'show'])->name('api.conversations.show');
+        Route::get('/{identifier}/messages', [ConversationController::class, 'messages'])->name('api.conversations.messages.index');
+        Route::post('/{identifier}/messages', [ConversationController::class, 'sendMessage'])
+            ->middleware('throttle:dm_send')
+            ->name('api.conversations.messages.send');
+        Route::post('/{identifier}/read', [ConversationController::class, 'markAsRead'])->name('api.conversations.read');
+    });
+
+    // 6e. Direct Messaging Administration routes (Phase 12)
+    Route::prefix('admin/messaging')->middleware(['auth:sanctum', 'throttle:dm_search'])->group(function () {
+        Route::get('/recipients', [AdminMessagingController::class, 'recipients'])->name('api.admin.messaging.recipients');
     });
 
     // 7. Analytics routes
@@ -1004,7 +1100,8 @@ Route::prefix('v1')->group(function () {
     // --- Public Donation routes ---------------------------------------
     Route::prefix('donations')->group(function () {
         Route::post('/checkout', [\App\Donations\Http\Controllers\V1\PublicDonationController::class, 'checkout']);
-        Route::get('/{uuid}/status', [\App\Donations\Http\Controllers\V1\PublicDonationController::class, 'status']);
+        Route::get('/{uuid}/status', [\App\Donations\Http\Controllers\V1\PublicDonationController::class, 'status'])
+            ->middleware('throttle:30,1');
     });
 
     // --- Standalone Donation Management System (DMS) Admin routes ----
@@ -1144,48 +1241,61 @@ Route::prefix('v1')->group(function () {
 
     // --- Standalone Volunteer System Admin routes ----
     Route::prefix('admin/volunteering')->middleware(['auth:sanctum', 'app.access:volunteering'])->group(function () {
-        Route::get('/eligible-events', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'eligibleEvents'])->name('api.admin.volunteering.eligible-events');
-        Route::get('/opportunities', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'index'])->name('api.admin.volunteering.opportunities.index');
-        Route::post('/opportunities', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'store'])->name('api.admin.volunteering.opportunities.store');
-        Route::get('/opportunities/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'show'])->name('api.admin.volunteering.opportunities.show');
-        Route::put('/opportunities/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'update'])->name('api.admin.volunteering.opportunities.update');
-        Route::delete('/opportunities/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'destroy'])->name('api.admin.volunteering.opportunities.destroy');
+        Route::get('/eligible-events', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'eligibleEvents'])->middleware('vms.can:vms.view')->name('api.admin.volunteering.eligible-events');
+        Route::get('/opportunities', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'index'])->middleware('vms.can:vms.view')->name('api.admin.volunteering.opportunities.index');
+        Route::post('/opportunities', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'store'])->middleware('vms.can:vms.create')->name('api.admin.volunteering.opportunities.store');
+        Route::get('/opportunities/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'show'])->middleware('vms.can:vms.view')->name('api.admin.volunteering.opportunities.show');
+        Route::put('/opportunities/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'update'])->middleware('vms.can:vms.update')->name('api.admin.volunteering.opportunities.update');
+        Route::delete('/opportunities/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'destroy'])->middleware('vms.can:vms.delete')->name('api.admin.volunteering.opportunities.destroy');
 
-        Route::get('/signups', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'indexSignups'])->name('api.admin.volunteering.signups.global');
-        Route::get('/opportunities/{id}/signups', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'listSignups'])->name('api.admin.volunteering.signups.index');
-        Route::put('/signups/{id}/status', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'updateSignupStatus'])->name('api.admin.volunteering.signups.update-status');
-        Route::put('/signups/{id}/attendance', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'updateAttendance'])->name('api.admin.volunteering.signups.update-attendance');
-        Route::post('/signups/batch-attendance', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'batchAttendance'])->name('api.admin.volunteering.signups.batch-attendance');
-        Route::post('/signups/{id}/promote', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'promoteWaitlist'])->name('api.admin.volunteering.signups.promote');
-        Route::get('/export', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'export'])->name('api.admin.volunteering.export');
-        Route::get('/analytics', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'analytics'])->name('api.admin.volunteering.analytics');
+        Route::get('/signups', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'indexSignups'])->middleware('vms.can:vms.view|volunteer.registrations.view')->name('api.admin.volunteering.signups.global');
+        Route::get('/opportunities/{id}/signups', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'listSignups'])->middleware('vms.can:vms.view|volunteer.registrations.view')->name('api.admin.volunteering.signups.index');
+        Route::put('/signups/{id}/status', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'updateSignupStatus'])->middleware('vms.can:vms.manage_signups|volunteer.registrations.update')->name('api.admin.volunteering.signups.update-status');
+        Route::put('/signups/{id}/attendance', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'updateAttendance'])->middleware('vms.can:vms.manage_signups|volunteer.registrations.update')->name('api.admin.volunteering.signups.update-attendance');
+        Route::post('/signups/batch-attendance', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'batchAttendance'])->middleware('vms.can:vms.manage_signups|volunteer.registrations.update')->name('api.admin.volunteering.signups.batch-attendance');
+        Route::post('/signups/{id}/promote', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'promoteWaitlist'])->middleware('vms.can:vms.manage_signups')->name('api.admin.volunteering.signups.promote');
+        Route::get('/export', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'export'])->middleware('vms.can:vms.export')->name('api.admin.volunteering.export');
+        Route::get('/analytics', [\App\Volunteering\Http\Controllers\AdminVolunteerController::class, 'analytics'])->middleware('vms.can:vms.view')->name('api.admin.volunteering.analytics');
 
         // VMS-7 Admin Taxonomy, Matching & Profile Management
-        Route::get('/skills', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'listSkills'])->name('api.admin.volunteering.skills.index');
-        Route::post('/skills', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'storeSkill'])->name('api.admin.volunteering.skills.store');
-        Route::put('/skills/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'updateSkill'])->name('api.admin.volunteering.skills.update');
-        Route::delete('/skills/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'destroySkill'])->name('api.admin.volunteering.skills.destroy');
+        Route::get('/skills', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'listSkills'])->middleware('vms.can:vms.view')->name('api.admin.volunteering.skills.index');
+        Route::post('/skills', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'storeSkill'])->middleware('vms.can:vms.manage')->name('api.admin.volunteering.skills.store');
+        Route::put('/skills/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'updateSkill'])->middleware('vms.can:vms.manage')->name('api.admin.volunteering.skills.update');
+        Route::delete('/skills/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'destroySkill'])->middleware('vms.can:vms.manage')->name('api.admin.volunteering.skills.destroy');
 
-        Route::get('/interests', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'listInterests'])->name('api.admin.volunteering.interests.index');
-        Route::post('/interests', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'storeInterest'])->name('api.admin.volunteering.interests.store');
-        Route::put('/interests/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'updateInterest'])->name('api.admin.volunteering.interests.update');
-        Route::delete('/interests/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'destroyInterest'])->name('api.admin.volunteering.interests.destroy');
+        Route::get('/interests', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'listInterests'])->middleware('vms.can:vms.view')->name('api.admin.volunteering.interests.index');
+        Route::post('/interests', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'storeInterest'])->middleware('vms.can:vms.manage')->name('api.admin.volunteering.interests.store');
+        Route::put('/interests/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'updateInterest'])->middleware('vms.can:vms.manage')->name('api.admin.volunteering.interests.update');
+        Route::delete('/interests/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'destroyInterest'])->middleware('vms.can:vms.manage')->name('api.admin.volunteering.interests.destroy');
 
-        Route::put('/opportunities/{id}/requirements', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'updateOpportunityRequirements'])->name('api.admin.volunteering.opportunities.requirements');
-        Route::get('/opportunities/{id}/matches', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'getOpportunityMatches'])->name('api.admin.volunteering.opportunities.matches');
-        Route::post('/opportunities/{id}/invite', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'inviteVolunteer'])->name('api.admin.volunteering.opportunities.invite');
+        Route::put('/opportunities/{id}/requirements', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'updateOpportunityRequirements'])->middleware('vms.can:vms.update')->name('api.admin.volunteering.opportunities.requirements');
+        Route::get('/opportunities/{id}/matches', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'getOpportunityMatches'])->middleware('vms.can:vms.view')->name('api.admin.volunteering.opportunities.matches');
+        Route::post('/opportunities/{id}/invite', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'inviteVolunteer'])->middleware('vms.can:vms.manage_signups')->name('api.admin.volunteering.opportunities.invite');
 
-        Route::get('/profiles', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'listProfiles'])->name('api.admin.volunteering.profiles.index');
-        Route::get('/profiles/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'showProfile'])->name('api.admin.volunteering.profiles.show');
+        Route::get('/profiles', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'listProfiles'])->middleware('vms.can:vms.view')->name('api.admin.volunteering.profiles.index');
+        Route::get('/profiles/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerMatchingController::class, 'showProfile'])->middleware('vms.can:vms.view')->name('api.admin.volunteering.profiles.show');
 
         // VMS-8 Admin Recognition, Retention & Re-engagement
-        Route::get('/achievements', [\App\Volunteering\Http\Controllers\AdminVolunteerRecognitionController::class, 'listAchievements'])->name('api.admin.volunteering.achievements.index');
-        Route::post('/achievements', [\App\Volunteering\Http\Controllers\AdminVolunteerRecognitionController::class, 'storeAchievement'])->name('api.admin.volunteering.achievements.store');
-        Route::put('/achievements/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerRecognitionController::class, 'updateAchievement'])->name('api.admin.volunteering.achievements.update');
-        Route::post('/volunteers/{userId}/award', [\App\Volunteering\Http\Controllers\AdminVolunteerRecognitionController::class, 'awardVolunteer'])->name('api.admin.volunteering.volunteers.award');
-        Route::get('/retention', [\App\Volunteering\Http\Controllers\AdminVolunteerRecognitionController::class, 'retentionOverview'])->name('api.admin.volunteering.retention.overview');
-        Route::get('/reengagement', [\App\Volunteering\Http\Controllers\AdminVolunteerRecognitionController::class, 'reengagementCandidates'])->name('api.admin.volunteering.reengagement.candidates');
-        Route::post('/reengagement/outreach', [\App\Volunteering\Http\Controllers\AdminVolunteerRecognitionController::class, 'logOutreach'])->name('api.admin.volunteering.reengagement.outreach');
+        Route::get('/achievements', [\App\Volunteering\Http\Controllers\AdminVolunteerRecognitionController::class, 'listAchievements'])->middleware('vms.can:vms.view')->name('api.admin.volunteering.achievements.index');
+        Route::post('/achievements', [\App\Volunteering\Http\Controllers\AdminVolunteerRecognitionController::class, 'storeAchievement'])->middleware('vms.can:vms.manage')->name('api.admin.volunteering.achievements.store');
+        Route::put('/achievements/{id}', [\App\Volunteering\Http\Controllers\AdminVolunteerRecognitionController::class, 'updateAchievement'])->middleware('vms.can:vms.manage')->name('api.admin.volunteering.achievements.update');
+        Route::post('/volunteers/{userId}/award', [\App\Volunteering\Http\Controllers\AdminVolunteerRecognitionController::class, 'awardVolunteer'])->middleware('vms.can:vms.manage')->name('api.admin.volunteering.volunteers.award');
+        Route::get('/retention', [\App\Volunteering\Http\Controllers\AdminVolunteerRecognitionController::class, 'retentionOverview'])->middleware('vms.can:vms.view')->name('api.admin.volunteering.retention.overview');
+        Route::get('/reengagement', [\App\Volunteering\Http\Controllers\AdminVolunteerRecognitionController::class, 'reengagementCandidates'])->middleware('vms.can:vms.view')->name('api.admin.volunteering.reengagement.candidates');
+        Route::post('/reengagement/outreach', [\App\Volunteering\Http\Controllers\AdminVolunteerRecognitionController::class, 'logOutreach'])->middleware('vms.can:vms.manage_signups')->name('api.admin.volunteering.reengagement.outreach');
+    });
+
+    // --- Standalone MSA Connect Management Admin routes (Phase 14) ----
+    Route::prefix('admin/connect')->middleware(['auth:sanctum', 'app.access:connect'])->group(function () {
+        Route::get('/', [\App\Http\Controllers\Api\V1\Admin\ConnectSystemController::class, 'index'])->name('api.admin.connect.index');
+        Route::get('/overview', [\App\Http\Controllers\Api\V1\Admin\ConnectSystemController::class, 'index'])->name('api.admin.connect.overview');
+        Route::get('/health', [\App\Http\Controllers\Api\V1\Admin\ConnectSystemController::class, 'health'])->name('api.admin.connect.health');
+        Route::get('/metrics', [\App\Http\Controllers\Api\V1\Admin\ConnectSystemController::class, 'metrics'])->name('api.admin.connect.metrics');
+        Route::get('/config', [\App\Http\Controllers\Api\V1\Admin\ConnectSystemController::class, 'getConfig'])->name('api.admin.connect.config.get');
+        Route::put('/config', [\App\Http\Controllers\Api\V1\Admin\ConnectSystemController::class, 'updateConfig'])->name('api.admin.connect.config.update');
+        Route::get('/events', [\App\Http\Controllers\Api\V1\Admin\ConnectSystemController::class, 'events'])->name('api.admin.connect.events');
+        Route::get('/announcements', [\App\Http\Controllers\Api\V1\Admin\ConnectSystemController::class, 'announcements'])->name('api.admin.connect.announcements');
+        Route::get('/audit', [\App\Http\Controllers\Api\V1\Admin\ConnectSystemController::class, 'audit'])->name('api.admin.connect.audit');
     });
 
 });

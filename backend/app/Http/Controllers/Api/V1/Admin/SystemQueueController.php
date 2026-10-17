@@ -104,8 +104,8 @@ class SystemQueueController extends Controller
 
         return response()->json([
             'success' => $success,
-            'message' => $success ? 'Job dispatched for retry.' : 'Failed to retry job.',
-        ]);
+            'message' => $success ? 'Job dispatched for retry.' : 'Failed job not found or could not be retried.',
+        ], $success ? 200 : 404);
     }
 
     /**

@@ -74,27 +74,36 @@ class SecurityLogger
      */
     protected function scrubPayload(array $payload): array
     {
-        $sensitiveKeys = [
-            'password', 
-            'password_confirmation', 
-            'token', 
-            'secret', 
-            'key', 
-            'credential', 
-            'api_key', 
-            'auth_token',
-            'client_secret',
-            'verification_code',
-        ];
-        
         foreach ($payload as $key => $value) {
-            if (is_array($value)) {
-                $payload[$key] = $this->scrubPayload($value);
-            } elseif (in_array(strtolower($key), $sensitiveKeys)) {
+            if ($this->isSensitiveKey((string) $key)) {
                 $payload[$key] = '[SCRUBBED]';
+            } elseif (is_array($value)) {
+                $payload[$key] = $this->scrubPayload($value);
             }
         }
-        
+
         return $payload;
+    }
+
+    /**
+     * Substring match on the normalised key so variants such as
+     * current_password, new_password_confirmation, refreshToken, or
+     * X-XSRF-TOKEN are caught without listing each one.
+     */
+    protected function isSensitiveKey(string $key): bool
+    {
+        $normalised = preg_replace('/[^a-z0-9]/', '', strtolower($key));
+
+        if ($normalised === 'key') {
+            return true;
+        }
+
+        foreach (['password', 'passwd', 'token', 'secret', 'apikey', 'credential', 'authorization', 'cookie', 'verificationcode', 'privatekey'] as $needle) {
+            if (str_contains($normalised, $needle)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

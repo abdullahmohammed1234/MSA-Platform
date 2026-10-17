@@ -15,8 +15,11 @@ class NotificationPreference extends Model
         'new_announcements',
         'upcoming_training',
         'certificate_earned',
+        'support_updates',
+        'direct_messages',
         'email_enabled',
         'in_app_enabled',
+        'push_enabled',
     ];
 
     protected $casts = [
@@ -24,8 +27,11 @@ class NotificationPreference extends Model
         'new_announcements' => 'boolean',
         'upcoming_training' => 'boolean',
         'certificate_earned' => 'boolean',
+        'support_updates' => 'boolean',
+        'direct_messages' => 'boolean',
         'email_enabled' => 'boolean',
         'in_app_enabled' => 'boolean',
+        'push_enabled' => 'boolean',
     ];
 
     /**

@@ -329,12 +329,12 @@ class PlatformArchitectureContractTest extends TestCase
             ->getJson('/api/v1/admin/systems')
             ->assertStatus(200)
             ->assertJsonPath('incidents_supported', false)
-            ->assertJsonPath('summary.applications_total', 10);
+            ->assertJsonPath('summary.applications_total', 11);
 
         $ids = array_keys(config('systems.applications', []));
         sort($ids);
         $this->assertSame(
-            ['cms', 'dams', 'dawah-academy', 'donations', 'ems', 'main-website', 'mlibms', 'sponsorship', 'store', 'vms'],
+            ['cms', 'connect', 'dams', 'dawah-academy', 'donations', 'ems', 'main-website', 'mlibms', 'sponsorship', 'store', 'vms'],
             $ids
         );
 

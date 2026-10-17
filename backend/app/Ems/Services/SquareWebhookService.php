@@ -15,7 +15,7 @@ use App\Ems\Services\Square\SquareCatalogService;
 use App\Ems\Services\Square\SquarePosIngestService;
 use App\Ems\Services\Square\SquareRefundService;
 use App\Ems\Services\Square\SquareTerminalService;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -66,27 +66,30 @@ class SquareWebhookService
             throw new EmsException('Webhook missing event id.', [], Response::HTTP_BAD_REQUEST);
         }
 
-        $record = DB::transaction(function () use ($payload, $eventId, $eventType): WebhookEvent {
-            $existing = WebhookEvent::query()
-                ->where('provider', 'square')
-                ->where('event_id', $eventId)
-                ->lockForUpdate()
-                ->first();
+        // No locking read before the insert: on InnoDB a FOR UPDATE miss takes a gap lock
+        // that concurrent first deliveries share, and their inserts then deadlock. The
+        // unique (provider, event_id) index arbitrates instead.
+        $record = WebhookEvent::query()
+            ->where('provider', 'square')
+            ->where('event_id', $eventId)
+            ->first();
 
-            if ($existing !== null) {
-                return $existing;
+        if ($record === null) {
+            try {
+                $record = new WebhookEvent();
+                $record->provider = 'square';
+                $record->event_id = $eventId;
+                $record->event_type = $eventType;
+                $record->status = WebhookEventStatus::Received->value;
+                $record->payload = $payload;
+                $record->save();
+            } catch (UniqueConstraintViolationException) {
+                $record = WebhookEvent::query()
+                    ->where('provider', 'square')
+                    ->where('event_id', $eventId)
+                    ->firstOrFail();
             }
-
-            $record = new WebhookEvent();
-            $record->provider = 'square';
-            $record->event_id = $eventId;
-            $record->event_type = $eventType;
-            $record->status = WebhookEventStatus::Received->value;
-            $record->payload = $payload;
-            $record->save();
-
-            return $record;
-        });
+        }
 
         $status = $this->normalizeStatus($record->status);
 
@@ -100,7 +103,7 @@ class SquareWebhookService
             return $record->payment_id ? Payment::query()->find($record->payment_id) : null;
         }
 
-        if ($status === WebhookEventStatus::Processing) {
+        if ($status === WebhookEventStatus::Processing && $record->isProcessingLeaseHeld()) {
             return $record->payment_id ? Payment::query()->find($record->payment_id) : null;
         }
 
@@ -126,10 +129,17 @@ class SquareWebhookService
             return $record->payment_id ? Payment::query()->find($record->payment_id) : null;
         }
 
-        $record->status = WebhookEventStatus::Processing->value;
-        $record->last_attempt_at = now();
-        $record->retry_count = (int) $record->retry_count + 1;
-        $record->save();
+        if (! WebhookEvent::claimForProcessing($record->id)) {
+            $record->refresh();
+            Log::channel((string) config('ems.logging.channel', 'ems'))
+                ->info('ems.webhooks.square.claim_skipped', [
+                    'event_id' => $record->event_id,
+                    'status' => $record->status,
+                ]);
+
+            return $record->payment_id ? Payment::query()->find($record->payment_id) : null;
+        }
+        $record->refresh();
 
         $payload = is_array($record->payload) ? $record->payload : [];
         $eventType = (string) ($record->event_type ?? '');
@@ -163,22 +173,13 @@ class SquareWebhookService
                 return $payment;
             }
 
-            $record->status = WebhookEventStatus::Unmatched->value;
-            $record->failure_reason = $record->failure_reason
-                ?: 'No EMS mapping for this Square event.';
             $record->payload = $this->redactPayload($payload);
-            $record->save();
-
-            Log::channel((string) config('ems.logging.channel', 'ems'))
-                ->warning('ems.webhooks.square.unmatched', [
-                    'event_id' => $record->event_id,
-                    'event_type' => $eventType,
-                ]);
+            $this->markUnmatched($record, $eventType);
 
             return null;
         } catch (\Throwable $e) {
             $record->status = WebhookEventStatus::Failed->value;
-            $record->failure_reason = mb_substr($e->getMessage(), 0, 500);
+            $record->failure_reason = mb_substr($e::class.': '.$e->getMessage(), 0, 500);
             $record->payload = $this->redactPayload($payload);
             $record->save();
 
@@ -186,11 +187,118 @@ class SquareWebhookService
                 ->error('ems.webhooks.square.failed', [
                     'event_id' => $record->event_id,
                     'event_type' => $eventType,
-                    'error' => $e->getMessage(),
+                    'attempt' => (int) $record->retry_count,
+                    'exception' => $e::class,
                 ]);
 
             throw $e;
         }
+    }
+
+    public static function isSupportedEventType(string $eventType): bool
+    {
+        if ($eventType === 'catalog.version.updated') {
+            return true;
+        }
+
+        foreach (['refund.', 'terminal.checkout.', 'payment.', 'order.'] as $prefix) {
+            if (str_starts_with($eventType, $prefix)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Unsupported types are ignored (kept, not retried). A supported event with no
+     * local match may simply have arrived first, so it is retried with backoff and
+     * then parked for review. Nothing is deleted.
+     */
+    private function markUnmatched(WebhookEvent $record, string $eventType): void
+    {
+        $log = Log::channel((string) config('ems.logging.channel', 'ems'));
+        $attempts = (int) $record->retry_count;
+
+        if (! self::isSupportedEventType($eventType)) {
+            $record->status = WebhookEventStatus::Ignored->value;
+            $record->next_retry_at = null;
+            $record->failure_reason = 'Unsupported Square event type; stored for audit only.';
+            $record->save();
+            $log->info('ems.webhooks.square.ignored_unsupported_type', [
+                'event_id' => $record->event_id,
+                'event_type' => $eventType,
+            ]);
+
+            return;
+        }
+
+        $reason = $record->failure_reason ?: 'No EMS mapping for this Square event.';
+
+        if ($attempts >= WebhookEvent::unmatchedMaxAttempts()) {
+            $record->status = WebhookEventStatus::NeedsReview->value;
+            $record->next_retry_at = null;
+            $record->failure_reason = mb_substr('Unmatched after '.$attempts.' attempts: '.$reason, 0, 500);
+            $record->save();
+
+            $log->warning('ems.webhooks.square.needs_review', [
+                'event_id' => $record->event_id,
+                'event_type' => $eventType,
+                'attempts' => $attempts,
+            ]);
+            app(\App\Services\Platform\PlatformAlertService::class)->createDeduplicatedAlert(
+                'ems.webhooks.square.needs_review.'.$record->event_id,
+                'ems',
+                \App\Platform\Enums\AlertSeverity::WARNING,
+                'Square webhook needs review',
+                'A Square webhook still has no matching EMS record after all automatic retries. Verify it against Square and requeue it if appropriate.',
+                ['event_id' => $record->event_id, 'event_type' => $eventType, 'attempts' => $attempts],
+            );
+
+            return;
+        }
+
+        $record->status = WebhookEventStatus::Unmatched->value;
+        $record->next_retry_at = WebhookEvent::unmatchedBackoffAfter($attempts);
+        $record->failure_reason = $reason;
+        $record->save();
+
+        $log->warning('ems.webhooks.square.unmatched', [
+            'event_id' => $record->event_id,
+            'event_type' => $eventType,
+            'attempts' => $attempts,
+            'next_retry_at' => $record->next_retry_at?->toIso8601String(),
+        ]);
+    }
+
+    /**
+     * @return bool false when the row is not in a requeueable state
+     */
+    public function requeueForOperator(WebhookEvent $record, ?int $actorId, string $source): bool
+    {
+        $previousStatus = (string) $record->status;
+        if (! WebhookEvent::requeueForOperator($record->id)) {
+            return false;
+        }
+
+        \App\Services\Security\AuditLogger::log(
+            'ems.webhook.requeued',
+            $record,
+            'Square webhook requeued for processing by operator',
+            ['event_id' => $record->event_id, 'event_type' => $record->event_type, 'previous_status' => $previousStatus, 'source' => $source],
+            $actorId,
+            'ems',
+        );
+        Log::channel((string) config('ems.logging.channel', 'ems'))
+            ->warning('ems.webhooks.square.operator_requeued', [
+                'event_id' => $record->event_id,
+                'previous_status' => $previousStatus,
+                'source' => $source,
+            ]);
+
+        ProcessSquareWebhookJob::dispatch($record->id);
+
+        return true;
     }
 
     /**
@@ -379,15 +487,30 @@ class SquareWebhookService
         }
 
         if ($this->isSupersededSquareCapture($payment, $parsed)) {
+            $captured = $status === PaymentStatus::Paid->value;
+            $squarePaymentId = isset($parsed['provider_payment_id']) ? (string) $parsed['provider_payment_id'] : null;
+
             Log::channel((string) config('ems.logging.channel', 'ems'))
-                ->info('ems.checkout.superseded_payment_ignored', [
+                ->{$captured ? 'warning' : 'info'}('ems.checkout.superseded_payment_ignored', [
                     'payment_uuid' => $payment->uuid,
                     'order_uuid' => $payment->order?->uuid,
                     'checkout_version' => $payment->checkout_version,
                     'square_order_id' => $parsed['provider_order_id'] ?? null,
-                    'square_payment_id' => $parsed['provider_payment_id'] ?? null,
+                    'square_payment_id' => $squarePaymentId,
                     'reason' => 'superseded_checkout',
                 ]);
+
+            // Money was taken on a replaced link: never fulfil it, but staff must refund it.
+            if ($captured) {
+                app(\App\Services\Platform\PlatformAlertService::class)->createDeduplicatedAlert(
+                    'ems.payments.superseded_capture.'.($squarePaymentId ?? $payment->uuid),
+                    'ems',
+                    \App\Platform\Enums\AlertSeverity::CRITICAL,
+                    'Payment captured on a replaced checkout link',
+                    'A buyer paid an older checkout link that had been replaced. No tickets were issued for it; refund the Square payment.',
+                    ['payment_uuid' => $payment->uuid, 'square_payment_id' => $squarePaymentId],
+                );
+            }
 
             return $payment;
         }
@@ -414,7 +537,7 @@ class SquareWebhookService
     {
         $payment->refresh();
 
-        if ($payment->status === PaymentStatus::Cancelled && $payment->wasBuyerCancelled()) {
+        if (in_array($payment->status, [PaymentStatus::Cancelled, PaymentStatus::Failed], true)) {
             return $this->fulfillment->recordStaleCaptureAfterBuyerCancel(
                 $payment,
                 isset($parsed['provider_payment_id']) ? (string) $parsed['provider_payment_id'] : null,

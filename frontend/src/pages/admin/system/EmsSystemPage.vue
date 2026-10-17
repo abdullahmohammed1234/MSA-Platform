@@ -654,10 +654,10 @@ onMounted(() => {
                     <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
                     Platform Queues partitions
                   </h3>
-                  <a href="/admin/system/queues" class="text-xs font-bold text-primary hover:text-primary-dark flex items-center gap-1">
+                  <router-link to="/admin/system/queues" class="text-xs font-bold text-primary hover:text-primary-dark flex items-center gap-1">
                     Queues dashboard
                     <ExternalLink :size="12" />
-                  </a>
+                  </router-link>
                 </div>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">

@@ -269,11 +269,16 @@ class SquareReconciliationService
     {
         $events = WebhookEvent::query()
             ->where('provider', 'square')
-            ->whereIn('status', [
-                WebhookEventStatus::Unmatched->value,
-                WebhookEventStatus::RetryPending->value,
-                WebhookEventStatus::Failed->value,
-            ])
+            ->where(function ($query): void {
+                $query->where(fn ($unmatched) => $unmatched->unmatchedDue())
+                    ->orWhere(function ($bounded): void {
+                        $bounded->whereIn('status', [
+                            WebhookEventStatus::RetryPending->value,
+                            WebhookEventStatus::Failed->value,
+                        ])->where('retry_count', '<', WebhookEvent::maxAttempts());
+                    });
+            })
+            ->orderBy('last_attempt_at')
             ->orderBy('id')
             ->limit(50)
             ->get();
@@ -285,7 +290,7 @@ class SquareReconciliationService
                 Log::channel((string) config('ems.logging.channel', 'ems'))
                     ->warning('ems.square.reconcile.webhook_retry_failed', [
                         'event_id' => $event->event_id,
-                        'error' => $e->getMessage(),
+                        'exception' => $e::class,
                     ]);
             }
         }

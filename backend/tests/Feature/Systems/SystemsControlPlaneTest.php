@@ -111,11 +111,11 @@ class SystemsControlPlaneTest extends TestCase
 
         $ids = collect($response->json('applications'))->pluck('id')->all();
         $this->assertSame(
-            ['main-website', 'cms', 'dawah-academy', 'dams', 'ems', 'store', 'donations', 'sponsorship', 'mlibms', 'vms'],
+            ['main-website', 'cms', 'dawah-academy', 'dams', 'ems', 'store', 'donations', 'sponsorship', 'mlibms', 'vms', 'connect'],
             $ids
         );
-        $this->assertCount(10, $ids);
-        $this->assertCount(10, array_unique($ids));
+        $this->assertCount(11, $ids);
+        $this->assertCount(11, array_unique($ids));
 
         $urls = collect($response->json('applications'))->pluck('url', 'id');
         $this->assertSame('/', $urls['main-website']);
@@ -123,6 +123,7 @@ class SystemsControlPlaneTest extends TestCase
         $this->assertSame('/academy', $urls['dawah-academy']);
         $this->assertSame('/dams', $urls['dams']);
         $this->assertSame('/ems', $urls['ems']);
+        $this->assertSame('/connect/admin', $urls['connect']);
 
         $serviceIds = collect($response->json('platform_services'))->pluck('id')->all();
         $this->assertEqualsCanonicalizing(['queues', 'database', 'email', 'storage'], $serviceIds);

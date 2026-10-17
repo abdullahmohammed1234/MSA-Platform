@@ -22,6 +22,10 @@ class JobLog extends Model
         'payload',
     ];
 
+    protected $hidden = [
+        'payload',
+    ];
+
     protected $casts = [
         'started_at' => 'datetime',
         'completed_at' => 'datetime',

@@ -42,35 +42,37 @@ class QrCodeGenerator
 
     /**
      * PNG binary suitable for an image response or data URI.
+     *
+     * Generated locally only: the payload is a check-in credential and must
+     * never be sent to a third-party QR service.
+     *
+     * @throws QrImageUnavailableException when the GD extension is missing
      */
     public function png(Ticket $ticket, int $size = 280): string
     {
-        if (extension_loaded('gd')) {
-            try {
-                $builder = new Builder(
-                    writer: new PngWriter(),
-                    data: $this->payloadFor($ticket),
-                    encoding: new Encoding('UTF-8'),
-                    errorCorrectionLevel: ErrorCorrectionLevel::Medium,
-                    size: $size,
-                    margin: 8,
-                );
-
-                return $builder->build()->getString();
-            } catch (\Throwable) {
-                // Fall through to remote PNG generation.
-            }
+        if (! $this->pngSupported()) {
+            throw new QrImageUnavailableException('PNG QR generation requires the GD extension.');
         }
 
-        $url = 'https://api.qrserver.com/v1/create-qr-code/?size=' . $size . 'x' . $size
-            . '&margin=8&data=' . urlencode($this->payloadFor($ticket));
-        $png = @file_get_contents($url);
+        try {
+            $builder = new Builder(
+                writer: new PngWriter(),
+                data: $this->payloadFor($ticket),
+                encoding: new Encoding('UTF-8'),
+                errorCorrectionLevel: ErrorCorrectionLevel::Medium,
+                size: $size,
+                margin: 8,
+            );
 
-        if (is_string($png) && strlen($png) > 100 && str_starts_with($png, "\x89PNG")) {
-            return $png;
+            return $builder->build()->getString();
+        } catch (\Throwable $e) {
+            throw new QrImageUnavailableException('Unable to generate a PNG QR code for this ticket.', 0, $e);
         }
+    }
 
-        throw new \RuntimeException('Unable to generate a PNG QR code for this ticket.');
+    public function pngSupported(): bool
+    {
+        return extension_loaded('gd');
     }
 
     /**
@@ -91,10 +93,15 @@ class QrCodeGenerator
     }
 
     /**
-     * Data URI for inline <img> tags without a second request.
+     * PNG data URI for inline <img> tags, or null when PNG generation is
+     * unavailable. Clients accept only PNG data URIs and hide a missing image.
      */
-    public function dataUri(Ticket $ticket, int $size = 280): string
+    public function dataUri(Ticket $ticket, int $size = 280): ?string
     {
-        return 'data:image/png;base64,' . base64_encode($this->png($ticket, $size));
+        try {
+            return 'data:image/png;base64,' . base64_encode($this->png($ticket, $size));
+        } catch (QrImageUnavailableException) {
+            return null;
+        }
     }
 }

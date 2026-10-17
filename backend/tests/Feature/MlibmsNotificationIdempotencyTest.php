@@ -19,6 +19,7 @@ class MlibmsNotificationIdempotencyTest extends TestCase
     public function test_two_day_due_reminder_is_dispatched_and_idempotent(): void
     {
         Mail::fake();
+        config(['features.mlibms_overdue_processing_enabled' => true]);
 
         $user = User::factory()->create();
         $book = Book::create(['title' => 'The Sealed Nectar', 'slug' => 'the-sealed-nectar']);

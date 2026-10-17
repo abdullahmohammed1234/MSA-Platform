@@ -10,6 +10,9 @@ import type {
   ResetPasswordPayload 
 } from '@/types/auth';
 
+export const UNCONFIRMED_LOGOUT_MESSAGE =
+  "You're signed out on this device, but we couldn't confirm it with the server. If this device isn't yours, change your password to end every session.";
+
 export const useAuthStore = defineStore('auth', () => {
   const token = ref<string | null>(localStorage.getItem('auth_token'));
   const user = ref<User | null>(
@@ -18,9 +21,11 @@ export const useAuthStore = defineStore('auth', () => {
       : null
   );
   const isLoading = ref<boolean>(false);
+  const isInitialized = ref<boolean>(false);
+  let restorePromise: Promise<User | null> | null = null;
 
   // Computeds
-  const isAuthenticated = computed(() => !!token.value && !!user.value);
+  const isAuthenticated = computed(() => !!user.value);
   const roles = computed(() => user.value?.roles || []);
   const permissions = computed(() => user.value?.permissions || []);
   const STAFF_ROLES = ['super-admin', 'admin', 'director', 'dawah-coordinator', 'mentor'] as const;
@@ -70,7 +75,7 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = newToken;
     user.value = newUser;
 
-    if (newToken) {
+    if (newToken && newToken !== 'sso_session') {
       localStorage.setItem('auth_token', newToken);
     } else {
       localStorage.removeItem('auth_token');
@@ -117,29 +122,33 @@ export const useAuthStore = defineStore('auth', () => {
   };
 
   /**
-   * Log active user out.
+   * Log active user out. Local credentials are always cleared; the result says
+   * whether the server confirmed that the session and token were revoked.
    */
-  const logout = async () => {
+  const logout = async (): Promise<boolean> => {
     isLoading.value = true;
+    let serverConfirmed = false;
     try {
       await authService.logout();
+      serverConfirmed = true;
     } catch (error) {
       console.error('Logout API request failed', error);
     } finally {
       setSession(null, null);
+      isInitialized.value = true;
       isLoading.value = false;
     }
+    return serverConfirmed;
   };
 
   /**
    * Fetch user details from /me.
    */
   const fetchUser = async () => {
-    if (!token.value) return null;
     isLoading.value = true;
     try {
       const data = await authService.getMe();
-      setSession(token.value, data.user);
+      setSession(token.value || 'sso_session', data.user);
       return data.user;
     } catch (error) {
       setSession(null, null); // Clear state on failed profile fetch
@@ -151,15 +160,30 @@ export const useAuthStore = defineStore('auth', () => {
 
   /**
    * Restore user session on application initialization.
+   * Deduplicates concurrent probe requests so only a single /auth/me call executes.
    */
   const restoreSession = async () => {
-    if (token.value) {
+    if (isInitialized.value) {
+      return user.value;
+    }
+    if (restorePromise) {
+      return await restorePromise;
+    }
+
+    restorePromise = (async () => {
       try {
         await fetchUser();
+        return user.value;
       } catch (error) {
-        console.warn('Session restoration failed', error);
+        console.warn('Session restoration failed or unauthenticated:', error);
+        return null;
+      } finally {
+        isInitialized.value = true;
+        restorePromise = null;
       }
-    }
+    })();
+
+    return await restorePromise;
   };
 
   /**
@@ -244,6 +268,7 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     user,
     isLoading,
+    isInitialized,
     isAuthenticated,
     roles,
     permissions,

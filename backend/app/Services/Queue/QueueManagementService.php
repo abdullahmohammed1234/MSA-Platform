@@ -13,7 +13,7 @@ class QueueManagementService
      */
     public function getQueueStatus(): array
     {
-        $queues = ['high', 'default', 'low'];
+        $queues = ['ems-payments', 'ems-notifications', 'ems-operations', 'high', 'default', 'low'];
         $status = [];
 
         foreach ($queues as $qName) {
@@ -81,6 +81,11 @@ class QueueManagementService
      */
     public function retryJob(string $uuid): bool
     {
+        // queue:retry exits 0 even when the id is unknown, so check first.
+        if (app('queue.failer')->find($uuid) === null) {
+            return false;
+        }
+
         Log::info("Retrying failed job: {$uuid}");
 
         // Using Artisan command allows standard Laravel retry logic

@@ -38,7 +38,7 @@ class SendCertificateEmailJob implements ShouldQueue
      */
     public function handle(): void
     {
-        Log::info("Sending certificate email to user: {$this->user->email} for certificate: {$this->award->title}");
+        Log::info("Sending certificate email to user: #{$this->user->id} for certificate: {$this->award->title}");
         
         $this->user->notifyNow(new CertificateEarnedNotification($this->award));
     }
@@ -48,6 +48,6 @@ class SendCertificateEmailJob implements ShouldQueue
      */
     public function failed(Throwable $exception): void
     {
-        Log::error("Failed to send certificate email to {$this->user->email}: " . $exception->getMessage());
+        Log::error("Failed to send certificate email to #{$this->user->id}: " . $exception->getMessage());
     }
 }

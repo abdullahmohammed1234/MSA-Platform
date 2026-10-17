@@ -1,8 +1,13 @@
 *.log
 .DS_Store
 .env
+.env.*
+!.env.example
 .env.backup
 .env.production
+*.sqlite
+*.sqlite3
+/sfumsa_platform_test
 .phpactor.json
 .phpunit.result.cache
 /.fleet

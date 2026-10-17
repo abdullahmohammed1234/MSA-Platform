@@ -100,6 +100,19 @@ export function useAppAccess() {
 
   const hasVolunteeringAccess = hasVmsAccess;
 
+  const hasConnectAccess = computed(() => {
+    if (authStore.user?.application_access?.connect) {
+      return authStore.user.application_access.connect.access;
+    }
+    return (
+      isSuperOrAdmin.value ||
+      authStore.roles.includes('connect-administrator') ||
+      authStore.roles.includes('connect-staff') ||
+      authStore.permissions.includes('connect.view') ||
+      authStore.permissions.includes('connect.manage')
+    );
+  });
+
   return {
     hasCmsAccess,
     hasDamsAccess,
@@ -111,6 +124,7 @@ export function useAppAccess() {
     hasMlibmsAccess,
     hasVmsAccess,
     hasVolunteeringAccess,
+    hasConnectAccess,
     isSuperOrAdmin,
   };
 }

@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Pre-deployment acceptance suite. Synthetic data only; never point it at a
+    production database. The <env> values below are defaults, so a MariaDB run
+    overrides them from the shell (DB_CONNECTION=mysql, DB_HOST, DB_PORT, ...).
+    Each file belongs to exactly one suite so a full run executes it once.
+-->
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+>
+    <testsuites>
+        <testsuite name="acceptance-auth">
+            <file>tests/Feature/Auth/LoginTest.php</file>
+            <file>tests/Feature/Auth/LogoutRevocationVerificationTest.php</file>
+            <file>tests/Feature/Auth/TokenLifecycleTest.php</file>
+            <file>tests/Feature/Auth/SessionRevocationTest.php</file>
+            <file>tests/Feature/Auth/PasswordResetTest.php</file>
+            <file>tests/Feature/Auth/EmailVerificationTest.php</file>
+            <file>tests/Feature/Auth/SynchronousEmailVerificationTest.php</file>
+            <file>tests/Feature/Auth/RegistrationTest.php</file>
+            <file>tests/Feature/Security/EmailClaimOwnershipTest.php</file>
+        </testsuite>
+        <testsuite name="acceptance-roles">
+            <file>tests/Feature/Authorization/AuthorizationSystemTest.php</file>
+            <file>tests/Feature/Authorization/PermissionGateTest.php</file>
+            <file>tests/Feature/Phase29/AuthorizationMemoIsolationTest.php</file>
+            <file>tests/Feature/Phase29/AuthenticatedQueryBudgetTest.php</file>
+        </testsuite>
+        <testsuite name="acceptance-academy">
+            <file>tests/Feature/Security/AcademyCourseBindingTest.php</file>
+            <file>tests/Feature/Security/MentorGradingScopeTest.php</file>
+            <file>tests/Feature/Academy/QuizGradingTest.php</file>
+            <file>tests/Feature/Academy/AcademyAssetOwnershipTest.php</file>
+        </testsuite>
+        <testsuite name="acceptance-ems">
+            <file>tests/Feature/Ems/EmsAuthorizationTest.php</file>
+            <file>tests/Feature/Security/EmsEventScopeAuthorizationTest.php</file>
+            <file>tests/Feature/Ems/EmsCompleteWorkflowTest.php</file>
+            <file>tests/Feature/Ems/EmsPhase3TicketingPaymentsTest.php</file>
+            <file>tests/Feature/Ems/WaitlistWorkflowAndConcurrencyTest.php</file>
+            <file>tests/Feature/Ems/QrCodeGeneratorTest.php</file>
+            <file>tests/Feature/Ems/EmsSquareRefundReliabilityTest.php</file>
+            <file>tests/Feature/Phase251/CheckoutOversellTest.php</file>
+            <file>tests/Feature/Phase251/SquareWebhookRecoveryTest.php</file>
+            <file>tests/Feature/Phase251/MysqlConcurrencyTest.php</file>
+            <file>tests/Feature/Phase26/UnmatchedSquareWebhookTest.php</file>
+            <file>tests/Feature/Phase26/StaleCaptureRecoveryTest.php</file>
+        </testsuite>
+        <testsuite name="acceptance-volunteers">
+            <file>tests/Feature/Volunteering/VolunteerSystemTest.php</file>
+            <file>tests/Feature/Volunteering/VolunteerConcurrencyAndRbacTest.php</file>
+            <file>tests/Feature/Security/VolunteeringActionAuthorizationTest.php</file>
+            <file>tests/Feature/Security/VolunteeringAdminBoundaryTest.php</file>
+            <file>tests/Feature/Vms/VmsNotificationsTest.php</file>
+            <file>tests/Feature/Phase26/VolunteerDigestPeriodTest.php</file>
+        </testsuite>
+        <testsuite name="acceptance-donations">
+            <file>tests/Feature/Security/DonationStatusPrivacyTest.php</file>
+            <file>tests/Feature/DonationsTest.php</file>
+        </testsuite>
+        <testsuite name="acceptance-queue-scheduler">
+            <file>tests/Feature/Queue/QueueExecutionTest.php</file>
+            <file>tests/Feature/Phase25/QueuePayloadSecrecyTest.php</file>
+            <file>tests/Feature/Phase25/SchedulerReliabilityTest.php</file>
+            <file>tests/Feature/Phase251/EmsRetryLeaseTest.php</file>
+            <file>tests/Feature/Phase27/FailedJobRecoveryTest.php</file>
+            <file>tests/Feature/Phase27/SchedulerCadenceTest.php</file>
+            <file>tests/Feature/Phase28/QueueWorkerBudgetTest.php</file>
+            <file>tests/Feature/Phase28/SchedulerCalendarTest.php</file>
+            <file>tests/Feature/Phase28/ScheduledReportPeriodTest.php</file>
+            <file>tests/Feature/Phase28/AnnouncementEmailCapTest.php</file>
+            <file>tests/Feature/Phase29/SchedulerCoarseIntervalTest.php</file>
+        </testsuite>
+        <testsuite name="acceptance-edge">
+            <file>tests/Feature/Security/SecurityHardeningTest.php</file>
+            <file>tests/Feature/Security/ContentSecurityPolicyTest.php</file>
+            <file>tests/Feature/Security/HealthEndpointTest.php</file>
+            <file>tests/Feature/Security/TrustedProxyTest.php</file>
+            <file>tests/Feature/Security/PublicStorageHeadersTest.php</file>
+            <file>tests/Feature/Security/SensitiveLoggingTest.php</file>
+            <file>tests/Feature/Auth/CorsAndSanctumConfigurationTest.php</file>
+            <file>tests/Feature/Phase29/ProductionOriginHardeningTest.php</file>
+        </testsuite>
+        <testsuite name="acceptance-release-gates">
+            <file>tests/Feature/Phase11/ProductionHardeningContractTest.php</file>
+            <file>tests/Feature/Phase12/ProductionReadinessContractTest.php</file>
+            <file>tests/Feature/Phase251/MigrationBackfillTest.php</file>
+            <file>tests/Feature/Phase27/QuestionAnswerColumnMigrationTest.php</file>
+            <file>tests/Feature/Phase29/PrepareProductionScriptTest.php</file>
+        </testsuite>
+    </testsuites>
+    <php>
+        <env name="APP_ENV" value="testing"/>
+        <env name="APP_MAINTENANCE_DRIVER" value="file"/>
+        <env name="BCRYPT_ROUNDS" value="4"/>
+        <env name="BROADCAST_CONNECTION" value="null"/>
+        <env name="CACHE_STORE" value="array"/>
+        <env name="DB_CONNECTION" value="sqlite"/>
+        <env name="DB_DATABASE" value=":memory:"/>
+        <env name="DB_URL" value=""/>
+        <env name="MAIL_MAILER" value="array"/>
+        <env name="ANNOUNCEMENT_EMAIL_HOURLY_CAP" value="unlimited"/>
+        <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="SESSION_DRIVER" value="array"/>
+        <env name="PULSE_ENABLED" value="false"/>
+        <env name="TELESCOPE_ENABLED" value="false"/>
+        <env name="NIGHTWATCH_ENABLED" value="false"/>
+    </php>
+</phpunit>

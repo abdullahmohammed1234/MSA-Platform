@@ -20,17 +20,24 @@ class StoreCartService
         if ($user) {
             $cart = StoreCart::firstOrCreate(
                 ['user_id' => $user->id],
-                ['session_id' => $sessionId, 'expires_at' => now()->addDays(7)]
+                ['session_id' => null, 'expires_at' => now()->addDays(7)]
             );
         } else {
-            $resolvedSession = $sessionId ?: session()->getId();
+            // The guest identifier is a bearer secret, so it must be long enough
+            // not to be guessed, and it can never select an account's cart.
+            $resolvedSession = $this->isStrongSessionId($sessionId) ? $sessionId : session()->getId();
             $cart = StoreCart::firstOrCreate(
-                ['session_id' => $resolvedSession],
+                ['session_id' => $resolvedSession, 'user_id' => null],
                 ['expires_at' => now()->addDays(7)]
             );
         }
 
         return $cart->load(['items.product.images', 'items.variant']);
+    }
+
+    private function isStrongSessionId(?string $sessionId): bool
+    {
+        return $sessionId !== null && preg_match('/^[A-Za-z0-9_-]{32,128}$/', $sessionId) === 1;
     }
 
     /**

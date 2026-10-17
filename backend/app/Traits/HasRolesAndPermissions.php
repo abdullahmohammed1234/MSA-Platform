@@ -4,6 +4,7 @@ namespace App\Traits;
 
 use App\Models\Permission;
 use App\Models\Role;
+use App\Support\AuthorizationMemo;
 
 trait HasRolesAndPermissions
 {
@@ -19,6 +20,10 @@ trait HasRolesAndPermissions
 
     public function hasRole(string $role): bool
     {
+        if ($memo = $this->authorizationMemo()) {
+            return $memo->hasAnyRole($this, [$role]);
+        }
+
         return $this->roles()->where(function ($query) use ($role) {
             $query->where('slug', $role)->orWhere('name', $role);
         })->exists();
@@ -26,9 +31,24 @@ trait HasRolesAndPermissions
 
     public function hasAnyRole(array $roles): bool
     {
+        if ($memo = $this->authorizationMemo()) {
+            return $memo->hasAnyRole($this, array_values($roles));
+        }
+
         return $this->roles()->where(function ($query) use ($roles) {
             $query->whereIn('slug', $roles)->orWhereIn('name', $roles);
         })->exists();
+    }
+
+    private function authorizationMemo(): ?AuthorizationMemo
+    {
+        if (! $this->exists || $this->getKey() === null) {
+            return null;
+        }
+
+        $memo = app(AuthorizationMemo::class);
+
+        return $memo->active() ? $memo : null;
     }
 
     public function hasPermissionTo(string $permission): bool
@@ -38,6 +58,10 @@ trait HasRolesAndPermissions
 
     public function hasPermission(string $permission): bool
     {
+        if ($memo = $this->authorizationMemo()) {
+            return $memo->hasPermission($this, $permission);
+        }
+
         // 1. Super Admin and Admin have all permissions bypass
         if ($this->hasRole('super-admin') || $this->hasRole('admin')) {
             return true;

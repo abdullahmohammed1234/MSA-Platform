@@ -316,14 +316,20 @@ class VolunteerRegistrationTest extends EmsTestCase
     public function test_daily_digest_command_sends_email_when_submissions_exist_today(): void
     {
         Mail::fake();
-        config(['website.contact_recipient' => 'sfumsa@hotmail.com']);
+        config([
+            'website.contact_recipient' => 'sfumsa@hotmail.com',
+            'features.volunteer_digest_enabled' => true,
+        ]);
 
+        $this->travelTo(now()->setTime(12, 0));
         VolunteerRegistration::factory()->create([
             'name' => 'Today Submission',
             'email' => 'today@sfu.ca',
             'created_at' => now(),
         ]);
 
+        // The digest period for today's submissions closes at 23:55.
+        $this->travelTo(now()->setTime(23, 55));
         Artisan::call('volunteer:send-daily-digest');
 
         Mail::assertSent(DailyVolunteerDigestMail::class, function ($mail) {

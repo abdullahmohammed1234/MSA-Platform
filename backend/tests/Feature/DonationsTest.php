@@ -223,7 +223,7 @@ class DonationsTest extends TestCase
         $response->assertOk()
             ->assertJsonPath('donation.is_anonymous', true)
             ->assertJsonPath('donation.donor_name', 'Anonymous')
-            ->assertJsonPath('donation.donor_email', '***@***.***');
+            ->assertJsonMissingPath('donation.donor_email');
     }
 
     public function test_csv_formula_injection_escaping(): void

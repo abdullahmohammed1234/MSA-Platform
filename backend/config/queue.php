@@ -15,6 +15,10 @@ return [
 
     'default' => env('QUEUE_CONNECTION', 'database'),
 
+    // platform:monitor-health-and-alerts raises a stall alert when a runnable
+    // job has waited longer than this without being reserved by a worker.
+    'stall_alert_minutes' => (int) env('QUEUE_STALL_ALERT_MINUTES', 15),
+
     /*
     |--------------------------------------------------------------------------
     | Queue Connections

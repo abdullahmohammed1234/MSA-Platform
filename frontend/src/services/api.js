@@ -9,15 +9,18 @@ const api = axios.create({
     'Content-Type': 'application/json',
     'X-Requested-With': 'XMLHttpRequest',
   },
-  withCredentials: false,
+  withCredentials: true,
+  withXSRFToken: true,
 });
 
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('auth_token');
 
-    if (token) {
+    if (token && token !== 'sso_session') {
       config.headers.Authorization = `Bearer ${token}`;
+    } else if (config.headers?.Authorization?.includes('sso_session')) {
+      delete config.headers.Authorization;
     }
 
     return config;
@@ -43,7 +46,14 @@ api.interceptors.response.use(
 
       window.dispatchEvent(new CustomEvent('auth:unauthorized'));
 
-      if (window.location.pathname !== '/login') {
+      const isAuthProbe = error.config?.url?.includes('/auth/me');
+      const isPublicOrAuthPage =
+        typeof window !== 'undefined' &&
+        (window.location.pathname === '/login' ||
+          window.location.pathname === '/' ||
+          window.location.pathname === '');
+
+      if (!isAuthProbe && !isPublicOrAuthPage && typeof window !== 'undefined') {
         window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`;
       }
     }

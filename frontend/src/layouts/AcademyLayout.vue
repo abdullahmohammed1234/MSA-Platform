@@ -6,7 +6,7 @@ import NotificationBell from '@/components/notifications/NotificationBell.vue';
 import CelebrationOverlay from '@/components/gamification/CelebrationOverlay.vue';
 import SessionLockscreen from '@/components/auth/SessionLockscreen.vue';
 import OnboardingSanctuary from '@/components/auth/OnboardingSanctuary.vue';
-import { useAuthStore } from '@/stores/auth';
+import { useAuthStore, UNCONFIRMED_LOGOUT_MESSAGE } from '@/stores/auth';
 
 const toast = useToastStore();
 const authStore = useAuthStore();
@@ -119,8 +119,12 @@ const academyItems = computed(() => {
 });
 
 const handleLogout = async () => {
-  await authStore.logout();
-  toast.success('Logged out successfully.');
+  const serverConfirmed = await authStore.logout();
+  if (serverConfirmed) {
+    toast.success('Logged out successfully.');
+  } else {
+    toast.warning(UNCONFIRMED_LOGOUT_MESSAGE, 8000);
+  }
   window.location.href = '/';
 };
 </script>

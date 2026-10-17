@@ -45,8 +45,8 @@ class SendNewsletterAnnouncementEmailsJob
                         ));
                     } catch (Throwable $exception) {
                         Log::error('Failed to send newsletter announcement email', [
-                            'email' => $subscriber->email,
-                            'error' => $exception->getMessage(),
+                            'subscriber_id' => $subscriber->id,
+                            'exception' => $exception::class,
                         ]);
                     }
                 }

@@ -51,6 +51,16 @@ class PublicEventController extends EmsController
      */
     public function index(IndexPublicEventRequest $request): JsonResponse
     {
+        if (! $this->isEventsFeedEnabled($request)) {
+            $perPage = min(50, max(1, (int) $request->input('per_page', 12)));
+            return ApiResponse::paginated(
+                new \Illuminate\Pagination\LengthAwarePaginator([], 0, $perPage, 1),
+                'Campus events feed is currently disabled in platform configuration.',
+                PublicEventResource::class,
+                ['feed_enabled' => false]
+            );
+        }
+
         $paginator = $this->events->paginate($request->filters());
 
         return ApiResponse::paginated(
@@ -58,6 +68,21 @@ class PublicEventController extends EmsController
             'Public events retrieved successfully.',
             PublicEventResource::class
         );
+    }
+
+    protected function isEventsFeedEnabled(Request $request): bool
+    {
+        try {
+            if (class_exists(\App\Http\Controllers\Api\V1\Admin\ConnectSystemController::class)) {
+                $config = \App\Http\Controllers\Api\V1\Admin\ConnectSystemController::getPersistedConfig();
+                if (isset($config['events_feed_enabled']) && ! (bool) $config['events_feed_enabled']) {
+                    return false;
+                }
+            }
+        } catch (\Throwable) {
+        }
+
+        return true;
     }
 
     /**
@@ -259,11 +284,11 @@ class PublicEventController extends EmsController
             throw new NotFoundHttpException('The requested event was not found.');
         }
 
-        $this->waitlists->leave(
-            $event,
-            $entry,
-            $request->query('email') ? strtolower((string) $request->query('email')) : null
-        );
+        $validated = $request->validate([
+            'email' => ['required', 'string', 'email', 'max:255'],
+        ]);
+
+        $this->waitlists->leave($event, $entry, strtolower($validated['email']));
 
         return ApiResponse::deleted('You have left the waitlist.');
     }
@@ -311,7 +336,11 @@ class PublicEventController extends EmsController
             throw new NotFoundHttpException('The requested ticket was not found.');
         }
 
-        $png = $this->qr->png($ticket);
+        try {
+            $png = $this->qr->png($ticket);
+        } catch (\App\Ems\Services\Ticketing\QrImageUnavailableException) {
+            abort(503, 'QR image generation is unavailable.');
+        }
  
         return response($png, 200, [
             'Content-Type' => 'image/png',
@@ -327,8 +356,11 @@ class PublicEventController extends EmsController
         $user = $request->user();
         $registrations = \App\Ems\Models\Registration::query()
             ->where(function ($query) use ($user): void {
-                $query->where('user_id', $user->id)
-                    ->orWhere('attendee_email', $user->email);
+                $query->where('user_id', $user->id);
+                // Guest records match by email only once the address is proven.
+                if ($user->email_verified_at !== null) {
+                    $query->orWhere('attendee_email', $user->email);
+                }
             })
             ->when($request->boolean('active_only'), function ($query): void {
                 $query->whereIn('status', [
@@ -358,8 +390,10 @@ class PublicEventController extends EmsController
         $reg = \App\Ems\Models\Registration::query()
             ->where('uuid', $registration)
             ->where(function ($query) use ($user): void {
-                $query->where('user_id', $user->id)
-                    ->orWhere('attendee_email', $user->email);
+                $query->where('user_id', $user->id);
+                if ($user->email_verified_at !== null) {
+                    $query->orWhere('attendee_email', $user->email);
+                }
             })
             ->first();
 

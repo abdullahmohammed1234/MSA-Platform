@@ -3,6 +3,7 @@
 namespace App\Jobs\Reports;
 
 use App\Jobs\Analytics\GenerateScheduledReportsJob;
+use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -13,7 +14,11 @@ class GenerateMonthlyReportJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $tries = 3;
+    // A retry after the report row is created would duplicate it and re-email admins.
+    public $tries = 1;
+
+    // Captured when the scheduler dispatches the job, not when the worker runs it.
+    protected ?string $referenceDate = null;
 
     /**
      * Create a new job instance.
@@ -21,6 +26,7 @@ class GenerateMonthlyReportJob implements ShouldQueue
     public function __construct()
     {
         $this->queue = 'low';
+        $this->referenceDate = Carbon::today()->toDateString();
     }
 
     /**
@@ -28,7 +34,7 @@ class GenerateMonthlyReportJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $job = new GenerateScheduledReportsJob('monthly');
+        $job = new GenerateScheduledReportsJob('monthly', $this->referenceDate);
         $job->handle();
     }
 }

@@ -7,6 +7,7 @@ use App\Http\Requests\Account\UpdatePasswordRequest;
 use App\Services\AccountSummaryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
@@ -47,15 +48,14 @@ class AccountController extends Controller
             ]);
         }
 
-        $user->password = Hash::make($request->input('new_password'));
-        $user->save();
+        $newToken = DB::transaction(function () use ($user, $request) {
+            $user->password = Hash::make($request->input('new_password'));
+            $user->save();
 
-        // Revoke current token and generate fresh session token
-        if ($user->currentAccessToken()) {
-            $user->currentAccessToken()->delete();
-        }
+            $user->tokens()->delete();
 
-        $newToken = $user->createToken('auth_token')->plainTextToken;
+            return $user->createToken('auth_token')->plainTextToken;
+        });
 
         return response()->json([
             'message' => 'Password updated successfully.',

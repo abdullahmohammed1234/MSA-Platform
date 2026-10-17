@@ -6,15 +6,16 @@ use App\Events\AnnouncementPublishedEvent;
 use App\Events\CertificateAwardedEvent;
 use App\Events\CourseCompletedEvent;
 use App\Events\TrainingScheduledEvent;
+use App\Models\AnnouncementDispatch;
 use App\Models\NotificationLog;
 use App\Models\User;
 use App\Notifications\CertificateEarnedNotification;
 use App\Notifications\CourseCompletedNotification;
-use App\Notifications\NewAnnouncementNotification;
 use App\Notifications\UpcomingTrainingNotification;
-use App\Services\NewsletterService;
+use App\Services\Announcements\AnnouncementDeliveryService;
 use Illuminate\Notifications\Events\NotificationFailed;
 use Illuminate\Notifications\Events\NotificationSent;
+use Illuminate\Support\Str;
 
 class NotificationEventSubscriber
 {
@@ -66,30 +67,21 @@ class NotificationEventSubscriber
      */
     public function handleAnnouncementPublished(AnnouncementPublishedEvent $event): void
     {
-        $query = User::query()->where('is_active', true);
+        // Recipients (users and, for audience "All", newsletter subscribers) are tracked
+        // per recipient/channel so a partial failure never resends to anyone already reached.
+        $initial = $event->announcementId !== null;
 
-        if ($event->audience !== 'All') {
-            $query->whereHas('roles', function ($q) use ($event) {
-                $q->where('slug', strtolower($event->audience))
-                  ->orWhere('name', $event->audience);
-            });
-        }
-
-        $users = $query->get();
-
-        foreach ($users as $user) {
-            $user->notify(new NewAnnouncementNotification(
-                $event->announcementTitle,
-                $event->announcementExcerpt,
-                $event->announcementSlug,
-                $event->audience
-            ));
-        }
-
-        app(NewsletterService::class)->sendAnnouncementToSubscribers(
-            $event->announcementTitle,
-            $event->announcementExcerpt,
-            $event->announcementSlug
+        app(AnnouncementDeliveryService::class)->start(
+            $initial ? AnnouncementDispatch::KIND_INITIAL : AnnouncementDispatch::KIND_BROADCAST,
+            $initial ? 'initial:'.$event->announcementId : 'broadcast:'.Str::uuid(),
+            [
+                'title' => $event->announcementTitle,
+                'excerpt' => $event->announcementExcerpt,
+                'slug' => $event->announcementSlug,
+                'audience' => $event->audience,
+            ],
+            $event->announcementId,
+            $event->actorId,
         );
     }
 

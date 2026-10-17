@@ -51,7 +51,7 @@ class SendTrainingReminderEmailJob implements ShouldQueue
      */
     public function handle(): void
     {
-        Log::info("Sending training reminder email to user: {$this->user->email} for training: {$this->trainingTitle}");
+        Log::info("Sending training reminder email to user: #{$this->user->id} for training: {$this->trainingTitle}");
         
         $this->user->notifyNow(new UpcomingTrainingNotification(
             $this->trainingTitle,
@@ -67,6 +67,6 @@ class SendTrainingReminderEmailJob implements ShouldQueue
      */
     public function failed(Throwable $exception): void
     {
-        Log::error("Failed to send training reminder email to {$this->user->email}: " . $exception->getMessage());
+        Log::error("Failed to send training reminder email to #{$this->user->id}: " . $exception->getMessage());
     }
 }

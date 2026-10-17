@@ -2,7 +2,9 @@
 
 namespace App\Ems\Http\Resources;
 
+use App\Ems\Enums\SquareRefundStatus;
 use App\Ems\Models\Payment;
+use App\Ems\Models\SquareRefund;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -74,6 +76,53 @@ class StaleCaptureResource extends JsonResource
             'remaining_refundable_amount' => isset($resolution['remaining_refundable_amount'])
                 ? (float) $resolution['remaining_refundable_amount']
                 : null,
+            'conflict_reason' => $this->entry['reason'] ?? 'buyer_cancelled',
+            'capacity_conflict_at' => data_get($payment->metadata, 'capacity_conflict_at'),
+            ...$this->refundLifecycle($payment, (string) ($resolution['status'] ?? 'unresolved')),
+            'buyer_notified_at' => data_get($this->entry, 'buyer_notification.notified_at'),
+            'buyer_notified_by_user_id' => data_get($this->entry, 'buyer_notification.notified_by_user_id'),
+            'buyer_notification_required' => data_get($this->entry, 'buyer_notification.notified_at') === null,
+        ];
+    }
+
+    /**
+     * requested  = refund row exists but Square has not acknowledged it (submit failed or timed out)
+     * processing = Square accepted the refund and reports it pending
+     * confirmed / partially_confirmed = Square reported COMPLETED
+     * failed     = latest attempt failed or was rejected; a new attempt is allowed
+     *
+     * @return array<string, mixed>
+     */
+    private function refundLifecycle(Payment $payment, string $resolutionStatus): array
+    {
+        $squarePaymentId = (string) ($this->entry['square_payment_id'] ?? '');
+        $refunds = $squarePaymentId === '' ? collect() : SquareRefund::query()
+            ->where('payment_id', $payment->id)
+            ->where('metadata->stale_capture_square_payment_id', $squarePaymentId)
+            ->orderByDesc('id')
+            ->get();
+
+        $pending = $refunds->first(fn (SquareRefund $r) => $r->status === SquareRefundStatus::Pending);
+        $latest = $pending ?? $refunds->first();
+
+        $state = match (true) {
+            $pending !== null => $pending->provider_refund_id ? 'processing' : 'requested',
+            $resolutionStatus === 'refunded' => 'confirmed',
+            $resolutionStatus === 'partially_refunded' => 'partially_confirmed',
+            $latest !== null && in_array($latest->status, [SquareRefundStatus::Failed, SquareRefundStatus::Rejected], true) => 'failed',
+            default => 'none',
+        };
+
+        return [
+            'refund_state' => $state,
+            'latest_refund' => $latest === null ? null : [
+                'uuid' => $latest->uuid,
+                'status' => $latest->status->value,
+                'acknowledged_by_square' => $latest->provider_refund_id !== null,
+                'amount' => (float) $latest->amount,
+                'failure_reason' => $latest->failure_reason !== null ? mb_substr((string) $latest->failure_reason, 0, 200) : null,
+                'created_at' => $latest->created_at?->toIso8601String(),
+            ],
         ];
     }
 }

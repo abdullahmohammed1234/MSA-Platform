@@ -335,6 +335,13 @@ onMounted(() => {
                         {{ log.error_message }}
                       </span>
                     </div>
+                    <span
+                      v-else-if="log.status === 'resent' || log.status === 'resending'"
+                      class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-neutral-background text-neutral-muted"
+                      :title="log.status === 'resent' ? 'Superseded by a manual resend; the new attempt is logged separately.' : 'Resend in progress.'"
+                    >
+                      {{ log.status === 'resent' ? 'Resent' : 'Resending' }}
+                    </span>
                   </td>
                   <!-- Actions -->
                   <td class="p-3 text-right">

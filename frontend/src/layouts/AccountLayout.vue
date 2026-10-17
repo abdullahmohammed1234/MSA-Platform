@@ -10,6 +10,7 @@ import {
   LayoutGrid,
   Heart,
   Bell,
+  MessageSquare,
   LogOut, 
   ArrowLeft 
 } from 'lucide-vue-next';
@@ -25,6 +26,7 @@ const activeTab = computed(() => {
   if (route.name === 'account-apps') return 'apps';
   if (route.name === 'account-volunteering') return 'volunteer';
   if (route.name === 'account-notifications-preferences' || route.name === 'notifications-preferences') return 'notifications';
+  if (route.name === 'account-messages' || route.name === 'account-conversation') return 'messages';
   return 'overview';
 });
 
@@ -172,6 +174,19 @@ const handleLogout = async () => {
         >
           <Bell class="h-4 w-4 shrink-0" />
           Notifications
+        </router-link>
+
+        <router-link
+          to="/account/messages"
+          :class="[
+            'px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-[11px] sm:text-xs font-extrabold uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-1.5 sm:gap-2 shrink-0',
+            activeTab === 'messages'
+              ? 'bg-white text-primary shadow-soft'
+              : 'text-white/80 hover:bg-white/15 hover:text-white'
+          ]"
+        >
+          <MessageSquare class="h-4 w-4 shrink-0" />
+          Messages
         </router-link>
       </div>
     </div>

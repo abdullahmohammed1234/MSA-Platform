@@ -182,7 +182,9 @@ class VmsNotificationDispatcher
                     $existing->scheduled_at = $scheduledAt ?? now();
                     $existing->save();
 
-                    SendEventNotificationJob::dispatch($existing->id);
+                    if (EventNotification::claimForDispatch($existing->id)) {
+                        SendEventNotificationJob::dispatch($existing->id);
+                    }
                 }
 
                 return $existing;
@@ -238,11 +240,19 @@ class VmsNotificationDispatcher
             'notification_uuid' => $notification->uuid,
             'type' => $notification->type,
             'signup_id' => $signup->id,
-            'recipient' => $recipient,
         ]);
 
-        $notification->markQueued();
-        SendEventNotificationJob::dispatchSync($notification->id);
+        try {
+            if (EventNotification::claimForDispatch($notification->id)) {
+                SendEventNotificationJob::dispatchSync($notification->id);
+            }
+        } catch (\Throwable $e) {
+            Log::warning('vms.notifications.immediate_send_exception', [
+                'notification_uuid' => $notification->uuid,
+                'type' => $notification->type,
+                'exception' => $e::class,
+            ]);
+        }
 
         // Dispatch dual in-app Notification for canonical user account
         if ($signup->user_id) {

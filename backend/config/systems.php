@@ -207,8 +207,53 @@ return [
             'owns' => ['volunteering_opportunities', 'volunteering_teams', 'volunteering_shifts', 'volunteering_signups'],
             'does_not_own' => ['ems_events', 'registrations', 'store_products'],
         ],
+        'connect' => [
+            'id' => 'connect',
+            'name' => 'MSA Connect Management',
+            'description' => 'Administrative system for configuring and managing the MSA Connect application, member device notifications, settings, and integrations.',
+            'type' => 'application',
+            'url' => '/connect/admin',
+            'admin_path' => '/admin/systems/connect',
+            'version' => env('CONNECT_VERSION', '1.0.0'),
+            'dependencies' => [
+                'platform-auth',
+                'database',
+                'web-push',
+                'ems-event-apis',
+                'cms-content-apis',
+            ],
+            'owns' => [
+                'connect_configuration',
+                'connect_integrations',
+                'device_subscriptions',
+            ],
+            'does_not_own' => [
+                'ems_events',
+                'cms_announcements',
+                'users_identity',
+            ],
+        ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Approved V1 release commitment (Phase 18)
+    |--------------------------------------------------------------------------
+    |
+    | Subset of registry ids that the product owner accepted for the first
+    | public release. This list does not hide, disable, or delete any other
+    | registered application. Registry presence, admin availability, member
+    | availability, and environment enablement remain separate questions.
+    | Central identity and the Admin Portal are platform capabilities and
+    | are not separate ids in `applications`.
+    |
+    */
+    'v1_release_scope' => [
+        'main-website',
+        'cms',
+        'ems',
+        'connect',
+    ],
 
     'platform_services' => [
         'queues' => [

@@ -118,7 +118,7 @@ class WaitlistService
         });
     }
 
-    public function leave(Event $event, string $entryUuid, ?string $email = null): void
+    public function leave(Event $event, string $entryUuid, string $email): void
     {
         DB::transaction(function () use ($event, $entryUuid, $email): void {
             // 1. Lock Event first to preserve canonical lock ordering
@@ -131,7 +131,7 @@ class WaitlistService
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if ($email !== null && strtolower($entry->attendee_email) !== strtolower($email)) {
+            if (strtolower($entry->attendee_email) !== strtolower($email)) {
                 throw new EmsException(
                     'Waitlist entry not found.',
                     [],

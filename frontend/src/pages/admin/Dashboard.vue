@@ -5,7 +5,7 @@
       <div>
         <h1 class="text-3xl font-display font-medium text-primary">Platform Operations & Intelligence</h1>
         <p class="text-sm text-neutral-muted mt-1">
-          Central intelligence control plane for SFU MSA Platform (9 Applications & 4 Core Services).
+          Central intelligence control plane for SFU MSA Platform ({{ metrics?.overall_health?.total_apps ?? 10 }} Applications & 4 Core Services).
         </p>
       </div>
 
@@ -76,9 +76,9 @@
         <!-- Apps Health -->
         <div class="bg-white border border-neutral-ivory p-5 rounded-xl shadow-soft flex items-center justify-between">
           <div>
-            <h3 class="text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-muted mb-1">9 Applications</h3>
+            <h3 class="text-[10px] font-bold uppercase tracking-[0.15em] text-neutral-muted mb-1">{{ metrics?.overall_health?.total_apps ?? 10 }} Applications</h3>
             <p class="text-2xl font-display font-semibold text-primary">
-              {{ metrics?.overall_health?.healthy_apps ?? 9 }} / {{ metrics?.overall_health?.total_apps ?? 9 }}
+              {{ metrics?.overall_health?.healthy_apps ?? 10 }} / {{ metrics?.overall_health?.total_apps ?? 10 }}
             </p>
             <span class="text-xs text-emerald-600 font-medium">Operational</span>
           </div>
@@ -170,7 +170,7 @@
         <h2 class="text-lg font-display font-semibold text-primary">Applications & Core Services Live Telemetry</h2>
 
         <div class="space-y-4">
-          <h3 class="text-xs font-bold uppercase tracking-wider text-neutral-muted">9 Applications Probe Status</h3>
+          <h3 class="text-xs font-bold uppercase tracking-wider text-neutral-muted">Platform Applications Probe Status</h3>
           <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             <div
               v-for="(appData, appKey) in (metrics?.apps || {})"

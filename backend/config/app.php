@@ -68,6 +68,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Connect Application URL
+    |--------------------------------------------------------------------------
+    |
+    | Member origin for MSA Connect. Used for Connect mail links. Password
+    | reset links stay on frontend_url, where the main site reset page lives.
+    |
+    */
+
+    'connect_url' => env('CONNECT_URL', 'http://localhost:5174'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Force HTTPS
     |--------------------------------------------------------------------------
     |
@@ -89,6 +101,13 @@ return [
     */
 
     'timezone' => 'UTC',
+
+    /*
+    | How often the host cron invokes `schedule:run`, in minutes (must divide 60).
+    | 1 keeps every schedule exactly as defined. A larger value snaps each task's
+    | minute onto that grid so no task falls between cron invocations.
+    */
+    'scheduler_cron_interval_minutes' => (int) env('SCHEDULER_CRON_INTERVAL_MINUTES', 1),
 
     /*
     |--------------------------------------------------------------------------

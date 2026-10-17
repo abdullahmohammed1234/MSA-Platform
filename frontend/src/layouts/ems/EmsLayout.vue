@@ -18,7 +18,7 @@ import {
   Mail,
 } from 'lucide-vue-next';
 import { ToastContainer, useToastStore } from '@/components/feedback/toast';
-import { useAuthStore } from '@/stores/auth';
+import { useAuthStore, UNCONFIRMED_LOGOUT_MESSAGE } from '@/stores/auth';
 import { useEmsAccessStore } from '@/stores/ems/emsAccess';
 import { EMS_PERMISSIONS } from '@/constants/ems';
 
@@ -159,8 +159,12 @@ const handleLogout = async () => {
 
   try {
     // The platform auth store owns logout; the EMS only clears its own cache.
-    await authStore.logout();
-    toast.success('Signed out successfully.');
+    const serverConfirmed = await authStore.logout();
+    if (serverConfirmed) {
+      toast.success('Signed out successfully.');
+    } else {
+      toast.warning(UNCONFIRMED_LOGOUT_MESSAGE, 8000);
+    }
   } finally {
     access.reset();
     await router.push({ name: 'login' });

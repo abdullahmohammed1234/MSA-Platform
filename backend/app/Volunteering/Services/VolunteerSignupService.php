@@ -574,7 +574,8 @@ class VolunteerSignupService
     public function getUserHistory(int $userId): array
     {
         $user = \App\Models\User::find($userId);
-        $userEmail = $user ? strtolower(trim($user->email)) : null;
+        // Guest signups match by email only once the address is proven.
+        $userEmail = $user && $user->email_verified_at !== null ? strtolower(trim($user->email)) : null;
 
         $signups = Signup::with(['opportunity:id,title,slug,start_at,end_at,location,status', 'team:id,name', 'shift:id,name,start_at,end_at'])
             ->where(function ($q) use ($userId, $userEmail) {

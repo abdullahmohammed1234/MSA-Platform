@@ -52,14 +52,26 @@ const handleLogin = async () => {
       return;
     }
 
-    const redirectPath = route.query.redirect as string;
-    if (redirectPath) {
-      router.push(redirectPath);
-    } else {
-      // Authenticated users return to the public homepage (/).
-      // Dashboard, Account, and Admin features are accessible via user menu & navigation.
-      router.push({ path: '/' });
+    function getSafeRedirectPath(rawPath: unknown, fallback = '/account'): string {
+      if (typeof rawPath !== 'string' || !rawPath.trim()) return fallback;
+      const trimmed = rawPath.trim();
+      if (!trimmed.startsWith('/') || trimmed.startsWith('//') || trimmed.startsWith('/\\') || trimmed.includes('\\')) {
+        return fallback;
+      }
+      if (/[\x00-\x1F\x7F\s]/.test(trimmed)) {
+        return fallback;
+      }
+      if (/^\/[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)) {
+        return fallback;
+      }
+      if (trimmed === '/' || trimmed === '' || trimmed === '/login') {
+        return fallback;
+      }
+      return trimmed;
     }
+
+    const targetPath = getSafeRedirectPath(route.query.redirect, '/account');
+    router.push(targetPath);
   } catch (error: any) {
     console.error('Login error details', error);
     if (error.response?.data?.errors?.email) {

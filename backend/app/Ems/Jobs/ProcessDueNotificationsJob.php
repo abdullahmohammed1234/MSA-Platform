@@ -5,6 +5,7 @@ namespace App\Ems\Jobs;
 use App\Ems\Models\EventNotification;
 use App\Ems\Services\Notifications\QueuedEventNotificationDispatcher;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -13,10 +14,13 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Picks up scheduled/pending ledger rows whose scheduled_at has arrived.
+ * Unique so a stalled worker does not accumulate one copy per scheduler tick.
  */
-class ProcessDueNotificationsJob implements ShouldQueue
+class ProcessDueNotificationsJob implements ShouldQueue, ShouldBeUnique
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    public int $uniqueFor = 600;
 
     public function __construct(public readonly int $limit = 100)
     {
@@ -32,7 +36,7 @@ class ProcessDueNotificationsJob implements ShouldQueue
         $count = 0;
 
         EventNotification::query()
-            ->due()
+            ->awaitingDispatch()
             ->orderBy('id')
             ->limit($this->limit)
             ->get()

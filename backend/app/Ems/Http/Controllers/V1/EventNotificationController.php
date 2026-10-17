@@ -122,8 +122,12 @@ class EventNotificationController extends EmsController
 
     public function retryGlobal(Request $request, EventNotification $notification): JsonResponse
     {
-        if ($notification->event !== null) {
-            $this->authorize('sendNotifications', $notification->event);
+        $event = $notification->event_id !== null
+            ? Event::withTrashed()->find($notification->event_id)
+            : null;
+
+        if ($event !== null) {
+            $this->authorize('sendNotifications', $event);
         } else {
             if (! $request->user()->hasPermission(\App\Ems\Support\EmsPermissions::NOTIFICATIONS_SEND)) {
                 abort(403, 'Unauthorized.');

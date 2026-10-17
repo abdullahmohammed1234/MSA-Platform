@@ -22,13 +22,17 @@ class RegisterController extends Controller
      */
     public function register(RegisterRequest $request): JsonResponse
     {
-        $user = $this->registrationService->register($request->validated());
+        $result = $this->registrationService->register($request->validated());
+        $user = $result['user'];
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'message' => 'Registration successful.',
+            'message' => $result['verification_email_sent']
+                ? 'Registration successful.'
+                : 'Registration successful, but we could not send the verification email. Please use "Resend verification email" to try again.',
             'user' => new UserResource($user),
             'token' => $token,
+            'verification_email_sent' => $result['verification_email_sent'],
         ], 201);
     }
 }

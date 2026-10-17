@@ -10,7 +10,7 @@ import { useAppAccess } from '@/composables/auth/useAppAccess';
 
 const route = useRoute();
 const authStore = useAuthStore();
-const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasStoreAccess, hasDonationsAccess, hasSponsorshipAccess, hasMlibmsAccess, hasVolunteeringAccess, hasVmsAccess } = useAppAccess();
+const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasStoreAccess, hasDonationsAccess, hasSponsorshipAccess, hasMlibmsAccess, hasVolunteeringAccess, hasVmsAccess, hasConnectAccess } = useAppAccess();
 const isSidebarCollapsed = ref(false);
 const isMobileOpen = ref(false);
 
@@ -53,6 +53,11 @@ const adminItems = computed(() => {
     adminGroup.push({ label: 'Application Access', path: '/admin/application-access', icon: 'key' });
   }
 
+  // Phase 12 Direct Messaging
+  if (isSuper || authStore.roles.includes('admin') || authStore.roles.includes('director') || authStore.roles.includes('dawah-coordinator') || authStore.permissions.includes('manage_support') || authStore.permissions.includes('manage_users')) {
+    adminGroup.push({ label: 'Direct Messages', path: '/admin/messages', icon: 'message-square' });
+  }
+
   // Applications: open shells — not embedded inside MSA Admin
   const appChildren: Array<{ label: string; path: string; icon: string }> = [];
   if (hasCmsAccess.value) {
@@ -78,6 +83,9 @@ const adminItems = computed(() => {
   }
   if (hasVolunteeringAccess.value || hasVmsAccess.value) {
     appChildren.push({ label: 'Open VMS', path: '/vms', icon: 'users' });
+  }
+  if (hasConnectAccess.value) {
+    appChildren.push({ label: 'Open Connect Management', path: '/connect/admin', icon: 'smartphone' });
   }
   if (appChildren.length > 0) {
     items.push({
@@ -134,6 +142,7 @@ const adminItems = computed(() => {
     systemChildren.push({ label: 'Sponsorship System (SPMS)', path: '/admin/systems/sponsorship', icon: 'briefcase' });
     systemChildren.push({ label: 'Library Management System (MLibMS)', path: '/admin/systems/library', icon: 'book' });
     systemChildren.push({ label: 'Volunteer System (VMS)', path: '/admin/systems/vms', icon: 'users' });
+    systemChildren.push({ label: 'MSA Connect Management', path: '/admin/systems/connect', icon: 'smartphone' });
   }
 
   if (systemChildren.length > 0) {
@@ -237,6 +246,13 @@ const handleLogout = async () => {
         </svg>
       </template>
 
+      <!-- Message Square Icon Slot -->
+      <template #message-square>
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        </svg>
+      </template>
+
       <!-- Heart Icon Slot -->
       <template #heart>
         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -269,6 +285,13 @@ const handleLogout = async () => {
       <template #award>
         <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v5m-3-3h6m-3-10a3 3 0 110-6 3 3 0 010 6zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </template>
+
+      <!-- Smartphone Icon Slot -->
+      <template #smartphone>
+        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
         </svg>
       </template>
 

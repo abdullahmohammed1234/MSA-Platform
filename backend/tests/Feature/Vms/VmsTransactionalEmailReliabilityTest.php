@@ -35,6 +35,7 @@ class VmsTransactionalEmailReliabilityTest extends TestCase
 
         Config::set('ems.notifications.enabled', true);
         Config::set('vms.notifications.enabled', true);
+        Config::set('vms.notifications.reminders.enabled', true);
     }
 
     /**

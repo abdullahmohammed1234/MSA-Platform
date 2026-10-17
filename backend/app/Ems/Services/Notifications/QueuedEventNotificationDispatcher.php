@@ -296,7 +296,11 @@ class QueuedEventNotificationDispatcher implements EventNotificationDispatcher
             return;
         }
 
-        $notification->markQueued();
+        if (! EventNotification::claimForDispatch($notification->id)) {
+            return;
+        }
+
+        $notification->refresh();
         SendEventNotificationJob::dispatch($notification->id);
 
         Log::channel((string) config('ems.logging.channel', 'ems'))
@@ -315,6 +319,17 @@ class QueuedEventNotificationDispatcher implements EventNotificationDispatcher
                 ->firstOrFail();
 
             if ($locked->status !== NotificationStatus::Failed) {
+                return $locked;
+            }
+
+            // A worker retry keeps status=Failed while it sends; resetting the claim here
+            // would let a second job pass the lease check and deliver twice.
+            if ($locked->isProcessingLeaseHeld()) {
+                Log::channel((string) config('ems.logging.channel', 'ems'))
+                    ->info('ems.notifications.manual_retry_skipped_in_flight', [
+                        'notification_uuid' => $locked->uuid,
+                    ]);
+
                 return $locked;
             }
 
@@ -367,14 +382,19 @@ class QueuedEventNotificationDispatcher implements EventNotificationDispatcher
     private function triggerImmediateSend(EventNotification $notification): void
     {
         try {
-            $notification->markQueued();
+            if (! EventNotification::claimForDispatch($notification->id)) {
+                return;
+            }
+
             SendEventNotificationJob::dispatchSync($notification->id);
         } catch (\Throwable $e) {
             Log::channel((string) config('ems.logging.channel', 'ems'))
                 ->warning('ems.notifications.immediate_send_exception', [
                     'notification_uuid' => $notification->uuid,
-                    'error' => $e->getMessage(),
+                    'exception' => $e::class,
                 ]);
+        } finally {
+            $notification->refresh();
         }
     }
 }

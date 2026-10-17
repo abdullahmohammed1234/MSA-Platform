@@ -123,6 +123,13 @@ class WebsiteController extends Controller
 
     public function announcements(Request $request): JsonResponse
     {
+        if (! $this->isAnnouncementsFeedEnabled($request)) {
+            return response()->json([
+                'announcements' => [],
+                'feed_enabled' => false,
+            ]);
+        }
+
         $hasFilters = $request->filled('search') || $request->filled('category');
 
         if ($hasFilters) {
@@ -214,6 +221,21 @@ class WebsiteController extends Controller
         return response()->json([
             'announcements' => $announcements,
         ]);
+    }
+
+    protected function isAnnouncementsFeedEnabled(Request $request): bool
+    {
+        try {
+            if (class_exists(\App\Http\Controllers\Api\V1\Admin\ConnectSystemController::class)) {
+                $config = \App\Http\Controllers\Api\V1\Admin\ConnectSystemController::getPersistedConfig();
+                if (isset($config['announcements_feed_enabled']) && ! (bool) $config['announcements_feed_enabled']) {
+                    return false;
+                }
+            }
+        } catch (\Throwable) {
+        }
+
+        return true;
     }
 
     public function showAnnouncement(string $slug): JsonResponse

@@ -276,6 +276,10 @@ const publicRoutes: Array<RouteRecordRaw> = [
         path: 'profile',
         redirect: '/account/profile',
       },
+      {
+        path: 'messages',
+        redirect: '/account/messages',
+      },
       // Notification Center (Phase 33)
       {
         path: 'notifications',
@@ -331,6 +335,18 @@ const publicRoutes: Array<RouteRecordRaw> = [
             name: 'account-notifications-preferences',
             component: () => import('@/pages/account/AccountNotificationsPreferencesView.vue'),
             meta: { title: 'Notification Settings | SFU MSA Account', desc: 'Manage your email and in-app notification preferences.', requiresAuth: true },
+          },
+          {
+            path: 'messages',
+            name: 'account-messages',
+            component: () => import('@/pages/account/AccountMessagesView.vue'),
+            meta: { title: 'Direct Messages | SFU MSA Account', desc: 'Private direct messages with MSA administrators.', requiresAuth: true },
+          },
+          {
+            path: 'messages/:id',
+            name: 'account-conversation',
+            component: () => import('@/pages/account/AccountMessagesView.vue'),
+            meta: { title: 'Conversation | SFU MSA Account', desc: 'Direct message conversation with administrator.', requiresAuth: true },
           },
           {
             path: 'settings/notifications',

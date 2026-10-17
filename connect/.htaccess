@@ -1,0 +1,47 @@
+# SFU MSA Connect — Apache SPA History Mode Fallback & Security Configuration
+# Preserved in connect/ root for document root alignment.
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  # Never serve dotfiles or build/backup leftovers; .well-known stays reachable for ACME renewals.
+  RewriteRule (^|/)\.(?!well-known/) - [F,L]
+  RewriteRule \.(map|sql|bak|log|zip|gz|env)$ - [F,L,NC]
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>
+
+# Security Headers
+<IfModule mod_headers.c>
+  # Prevent MIME type sniffing
+  Header set X-Content-Type-Options "nosniff"
+  # Disallow iframe framing on external origins
+  Header set X-Frame-Options "SAMEORIGIN"
+  # Restrict referrer leakage
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+  # Restrict browser feature access
+  Header set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+  # Report-only: violations appear in the browser console but nothing is blocked.
+  Header set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+</IfModule>
+
+# Disable directory browsing
+Options -Indexes
+
+# Hashed build assets can be cached. HTML, the service worker, and manifests must not.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|css|woff2|png|svg|webp|ico)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  <FilesMatch "^(index\.html|sw\.js|robots\.txt|manifest\.webmanifest|manifest\.json)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+  <Files "manifest.webmanifest">
+    Header set Content-Type "application/manifest+json"
+  </Files>
+  <Files "manifest.json">
+    Header set Content-Type "application/manifest+json"
+  </Files>
+</IfModule>

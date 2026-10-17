@@ -30,6 +30,12 @@ class DatabaseMaintenanceJob implements ShouldQueue
      */
     public function handle(): void
     {
+        if (! config('features.database_optimize_enabled', false)) {
+            Log::info('Database maintenance skipped: DB_OPTIMIZE_ENABLED is false.');
+
+            return;
+        }
+
         Log::info("Starting database maintenance and disk cleanup...");
 
         // 1. Database Optimization

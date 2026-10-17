@@ -21,7 +21,10 @@ class AggregateAnalyticsMetricsJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $tries = 0;
+    public $tries = 3;
+
+    /** @var array<int, int> */
+    public $backoff = [60, 300];
 
     protected ?Carbon $date;
 
@@ -32,14 +35,6 @@ class AggregateAnalyticsMetricsJob implements ShouldQueue
     {
         $this->date = $date ?? Carbon::today();
         $this->queue = 'low';
-    }
-
-    /**
-     * Timeout safeguard: retry up to 24 hours.
-     */
-    public function retryUntil(): \DateTime
-    {
-        return now()->addHours(24);
     }
 
     /**

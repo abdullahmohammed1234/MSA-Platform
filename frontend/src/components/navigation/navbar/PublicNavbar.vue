@@ -73,6 +73,13 @@ const canAccessAcademy = computed(() => authStore.canAccessAcademy);
 const showPublicAuth = computed(() => isPublicAuthEnabled);
 const isLoading = ref(false);
 
+const logoDestination = computed(() => {
+  return isAuthenticated.value ? { name: 'account-overview' } : { name: 'home' };
+});
+const logoAriaLabel = computed(() => {
+  return isAuthenticated.value ? 'SFU MSA Member Dashboard' : 'SFU MSA Homepage';
+});
+
 const filteredNavLinks = computed(() => {
   return navLinks.filter(link => {
     if (link.href === '/library' && !isAuthenticated.value) {
@@ -146,7 +153,11 @@ const handleLogout = async () => {
       ]"
     >
       <div class="flex items-center justify-between gap-2 xl:gap-4 min-w-0 w-full">
-        <router-link to="/" class="flex items-center gap-2 sm:gap-2.5 group min-w-0 shrink-0 overflow-hidden pl-0.5 sm:pl-1">
+        <router-link
+          :to="logoDestination"
+          :aria-label="logoAriaLabel"
+          class="flex items-center gap-2 sm:gap-2.5 group min-w-0 shrink-0 overflow-hidden pl-0.5 sm:pl-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-xl"
+        >
           <div class="h-9 w-9 sm:h-10 sm:w-10 shrink-0 flex items-center justify-center">
             <img
               src="/logo.webp"
@@ -158,7 +169,7 @@ const handleLogout = async () => {
             <span class="text-sm sm:text-base font-display font-extrabold text-primary leading-none tracking-tight uppercase truncate">SFU MSA</span>
             <span class="hidden 2xl:block text-[8px] uppercase tracking-[0.15em] text-neutral-black/40 font-bold mt-0.5 truncate">Muslim Students Association</span>
           </div>
-          <span class="sr-only">SFU MSA</span>
+          <span class="sr-only">{{ logoAriaLabel }}</span>
         </router-link>
 
         <!-- Desktop Nav -->

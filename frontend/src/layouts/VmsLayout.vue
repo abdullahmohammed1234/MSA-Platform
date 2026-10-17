@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from 'vue';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { useToastStore, ToastContainer } from '@/components/feedback/toast';
-import { useAuthStore } from '@/stores/auth';
+import { useAuthStore, UNCONFIRMED_LOGOUT_MESSAGE } from '@/stores/auth';
 import { useVmsAccessStore } from '@/stores/vms/vmsAccess';
 import NotificationBell from '@/components/notifications/NotificationBell.vue';
 import { useAppAccess } from '@/composables/auth/useAppAccess';
@@ -53,8 +53,12 @@ const vmsItems = computed(() => {
 
 const handleLogout = async () => {
   try {
-    await authStore.logout();
-    toast.success('Logged out successfully.');
+    const serverConfirmed = await authStore.logout();
+    if (serverConfirmed) {
+      toast.success('Logged out successfully.');
+    } else {
+      toast.warning(UNCONFIRMED_LOGOUT_MESSAGE, 8000);
+    }
     setTimeout(() => {
       window.location.href = '/';
     }, 1000);

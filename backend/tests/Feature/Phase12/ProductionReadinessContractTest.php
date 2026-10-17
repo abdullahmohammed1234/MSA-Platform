@@ -149,6 +149,8 @@ class ProductionReadinessContractTest extends TestCase
         $this->assertStringNotContainsString('SQUARE_ACCESS_TOKEN', $output);
         $this->assertStringNotContainsString('MAIL_PASSWORD', $output);
         $this->assertStringContainsString('production readiness check', strtolower($output));
+        $this->assertStringContainsString('outside the approved V1 release commitment', $output);
+        $this->assertStringContainsString('not disabled', $output);
     }
 
     /** @test */
@@ -303,7 +305,10 @@ class ProductionReadinessContractTest extends TestCase
     {
         $ids = array_keys(config('systems.applications', []));
         sort($ids);
-        $this->assertSame(['cms', 'dams', 'dawah-academy', 'donations', 'ems', 'main-website', 'mlibms', 'sponsorship', 'store', 'vms'], $ids);
+        $this->assertSame(['cms', 'connect', 'dams', 'dawah-academy', 'donations', 'ems', 'main-website', 'mlibms', 'sponsorship', 'store', 'vms'], $ids);
+        $scope = config('systems.v1_release_scope');
+        sort($scope);
+        $this->assertSame(['cms', 'connect', 'ems', 'main-website'], $scope);
         $this->assertArrayHasKey('queues', config('systems.platform_services'));
         $this->assertArrayHasKey('database', config('systems.platform_services'));
         $this->assertArrayHasKey('email', config('systems.platform_services'));

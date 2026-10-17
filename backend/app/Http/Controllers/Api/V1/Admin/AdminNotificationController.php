@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Events\AnnouncementPublishedEvent;
 use App\Notifications\PlatformNotification;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 class AdminNotificationController extends Controller
@@ -46,12 +47,23 @@ class AdminNotificationController extends Controller
      */
     public function resend(Request $request, $logId)
     {
-        $log = NotificationLog::findOrFail($logId);
-        
         $this->authorize('send', Notification::class);
+
+        $log = NotificationLog::findOrFail($logId);
+
+        if (! NotificationLog::claimForResend($log->id)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only failed notifications can be resent, and this one is already sent or being resent.'
+            ], 409);
+        }
+
+        $log->refresh();
 
         $user = $log->user;
         if (!$user) {
+            $log->update(['status' => 'failed']);
+
             return response()->json([
                 'success' => false,
                 'message' => 'User associated with this log no longer exists.'
@@ -87,24 +99,26 @@ class AdminNotificationController extends Controller
                 'resent' => true,
                 'resent_at' => now()->toIso8601String()
             ]));
-
-            // Update log
-            $log->update([
-                'status' => 'sent',
-                'sent_at' => now(),
-                'error_message' => null
+        } catch (\Throwable $e) {
+            $log->update(['status' => 'failed']);
+            Log::warning('admin.notifications.resend_failed', [
+                'notification_log_id' => $log->id,
+                'exception' => $e::class,
             ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Notification resent successfully.'
-            ]);
-        } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to resend: ' . $e->getMessage()
+                'message' => 'Failed to resend notification. Please try again later.'
             ], 500);
         }
+
+        // Superseded, not delivered: the new attempt's outcome is logged as its own row.
+        $log->update(['status' => 'resent']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Notification re-queued for delivery.'
+        ]);
     }
 
     /**
@@ -127,7 +141,9 @@ class AdminNotificationController extends Controller
             $data['title'],
             Str::limit($data['message'], 150),
             $slug,
-            $data['audience']
+            $data['audience'],
+            null,
+            $request->user()?->id,
         ));
 
         return response()->json([

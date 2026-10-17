@@ -33,6 +33,8 @@ class EventCancellationService
             $event->save();
         }
 
+        $this->suppressPendingReminders($event);
+
         $notified = $this->dispatcher->broadcastToEvent($event, NotificationType::EventCancelled->value, [
             'audience' => NotificationAudience::Everyone->value,
             'cancellation_reason' => $event->cancellation_reason ?? $reason ?? '',
@@ -65,6 +67,32 @@ class EventCancellationService
             'notified' => $notified,
             'refunds_initiated' => $refunds,
         ];
+    }
+
+    private function suppressPendingReminders(Event $event): void
+    {
+        \App\Ems\Models\EventReminder::query()
+            ->where('event_id', $event->id)
+            ->update(['enabled' => false, 'next_run_at' => null]);
+
+        \App\Ems\Models\EventNotification::query()
+            ->where('event_id', $event->id)
+            ->whereIn('type', [
+                NotificationType::EventReminder->value,
+                NotificationType::EventStartingSoon->value,
+                NotificationType::EventStartingNow->value,
+            ])
+            ->whereIn('status', [
+                \App\Ems\Enums\NotificationStatus::Pending->value,
+                \App\Ems\Enums\NotificationStatus::Scheduled->value,
+                \App\Ems\Enums\NotificationStatus::Failed->value,
+            ])
+            ->update([
+                'status' => \App\Ems\Enums\NotificationStatus::Cancelled->value,
+                'queue_status' => 'suppressed',
+                'error' => 'Event cancelled before reminder delivery.',
+                'updated_at' => now(),
+            ]);
     }
 
     /**

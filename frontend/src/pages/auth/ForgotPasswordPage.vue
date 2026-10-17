@@ -5,6 +5,7 @@ import Button from '@/components/ui/button/Button.vue';
 import Input from '@/components/ui/input/Input.vue';
 import Alert from '@/components/feedback/alert/Alert.vue';
 import { Motion, Presence } from '@motionone/vue';
+import { interpretPasswordResetRequest } from '@/utils/passwordResetNotice';
 
 const authStore = useAuthStore();
 const email = ref('');
@@ -21,15 +22,22 @@ const handleForgotPassword = async () => {
   }
 
   try {
-    const data = await authStore.forgotPassword(email.value);
-    successMsg.value = data.message || 'Check your email for reset instructions.';
+    await authStore.forgotPassword(email.value);
+    const notice = interpretPasswordResetRequest({ ok: true, status: 200 });
+    successMsg.value = notice.text;
     email.value = '';
   } catch (error: any) {
-    console.error('Forgot password error', error);
-    if (error.response?.data?.errors?.email) {
-      errorMsg.value = error.response.data.errors.email[0];
+    const notice = interpretPasswordResetRequest({
+      ok: false,
+      status: error.response?.status,
+      message: error.response?.data?.message,
+      emailErrors: error.response?.data?.errors?.email,
+    });
+    if (notice.kind === 'success') {
+      successMsg.value = notice.text;
+      email.value = '';
     } else {
-      errorMsg.value = error.response?.data?.message || 'Failed to request password reset. Please try again.';
+      errorMsg.value = notice.text;
     }
   }
 };
@@ -44,7 +52,7 @@ const handleForgotPassword = async () => {
     <div class="space-y-6">
       <div class="text-left mb-6">
         <h2 class="text-2xl font-display font-bold text-primary">Reset Password</h2>
-        <p class="text-xs text-neutral-muted mt-1">Enter your email and we'll send you instructions to reset your password.</p>
+        <p class="text-xs text-neutral-muted mt-1">Enter your email address. If an account matches, password reset instructions will be sent.</p>
       </div>
 
       <Presence>
@@ -56,7 +64,7 @@ const handleForgotPassword = async () => {
           :exit="{ opacity: 0, height: 0, y: -10 }"
           class="overflow-hidden"
         >
-          <Alert type="success" class="mb-4" title="Email Sent">
+          <Alert type="success" class="mb-4" title="Request received">
             {{ successMsg }}
           </Alert>
         </Motion>

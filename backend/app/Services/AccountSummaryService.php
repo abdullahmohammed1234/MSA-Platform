@@ -299,6 +299,12 @@ class AccountSummaryService
                 'path' => '/admin/systems/library',
                 'is_admin' => true,
             ],
+            'connect' => [
+                'title' => 'MSA Connect Management',
+                'description' => 'Member communications, direct messaging, push dispatch, and audits.',
+                'path' => '/connect/admin',
+                'is_admin' => true,
+            ],
             'admin-portal' => [
                 'title' => 'Admin Command Center',
                 'description' => 'Global MSA platform administration, roles, and settings portal.',

@@ -173,6 +173,48 @@ const handleToggle = (key: string, value: boolean) => {
                 <div class="w-11 h-6 bg-neutral-ivory peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-gray after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
               </label>
             </div>
+
+            <div class="p-4 rounded-2xl border border-neutral-ivory flex items-center justify-between hover:border-primary/30 transition-all">
+              <div class="flex items-center gap-3">
+                <div class="p-2.5 rounded-xl bg-primary/10 text-primary">
+                  <Bell class="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 class="text-sm font-bold text-neutral-black">Direct Messages</h4>
+                  <p class="text-xs text-neutral-black/60">Alerts when an authorized administrator replies or starts a conversation</p>
+                </div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  :checked="notificationsStore.preferences.direct_messages ?? true"
+                  @change="handleToggle('direct_messages', !(notificationsStore.preferences.direct_messages ?? true))"
+                  class="sr-only peer"
+                />
+                <div class="w-11 h-6 bg-neutral-ivory peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-gray after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+              </label>
+            </div>
+
+            <div class="p-4 rounded-2xl border border-neutral-ivory flex items-center justify-between hover:border-primary/30 transition-all">
+              <div class="flex items-center gap-3">
+                <div class="p-2.5 rounded-xl bg-teal-500/10 text-teal-700">
+                  <CheckCircle class="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 class="text-sm font-bold text-neutral-black">Support Inquiries</h4>
+                  <p class="text-xs text-neutral-black/60">Updates on submitted campus and student support inquiries</p>
+                </div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  :checked="notificationsStore.preferences.support_updates ?? true"
+                  @change="handleToggle('support_updates', !(notificationsStore.preferences.support_updates ?? true))"
+                  class="sr-only peer"
+                />
+                <div class="w-11 h-6 bg-neutral-ivory peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-gray after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+              </label>
+            </div>
           </div>
         </div>
 

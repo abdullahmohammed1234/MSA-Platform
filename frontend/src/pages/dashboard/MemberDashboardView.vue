@@ -223,6 +223,8 @@ onMounted(async () => {
                 <a 
                   v-else 
                   :href="item.action_path" 
+                  target="_blank"
+                  rel="noopener noreferrer"
                   class="px-4 py-2 bg-primary text-white rounded-xl text-xs font-extrabold uppercase tracking-wider hover:bg-secondary transition-all inline-flex items-center gap-1.5 shadow-soft"
                 >
                   {{ item.action_label }}

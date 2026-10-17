@@ -15,9 +15,14 @@ deployment:
     #   - cron: * * * * * cd /path/to/msa-backend && php artisan schedule:run
     # Never: migrate:fresh / migrate:refresh on production.
 
-    # 1. Sync the Laravel backend to a secure folder
+    # 1. Sync the Laravel backend to a secure folder outside public_html
     - /bin/mkdir -p /home2/sfums1d5/msa-backend
-    - /bin/rsync -avz --exclude='node_modules' --exclude='.git' backend/ /home2/sfums1d5/msa-backend/
+    - /bin/rsync -avz --exclude='node_modules' --exclude='.git' --exclude='.env*' --exclude='tests' --exclude='*.sqlite*' backend/ /home2/sfums1d5/msa-backend/
 
-    # 2. Deploy your pre-built frontend files directly to public_html
-    - /bin/rsync -avz frontend/dist/ /home2/sfums1d5/public_html/
+    # 2. Deploy pre-built main frontend files directly to public_html (sfumsa.ca)
+    - /bin/mkdir -p /home2/sfums1d5/public_html
+    - /bin/rsync -avz --exclude='.env*' --exclude='*.map' --exclude='*.bak' frontend/dist/ /home2/sfums1d5/public_html/
+
+    # 3. Deploy pre-built MSA Connect frontend files to connect.sfumsa.ca document root
+    - /bin/mkdir -p /home2/sfums1d5/connect.sfumsa.ca
+    - /bin/rsync -avz --exclude='.env*' --exclude='*.map' --exclude='*.bak' connect/dist/ /home2/sfums1d5/public_html/connect/

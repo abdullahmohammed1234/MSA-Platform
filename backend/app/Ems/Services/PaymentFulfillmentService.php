@@ -47,16 +47,27 @@ class PaymentFulfillmentService
             /** @var Payment $locked */
             $locked = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
 
-            if ($locked->status === PaymentStatus::Paid) {
+            if (in_array($locked->status, [PaymentStatus::Paid, PaymentStatus::Refunded, PaymentStatus::PartiallyRefunded], true)) {
                 return $locked->fresh(['order.registrations.tickets', 'registration']);
             }
 
-            if ($locked->status === PaymentStatus::Cancelled && $locked->wasBuyerCancelled()) {
+            if (in_array($locked->status, [PaymentStatus::Cancelled, PaymentStatus::Failed], true)) {
                 Log::channel((string) config('ems.logging.channel', 'ems'))
-                    ->warning('ems.payments.paid_blocked_buyer_cancelled', [
+                    ->warning('ems.payments.paid_blocked_terminal_state', [
                         'payment_uuid' => $locked->uuid,
+                        'ems_status' => $locked->status->value,
+                        'buyer_cancelled' => $locked->wasBuyerCancelled(),
                         'provider_payment_id' => $providerData['provider_payment_id'] ?? $locked->provider_payment_id,
                     ]);
+
+                $this->appendUnfulfilledCapture(
+                    $locked,
+                    isset($providerData['provider_payment_id']) ? (string) $providerData['provider_payment_id'] : $locked->provider_payment_id,
+                    isset($providerData['provider_order_id']) ? (string) $providerData['provider_order_id'] : $locked->provider_order_id,
+                    null,
+                    'payment_confirmation',
+                    $locked->wasBuyerCancelled() ? 'buyer_cancelled' : 'terminal_'.$locked->status->value,
+                );
 
                 return $locked->fresh(['order.registrations.tickets', 'registration']);
             }
@@ -72,6 +83,13 @@ class PaymentFulfillmentService
                     $locked->status->value,
                     PaymentStatus::Paid->value
                 );
+            }
+
+            $released = (bool) data_get($locked->metadata, 'inventory_released', false);
+            $linkedOrder = $locked->order ?? ($locked->registration?->order);
+
+            if ($released && $linkedOrder !== null && ! $this->releasedInventoryCanBeRestored($linkedOrder)) {
+                return $this->holdCaptureForCapacityConflict($locked, $providerData);
             }
 
             if (isset($providerData['provider_payment_id'])) {
@@ -128,8 +146,6 @@ class PaymentFulfillmentService
                 ->where('order_id', $orderLocked->id)
                 ->lockForUpdate()
                 ->get();
-
-            $released = (bool) data_get($locked->metadata, 'inventory_released', false);
 
             foreach ($registrations as $registration) {
                 if ($released) {
@@ -268,10 +284,11 @@ class PaymentFulfillmentService
     }
 
     /**
-     * Record Square capture evidence for a buyer-cancelled checkout without fulfilling.
+     * Record Square capture evidence for a checkout that will not be fulfilled.
      *
-     * Used by webhooks and scheduled Square reconciliation when money was captured
-     * after the attendee explicitly cancelled.
+     * Covers buyer-cancelled checkouts and payments already Failed or Cancelled
+     * when the capture arrives. Staff resolve these through the stale capture
+     * queue (refund or resolve without refund); tickets are never issued here.
      */
     public function recordStaleCaptureAfterBuyerCancel(
         Payment $payment,
@@ -290,51 +307,153 @@ class PaymentFulfillmentService
             /** @var Payment $locked */
             $locked = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
 
-            if ($locked->status !== PaymentStatus::Cancelled || ! $locked->wasBuyerCancelled()) {
+            if (! in_array($locked->status, [PaymentStatus::Cancelled, PaymentStatus::Failed], true)) {
                 return $locked;
             }
 
-            $metadata = $locked->metadata ?? [];
-            $staleCaptures = $metadata['stale_captures_after_buyer_cancel'] ?? [];
-
-            foreach ($staleCaptures as $row) {
-                if (! is_array($row)) {
-                    continue;
-                }
-                if ($squarePaymentId !== null && ($row['square_payment_id'] ?? null) === $squarePaymentId) {
-                    return $locked;
-                }
-            }
-
-            $staleCaptures[] = array_filter([
-                'square_payment_id' => $squarePaymentId,
-                'square_order_id' => $squareOrderId,
-                'reported_at' => now()->toIso8601String(),
-                'webhook_event_id' => $webhookEventId,
-                'source' => $source,
-            ], fn ($value) => $value !== null);
-
-            $metadata['stale_captures_after_buyer_cancel'] = $staleCaptures;
-            $locked->metadata = $metadata;
-            $locked->save();
-
-            Log::channel((string) config('ems.logging.channel', 'ems'))
-                ->warning('ems.payments.stale_capture_after_buyer_cancel', [
-                    'payment_uuid' => $locked->uuid,
-                    'payment_id' => $locked->id,
-                    'order_uuid' => $locked->order?->uuid,
-                    'registration_id' => $locked->registration_id,
-                    'square_payment_id' => $squarePaymentId,
-                    'square_order_id' => $squareOrderId,
-                    'webhook_event_id' => $webhookEventId,
-                    'source' => $source,
-                    'ems_status' => $locked->status->value,
-                ]);
-
-            ReconcilePaymentJob::dispatch($locked->id);
+            $this->appendUnfulfilledCapture(
+                $locked,
+                $squarePaymentId,
+                $squareOrderId,
+                $webhookEventId,
+                $source,
+                $locked->wasBuyerCancelled() ? 'buyer_cancelled' : (data_get($locked->metadata, 'capacity_conflict_at') ? 'capacity_unavailable' : 'terminal_'.$locked->status->value),
+            );
 
             return $locked->fresh();
         });
+    }
+
+    /**
+     * Must run inside a transaction holding the payment row lock.
+     */
+    private function appendUnfulfilledCapture(
+        Payment $locked,
+        ?string $squarePaymentId,
+        ?string $squareOrderId,
+        ?string $webhookEventId,
+        ?string $source,
+        string $reason,
+    ): void {
+        $metadata = $locked->metadata ?? [];
+        $staleCaptures = $metadata['stale_captures_after_buyer_cancel'] ?? [];
+
+        foreach ($staleCaptures as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            if ($squarePaymentId !== null && ($row['square_payment_id'] ?? null) === $squarePaymentId) {
+                return;
+            }
+        }
+
+        $staleCaptures[] = array_filter([
+            'square_payment_id' => $squarePaymentId,
+            'square_order_id' => $squareOrderId,
+            'reported_at' => now()->toIso8601String(),
+            'webhook_event_id' => $webhookEventId,
+            'source' => $source,
+            'reason' => $reason,
+        ], fn ($value) => $value !== null);
+
+        $metadata['stale_captures_after_buyer_cancel'] = $staleCaptures;
+        $locked->metadata = $metadata;
+        $locked->save();
+
+        Log::channel((string) config('ems.logging.channel', 'ems'))
+            ->warning('ems.payments.stale_capture_after_buyer_cancel', [
+                'payment_uuid' => $locked->uuid,
+                'payment_id' => $locked->id,
+                'order_uuid' => $locked->order?->uuid,
+                'registration_id' => $locked->registration_id,
+                'square_payment_id' => $squarePaymentId,
+                'square_order_id' => $squareOrderId,
+                'webhook_event_id' => $webhookEventId,
+                'source' => $source,
+                'reason' => $reason,
+                'ems_status' => $locked->status->value,
+            ]);
+
+        ReconcilePaymentJob::dispatch($locked->id);
+    }
+
+    /**
+     * Whether seats released when this order lapsed are still free at both the
+     * ticket-type and event level. Caller holds the canonical event/ticket locks.
+     *
+     * Every read here must be a locking (current) read: under InnoDB REPEATABLE READ
+     * the transaction snapshot predates the lock waits, so plain reads would miss
+     * checkouts that committed while this transaction was blocked.
+     */
+    private function releasedInventoryCanBeRestored(Order $order): bool
+    {
+        $registrations = Registration::query()->where('order_id', $order->id)->lockForUpdate()->get()
+            ->reject(fn (Registration $registration) => $registration->status->occupiesCapacity());
+
+        if ($registrations->isEmpty()) {
+            return true;
+        }
+
+        $event = \App\Ems\Models\Event::query()->withTrashed()->whereKey($order->event_id)->lockForUpdate()->first();
+        if ($event !== null && $event->capacity !== null) {
+            $occupied = (int) Registration::query()
+                ->where('event_id', $event->id)
+                ->occupyingCapacity()
+                ->sharedLock()
+                ->sum('quantity');
+
+            if ($event->capacity - $occupied < (int) $registrations->sum('quantity')) {
+                return false;
+            }
+        }
+
+        foreach ($registrations->groupBy('ticket_type_id') as $ticketTypeId => $group) {
+            if (! $ticketTypeId) {
+                continue;
+            }
+            $ticketType = TicketType::query()->whereKey($ticketTypeId)->lockForUpdate()->first();
+            if ($ticketType !== null && ! $ticketType->hasAvailableQuantity((int) $group->sum('quantity'))) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * A capture arrived after the reservation lapsed and the seats were resold.
+     * Keep the order unfulfilled and route the money to the stale capture queue.
+     *
+     * @param  array<string, mixed>  $providerData
+     */
+    private function holdCaptureForCapacityConflict(Payment $locked, array $providerData): Payment
+    {
+        $squarePaymentId = isset($providerData['provider_payment_id']) ? (string) $providerData['provider_payment_id'] : $locked->provider_payment_id;
+        $squareOrderId = isset($providerData['provider_order_id']) ? (string) $providerData['provider_order_id'] : $locked->provider_order_id;
+
+        if ($squarePaymentId !== null && $locked->provider_payment_id === null) {
+            $locked->provider_payment_id = $squarePaymentId;
+        }
+
+        $metadata = $locked->metadata ?? [];
+        $metadata['capacity_conflict_at'] ??= now()->toIso8601String();
+        $locked->metadata = $metadata;
+        $locked->status = PaymentStatus::Cancelled;
+        $locked->failure_reason = 'Payment captured after the reservation lapsed and the event no longer has capacity.';
+        $locked->save();
+
+        $this->appendUnfulfilledCapture($locked, $squarePaymentId, $squareOrderId, null, 'payment_confirmation', 'capacity_unavailable');
+
+        app(\App\Services\Platform\PlatformAlertService::class)->createDeduplicatedAlert(
+            'ems.payments.capacity_conflict.'.$locked->uuid,
+            'ems',
+            \App\Platform\Enums\AlertSeverity::CRITICAL,
+            'Late payment for a sold-out event',
+            'A payment was captured after its reservation lapsed and the seats were resold. Review the stale capture queue to refund or resolve.',
+            ['payment_uuid' => $locked->uuid],
+        );
+
+        return $locked->fresh(['order.registrations.tickets', 'registration']);
     }
 
     private function restoreInventoryFor(Registration $registration): void

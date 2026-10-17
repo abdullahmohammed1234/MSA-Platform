@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Log;
 
 class ReminderService
 {
+    private const FAN_OUT_LEASE_MINUTES = 15;
+
     public function __construct(
         private readonly EventNotificationDispatcher $dispatcher,
     ) {
@@ -162,7 +164,12 @@ class ReminderService
     {
         $event = $reminder->event;
 
-        if ($event === null || $event->start_at === null || $event->start_at->isPast()) {
+        if (
+            $event === null
+            || $event->start_at === null
+            || $event->start_at->isPast()
+            || $event->status === \App\Ems\Enums\EventStatus::Cancelled
+        ) {
             DB::transaction(function () use ($reminder): void {
                 $locked = EventReminder::query()->whereKey($reminder->id)->lockForUpdate()->first();
                 if ($locked) {
@@ -181,9 +188,14 @@ class ReminderService
             if ($locked === null || !$locked->enabled) {
                 return false;
             }
-            $locked->enabled = false;
+            if ($locked->next_run_at !== null && $locked->next_run_at->isFuture()) {
+                return false;
+            }
+            // Lease rather than disable: if this process dies mid fan-out the
+            // reminder becomes due again and ReminderDispatch skips recipients
+            // that were already handled.
             $locked->last_run_at = now();
-            $locked->next_run_at = null;
+            $locked->next_run_at = now()->addMinutes(self::FAN_OUT_LEASE_MINUTES);
             $locked->save();
             return true;
         });
@@ -244,6 +256,11 @@ class ReminderService
                     }
                 }
             });
+
+        EventReminder::query()->whereKey($reminder->id)->update([
+            'enabled' => false,
+            'next_run_at' => null,
+        ]);
 
         Log::channel((string) config('ems.logging.channel', 'ems'))
             ->info('ems.reminders.executed', [

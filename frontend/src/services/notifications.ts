@@ -20,6 +20,8 @@ export interface NotificationPreferences {
   new_announcements: boolean;
   upcoming_training: boolean;
   certificate_earned: boolean;
+  support_updates?: boolean;
+  direct_messages?: boolean;
   email_enabled: boolean;
   in_app_enabled: boolean;
 }

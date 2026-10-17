@@ -9,9 +9,23 @@ import type {
 
 export const authService = {
   /**
+   * Initialize CSRF protection cookie for stateful authentication.
+   */
+  async getCsrfCookie(): Promise<void> {
+    try {
+      await api.get('/sanctum/csrf-cookie', {
+        baseURL: '',
+      });
+    } catch (e) {
+      console.warn('CSRF cookie bootstrap ignored or failed:', e);
+    }
+  },
+
+  /**
    * Log user in and return user details and token.
    */
   async login(payload: LoginPayload): Promise<AuthResponse> {
+    await this.getCsrfCookie();
     const response = await api.post<AuthResponse>('/auth/login', payload);
     return response.data;
   },

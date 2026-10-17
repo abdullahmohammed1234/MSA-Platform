@@ -63,12 +63,21 @@ class SendEventNotificationJob implements ShouldQueue
                 return null;
             }
 
-            // Concurrency protection: skip if another worker is already processing first attempt
-            if ($locked->queue_status === 'processing' && $this->attempts() === 1) {
+            // Another worker holds a fresh claim; a stale one (crashed worker) is reclaimed.
+            if ($locked->isProcessingLeaseHeld()) {
                 Log::channel((string) config('ems.logging.channel', 'ems'))
                     ->warning('ems.notifications.concurrent_processing_ignored', [
                         'notification_uuid' => $locked->uuid,
                     ]);
+                return null;
+            }
+
+            if ($this->isReminderForCancelledEvent($locked)) {
+                $locked->status = NotificationStatus::Cancelled;
+                $locked->queue_status = 'suppressed';
+                $locked->error = 'Event cancelled before reminder delivery.';
+                $locked->save();
+
                 return null;
             }
 
@@ -102,7 +111,14 @@ class SendEventNotificationJob implements ShouldQueue
                     'provider_message_id' => $messageId,
                 ]);
         } catch (Throwable $e) {
-            $notification->markFailed($e->getMessage());
+            $handOffToWorker = $this->runningSynchronously() && $this->asyncConnection() !== null;
+            $willRetry = $handOffToWorker || ($this->job !== null && $this->attempts() < $this->tries);
+
+            if ($willRetry) {
+                $notification->markRetryPending($e->getMessage());
+            } else {
+                $notification->markFailed($e->getMessage());
+            }
 
             Log::channel((string) config('ems.logging.channel', 'ems'))
                 ->warning('ems.notifications.send_failed', [
@@ -110,12 +126,57 @@ class SendEventNotificationJob implements ShouldQueue
                     'type' => $notification->type,
                     'retry_count' => $notification->retry_count,
                     'attempt' => $this->attempts(),
+                    'exception' => $e::class,
+                    'will_retry' => $willRetry,
                 ]);
 
             app(\App\Ems\Services\Notifications\NotificationFailureAlertService::class)->sendAlert($notification, $e->getMessage());
 
+            if ($handOffToWorker) {
+                // An inline (request-time) send failed: hand the retry to a worker
+                // instead of failing the HTTP request or burning the only attempt.
+                static::dispatch($this->notificationId)
+                    ->onConnection($this->asyncConnection())
+                    ->delay(now()->addSeconds($this->backoff[0]));
+
+                return;
+            }
+
             throw $e;
         }
+    }
+
+    private function runningSynchronously(): bool
+    {
+        return $this->job instanceof \Illuminate\Queue\Jobs\SyncJob;
+    }
+
+    private function asyncConnection(): ?string
+    {
+        $connection = (string) config('queue.default');
+
+        return $connection !== '' && config("queue.connections.{$connection}.driver") !== 'sync'
+            ? $connection
+            : null;
+    }
+
+    private function isReminderForCancelledEvent(EventNotification $notification): bool
+    {
+        $reminderTypes = [
+            \App\Ems\Enums\NotificationType::EventReminder->value,
+            \App\Ems\Enums\NotificationType::EventStartingSoon->value,
+            \App\Ems\Enums\NotificationType::EventStartingNow->value,
+            \App\Ems\Enums\NotificationType::VmsShiftReminder->value,
+        ];
+
+        if (! in_array($notification->type, $reminderTypes, true) || $notification->event_id === null) {
+            return false;
+        }
+
+        return \App\Ems\Models\Event::query()
+            ->whereKey($notification->event_id)
+            ->where('status', \App\Ems\Enums\EventStatus::Cancelled->value)
+            ->exists();
     }
 
     public function failed(?Throwable $e): void

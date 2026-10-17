@@ -16,6 +16,12 @@ class UserService
 
     public function updateProfile(User $user, array $data): bool
     {
+        // A new address has not been proven yet; guest records keyed by email
+        // must not attach to this account until it is verified again.
+        if (array_key_exists('email', $data) && strcasecmp((string) $data['email'], (string) $user->email) !== 0) {
+            $user->forceFill(['email_verified_at' => null]);
+        }
+
         return $this->userRepository->update($user, $data);
     }
 

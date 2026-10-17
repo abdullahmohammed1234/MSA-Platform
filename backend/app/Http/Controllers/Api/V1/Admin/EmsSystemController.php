@@ -9,6 +9,8 @@ use App\Ems\Models\Ticket;
 use App\Ems\Models\CheckIn;
 use App\Ems\Models\Payment;
 use App\Ems\Models\WebhookEvent;
+use App\Ems\Enums\WebhookEventStatus;
+use App\Ems\Services\SquareWebhookService;
 use App\Ems\Models\WaitlistEntry;
 use App\Ems\Models\AttendeeImport;
 use App\Ems\Models\EventNotification;
@@ -444,11 +446,35 @@ class EmsSystemController extends Controller
                 'last_received' => $latestWebhook ? $latestWebhook->created_at->toIso8601String() : null,
                 'last_successful' => $latestSuccess ? $latestSuccess->processed_at->toIso8601String() : null,
                 'failed_count' => $failedCount,
+                'needs_review_count' => WebhookEvent::where('status', WebhookEventStatus::NeedsReview->value)->count(),
+                'unmatched_count' => WebhookEvent::where('status', WebhookEventStatus::Unmatched->value)->count(),
+                'ignored_count' => WebhookEvent::where('status', WebhookEventStatus::Ignored->value)->count(),
                 'verification_status' => $signatureConfigured ? 'Verified' : 'Unverified (Missing Key)',
                 'average_processing_time_ms' => round($avgProcessingTimeMs),
                 'history' => $recentWebhooks,
             ]
         ]);
+    }
+
+    /**
+     * POST /api/v1/admin/systems/ems/webhooks/{uuid}/requeue
+     */
+    public function requeueWebhook(Request $request, string $uuid, SquareWebhookService $webhooks): JsonResponse
+    {
+        if (!$request->user() || !$request->user()->hasPermission('system.manage')) {
+            return response()->json(['message' => 'Unauthorized. Required permission: system.manage'], 403);
+        }
+
+        $event = WebhookEvent::where('provider', 'square')->where('uuid', $uuid)->firstOrFail();
+
+        if (! $webhooks->requeueForOperator($event, $request->user()->id, 'admin_api')) {
+            return response()->json([
+                'message' => 'This webhook is not in a requeueable state.',
+                'status' => $event->fresh()?->status,
+            ], 409);
+        }
+
+        return response()->json(['success' => true, 'status' => WebhookEventStatus::RetryPending->value], 202);
     }
 
     /**

@@ -23,3 +23,13 @@
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
+
+# Uploaded files under /storage are served by Apache without Laravel's
+# middleware. Admins can upload SVGs, which may contain script; sandbox them
+# so opening one directly cannot run code on the API origin.
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    <FilesMatch "\.(svg|svgz)$">
+        Header always set Content-Security-Policy "default-src 'none'; style-src 'unsafe-inline'; img-src data:; sandbox"
+    </FilesMatch>
+</IfModule>

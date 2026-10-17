@@ -11,7 +11,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(\App\Support\AuthorizationMemo::class);
     }
 
     /**
@@ -19,6 +19,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        \Illuminate\Support\Facades\DB::listen(function (\Illuminate\Database\Events\QueryExecuted $query) {
+            $this->app->make(\App\Support\AuthorizationMemo::class)->observeStatement($query->sql);
+        });
+
         if ($this->app->environment('production')) {
             \Illuminate\Support\Facades\URL::forceScheme('https');
         }
@@ -67,13 +71,44 @@ class AppServiceProvider extends ServiceProvider
                 });
         });
 
-        \Illuminate\Support\Facades\Gate::before(function ($user, $ability) {
+        \Illuminate\Support\Facades\RateLimiter::for('dm_send', function (\Illuminate\Http\Request $request) {
+            $user = $request->user();
+            $key = $user ? $user->id : $request->ip();
+            return \Illuminate\Cache\RateLimiting\Limit::perMinute(30)->by($key);
+        });
+
+        \Illuminate\Support\Facades\RateLimiter::for('dm_create', function (\Illuminate\Http\Request $request) {
+            $user = $request->user();
+            $key = $user ? $user->id : $request->ip();
+            return \Illuminate\Cache\RateLimiting\Limit::perMinute(20)->by($key);
+        });
+
+        \Illuminate\Support\Facades\RateLimiter::for('dm_search', function (\Illuminate\Http\Request $request) {
+            $user = $request->user();
+            $key = $user ? $user->id : $request->ip();
+            return \Illuminate\Cache\RateLimiting\Limit::perMinute(60)->by($key);
+        });
+
+        \Illuminate\Support\Facades\Gate::before(function ($user, $ability, $arguments = []) {
+            // Do not bypass conversation participant checks for admins
+            if (str_starts_with($ability, 'conversation.') || (isset($arguments[0]) && $arguments[0] instanceof \App\Models\Conversation)) {
+                return null;
+            }
+
             if ($user->hasRole('super-admin') || $user->hasRole('admin')) {
                 return true;
             }
         });
 
+        \Illuminate\Support\Facades\Gate::policy(\App\Models\SupportInquiry::class, \App\Policies\SupportInquiryPolicy::class);
+        \Illuminate\Support\Facades\Gate::policy(\App\Models\Conversation::class, \App\Policies\ConversationPolicy::class);
+
         \Illuminate\Support\Facades\Event::subscribe(\App\Listeners\NotificationEventSubscriber::class);
+
+        \Illuminate\Support\Facades\Event::listen(
+            \Illuminate\Console\Events\ScheduledTaskFailed::class,
+            \App\Listeners\ScheduledTaskFailureListener::class
+        );
 
         // Listen for Authentication Events to write to security/audit logs
         \Illuminate\Support\Facades\Event::listen(

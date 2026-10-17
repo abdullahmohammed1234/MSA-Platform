@@ -128,6 +128,49 @@ class StaleCaptureService
         });
     }
 
+    /**
+     * Records that staff told the buyer about the held payment. EMS does not email
+     * the buyer itself; this only tracks the manual follow-up. Idempotent.
+     */
+    public function markBuyerNotified(User $user, Payment $payment, string $squarePaymentId, ?string $note): StaleCaptureResource
+    {
+        $this->assertCanResolve($user, $payment);
+
+        return DB::transaction(function () use ($user, $payment, $squarePaymentId, $note): StaleCaptureResource {
+            /** @var Payment $locked */
+            $locked = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
+            $entry = $this->requireStaleCaptureEntry($locked, $squarePaymentId);
+
+            if (data_get($entry, 'buyer_notification.notified_at') === null) {
+                $locked->updateStaleCaptureEntry($squarePaymentId, function (array $row) use ($user, $note): array {
+                    $row['buyer_notification'] = array_filter([
+                        'notified_at' => now()->toIso8601String(),
+                        'notified_by_user_id' => $user->id,
+                        'note' => $note !== null && $note !== '' ? mb_substr($note, 0, 500) : null,
+                    ], fn ($value) => $value !== null);
+
+                    return $row;
+                });
+                $locked->save();
+
+                $this->activity->log(
+                    'stale_capture.buyer_notified',
+                    $locked,
+                    'Buyer notification for a held payment recorded.',
+                    [
+                        'payment_uuid' => $locked->uuid,
+                        'square_payment_id' => $squarePaymentId,
+                        'actor_user_id' => $user->id,
+                    ]
+                );
+            }
+
+            $fresh = $locked->fresh(['order.registrations', 'registration']);
+
+            return $this->toResource($fresh, $fresh->findStaleCaptureEntry($squarePaymentId) ?? $entry);
+        });
+    }
+
     public function refund(
         User $user,
         Payment $payment,
@@ -191,7 +234,7 @@ class StaleCaptureService
         $reportedTo = isset($filters['reported_to']) ? (string) $filters['reported_to'] : null;
 
         $payments = Payment::query()
-            ->where('status', PaymentStatus::Cancelled->value)
+            ->whereIn('status', [PaymentStatus::Cancelled->value, PaymentStatus::Failed->value])
             ->whereNotNull('metadata')
             ->with(['order.registrations', 'registration.tickets', 'order.event'])
             ->orderByDesc('updated_at')
@@ -200,7 +243,7 @@ class StaleCaptureService
         $rows = collect();
 
         foreach ($payments as $payment) {
-            if (! $payment->wasBuyerCancelled()) {
+            if (! $payment->holdsUnfulfilledCaptures()) {
                 continue;
             }
 
@@ -271,7 +314,7 @@ class StaleCaptureService
      */
     private function requireStaleCaptureEntry(Payment $payment, string $squarePaymentId): array
     {
-        if ($payment->status !== PaymentStatus::Cancelled || ! $payment->wasBuyerCancelled()) {
+        if (! $payment->holdsUnfulfilledCaptures()) {
             throw new EmsException(
                 'This payment is not a buyer-cancelled stale capture checkout.',
                 ['payment' => ['Invalid stale capture payment state.']],

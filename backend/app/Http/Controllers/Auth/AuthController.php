@@ -25,7 +25,8 @@ class AuthController extends Controller
     {
         $result = $this->authService->login(
             $request->input('email'),
-            $request->input('password')
+            $request->input('password'),
+            $request
         );
 
         return response()->json([
@@ -40,7 +41,7 @@ class AuthController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
-        $this->authService->logout($request->user());
+        $this->authService->logout($request->user(), $request);
 
         return response()->json([
             'message' => 'Logout successful.',

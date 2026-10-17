@@ -1,8 +1,38 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
+  # Never serve dotfiles or build/backup leftovers; .well-known stays reachable for ACME renewals.
+  RewriteRule (^|/)\.(?!well-known/) - [F,L]
+  RewriteRule \.(map|sql|bak|log|zip|gz|env)$ - [F,L,NC]
   RewriteRule ^index\.html$ - [L]
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule . /index.html [L]
+</IfModule>
+
+# Disable directory browsing
+Options -Indexes
+
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+  # Report-only: violations appear in the browser console but nothing is blocked.
+  # Switch to Content-Security-Policy after a clean staging run. The build has
+  # no inline or eval'd script, so script-src stays 'self'.
+  Header set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https: wss:; frame-src https://www.youtube.com https://www.youtube-nocookie.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+
+  # Hashed build assets can be cached immutably. HTML and manifests must not be cached.
+  <FilesMatch "\.(js|css|woff2|png|svg|webp|ico)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  <FilesMatch "^(index\.html|robots\.txt|sitemap\.xml|manifest\.webmanifest|manifest\.json)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+  <Files "manifest.webmanifest">
+    Header set Content-Type "application/manifest+json"
+  </Files>
+  <Files "manifest.json">
+    Header set Content-Type "application/manifest+json"
+  </Files>
 </IfModule>

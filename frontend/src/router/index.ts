@@ -10,6 +10,7 @@ import donationsRoutes from './donations';
 import sponsorshipRoutes from './sponsorship';
 import mlibmsRoutes from './mlibms';
 import vmsRoutes from './vms';
+import connectAdminRoutes from './connectAdmin';
 import { useAuthStore } from '@/stores/auth';
 import { authGuard } from './guards/authGuard';
 import { guestGuard } from './guards/guestGuard';
@@ -25,6 +26,7 @@ import { dmsGuard } from './guards/dmsGuard';
 import { spmsGuard } from './guards/spmsGuard';
 import { mlibmsGuard } from './guards/mlibmsGuard';
 import { vmsGuard } from './guards/vmsGuard';
+import { connectAdminGuard } from './guards/connectAdminGuard';
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -37,6 +39,7 @@ const router = createRouter({
     ...sponsorshipRoutes,
     ...mlibmsRoutes,
     ...vmsRoutes,
+    ...connectAdminRoutes,
     ...adminRoutes,
     ...emsRoutes,
     ...authRoutes,
@@ -52,9 +55,6 @@ const router = createRouter({
     return { top: 0, behavior: 'smooth' };
   }
 });
-
-let isSessionRestored = false;
-
 router.beforeEach(async (to) => {
   const authStore = useAuthStore();
 
@@ -74,16 +74,23 @@ router.beforeEach(async (to) => {
     document.head.appendChild(metaDesc);
   }
 
-  // 1. Restore session on initial load if token exists
-  if (!isSessionRestored) {
-    if (authStore.token) {
-      try {
-        await authStore.restoreSession();
-      } catch (error) {
-        console.warn('Initial session restore failed:', error);
-      }
+  // 1. Initial Session Restoration
+  if (!authStore.isInitialized) {
+    try {
+      await authStore.restoreSession();
+    } catch (error) {
+      console.warn('Initial session restore failed:', error);
     }
-    isSessionRestored = true;
+  }
+
+  // 2. Authentication-Aware Root / Landing Route Redirect
+  if (to.name === 'home' || to.path === '/') {
+    if (authStore.isAuthenticated) {
+      if (authStore.needsEmailVerification) {
+        return { name: 'verify-email' };
+      }
+      return { name: 'account-overview' };
+    }
   }
 
   // 2. Sequential guard pipeline
@@ -108,6 +115,9 @@ router.beforeEach(async (to) => {
 
   const vmsResult = await vmsGuard(to);
   if (vmsResult !== true) return vmsResult;
+
+  const connectResult = await connectAdminGuard(to);
+  if (connectResult !== true) return connectResult;
 
   const academyResult = academyGuard(to);
   if (academyResult !== true) return academyResult;

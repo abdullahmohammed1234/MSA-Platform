@@ -12,6 +12,9 @@
                 <h3 style="margin-top: 0; margin-bottom: 8px; color: #1E293B; font-size: 16px;">
                     {{ $index + 1 }}. {{ $app->name }}
                 </h3>
+                @if(in_array($app->id, $possibleRepeatIds ?? [], true))
+                    <p style="margin: 0 0 8px; font-size: 12px; color: #B45309;">May also appear in the previous digest (submitted during the final legacy digest run).</p>
+                @endif
                 <table style="width: 100%; border-collapse: collapse; font-size: 13px; color: #475569;">
                     <tr>
                         <td style="padding: 4px 0; font-weight: bold; width: 140px;">SFU Email:</td>

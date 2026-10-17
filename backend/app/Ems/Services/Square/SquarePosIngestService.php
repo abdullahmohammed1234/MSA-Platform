@@ -331,10 +331,11 @@ class SquarePosIngestService
             );
         }
 
-        if ($existingSale->status === PaymentStatus::Abandoned
+        // An unsettled checkout whose webhook was missed is the primary capture, not a split
+        // tender. markPaid handles released inventory and terminal states (Failed/Cancelled).
+        if ($existingSale->provider_payment_id === null
             && $this->isSettledStatus($status, $channel)
-            && ($existingSale->provider_payment_id === null
-                || (string) $existingSale->provider_payment_id === $paymentId)
+            && ! in_array($existingSale->status, [PaymentStatus::Paid, PaymentStatus::Refunded, PaymentStatus::PartiallyRefunded], true)
         ) {
             return $this->fulfillExistingIfSettled($existingSale, $squarePayment, $channel, $status);
         }

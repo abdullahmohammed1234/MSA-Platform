@@ -87,8 +87,11 @@ class User extends Authenticatable implements MustVerifyEmail
                 'new_announcements' => true,
                 'upcoming_training' => true,
                 'certificate_earned' => true,
+                'support_updates' => true,
+                'direct_messages' => true,
                 'email_enabled' => true,
                 'in_app_enabled' => true,
+                'push_enabled' => true,
             ]);
         });
     }
@@ -271,6 +274,14 @@ class User extends Authenticatable implements MustVerifyEmail
     public function volunteeringSignups()
     {
         return $this->hasMany(\App\Volunteering\Models\Signup::class, 'user_id');
+    }
+
+    /**
+     * Get the registered device push subscriptions for the user.
+     */
+    public function deviceSubscriptions()
+    {
+        return $this->hasMany(DeviceSubscription::class, 'user_id');
     }
 }
 
