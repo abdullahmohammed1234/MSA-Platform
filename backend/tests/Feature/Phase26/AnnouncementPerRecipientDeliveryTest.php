@@ -47,6 +47,7 @@ class AnnouncementPerRecipientDeliveryTest extends TestCase
     {
         parent::setUp();
 
+        \Illuminate\Support\Facades\Cache::flush();
         self::$delivered = [];
         self::$failFor = [];
 
