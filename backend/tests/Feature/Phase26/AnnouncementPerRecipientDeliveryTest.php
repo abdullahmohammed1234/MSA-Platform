@@ -73,6 +73,8 @@ class AnnouncementPerRecipientDeliveryTest extends TestCase
             'mail.mailers.p26-recording' => ['transport' => 'p26-recording'],
             'mail.default' => 'p26-recording',
             'queue.default' => 'sync',
+            'announcements.delivery.email_hourly_cap' => 'unlimited',
+            'announcements.delivery.email_min_interval_seconds' => 0,
         ]);
 
         $manage = Permission::create(['name' => 'Manage Notifications', 'slug' => 'manage_notifications', 'module' => 'Admin', 'uuid' => (string) Str::uuid()]);
