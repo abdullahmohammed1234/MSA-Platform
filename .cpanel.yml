@@ -23,4 +23,5 @@ deployment:
     - /bin/rsync -avz --exclude='.env*' --exclude='*.map' --exclude='*.bak' frontend/dist/ /home2/sfums1d5/public_html/
 
     # 3. Deploy pre-built MSA Connect frontend files to connect.sfumsa.ca document root
-    - /bin/rsync -avz --exclude='.env*' --exclude='*.map' --exclude='*.bak' connect/dist/ /home2/sfums1d5/public_html/connect/
+    - /bin/mkdir -p /home2/sfums1d5/connect.sfumsa.ca
+    - /bin/rsync -avz --exclude='.env*' --exclude='*.map' --exclude='*.bak' connect/dist/ /home2/sfums1d5/connect.sfumsa.ca/
