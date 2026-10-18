@@ -92,8 +92,10 @@ apiClient.interceptors.response.use(
       const isAuthProbe = error.config?.url?.includes('/auth/me');
       if (!isAuthProbe && typeof window !== 'undefined') {
         const currentPath = window.location.pathname;
-        if (currentPath !== '/login' && currentPath !== '/' && currentPath !== '') {
-          window.location.href = `/login?redirect=${encodeURIComponent(currentPath + window.location.search)}`;
+        const base = (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL ? import.meta.env.BASE_URL : '/').replace(/\/$/, '');
+        const loginPath = base ? `${base}/login` : '/login';
+        if (currentPath !== loginPath && currentPath !== (base || '/') && currentPath !== '') {
+          window.location.href = `${loginPath}?redirect=${encodeURIComponent(currentPath + window.location.search)}`;
         }
       }
     }

@@ -536,4 +536,88 @@ class CorsAndSanctumConfigurationTest extends TestCase
             'Authorization' => 'Bearer '.$secondToken,
         ])->getJson('/api/v1/auth/me')->assertUnauthorized();
     }
+
+    public function test_connect_preflight_for_reported_failing_endpoints_succeeds(): void
+    {
+        config(['cors.allowed_origins' => ['https://sfumsa.ca', 'https://connect.sfumsa.ca']]);
+
+        $endpoints = [
+            ['GET', '/api/v1/auth/me'],
+            ['GET', '/api/v1/website/announcements'],
+            ['POST', '/api/v1/auth/login'],
+        ];
+
+        foreach ($endpoints as [$method, $uri]) {
+            $response = $this->call(
+                'OPTIONS',
+                $uri,
+                [],
+                [],
+                [],
+                [
+                    'HTTP_ORIGIN' => 'https://connect.sfumsa.ca',
+                    'HTTP_ACCESS_CONTROL_REQUEST_METHOD' => $method,
+                    'HTTP_ACCESS_CONTROL_REQUEST_HEADERS' => 'authorization,content-type,x-requested-with,x-xsrf-token',
+                ]
+            );
+
+            $this->assertTrue(
+                in_array($response->getStatusCode(), [200, 204], true),
+                "Preflight for {$uri} failed with status {$response->getStatusCode()}"
+            );
+            $this->assertSame(
+                'https://connect.sfumsa.ca',
+                $response->headers->get('Access-Control-Allow-Origin'),
+                "Preflight for {$uri} missing Access-Control-Allow-Origin"
+            );
+            $this->assertSame(
+                'true',
+                $response->headers->get('Access-Control-Allow-Credentials'),
+                "Preflight for {$uri} missing Access-Control-Allow-Credentials"
+            );
+        }
+    }
+
+    public function test_csrf_cookie_bootstrap_allows_stateful_post_without_419(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'csrf_verify_'.uniqid().'@sfu.ca',
+            'password' => Hash::make('Password123!'),
+            'is_active' => true,
+        ]);
+
+        $this->resetClient();
+
+        // 1. Fetch CSRF cookie on API origin
+        $csrfResponse = $this->withHeaders([
+            'Origin' => 'https://sfumsa.ca',
+            'Referer' => 'https://sfumsa.ca/',
+        ])->get('/sanctum/csrf-cookie');
+
+        $csrfResponse->assertNoContent();
+
+        // 2. Extract XSRF token and session cookies
+        $xsrfCookie = $csrfResponse->getCookie('XSRF-TOKEN');
+        $sessionCookie = $csrfResponse->getCookie(config('session.cookie'));
+
+        $this->assertNotNull($xsrfCookie, 'XSRF-TOKEN cookie must be set');
+
+        // 3. Post to login with decrypted X-XSRF-TOKEN and credentials
+        $this->resetClient();
+        $loginResponse = $this->withHeaders([
+            'Origin' => 'https://sfumsa.ca',
+            'Referer' => 'https://sfumsa.ca/login',
+            'X-XSRF-TOKEN' => $xsrfCookie->getValue(),
+        ])
+        ->withCookie('XSRF-TOKEN', $xsrfCookie->getValue())
+        ->withCookie(config('session.cookie'), $sessionCookie?->getValue())
+        ->postJson('/api/v1/auth/login', [
+            'email' => $user->email,
+            'password' => 'Password123!',
+        ]);
+
+        $this->assertNotSame(419, $loginResponse->getStatusCode(), 'Login must not return 419 CSRF mismatch when CSRF cookie is bootstrapped');
+        $loginResponse->assertOk();
+    }
 }
+

@@ -47,6 +47,11 @@ class ProductionReadinessCheckCommand extends Command
             if (! str_starts_with($frontendUrl, 'https://') || in_array($frontendHost, ['localhost', '127.0.0.1', '[::1]', '::1'], true)) {
                 $failures[] = 'FRONTEND_URL must be the public https:// site origin in production (it drives CORS, Sanctum and email links)';
             }
+            $connectUrl = (string) config('app.connect_url');
+            $connectHost = (string) parse_url($connectUrl, PHP_URL_HOST);
+            if (! str_starts_with($connectUrl, 'https://') || in_array($connectHost, ['localhost', '127.0.0.1', '[::1]', '::1'], true)) {
+                $warnings[] = 'CONNECT_URL should be the public https:// Connect origin in production (required for Connect CORS, Sanctum, and notification links)';
+            }
             if (! $forceHttps) {
                 $warnings[] = 'FORCE_HTTPS is false — enable when HTTPS is terminated at the reverse proxy';
             }

@@ -1,14 +1,15 @@
 import apiClient from './api';
+import { getApiOrigin } from '../config/api';
 import type { LoginPayload, LoginResponse, MeResponse, LogoutResponse } from '@/types/auth';
 
 export const authService = {
   /**
-   * Initialize CSRF protection cookie for stateful authentication.
+   * Initialize CSRF protection cookie for stateful authentication on the API origin.
    */
   async getCsrfCookie(): Promise<void> {
     try {
       await apiClient.get('/sanctum/csrf-cookie', {
-        baseURL: '', // Uses relative path to hit proxied /sanctum/csrf-cookie
+        baseURL: getApiOrigin(),
       });
     } catch (e) {
       console.warn('CSRF cookie bootstrap ignored or failed:', e);
@@ -36,14 +37,24 @@ export const authService = {
    * Invalidate the current Sanctum token on the server.
    */
   async logout(): Promise<LogoutResponse> {
-    const response = await apiClient.post<LogoutResponse>('/auth/logout');
-    return response.data;
+    try {
+      await this.getCsrfCookie();
+      const response = await apiClient.post<LogoutResponse>('/auth/logout');
+      return response.data;
+    } catch (e: any) {
+      // If the session was already expired on the server (419/401), client logout completes cleanly
+      if (e?.response?.status === 419 || e?.response?.status === 401) {
+        return { message: 'Logged out.' };
+      }
+      throw e;
+    }
   },
 
   /**
    * Request password reset instructions via email.
    */
   async requestPasswordReset(email: string): Promise<{ message: string }> {
+    await this.getCsrfCookie();
     const response = await apiClient.post<{ message: string }>('/auth/forgot-password', { email });
     return response.data;
   },

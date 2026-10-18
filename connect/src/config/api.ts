@@ -82,3 +82,10 @@ export function getApiBaseUrl(): string {
   // Canonical production endpoint
   return 'https://api.sfumsa.ca/api/v1';
 }
+
+/**
+ * Returns the API origin without the /api/v1 suffix (used for CSRF cookie bootstrap and storage).
+ */
+export function getApiOrigin(): string {
+  return getApiBaseUrl().replace(/\/api\/v1\/?$/, '');
+}
