@@ -160,10 +160,20 @@ export const useAuthStore = defineStore('connect_auth', () => {
     token.value = renewed ?? null;
   }
 
-  // Register listener for 401 unauthorized events to wipe all stores immediately
+  // Register listener for 401 unauthorized events and window focus to sync cross-app session state
   if (typeof window !== 'undefined') {
     window.addEventListener('msa:unauthorized', () => {
       purgeAllUserData();
+    });
+
+    window.addEventListener('focus', async () => {
+      if (user.value) {
+        try {
+          await authService.me();
+        } catch {
+          purgeAllUserData();
+        }
+      }
     });
   }
 

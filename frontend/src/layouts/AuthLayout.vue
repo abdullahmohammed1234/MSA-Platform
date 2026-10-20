@@ -7,7 +7,7 @@ import { PUBLIC_LOGO } from '@/constants/publicAssets';
     <div class="w-full max-w-md space-y-8">
       <div class="text-center space-y-3">
         <router-link to="/" class="inline-flex items-center justify-center">
-          <img :src="PUBLIC_LOGO" alt="SFU MSA" class="h-14 w-14 object-contain" />
+          <img :src="PUBLIC_LOGO" alt="SFU MSA logo" class="h-14 w-14 object-contain" />
         </router-link>
         <p class="text-xs uppercase tracking-[0.25em] text-neutral-muted font-bold">SFU Muslim Students Association</p>
       </div>

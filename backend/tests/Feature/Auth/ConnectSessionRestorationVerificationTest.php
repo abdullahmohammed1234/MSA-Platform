@@ -79,7 +79,8 @@ class ConnectSessionRestorationVerificationTest extends TestCase
     // =========================================================================
 
     /**
-     * Scenario 1: A valid bearer token restores the Connect user.
+     * Scenario 1: A valid bearer token restores the API client statelessly,
+     * while under Option A browser SPAs authenticate exclusively via shared session cookies.
      */
     public function test_scenario_01_valid_bearer_token_restores_connect_user(): void
     {
@@ -88,7 +89,6 @@ class ConnectSessionRestorationVerificationTest extends TestCase
 
         $this->resetClient();
         $response = $this->withHeaders([
-            'Origin' => self::CONNECT_ORIGIN,
             'Authorization' => "Bearer {$token}",
         ])->getJson('/api/v1/auth/me');
 
@@ -267,13 +267,11 @@ class ConnectSessionRestorationVerificationTest extends TestCase
 
         $this->resetClient();
         $this->withHeaders([
-            'Origin' => self::CONNECT_ORIGIN,
             'Authorization' => "Bearer {$token}",
         ])->postJson('/api/v1/auth/logout')->assertOk();
 
         $this->resetClient();
         $this->withHeaders([
-            'Origin' => self::CONNECT_ORIGIN,
             'Authorization' => "Bearer {$token}",
         ])->getJson('/api/v1/auth/me')->assertUnauthorized();
     }
@@ -333,7 +331,6 @@ class ConnectSessionRestorationVerificationTest extends TestCase
         // Password change through /api/v1/account/password
         $this->resetClient();
         $changeRes = $this->withHeaders([
-            'Origin' => self::CONNECT_ORIGIN,
             'Authorization' => "Bearer {$tokenA}",
         ])->putJson('/api/v1/account/password', [
             'current_password' => 'StrongPassword123!',

@@ -256,11 +256,20 @@ export const useAuthStore = defineStore('auth', () => {
     return updatedUser;
   };
 
-  // Sync token clearing from Axios interceptors
+  // Sync token clearing from Axios interceptors and re-verify session on window focus
   if (typeof window !== 'undefined') {
     window.addEventListener('auth:unauthorized', () => {
-      token.value = null;
-      user.value = null;
+      setSession(null, null);
+    });
+
+    window.addEventListener('focus', async () => {
+      if (user.value) {
+        try {
+          await authService.getMe();
+        } catch {
+          setSession(null, null);
+        }
+      }
     });
   }
 

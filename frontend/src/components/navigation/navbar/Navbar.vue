@@ -58,10 +58,13 @@ const canAccessAcademy = computed(() => {
         <div class="flex-shrink-0 flex items-center">
           <router-link to="/" class="flex items-center gap-2">
             <slot name="logo">
-              <!-- Default scholastic calligraphic logo icon -->
-              <div class="h-9 w-9 rounded-full bg-primary flex items-center justify-center text-white font-display font-bold text-lg">
-                M
-              </div>
+              <img
+                src="/logo.webp"
+                alt="SFU MSA logo"
+                class="h-9 w-auto object-contain"
+                loading="eager"
+                decoding="async"
+              />
               <span class="font-display font-bold text-lg text-primary tracking-wide">
                 {{ brandName }}
               </span>

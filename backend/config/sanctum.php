@@ -28,6 +28,19 @@ if ($connectHost) {
     $statefulHosts .= ','.$connectHost.($connectPort ? ':'.$connectPort : '');
 }
 
+$extraOrigins = array_values(array_filter(array_map(
+    fn (string $origin): string => rtrim(trim($origin), '/'),
+    explode(',', (string) env('CORS_ALLOWED_ORIGINS', ''))
+), fn (string $origin): bool => $origin !== ''));
+
+foreach ($extraOrigins as $origin) {
+    $extraHost = parse_url($origin, PHP_URL_HOST);
+    if ($extraHost) {
+        $extraPort = parse_url($origin, PHP_URL_PORT);
+        $statefulHosts .= ','.$extraHost.($extraPort ? ':'.$extraPort : '');
+    }
+}
+
 return [
 
     /*

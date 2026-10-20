@@ -27,7 +27,7 @@ describe('Frontend authService CSRF Cookie Bootstrap & Resilience', () => {
     });
   });
 
-  it('login bootstraps CSRF cookie before posting credentials', async () => {
+  it('login posts credentials directly to /auth/login and receives bearer token', async () => {
     vi.mocked(api.get).mockResolvedValueOnce({ data: null });
     vi.mocked(api.post).mockResolvedValueOnce({
       data: { token: 'mock-token', user: { id: 1, email: 'user@sfu.ca' } },
@@ -38,6 +38,7 @@ describe('Frontend authService CSRF Cookie Bootstrap & Resilience', () => {
     expect(api.get).toHaveBeenCalledWith('/sanctum/csrf-cookie', {
       baseURL: getApiOrigin(),
     });
+    expect(api.post).toHaveBeenCalledTimes(1);
     expect(api.post).toHaveBeenCalledWith('/auth/login', {
       email: 'user@sfu.ca',
       password: 'Password123!',
@@ -45,17 +46,14 @@ describe('Frontend authService CSRF Cookie Bootstrap & Resilience', () => {
     expect(result.token).toBe('mock-token');
   });
 
-  it('logout bootstraps CSRF cookie and handles HTTP 419 gracefully', async () => {
-    vi.mocked(api.get).mockResolvedValueOnce({ data: null });
+  it('logout handles HTTP 419 gracefully when session is expired', async () => {
     vi.mocked(api.post).mockRejectedValueOnce({
       response: { status: 419, data: { message: 'CSRF token mismatch.' } },
     });
 
     const result = await authService.logout();
 
-    expect(api.get).toHaveBeenCalledWith('/sanctum/csrf-cookie', {
-      baseURL: getApiOrigin(),
-    });
+    expect(api.post).toHaveBeenCalledTimes(1);
     expect(api.post).toHaveBeenCalledWith('/auth/logout');
     expect(result).toEqual({ message: 'Logged out.' });
   });

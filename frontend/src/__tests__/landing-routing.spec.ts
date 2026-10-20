@@ -57,39 +57,26 @@ describe('Frontend Landing Page & Dashboard Routing (Phase 10.1)', () => {
 
   describe('Logo destination resolution', () => {
     it('resolves home for unauthenticated guests', () => {
-      const authStore = useAuthStore();
-      authStore.token = null;
-      authStore.user = null;
-
-      const destination = authStore.isAuthenticated ? { name: 'account-overview' } : { name: 'home' };
-      const ariaLabel = authStore.isAuthenticated ? 'SFU MSA Dashboard' : 'SFU MSA Home';
+      const destination = { name: 'home' };
+      const ariaLabel = 'SFU MSA Homepage';
 
       expect(destination).toEqual({ name: 'home' });
-      expect(ariaLabel).toBe('SFU MSA Home');
+      expect(ariaLabel).toBe('SFU MSA Homepage');
     });
 
-    it('resolves account-overview dashboard for authenticated users', () => {
-      const authStore = useAuthStore();
-      authStore.token = 'valid-token';
-      authStore.user = { id: 1, name: 'Active User', email: 'user@sfu.ca', roles: ['member'], permissions: [], is_verified: true } as any;
+    it('resolves home for authenticated users so public homepage remains accessible', () => {
+      const destination = { name: 'home' };
+      const ariaLabel = 'SFU MSA Homepage';
 
-      const destination = authStore.isAuthenticated ? { name: 'account-overview' } : { name: 'home' };
-      const ariaLabel = authStore.isAuthenticated ? 'SFU MSA Dashboard' : 'SFU MSA Home';
-
-      expect(destination).toEqual({ name: 'account-overview' });
-      expect(ariaLabel).toBe('SFU MSA Dashboard');
+      expect(destination).toEqual({ name: 'home' });
+      expect(ariaLabel).toBe('SFU MSA Homepage');
     });
   });
 
   describe('Root route guard decision', () => {
-    function evaluateRootDestination(authStore: ReturnType<typeof useAuthStore>, to: { name: string; path: string }) {
+    function evaluateRootDestination(_authStore: ReturnType<typeof useAuthStore>, to: { name: string; path: string }) {
       if (to.name === 'home' || to.path === '/') {
-        if (authStore.isAuthenticated) {
-          if (authStore.needsEmailVerification) {
-            return { name: 'verify-email' };
-          }
-          return { name: 'account-overview' };
-        }
+        return true;
       }
       return true;
     }
@@ -103,22 +90,23 @@ describe('Frontend Landing Page & Dashboard Routing (Phase 10.1)', () => {
       expect(result).toBe(true);
     });
 
-    it('redirects authenticated verified users from root to account-overview dashboard', () => {
+    it('allows authenticated verified users to access root landing page without redirect to account', () => {
       const authStore = useAuthStore();
       authStore.token = 'valid-token';
       authStore.user = { id: 1, name: 'Verified Member', email: 'mem@sfu.ca', roles: ['member'], permissions: [], is_verified: true } as any;
 
       const result = evaluateRootDestination(authStore, { name: 'home', path: '/' });
-      expect(result).toEqual({ name: 'account-overview' });
+      expect(result).toBe(true);
     });
 
-    it('redirects authenticated unverified users from root to verify-email', () => {
+    it('allows direct navigation and refresh on root route without redirection', () => {
       const authStore = useAuthStore();
       authStore.token = 'valid-token';
-      authStore.user = { id: 1, name: 'Unverified Member', email: 'unverified@sfu.ca', roles: ['member'], permissions: [], is_verified: false, requires_email_verification: true } as any;
+      authStore.user = { id: 1, name: 'Active User', email: 'user@sfu.ca', roles: ['member'], permissions: [], is_verified: true } as any;
 
       const result = evaluateRootDestination(authStore, { name: 'home', path: '/' });
-      expect(result).toEqual({ name: 'verify-email' });
+      expect(result).not.toEqual({ name: 'account-overview' });
+      expect(result).toBe(true);
     });
   });
 

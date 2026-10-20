@@ -5,7 +5,7 @@ import type { SidebarProps } from './types';
 const props = withDefaults(defineProps<SidebarProps>(), {
   collapsed: false,
   title: 'MSA Admin',
-  logoAlt: 'MSA Admin logo',
+  logoAlt: 'SFU MSA logo',
   mobileOpen: false,
 });
 
@@ -96,10 +96,11 @@ onUnmounted(() => {
           ]"
         >
           <!-- Logo & Brand info -->
-          <div
+          <router-link
             v-if="logoSrc"
+            to="/"
             :class="[
-              'flex items-center min-w-0',
+              'flex items-center min-w-0 group',
               isCollapsed ? 'justify-center' : 'gap-3 flex-1'
             ]"
           >
@@ -116,7 +117,7 @@ onUnmounted(() => {
               />
             </div>
             <div v-if="!isCollapsed" class="flex flex-col min-w-0">
-              <span class="font-display font-bold text-primary text-sm tracking-wide truncate">
+              <span class="font-display font-bold text-primary text-sm tracking-wide truncate group-hover:text-primary/80 transition-colors">
                 {{ title }}
               </span>
               <span
@@ -126,13 +127,14 @@ onUnmounted(() => {
                 {{ subtitle }}
               </span>
             </div>
-          </div>
-          <span
+          </router-link>
+          <router-link
             v-else-if="!isCollapsed"
-            class="font-display font-bold text-primary text-base tracking-wide truncate flex-1"
+            to="/"
+            class="font-display font-bold text-primary text-base tracking-wide truncate flex-1 hover:text-primary/80 transition-colors"
           >
             {{ title }}
-          </span>
+          </router-link>
 
           <!-- Mobile Close Button -->
           <button

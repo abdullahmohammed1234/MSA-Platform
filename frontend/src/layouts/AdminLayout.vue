@@ -175,6 +175,7 @@ const handleLogout = async () => {
       title="MSA Admin"
       subtitle="Platform Console"
       logoSrc="/logo.webp"
+      logoAlt="SFU MSA logo"
     >
       <!-- Dashboard Icon Slot -->
       <template #dashboard>

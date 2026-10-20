@@ -83,16 +83,6 @@ router.beforeEach(async (to) => {
     }
   }
 
-  // 2. Authentication-Aware Root / Landing Route Redirect
-  if (to.name === 'home' || to.path === '/') {
-    if (authStore.isAuthenticated) {
-      if (authStore.needsEmailVerification) {
-        return { name: 'verify-email' };
-      }
-      return { name: 'account-overview' };
-    }
-  }
-
   // 2. Sequential guard pipeline
   // SPMS, DMS, EMS, CMS, DAMS own their routes outright with dedicated access models
   const spmsResult = await spmsGuard(to);

@@ -49,6 +49,12 @@
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.webp",
+      "sizes": "1286x1286",
+      "type": "image/webp",
+      "purpose": "any"
     }
   ]
 }

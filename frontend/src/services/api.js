@@ -15,6 +15,14 @@ const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
+    // Strip Authorization header on /auth/me so browser session cookie is authoritative
+    if (config.url?.includes('/auth/me')) {
+      if (config.headers) {
+        delete config.headers.Authorization;
+      }
+      return config;
+    }
+
     const token = localStorage.getItem('auth_token');
 
     if (token && token !== 'sso_session') {

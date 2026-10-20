@@ -11,7 +11,7 @@
           <div class="relative w-9 h-9 rounded-xl bg-white border border-[#ebe8de] shadow-xs flex items-center justify-center overflow-hidden shrink-0 group-hover:border-[#640c0e]/40 transition-colors">
             <img
               src="/logo.webp"
-              alt="SFU MSA Logo"
+              alt="SFU MSA logo"
               class="w-7 h-7 object-contain"
             />
           </div>
@@ -248,10 +248,10 @@ const isLoggingOut = ref(false);
 const isResourcesEnabled = ref(false);
 
 const logoDestination = computed(() => {
-  return authStore.isAuthenticated ? '/app/dashboard' : '/';
+  return '/';
 });
 const logoAriaLabel = computed(() => {
-  return authStore.isAuthenticated ? 'SFU MSA Connect Dashboard' : 'SFU MSA Connect Home';
+  return 'SFU MSA Connect Home';
 });
 
 const unreadCount = computed(() => notificationsStore.unreadCount);

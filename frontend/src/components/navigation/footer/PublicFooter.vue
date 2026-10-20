@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { useAuthStore } from '@/stores/auth';
 import {
   Instagram,
   Facebook,
@@ -14,12 +13,11 @@ import {
 } from 'lucide-vue-next';
 import websiteService from '@/services/website/websiteService';
 
-const authStore = useAuthStore();
 const logoDestination = computed(() => {
-  return authStore.isAuthenticated ? { name: 'account-overview' } : { name: 'home' };
+  return { name: 'home' };
 });
 const logoAriaLabel = computed(() => {
-  return authStore.isAuthenticated ? 'SFU MSA Member Dashboard' : 'SFU MSA Homepage';
+  return 'SFU MSA Homepage';
 });
 
 const currentYear = new Date().getFullYear();

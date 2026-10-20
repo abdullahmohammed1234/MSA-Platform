@@ -140,8 +140,8 @@ const handleLogout = async () => {
     <Sidebar
       title="Dawah Academy"
       subtitle="SFU MSA"
-      logo-src="/logo.PNG"
-      logo-alt="Dawah Academy logo"
+      logo-src="/logo.webp"
+      logo-alt="SFU MSA logo"
       :items="academyItems"
       :collapsed="isSidebarCollapsed"
       @collapse="(val) => isSidebarCollapsed = val"

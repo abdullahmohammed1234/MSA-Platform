@@ -43,14 +43,18 @@ const close = () => {
       >
         <!-- Top row: Brand & Close -->
         <div class="px-4 flex items-center justify-between border-b border-neutral-ivory/50 pb-4 flex-shrink-0">
-          <div class="flex items-center gap-2">
-            <div class="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white font-display font-bold text-sm">
-              M
-            </div>
+          <router-link to="/" class="flex items-center gap-2" @click="close">
+            <img
+              src="/logo.webp"
+              alt="SFU MSA logo"
+              class="h-8 w-auto object-contain"
+              loading="eager"
+              decoding="async"
+            />
             <span class="font-display font-bold text-sm text-primary tracking-wide">
               {{ brandName }}
             </span>
-          </div>
+          </router-link>
           
           <button
             @click="close"

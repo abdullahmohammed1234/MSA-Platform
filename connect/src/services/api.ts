@@ -28,6 +28,12 @@ export const apiClient: AxiosInstance = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     try {
+      // Strip Authorization header on /auth/me so browser session cookie is authoritative
+      if (config.url?.includes('/auth/me') && config.headers) {
+        delete config.headers.Authorization;
+        return config;
+      }
+
       const token = localStorage.getItem(AUTH_TOKEN_KEY);
       if (token && token !== 'sso_session' && config.headers) {
         // Enforce origin boundary: only attach Bearer tokens to authorized API origin

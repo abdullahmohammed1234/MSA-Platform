@@ -619,5 +619,41 @@ class CorsAndSanctumConfigurationTest extends TestCase
         $this->assertNotSame(419, $loginResponse->getStatusCode(), 'Login must not return 419 CSRF mismatch when CSRF cookie is bootstrapped');
         $loginResponse->assertOk();
     }
+
+    public function test_stateless_login_and_logout_succeeds_without_csrf_tokens(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'stateless_auth_'.uniqid().'@sfu.ca',
+            'password' => Hash::make('Password123!'),
+            'is_active' => true,
+        ]);
+
+        $this->resetClient();
+
+        // 1. Non-browser API client without frontend origin can authenticate statelessly
+        $loginResponse = $this->postJson('/api/v1/auth/login', [
+            'email' => $user->email,
+            'password' => 'Password123!',
+        ]);
+
+        $this->assertNotSame(419, $loginResponse->getStatusCode(), 'Non-browser API login must not require CSRF');
+        $loginResponse->assertOk();
+        $token = $loginResponse->json('token');
+        $this->assertNotEmpty($token, 'Login response must provide a bearer token');
+
+        // 2. Non-browser API client can logout with Bearer token statelessly
+        $this->resetClient();
+        $logoutResponse = $this->withHeaders([
+            'Authorization' => "Bearer {$token}",
+        ])->postJson('/api/v1/auth/logout');
+
+        $this->assertNotSame(419, $logoutResponse->getStatusCode(), 'Non-browser API logout must not require CSRF');
+        $logoutResponse->assertOk();
+
+        // 3. Verify ValidateCsrfToken does NOT broadly exclude api/v1/auth/*
+        $encrypter = $this->app['encrypter'];
+        $middleware = new \Illuminate\Foundation\Http\Middleware\ValidateCsrfToken($this->app, $encrypter);
+        $this->assertNotContains('api/v1/auth/*', $middleware->getExcludedPaths(), 'CSRF protection must not broadly exclude authentication endpoints');
+    }
 }
 

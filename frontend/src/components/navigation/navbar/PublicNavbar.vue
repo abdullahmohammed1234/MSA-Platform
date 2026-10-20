@@ -74,10 +74,10 @@ const showPublicAuth = computed(() => isPublicAuthEnabled);
 const isLoading = ref(false);
 
 const logoDestination = computed(() => {
-  return isAuthenticated.value ? { name: 'account-overview' } : { name: 'home' };
+  return { name: 'home' };
 });
 const logoAriaLabel = computed(() => {
-  return isAuthenticated.value ? 'SFU MSA Member Dashboard' : 'SFU MSA Homepage';
+  return 'SFU MSA Homepage';
 });
 
 const filteredNavLinks = computed(() => {

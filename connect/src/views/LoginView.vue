@@ -6,7 +6,7 @@
         <div class="w-8 h-8 rounded-xl bg-white border border-[#ebe8de] shadow-xs flex items-center justify-center overflow-hidden shrink-0 group-hover:border-[#640c0e]/40 transition-colors">
           <img
             src="/logo.webp"
-            alt="SFU MSA"
+            alt="SFU MSA logo"
             class="w-6 h-6 object-contain"
             onerror="this.style.display='none'"
           />
@@ -43,7 +43,7 @@
             <div class="w-14 h-14 mx-auto rounded-2xl bg-white border border-[#ebe8de] shadow-2xs flex items-center justify-center mb-3.5 ring-2 ring-[#ffdc83]/60">
               <img
                 src="/logo.webp"
-                alt="SFU MSA"
+                alt="SFU MSA logo"
                 class="w-10 h-10 object-contain"
                 onerror="this.style.display='none'"
               />
@@ -307,10 +307,10 @@ const route = useRoute();
 const authStore = useAuthStore();
 
 const logoDestination = computed(() => {
-  return authStore.isAuthenticated ? '/app/dashboard' : '/';
+  return '/';
 });
 const logoAriaLabel = computed(() => {
-  return authStore.isAuthenticated ? 'MSA Connect Dashboard' : 'MSA Connect Home';
+  return 'SFU MSA Connect Home';
 });
 
 const email = ref('');

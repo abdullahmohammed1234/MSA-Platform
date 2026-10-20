@@ -45,7 +45,6 @@ export const authService = {
    */
   async logout(): Promise<{ message: string }> {
     try {
-      await this.getCsrfCookie();
       const response = await api.post<{ message: string }>('/auth/logout');
       return response.data;
     } catch (e: any) {
