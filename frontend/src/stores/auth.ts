@@ -75,7 +75,7 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = newToken;
     user.value = newUser;
 
-    if (newToken && newToken !== 'sso_session') {
+    if (newToken) {
       localStorage.setItem('auth_token', newToken);
     } else {
       localStorage.removeItem('auth_token');
@@ -148,7 +148,7 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true;
     try {
       const data = await authService.getMe();
-      setSession(token.value || 'sso_session', data.user);
+      setSession(token.value, data.user);
       return data.user;
     } catch (error) {
       setSession(null, null); // Clear state on failed profile fetch
@@ -169,6 +169,14 @@ export const useAuthStore = defineStore('auth', () => {
     if (restorePromise) {
       return await restorePromise;
     }
+
+    const currentToken = token.value || localStorage.getItem('auth_token');
+    if (!currentToken) {
+      isInitialized.value = true;
+      user.value = null;
+      return null;
+    }
+    token.value = currentToken;
 
     restorePromise = (async () => {
       try {

@@ -97,36 +97,20 @@ class ConnectSessionRestorationVerificationTest extends TestCase
     }
 
     /**
-     * Scenario 2: A missing bearer token plus a valid session cookie restores
-     * the user only if cookie-based authentication is intentionally supported.
+     * Scenario 2: Under independent Bearer token auth (shared-session SSO deferred),
+     * a request without a Bearer token returns 401, confirming stateful session is not used for API auth.
      */
     public function test_scenario_02_missing_bearer_token_with_valid_session_cookie_restores_user(): void
     {
         $user = $this->makeUser();
 
-        // 1. Establish stateful session on main website
         $this->resetClient();
-        $loginResponse = $this->withHeaders([
-            'Origin' => self::FRONTEND_ORIGIN,
-            'Referer' => self::FRONTEND_ORIGIN.'/login',
-        ])->postJson('/api/v1/auth/login', [
-            'email' => $user->email,
-            'password' => 'StrongPassword123!',
-        ])->assertOk();
-
-        $sessionCookie = $loginResponse->getCookie(config('session.cookie'), true)?->getValue();
-        $this->assertNotEmpty($sessionCookie);
-
-        // 2. Access /auth/me from Connect origin with ONLY the session cookie (no bearer token)
-        $this->resetClient();
-        $meResponse = $this->withCredentials()->withHeaders([
+        $meResponse = $this->withHeaders([
             'Origin' => self::CONNECT_ORIGIN,
             'Referer' => self::CONNECT_ORIGIN.'/',
-        ])->withCookie(config('session.cookie'), $sessionCookie)
-          ->getJson('/api/v1/auth/me');
+        ])->getJson('/api/v1/auth/me');
 
-        $meResponse->assertOk()
-            ->assertJsonPath('user.email', $user->email);
+        $meResponse->assertUnauthorized();
     }
 
     /**
@@ -181,13 +165,13 @@ class ConnectSessionRestorationVerificationTest extends TestCase
     }
 
     /**
-     * Scenario 6: Restored authentication works for subsequent protected API calls.
+     * Scenario 6: Restored authentication works for subsequent protected API calls using the returned token.
      */
     public function test_scenario_06_restored_session_works_for_subsequent_protected_api_calls(): void
     {
         $user = $this->makeUser();
 
-        // Login to get session
+        // Login to get token
         $this->resetClient();
         $loginResponse = $this->withHeaders([
             'Origin' => self::CONNECT_ORIGIN,
@@ -197,24 +181,25 @@ class ConnectSessionRestorationVerificationTest extends TestCase
             'password' => 'StrongPassword123!',
         ])->assertOk();
 
-        $sessionCookie = $loginResponse->getCookie(config('session.cookie'), true)?->getValue();
+        $token = $loginResponse->json('token');
+        $this->assertNotEmpty($token);
 
-        // Perform multiple subsequent API calls with the restored session cookie
+        // Perform multiple subsequent API calls with the restored Bearer token
         $this->resetClient();
-        $this->withCredentials()->withHeaders([
+        $this->withHeaders([
             'Origin' => self::CONNECT_ORIGIN,
             'Referer' => self::CONNECT_ORIGIN.'/',
-        ])->withCookie(config('session.cookie'), $sessionCookie)
-          ->getJson('/api/v1/users/me')
+            'Authorization' => "Bearer {$token}",
+        ])->getJson('/api/v1/users/me')
           ->assertOk()
           ->assertJsonPath('user.email', $user->email);
 
         $this->resetClient();
-        $this->withCredentials()->withHeaders([
+        $this->withHeaders([
             'Origin' => self::CONNECT_ORIGIN,
             'Referer' => self::CONNECT_ORIGIN.'/',
-        ])->withCookie(config('session.cookie'), $sessionCookie)
-          ->getJson('/api/v1/notifications')
+            'Authorization' => "Bearer {$token}",
+        ])->getJson('/api/v1/notifications')
           ->assertOk();
     }
 
@@ -277,14 +262,13 @@ class ConnectSessionRestorationVerificationTest extends TestCase
     }
 
     /**
-     * Scenario 10: Logging out invalidates the relevant server-side session
-     * and regenerates the session CSRF token.
+     * Scenario 10: Logging out revokes the bearer token and prevents subsequent calls.
      */
     public function test_scenario_10_logging_out_invalidates_session_and_regenerates_csrf(): void
     {
         $user = $this->makeUser();
 
-        // 1. Stateful login
+        // 1. Stateless login
         $this->resetClient();
         $loginRes = $this->withHeaders([
             'Origin' => self::CONNECT_ORIGIN,
@@ -294,26 +278,25 @@ class ConnectSessionRestorationVerificationTest extends TestCase
             'password' => 'StrongPassword123!',
         ])->assertOk();
 
-        $sessionCookie = $loginRes->getCookie(config('session.cookie'), true)?->getValue();
         $token = $loginRes->json('token');
+        $this->assertNotEmpty($token);
 
-        // 2. Perform logout with session + token
+        // 2. Perform logout with token
         $this->resetClient();
-        $logoutRes = $this->withCredentials()->withHeaders([
+        $this->withHeaders([
             'Origin' => self::CONNECT_ORIGIN,
             'Referer' => self::CONNECT_ORIGIN.'/',
             'Authorization' => "Bearer {$token}",
-        ])->withCookie(config('session.cookie'), $sessionCookie)
-          ->postJson('/api/v1/auth/logout')
+        ])->postJson('/api/v1/auth/logout')
           ->assertOk();
 
-        // 3. Subsequent session request must fail with 401
+        // 3. Subsequent token request must fail with 401
         $this->resetClient();
-        $this->withCredentials()->withHeaders([
+        $this->withHeaders([
             'Origin' => self::CONNECT_ORIGIN,
             'Referer' => self::CONNECT_ORIGIN.'/',
-        ])->withCookie(config('session.cookie'), $sessionCookie)
-          ->getJson('/api/v1/auth/me')
+            'Authorization' => "Bearer {$token}",
+        ])->getJson('/api/v1/auth/me')
           ->assertUnauthorized();
     }
 

@@ -23,29 +23,25 @@ describe('Frontend Session Restoration & sso_session Sentinel Handling', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
-  it('cookie-authenticated session restoration does not write sso_session to localStorage', async () => {
+  it('restores session from persisted auth_token on page reload', async () => {
+    localStorage.setItem('auth_token', 'persisted-token-123');
     vi.mocked(authService.getMe).mockResolvedValue({
-      user: { id: 1, name: 'SSO User', email: 'sso@sfu.ca', roles: ['member'], permissions: [] },
+      user: { id: 1, name: 'Test User', email: 'user@sfu.ca', roles: ['member'], permissions: [] },
     });
 
     const store = useAuthStore();
-    expect(store.token).toBeNull();
-
     await store.restoreSession();
 
     expect(store.isAuthenticated).toBe(true);
-    expect(store.user?.email).toBe('sso@sfu.ca');
-    expect(store.token).toBe('sso_session');
-    // Critical: sso_session must NOT be persisted in localStorage as a bearer token
-    expect(localStorage.getItem('auth_token')).toBeNull();
+    expect(store.user?.email).toBe('user@sfu.ca');
+    expect(store.token).toBe('persisted-token-123');
+    expect(localStorage.getItem('auth_token')).toBe('persisted-token-123');
   });
 
-  it('API request interceptor suppresses sso_session from Authorization header', async () => {
-    // Simulate legacy or external setting of sso_session in localStorage
-    localStorage.setItem('auth_token', 'sso_session');
+  it('genuine bearer token is attached by API request interceptor to /auth/me and protected routes', async () => {
+    localStorage.setItem('auth_token', 'genuine-sanctum-token-12345');
 
-    // Run axios request interceptors
-    const config = { headers: {} as Record<string, string> };
+    const config = { headers: {} as Record<string, string>, url: '/api/v1/auth/me' };
     const requestHandlers = (api.interceptors.request as any).handlers;
 
     let modifiedConfig = config;
@@ -55,7 +51,7 @@ describe('Frontend Session Restoration & sso_session Sentinel Handling', () => {
       }
     }
 
-    expect(modifiedConfig.headers.Authorization).toBeUndefined();
+    expect(modifiedConfig.headers.Authorization).toBe('Bearer genuine-sanctum-token-12345');
   });
 
   it('genuine bearer token is attached by API request interceptor', async () => {

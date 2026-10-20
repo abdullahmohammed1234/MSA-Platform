@@ -31,7 +31,6 @@ return Application::configure(basePath: dirname(__DIR__))
                 | \Illuminate\Http\Request::HEADER_X_FORWARDED_AWS_ELB
         );
 
-        $middleware->statefulApi();
         $middleware->prepend(\App\Http\Middleware\ScopeAuthorizationMemo::class);
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
         $middleware->append(\App\Http\Middleware\PerformanceMonitoringMiddleware::class);

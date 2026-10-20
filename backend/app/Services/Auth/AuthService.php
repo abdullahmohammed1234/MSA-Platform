@@ -80,14 +80,9 @@ class AuthService
                 $token->delete();
             } elseif ($token && !($token instanceof \Laravel\Sanctum\TransientToken) && method_exists($token, 'delete')) {
                 $token->delete();
-            } elseif (!$token) {
-                $user->tokens()->delete();
+            } elseif ($request?->bearerToken()) {
+                $this->revokePresentedToken($user, $request);
             }
-
-            // SPAs send the session cookie and the bearer token together, and
-            // Sanctum authenticates the session first, so the presented token
-            // must be revoked explicitly or it outlives the logout.
-            $this->revokePresentedToken($user, $request);
         }
 
         // Invalidate shared web session if present

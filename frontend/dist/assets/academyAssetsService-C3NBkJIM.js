@@ -1,1 +1,0 @@
-import{t as e}from"./api-D6eTtsc3.js";var t={async uploadImage(t){let n=new FormData;return n.append(`file`,t),(await e.post(`/dams/assets/upload`,n,{headers:{"Content-Type":`multipart/form-data`}})).data}};export{t};

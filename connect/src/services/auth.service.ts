@@ -20,7 +20,6 @@ export const authService = {
    * Authenticate with email and password via Laravel Sanctum endpoint.
    */
   async login(payload: LoginPayload): Promise<LoginResponse> {
-    await this.getCsrfCookie();
     const response = await apiClient.post<LoginResponse>('/auth/login', payload);
     return response.data;
   },
@@ -53,7 +52,6 @@ export const authService = {
    * Request password reset instructions via email.
    */
   async requestPasswordReset(email: string): Promise<{ message: string }> {
-    await this.getCsrfCookie();
     const response = await apiClient.post<{ message: string }>('/auth/forgot-password', { email });
     return response.data;
   },

@@ -20,22 +20,16 @@ export const apiClient: AxiosInstance = axios.create({
     'Content-Type': 'application/json',
     'X-Requested-With': 'XMLHttpRequest',
   },
-  withCredentials: true, // Enables first-party session cookie SSO across subdomains
-  withXSRFToken: true, // Automatically reads XSRF-TOKEN cookie and passes X-XSRF-TOKEN header
+  withCredentials: false,
+  withXSRFToken: false,
 });
 
 // Request Interceptor: Attach Sanctum Bearer token strictly to the configured API origin
 apiClient.interceptors.request.use(
   (config) => {
     try {
-      // Strip Authorization header on /auth/me so browser session cookie is authoritative
-      if (config.url?.includes('/auth/me') && config.headers) {
-        delete config.headers.Authorization;
-        return config;
-      }
-
       const token = localStorage.getItem(AUTH_TOKEN_KEY);
-      if (token && token !== 'sso_session' && config.headers) {
+      if (token && config.headers) {
         // Enforce origin boundary: only attach Bearer tokens to authorized API origin
         if (isAllowedApiDestination(config.url, config.baseURL)) {
           config.headers.Authorization = `Bearer ${token}`;
@@ -43,8 +37,6 @@ apiClient.interceptors.request.use(
           // Explicitly strip Authorization header if targeting an external origin
           delete config.headers.Authorization;
         }
-      } else if (config.headers && typeof config.headers.Authorization === 'string' && config.headers.Authorization.includes('sso_session')) {
-        delete config.headers.Authorization;
       }
     } catch {
       // Storage access blocked or restricted; proceed without token

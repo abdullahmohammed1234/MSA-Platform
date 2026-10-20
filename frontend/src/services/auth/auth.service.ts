@@ -26,7 +26,6 @@ export const authService = {
    * Log user in and return user details and token.
    */
   async login(payload: LoginPayload): Promise<AuthResponse> {
-    await this.getCsrfCookie();
     const response = await api.post<AuthResponse>('/auth/login', payload);
     return response.data;
   },
@@ -35,7 +34,6 @@ export const authService = {
    * Register a new user account.
    */
   async register(payload: RegisterPayload): Promise<AuthResponse> {
-    await this.getCsrfCookie();
     const response = await api.post<AuthResponse>('/auth/register', payload);
     return response.data;
   },
@@ -48,7 +46,7 @@ export const authService = {
       const response = await api.post<{ message: string }>('/auth/logout');
       return response.data;
     } catch (e: any) {
-      // If the session was already expired on the server (419/401), client logout completes cleanly
+      // If the token was already expired on the server (419/401), client logout completes cleanly
       if (e?.response?.status === 419 || e?.response?.status === 401) {
         return { message: 'Logged out.' };
       }
@@ -68,7 +66,6 @@ export const authService = {
    * Send a password reset email request.
    */
   async forgotPassword(email: string): Promise<{ message: string }> {
-    await this.getCsrfCookie();
     const response = await api.post<{ message: string }>('/auth/forgot-password', { email });
     return response.data;
   },
@@ -77,7 +74,6 @@ export const authService = {
    * Reset the user password using a token.
    */
   async resetPassword(payload: ResetPasswordPayload): Promise<{ message: string }> {
-    await this.getCsrfCookie();
     const response = await api.post<{ message: string }>('/auth/reset-password', payload);
     return response.data;
   },
@@ -94,7 +90,6 @@ export const authService = {
    * Resend verification email.
    */
   async resendVerification(): Promise<{ message: string }> {
-    await this.getCsrfCookie();
     const response = await api.post<{ message: string }>('/auth/resend-verification');
     return response.data;
   }

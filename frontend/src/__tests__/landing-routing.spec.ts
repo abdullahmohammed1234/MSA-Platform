@@ -122,7 +122,8 @@ describe('Frontend Landing Page & Dashboard Routing (Phase 10.1)', () => {
 
       vi.mocked(authService.getMe).mockImplementation(() => pendingPromise as any);
 
-      // Concurrent calls
+      // Concurrent calls with persisted auth token
+      localStorage.setItem('auth_token', 'valid-probe-token');
       const p1 = authStore.restoreSession();
       const p2 = authStore.restoreSession();
 

@@ -9,26 +9,16 @@ const api = axios.create({
     'Content-Type': 'application/json',
     'X-Requested-With': 'XMLHttpRequest',
   },
-  withCredentials: true,
-  withXSRFToken: true,
+  withCredentials: false,
+  withXSRFToken: false,
 });
 
 api.interceptors.request.use(
   (config) => {
-    // Strip Authorization header on /auth/me so browser session cookie is authoritative
-    if (config.url?.includes('/auth/me')) {
-      if (config.headers) {
-        delete config.headers.Authorization;
-      }
-      return config;
-    }
-
     const token = localStorage.getItem('auth_token');
 
-    if (token && token !== 'sso_session') {
+    if (token) {
       config.headers.Authorization = `Bearer ${token}`;
-    } else if (config.headers?.Authorization?.includes('sso_session')) {
-      delete config.headers.Authorization;
     }
 
     return config;

@@ -19,29 +19,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Under Option A (Shared-Session SSO), requests originating from approved
-        // browser frontend origins authenticate strictly via shared web sessions.
-        // Personal access tokens cannot be used to bypass an invalidated or missing session
-        // from a stateful browser origin. Non-browser API clients continue to authenticate statelessly.
-        \Laravel\Sanctum\Sanctum::getAccessTokenFromRequestUsing(function (\Illuminate\Http\Request $request): ?string {
-            if (\Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::fromFrontend($request)) {
-                return null;
-            }
-
-            $token = $request->bearerToken();
-            if (! $token) {
-                return null;
-            }
-
-            if (str_contains($token, '|')) {
-                [$id, $secret] = explode('|', $token, 2);
-                if (! ctype_digit($id) || empty($secret)) {
-                    return null;
-                }
-            }
-
-            return $token;
-        });
 
         \Illuminate\Support\Facades\DB::listen(function (\Illuminate\Database\Events\QueryExecuted $query) {
             $this->app->make(\App\Support\AuthorizationMemo::class)->observeStatement($query->sql);

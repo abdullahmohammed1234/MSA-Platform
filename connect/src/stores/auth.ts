@@ -43,7 +43,7 @@ export const useAuthStore = defineStore('connect_auth', () => {
     user.value = newUser;
 
     try {
-      if (newToken && newToken !== 'sso_session') {
+      if (newToken) {
         localStorage.setItem(AUTH_TOKEN_KEY, newToken);
       } else {
         localStorage.removeItem(AUTH_TOKEN_KEY);
@@ -86,7 +86,7 @@ export const useAuthStore = defineStore('connect_auth', () => {
 
   /**
    * Verify and restore session on application mount.
-   * Leverages shared Sanctum session cookies across origins.
+   * Restores authenticated state from the stored Sanctum Bearer token.
    * Deduplicates concurrent probe requests so only a single /auth/me call executes.
    */
   async function restoreSession(): Promise<boolean> {
@@ -97,17 +97,23 @@ export const useAuthStore = defineStore('connect_auth', () => {
       return await restorePromise;
     }
 
+    const storedToken = getStoredToken();
+    if (!storedToken) {
+      isInitialized.value = true;
+      user.value = null;
+      token.value = null;
+      return false;
+    }
+
     isLoading.value = true;
     restorePromise = (async () => {
       try {
         const data = await authService.me();
         user.value = data.user;
-        if (!token.value) {
-          token.value = 'sso_session';
-        }
+        token.value = storedToken;
         return true;
       } catch {
-        // Invalidation or expired session
+        // Invalidation or expired token
         purgeAllUserData();
         return false;
       } finally {
