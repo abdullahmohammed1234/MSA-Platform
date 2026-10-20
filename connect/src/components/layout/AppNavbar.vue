@@ -144,9 +144,9 @@
 
           <!-- When Authenticated -->
           <template v-if="authStore.isAuthenticated">
-            <!-- Staff Triage shortcut for authorized staff -->
+            <!-- Staff Triage shortcut for administrators only -->
             <router-link
-              v-if="isStaff"
+              v-if="isAdmin"
               to="/app/support/staff"
               class="hidden 2xl:inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-[#b02e32] hover:bg-rose-50 border border-rose-200 transition-colors shrink-0"
               title="Staff Support Triage"
@@ -257,17 +257,7 @@ const logoAriaLabel = computed(() => {
 const unreadCount = computed(() => notificationsStore.unreadCount);
 const supportUnreadCount = computed(() => supportStore.memberUnreadCount);
 
-const isStaff = computed(() => {
-  const roles = authStore.roles;
-  const permissions = authStore.permissions;
-  return (
-    roles.includes('super-admin') ||
-    roles.includes('admin') ||
-    roles.includes('director') ||
-    roles.includes('dawah-coordinator') ||
-    permissions.includes('manage_support')
-  );
-});
+const isAdmin = computed(() => authStore.isAdmin);
 
 onMounted(async () => {
   if (authStore.isAuthenticated) {

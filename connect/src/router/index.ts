@@ -145,7 +145,7 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: 'Staff Support Triage — MSA Connect',
           requiresAuth: true,
-          requiresStaff: true,
+          requiresAdmin: true,
         },
       },
       {
@@ -272,19 +272,10 @@ router.beforeEach(async (to) => {
     return { path: '/app/dashboard' };
   }
 
-  // 4. Staff-Only Guard
-  const requiresStaff = to.matched.some((record) => record.meta?.requiresStaff);
-  if (requiresStaff) {
-    const roles = authStore.roles;
-    const permissions = authStore.permissions;
-    const isStaff =
-      roles.includes('super-admin') ||
-      roles.includes('admin') ||
-      roles.includes('director') ||
-      roles.includes('dawah-coordinator') ||
-      permissions.includes('manage_support');
-
-    if (!isStaff) {
+  // 4. Administrator-Only Guard (Staff Support Triage restricted to administrators)
+  const requiresAdmin = to.matched.some((record) => record.meta?.requiresAdmin || record.meta?.requiresStaff);
+  if (requiresAdmin) {
+    if (!authStore.isAdmin) {
       return { path: '/app/support' };
     }
   }

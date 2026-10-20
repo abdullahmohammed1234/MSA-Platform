@@ -238,15 +238,7 @@ const resolvedInquiriesCount = computed(() => {
 });
 
 const canAccessStaffTriage = computed(() => {
-  const roles = authStore.roles;
-  const permissions = authStore.permissions;
-  return (
-    roles.includes('super-admin') ||
-    roles.includes('admin') ||
-    roles.includes('director') ||
-    roles.includes('dawah-coordinator') ||
-    permissions.includes('manage_support')
-  );
+  return authStore.isAdmin;
 });
 
 const navTabs = computed<RouteTabItem[]>(() => {

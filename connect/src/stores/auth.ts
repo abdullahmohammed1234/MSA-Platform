@@ -34,6 +34,10 @@ export const useAuthStore = defineStore('connect_auth', () => {
   const roles = computed<string[]>(() => user.value?.roles ?? []);
   const permissions = computed<string[]>(() => user.value?.permissions ?? []);
   const isVerified = computed<boolean>(() => user.value?.is_verified ?? false);
+  const isAdmin = computed<boolean>(() => {
+    const userRoles = roles.value;
+    return userRoles.includes('super-admin') || userRoles.includes('admin');
+  });
 
   /**
    * Set or clear active session and storage.
@@ -192,6 +196,7 @@ export const useAuthStore = defineStore('connect_auth', () => {
     roles,
     permissions,
     isVerified,
+    isAdmin,
     login,
     restoreSession,
     updateProfile,
