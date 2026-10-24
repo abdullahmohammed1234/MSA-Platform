@@ -41,6 +41,18 @@ class RegisterRequest extends FormRequest
             'password' => 'required|string|min:8|confirmed',
             'terms' => 'required|accepted',
             'role' => 'required|in:member,volunteer',
+            'gender' => 'required|string|in:male,female',
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'gender.required' => 'Please select your gender (Male or Female).',
+            'gender.in' => 'Please select a valid gender option (Male or Female).',
         ];
     }
 }

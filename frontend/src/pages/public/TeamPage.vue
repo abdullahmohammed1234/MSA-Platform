@@ -19,7 +19,8 @@ useSeo({
   description: 'Meet the executive council and directors who lead and shape the Simon Fraser University Muslim Students Association.'
 });
 
-const teamMembers = ref<TeamMember[]>([...DEFAULT_TEAM_MEMBERS]);
+const teamMembers = ref<TeamMember[]>([]);
+const isLoaded = ref(false);
 const selectedMemberIndex = ref<number | null>(null);
 
 onMounted(async () => {
@@ -28,6 +29,8 @@ onMounted(async () => {
   } catch (err) {
     console.error('Failed to load team members:', err);
     teamMembers.value = [...DEFAULT_TEAM_MEMBERS];
+  } finally {
+    isLoaded.value = true;
   }
 });
 

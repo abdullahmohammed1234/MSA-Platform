@@ -17,6 +17,11 @@ export interface AnalyticsKpis {
   waitlist_conversions: number;
   total_capacity: number | null;
   capacity_utilization: number;
+  page_views?: number;
+  registrations_started?: number;
+  conversion_rate?: number;
+  paid_registrations?: number;
+  free_registrations?: number;
 }
 
 export interface RegistrationTrend {

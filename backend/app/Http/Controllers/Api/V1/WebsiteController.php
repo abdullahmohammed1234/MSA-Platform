@@ -20,6 +20,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Throwable;
 
 class WebsiteController extends Controller
@@ -55,16 +56,44 @@ class WebsiteController extends Controller
         ]);
     }
 
-    public function media(): JsonResponse
+    public function media(Request $request): JsonResponse
     {
-        $media = Cache::remember('website_media', 3600, function () {
-            return Media::query()
+        $viewer = $request->user('sanctum') ?? $request->user();
+        if (!$viewer && ($token = $request->bearerToken())) {
+            $accessToken = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
+            if ($accessToken && (!$accessToken->expires_at || $accessToken->expires_at->isFuture())) {
+                $viewer = $accessToken->tokenable;
+            }
+        }
+
+        $audienceKey = 'public';
+        if ($viewer && $viewer->gender === 'male') {
+            $audienceKey = 'male';
+        } elseif ($viewer && $viewer->gender === 'female') {
+            $audienceKey = 'female';
+        }
+
+        $media = Cache::remember("website_media_{$audienceKey}", 3600, function () use ($audienceKey) {
+            $query = Media::query()
                 ->with('category:id,name')
                 ->where(function ($query) {
                     $query->where('mime_type', 'like', 'image/%')
                         ->orWhere('mime_type', 'like', 'video/%');
-                })
-                ->orderByDesc('created_at')
+                });
+
+            if ($audienceKey === 'male') {
+                $query->whereIn('audience', ['both', 'brothers', 'male']);
+            } elseif ($audienceKey === 'female') {
+                $query->whereIn('audience', ['both', 'sisters', 'female']);
+            } else {
+                $query->where(function ($q) {
+                    $q->where('audience', 'both')
+                        ->orWhereNull('audience');
+                });
+            }
+
+            return $query->orderByDesc('created_at')
+                ->orderByDesc('id')
                 ->get()
                 ->map(function (Media $item) {
                     $title = $item->display_name;
@@ -85,7 +114,9 @@ class WebsiteController extends Controller
                         'title' => $title,
                         'description' => 'Uploaded via CMS media library.',
                         'category' => $item->category?->name ?: 'Community',
-                        'date' => $item->created_at?->format('Y') ?? date('Y'),
+                        'date' => $item->created_at ? $item->created_at->format('M Y') : date('M Y'),
+                        'created_at' => $item->created_at?->toIso8601String(),
+                        'audience' => $item->audience ?? 'both',
                         'isLandscape' => true,
                         'media_type' => $mediaType,
                         'mime_type' => $item->mime_type,
@@ -363,6 +394,11 @@ class WebsiteController extends Controller
                 ->get();
 
             if ($dbTeam->isEmpty()) {
+                // If CMS records exist but none are currently published, return empty array.
+                // Do not revert to default config if administrator has customized or unpublished content.
+                if (TeamMember::withTrashed()->exists()) {
+                    return [];
+                }
                 return config('website_defaults.team', []);
             }
 
@@ -376,7 +412,7 @@ class WebsiteController extends Controller
             })->toArray();
         });
 
-        if (empty($team)) {
+        if (empty($team) && ! TeamMember::withTrashed()->exists()) {
             $team = config('website_defaults.team', []);
         }
 
@@ -589,4 +625,51 @@ class WebsiteController extends Controller
         ], 200);
     }
 
+    public function streamMedia(Request $request, string $uuid)
+    {
+        $media = Media::where('uuid', $uuid)->firstOrFail();
+
+        $user = $request->user('sanctum');
+        if (!$user && ($token = $request->bearerToken())) {
+            $accessToken = \Laravel\Sanctum\PersonalAccessToken::findToken($token);
+            if ($accessToken && (!$accessToken->expires_at || $accessToken->expires_at->isFuture())) {
+                $user = $accessToken->tokenable;
+            }
+        }
+
+        $canManage = $user && method_exists($user, 'hasPermissionTo') && $user->hasPermissionTo('manage_media');
+
+        if (!$canManage && !$media->isAudienceEligible($user)) {
+            abort(403, 'Unauthorized audience for this media.');
+        }
+
+        $path = $media->filepath;
+        $mimeType = $media->mime_type ?: 'image/jpeg';
+        $filename = basename($path ?: $media->filename);
+        $headers = [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => 'inline; filename="' . $filename . '"',
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control' => 'private, no-store, max-age=0, must-revalidate',
+            'Pragma' => 'no-cache',
+        ];
+
+        if ($path && Storage::disk('local')->exists($path)) {
+            $fullPath = Storage::disk('local')->path($path);
+            $fileResponse = response()->file($fullPath, $headers);
+            $fileResponse->headers->set('Cache-Control', 'private, no-store, max-age=0, must-revalidate');
+            $fileResponse->headers->set('Pragma', 'no-cache');
+            return $fileResponse;
+        } elseif ($path && Storage::disk('public')->exists($path)) {
+            $fullPath = Storage::disk('public')->path($path);
+            $fileResponse = response()->file($fullPath, $headers);
+            $fileResponse->headers->set('Cache-Control', 'private, no-store, max-age=0, must-revalidate');
+            $fileResponse->headers->set('Pragma', 'no-cache');
+            return $fileResponse;
+        } elseif (filter_var($media->url, FILTER_VALIDATE_URL)) {
+            return redirect()->away($media->url);
+        } else {
+            abort(404, 'Media asset not found.');
+        }
+    }
 }

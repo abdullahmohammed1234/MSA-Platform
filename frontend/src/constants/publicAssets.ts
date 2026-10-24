@@ -85,13 +85,21 @@ export function resolveCmsMediaUrl(path: string | null | undefined): string {
   }
 
   if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) {
+    let resolved = path;
     if (/^https?:\/\/localhost(?::\d+)?/i.test(path)) {
-      return rewriteLocalhostUrl(path);
+      resolved = rewriteLocalhostUrl(path);
     }
-    return path;
+    return resolved;
   }
 
   const normalized = path.startsWith('/') ? path : `/${path}`;
+
+  if (
+    (normalized.startsWith('/api/v1/website/media/') && normalized.includes('/file')) ||
+    (normalized.startsWith('/api/v1/store/products/') && normalized.includes('/images/'))
+  ) {
+    return `${getApiOrigin()}${normalized}`;
+  }
 
   if (normalized.startsWith('/storage/') || normalized.startsWith('/uploads/')) {
     const storagePath = normalized.startsWith('/uploads/')

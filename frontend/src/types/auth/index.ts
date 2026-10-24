@@ -3,6 +3,7 @@ export interface User {
   uuid: string;
   name: string;
   email: string;
+  gender: 'male' | 'female' | null;
   avatar: string | null;
   is_active: boolean;
   is_verified: boolean;
@@ -27,6 +28,7 @@ export interface LoginPayload {
 export interface RegisterPayload {
   name: string;
   email: string;
+  gender: 'male' | 'female';
   password: string;
   password_confirmation: string;
   terms: boolean;

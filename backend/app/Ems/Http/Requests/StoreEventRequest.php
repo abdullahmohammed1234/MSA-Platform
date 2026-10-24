@@ -46,6 +46,9 @@ class StoreEventRequest extends EmsFormRequest
             'registration_deadline_at' => ['nullable', 'date'],
             'is_public' => ['nullable', 'boolean'],
             'is_featured' => ['nullable', 'boolean'],
+            'audience' => ['nullable', 'string', Rule::in(['both', 'male', 'female'])],
+            'show_volunteer_button' => ['nullable', 'boolean'],
+            'volunteer_url' => ['nullable', 'string', 'max:500'],
         ];
     }
 
@@ -83,6 +86,8 @@ class StoreEventRequest extends EmsFormRequest
             'max_tickets_per_order',
             'max_registrations_per_attendee',
             'registration_deadline_at',
+            'audience',
+            'volunteer_url',
         ]);
 
         if (isset($merge['slug']) && is_string($merge['slug'])) {

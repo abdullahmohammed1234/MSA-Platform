@@ -97,6 +97,9 @@ class EventService
             $event->slug = $this->uniqueSlug(
                 ($isManualMode && filled($data['slug'] ?? null)) ? $data['slug'] : $data['name']
             );
+            if ($event->show_volunteer_button && blank($event->volunteer_url)) {
+                $event->volunteer_url = filled($event->slug) ? ('/volunteer/' . $event->slug) : '/volunteer';
+            }
             $event->timezone = $data['timezone'] ?? config('ems.defaults.timezone');
 
             // New events always start in draft; status only moves through the
@@ -157,6 +160,10 @@ class EventService
                 $event->slug = $this->uniqueSlug($targetSlug, $event->id);
             } elseif (! $event->is_slug_custom && array_key_exists('name', $data) && $event->isDirty('name')) {
                 $event->slug = $this->uniqueSlug($event->name, $event->id);
+            }
+
+            if ($event->show_volunteer_button && blank($event->volunteer_url)) {
+                $event->volunteer_url = filled($event->slug) ? ('/volunteer/' . $event->slug) : '/volunteer';
             }
 
             $event->updated_by = $actor->id;
@@ -230,6 +237,10 @@ class EventService
             'registration_deadline_at',
             'is_public',
             'is_featured',
+            'audience',
+            'show_remaining_tickets',
+            'show_volunteer_button',
+            'volunteer_url',
         ]));
     }
 

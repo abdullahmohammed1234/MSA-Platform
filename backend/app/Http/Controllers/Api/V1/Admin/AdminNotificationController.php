@@ -131,7 +131,7 @@ class AdminNotificationController extends Controller
         $data = $request->validate([
             'title' => 'required|string|max:255',
             'message' => 'required|string',
-            'audience' => 'required|string|in:All,Volunteers,Mentors,Coordinators',
+            'audience' => 'required|string|in:All,Male,Female,Volunteers,Mentors,Coordinators',
         ]);
 
         $slug = Str::slug($data['title']);

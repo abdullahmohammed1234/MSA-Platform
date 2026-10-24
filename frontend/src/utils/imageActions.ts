@@ -20,7 +20,13 @@ export async function downloadImage(url: string, filename?: string): Promise<voi
   const targetName = filename ?? filenameFromUrl(url);
 
   try {
-    const response = await fetch(url);
+    const headers: Record<string, string> = {};
+    const token = typeof localStorage !== 'undefined' ? localStorage.getItem('auth_token') : null;
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
+    const response = await fetch(url, { headers });
     if (!response.ok) {
       throw new Error('Download failed');
     }

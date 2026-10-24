@@ -61,6 +61,7 @@ class PublicEventResource extends JsonResource
             'is_sold_out' => $capacity !== null && $remaining === 0,
             'waitlist_enabled' => (bool) $this->waitlist_enabled,
             'is_featured' => (bool) $this->is_featured,
+            'audience' => $this->audience ?? 'both',
             'is_accepting_registrations' => $this->isAcceptingRegistrations(),
 
             'registration_label' => $this->registrationLabel($remaining),

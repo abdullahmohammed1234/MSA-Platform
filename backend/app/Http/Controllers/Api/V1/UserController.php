@@ -29,6 +29,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
             'email' => 'sometimes|required|string|email|max:255|unique:users,email,'.$request->user()->id,
+            'gender' => 'sometimes|required|string|in:male,female',
         ]);
 
         $this->userService->updateProfile($request->user(), $validated);

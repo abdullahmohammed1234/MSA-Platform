@@ -348,96 +348,71 @@ class DatabaseSeeder extends Seeder
             Permission::whereIn('slug', $mentorPermissions)->pluck('id')->toArray()
         );
 
-        // 4. Seed Test Users
+        // 4. Seed Test Users (Local & Testing only - NEVER in production)
+        if (! app()->environment('production')) {
+            $findOrCreateTestUser = function (string $email, string $name) {
+                $user = User::withTrashed()->where('email', $email)->first();
+                if (! $user) {
+                    $user = User::create([
+                        'uuid' => (string) Str::uuid(),
+                        'email' => $email,
+                        'name' => $name,
+                        'password' => Hash::make('password'),
+                        'email_verified_at' => now(),
+                        'is_active' => true,
+                    ]);
+                } else {
+                    if ($user->trashed()) {
+                        $user->restore();
+                    }
+                }
+                return $user;
+            };
 
-        // Super Admin
-        $superAdminUser = User::firstOrCreate(
-            ['email' => 'superadmin@example.com'],
-            [
-                'uuid' => (string) Str::uuid(),
-                'name' => 'Super Admin',
-                'password' => Hash::make('password'),
-                'email_verified_at' => now(),
-                'is_active' => true,
-            ]
-        );
-        $superAdminUser->roles()->sync([$roles['super-admin']->id]);
+            // Super Admin
+            $superAdminUser = $findOrCreateTestUser('superadmin@example.com', 'Super Admin');
+            $superAdminUser->roles()->sync([$roles['super-admin']->id]);
 
-        // Admin
-        $adminUser = User::firstOrCreate(
-            ['email' => 'admin@example.com'],
-            [
-                'uuid' => (string) Str::uuid(),
-                'name' => 'Admin User',
-                'password' => Hash::make('password'),
-                'email_verified_at' => now(),
-                'is_active' => true,
-            ]
-        );
-        $adminUser->roles()->sync([$roles['admin']->id]);
+            // Admin
+            $adminUser = $findOrCreateTestUser('admin@example.com', 'Admin User');
+            $adminUser->roles()->sync([$roles['admin']->id]);
 
-        // Dawah Coordinator
-        $coordinatorUser = User::firstOrCreate(
-            ['email' => 'coordinator@example.com'],
-            [
-                'uuid' => (string) Str::uuid(),
-                'name' => 'Dawah Coordinator',
-                'password' => Hash::make('password'),
-                'email_verified_at' => now(),
-                'is_active' => true,
-            ]
-        );
-        $coordinatorUser->roles()->sync([$roles['dawah-coordinator']->id]);
+            // Dawah Coordinator
+            $coordinatorUser = $findOrCreateTestUser('coordinator@example.com', 'Dawah Coordinator');
+            $coordinatorUser->roles()->sync([$roles['dawah-coordinator']->id]);
 
-        // Mentor
-        $mentorUser = User::firstOrCreate(
-            ['email' => 'mentor@example.com'],
-            [
-                'uuid' => (string) Str::uuid(),
-                'name' => 'Mentor User',
-                'password' => Hash::make('password'),
-                'email_verified_at' => now(),
-                'is_active' => true,
-            ]
-        );
-        $mentorUser->roles()->sync([$roles['mentor']->id]);
+            // Mentor
+            $mentorUser = $findOrCreateTestUser('mentor@example.com', 'Mentor User');
+            $mentorUser->roles()->sync([$roles['mentor']->id]);
 
-        // Volunteer
-        $volunteerUser = User::firstOrCreate(
-            ['email' => 'volunteer@example.com'],
-            [
-                'uuid' => (string) Str::uuid(),
-                'name' => 'Volunteer User',
-                'password' => Hash::make('password'),
-                'email_verified_at' => now(),
-                'is_active' => true,
-            ]
-        );
-        $volunteerUser->roles()->sync([$roles['volunteer']->id]);
+            // Volunteer
+            $volunteerUser = $findOrCreateTestUser('volunteer@example.com', 'Volunteer User');
+            $volunteerUser->roles()->sync([$roles['volunteer']->id]);
 
-        // Seed Application Access for platform administrators
-        $allApps = ['admin-portal', 'dawah-academy', 'cms', 'dams', 'ems', 'store', 'donations', 'sponsorship', 'mlibms'];
-        foreach ($allApps as $app) {
+            // Seed Application Access for platform administrators
+            $allApps = ['admin-portal', 'dawah-academy', 'cms', 'dams', 'ems', 'store', 'donations', 'sponsorship', 'mlibms'];
+            foreach ($allApps as $app) {
+                \Illuminate\Support\Facades\DB::table('application_access')->insertOrIgnore([
+                    'user_id' => $superAdminUser->id,
+                    'application' => $app,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                \Illuminate\Support\Facades\DB::table('application_access')->insertOrIgnore([
+                    'user_id' => $adminUser->id,
+                    'application' => $app,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
             \Illuminate\Support\Facades\DB::table('application_access')->insertOrIgnore([
-                'user_id' => $superAdminUser->id,
-                'application' => $app,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-            \Illuminate\Support\Facades\DB::table('application_access')->insertOrIgnore([
-                'user_id' => $adminUser->id,
-                'application' => $app,
-                'created_at' => now(),
-                'updated_at' => now(),
+                ['user_id' => $coordinatorUser->id, 'application' => 'dams', 'created_at' => now(), 'updated_at' => now()],
+                ['user_id' => $coordinatorUser->id, 'application' => 'dawah-academy', 'created_at' => now(), 'updated_at' => now()],
+                ['user_id' => $mentorUser->id, 'application' => 'dawah-academy', 'created_at' => now(), 'updated_at' => now()],
+                ['user_id' => $volunteerUser->id, 'application' => 'dawah-academy', 'created_at' => now(), 'updated_at' => now()],
             ]);
         }
-
-        \Illuminate\Support\Facades\DB::table('application_access')->insertOrIgnore([
-            ['user_id' => $coordinatorUser->id, 'application' => 'dams', 'created_at' => now(), 'updated_at' => now()],
-            ['user_id' => $coordinatorUser->id, 'application' => 'dawah-academy', 'created_at' => now(), 'updated_at' => now()],
-            ['user_id' => $mentorUser->id, 'application' => 'dawah-academy', 'created_at' => now(), 'updated_at' => now()],
-            ['user_id' => $volunteerUser->id, 'application' => 'dawah-academy', 'created_at' => now(), 'updated_at' => now()],
-        ]);
 
         // 5. Seed CMS content
         $this->call(CmsSeeder::class);
@@ -468,5 +443,9 @@ class DatabaseSeeder extends Seeder
 
         // 10. Platform notification permissions + preference backfill
         $this->call(NotificationSeeder::class);
+
+        // 11. System, Platform, VMS, and Connect permissions
+        $this->call(SystemPermissionSeeder::class);
     }
 }
+

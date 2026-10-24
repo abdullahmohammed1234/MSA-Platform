@@ -20,6 +20,7 @@ import FloatingElement from '@/components/shared/FloatingElement.vue';
 import ParallaxSection from '@/components/shared/ParallaxSection.vue';
 import PublicButton from '@/components/shared/PublicButton.vue';
 import PublicCard from '@/components/shared/PublicCard.vue';
+import HomeVideoFeature from '@/components/website/HomeVideoFeature.vue';
 import { usePrayerTimes, campusPrayerInfo, fallbackPrayerTimes, prayerTabs, type Campus, type PrayerTab } from '@/composables/usePrayerTimes';
 import { useSeo } from '@/composables/useSeo';
 import websiteService from '@/services/website/websiteService';
@@ -232,7 +233,10 @@ const ctaBtnUrl = computed(() => homepageData.value?.cta?.button_url ?? '/contac
       </div>
     </section>
 
-    <!-- 2. PRAYER PREVIEW -->
+    <!-- 2. CINEMATIC VIDEO FEATURE -->
+    <HomeVideoFeature />
+
+    <!-- 3. PRAYER PREVIEW -->
     <section class="section-padding container-custom relative">
       <div class="absolute top-12 left-10 w-96 h-96 bg-primary-light/5 rounded-full blur-3xl -z-10 pointer-events-none" />
       <div class="flex flex-col lg:flex-row gap-16 lg:gap-24 items-stretch">

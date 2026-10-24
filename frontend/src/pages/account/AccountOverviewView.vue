@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { accountService, type AccountSummaryResponse } from '@/services/account/accountService';
 import { 
   CheckCircle2, 
@@ -7,10 +7,14 @@ import {
   Calendar, 
   ShoppingBag, 
   Heart, 
-  BookOpen, 
   Bell, 
   ExternalLink, 
-  Sparkles
+  Sparkles,
+  HelpCircle,
+  Mail,
+  MapPin,
+  ShieldCheck,
+  ChevronRight
 } from 'lucide-vue-next';
 
 const summary = ref<AccountSummaryResponse | null>(null);
@@ -28,6 +32,38 @@ const loadSummary = async () => {
     isLoading.value = false;
   }
 };
+
+const profileCompleteness = computed(() => {
+  if (!summary.value) {
+    return { percentage: 0, steps: [], completedCount: 0, totalCount: 4 };
+  }
+  const user = summary.value.user;
+  const steps = [
+    { 
+      label: 'Full Name', 
+      completed: Boolean(user.name && user.name.trim().length > 0),
+      hint: 'Display name configured' 
+    },
+    { 
+      label: 'Email Verification', 
+      completed: Boolean(user.email_verified),
+      hint: user.email_verified ? 'Email address verified' : 'Action needed: verify your email' 
+    },
+    { 
+      label: 'Community Role', 
+      completed: Boolean(user.community_status),
+      hint: user.community_status || 'Member profile active' 
+    },
+    { 
+      label: 'Security & Access', 
+      completed: (summary.value.applications?.length ?? 0) > 0,
+      hint: 'Connected platform applications' 
+    }
+  ];
+  const completedCount = steps.filter(s => s.completed).length;
+  const percentage = Math.round((completedCount / steps.length) * 100);
+  return { percentage, steps, completedCount, totalCount: steps.length };
+});
 
 onMounted(() => {
   loadSummary();
@@ -52,8 +88,8 @@ onMounted(() => {
 
     <!-- Summary Content -->
     <div v-else-if="summary" class="space-y-8">
-      <!-- 1. High Level Stat Counters -->
-      <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <!-- 1. High Level Stat Counters (4 Columns) -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div class="bg-white p-5 rounded-2xl border border-neutral-ivory shadow-soft hover:shadow-premium transition-all">
           <div class="flex items-center justify-between text-primary mb-2">
             <span class="text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/60">Events</span>
@@ -83,24 +119,85 @@ onMounted(() => {
 
         <div class="bg-white p-5 rounded-2xl border border-neutral-ivory shadow-soft hover:shadow-premium transition-all">
           <div class="flex items-center justify-between text-primary mb-2">
-            <span class="text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/60">Courses</span>
-            <BookOpen class="h-4 w-4" />
-          </div>
-          <div class="text-2xl font-black text-primary">{{ summary.counts.courses }}</div>
-          <p class="text-[10px] text-neutral-black/50 mt-1">Enrolled academy courses</p>
-        </div>
-
-        <div class="bg-white p-5 rounded-2xl border border-neutral-ivory shadow-soft hover:shadow-premium transition-all col-span-2 md:col-span-1">
-          <div class="flex items-center justify-between text-primary mb-2">
-            <span class="text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/60">Unread</span>
+            <span class="text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/60">Notifications</span>
             <Bell class="h-4 w-4" />
           </div>
           <div class="text-2xl font-black text-primary">{{ summary.counts.unread_notifications }}</div>
-          <p class="text-[10px] text-neutral-black/50 mt-1">Unread notifications</p>
+          <p class="text-[10px] text-neutral-black/50 mt-1">Unread alerts</p>
         </div>
       </div>
 
-      <!-- 2. Identity & Access Grid -->
+      <!-- 2. Profile Completeness Widget (ACCOUNT-02) -->
+      <div class="bg-white p-6 rounded-3xl border border-neutral-ivory shadow-soft">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+          <div class="flex items-center gap-3">
+            <div class="h-10 w-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center font-black">
+              <ShieldCheck class="h-5 w-5" />
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-sm font-extrabold uppercase tracking-wider text-primary">Profile Completeness</h2>
+                <span 
+                  :class="[
+                    'text-[10px] font-extrabold px-2 py-0.5 rounded-full border',
+                    profileCompleteness.percentage === 100 
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                      : 'bg-primary/10 text-primary border-primary/20'
+                  ]"
+                >
+                  {{ profileCompleteness.percentage }}% Complete
+                </span>
+              </div>
+              <p class="text-[11px] text-neutral-black/60 font-medium">
+                {{ profileCompleteness.percentage === 100 
+                  ? 'All essential profile credentials and verifications are in place.' 
+                  : 'Complete all steps below to unlock full MSA platform capabilities.' 
+                }}
+              </p>
+            </div>
+          </div>
+
+          <router-link 
+            v-if="profileCompleteness.percentage < 100"
+            to="/account/profile" 
+            class="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline self-start sm:self-auto"
+          >
+            Complete Profile
+            <ChevronRight class="h-3.5 w-3.5" />
+          </router-link>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="w-full bg-neutral-background h-2.5 rounded-full overflow-hidden mb-5 border border-neutral-ivory">
+          <div 
+            class="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-500 rounded-full"
+            :style="{ width: `${profileCompleteness.percentage}%` }"
+          />
+        </div>
+
+        <!-- Checklist Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div 
+            v-for="step in profileCompleteness.steps" 
+            :key="step.label"
+            :class="[
+              'p-3 rounded-2xl border flex items-center gap-2.5 transition-all',
+              step.completed 
+                ? 'bg-emerald-50/50 border-emerald-200/80 text-emerald-950' 
+                : 'bg-neutral-background/60 border-neutral-ivory text-neutral-black/70'
+            ]"
+          >
+            <CheckCircle2 v-if="step.completed" class="h-4 w-4 text-emerald-600 shrink-0" />
+            <XCircle v-else class="h-4 w-4 text-amber-500 shrink-0" />
+            <div class="min-w-0">
+              <span class="block text-[11px] font-extrabold truncate">{{ step.label }}</span>
+              <span class="block text-[10px] text-neutral-black/50 truncate">{{ step.hint }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Identity & Access Grid -->
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <!-- Identity Card -->
         <div class="bg-white p-6 rounded-3xl border border-neutral-ivory shadow-soft flex flex-col justify-between">
@@ -190,8 +287,8 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- 3. Learning & Volunteer Highlights -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <!-- 4. Volunteer Highlights & Support Grid (ACCOUNT-04) -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <!-- Volunteer Summary -->
         <div class="bg-white p-6 rounded-3xl border border-neutral-ivory shadow-soft">
           <div class="flex items-center justify-between border-b border-neutral-ivory pb-4 mb-4">
@@ -238,51 +335,54 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Academy Summary -->
-        <div class="bg-white p-6 rounded-3xl border border-neutral-ivory shadow-soft">
-          <div class="flex items-center justify-between border-b border-neutral-ivory pb-4 mb-4">
-            <div class="flex items-center gap-2">
-              <BookOpen class="h-4 w-4 text-primary" />
-              <h2 class="text-sm font-extrabold uppercase tracking-wider text-primary">Dawah Academy Progress</h2>
+        <!-- Help & Support Card (ACCOUNT-04) -->
+        <div class="bg-white p-6 rounded-3xl border border-neutral-ivory shadow-soft flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between border-b border-neutral-ivory pb-4 mb-4">
+              <div class="flex items-center gap-2">
+                <HelpCircle class="h-4 w-4 text-primary" />
+                <h2 class="text-sm font-extrabold uppercase tracking-wider text-primary">Need Help & Support?</h2>
+              </div>
+              <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+                Support Desk
+              </span>
             </div>
-            <router-link to="/academy" class="text-xs font-bold text-primary hover:underline">
-              Course Player &rarr;
-            </router-link>
-          </div>
 
-          <div class="grid grid-cols-3 gap-3 mb-4 text-center">
-            <div class="p-3 bg-neutral-background rounded-2xl border border-neutral-ivory">
-              <div class="text-lg font-black text-primary">{{ summary.academy.enrolled_courses }}</div>
-              <span class="text-[9px] font-extrabold uppercase text-neutral-black/60">Enrolled</span>
-            </div>
-            <div class="p-3 bg-neutral-background rounded-2xl border border-neutral-ivory">
-              <div class="text-lg font-black text-primary">{{ summary.academy.completed_courses }}</div>
-              <span class="text-[9px] font-extrabold uppercase text-neutral-black/60">Completed</span>
-            </div>
-            <div class="p-3 bg-neutral-background rounded-2xl border border-neutral-ivory">
-              <div class="text-lg font-black text-primary">{{ summary.academy.certificates }}</div>
-              <span class="text-[9px] font-extrabold uppercase text-neutral-black/60">Certificates</span>
-            </div>
-          </div>
+            <p class="text-xs text-neutral-black/70 leading-relaxed mb-4">
+              Have questions regarding event registrations, bookstore orders, volunteer hours, or platform access? Our executive team is here to assist.
+            </p>
 
-          <div v-if="summary.academy.recent_courses.length > 0">
-            <span class="text-[10px] font-extrabold uppercase text-neutral-black/50 block mb-2">Recent Courses</span>
-            <div class="space-y-2">
-              <div 
-                v-for="enrollment in summary.academy.recent_courses" 
-                :key="enrollment.id"
-                class="p-2.5 rounded-xl border border-neutral-ivory bg-neutral-background/40 flex items-center justify-between text-xs"
-              >
-                <span class="font-bold text-neutral-black truncate">{{ enrollment.course?.title || 'Course' }}</span>
-                <span class="px-2 py-0.5 rounded text-[9px] font-extrabold uppercase bg-primary/10 text-primary border border-primary/20">
-                  {{ enrollment.status }}
-                </span>
+            <div class="space-y-3">
+              <div class="flex items-start gap-3 p-3 rounded-2xl bg-neutral-background/60 border border-neutral-ivory text-xs">
+                <Mail class="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                <div>
+                  <span class="font-extrabold text-neutral-black block text-[11px]">Direct Support Email</span>
+                  <a href="mailto:support@sfumsa.ca" class="text-primary font-bold hover:underline">support@sfumsa.ca</a>
+                  <span class="text-neutral-black/40 text-[10px] block mt-0.5">Response typically within 24-48 hours</span>
+                </div>
+              </div>
+
+              <div class="flex items-start gap-3 p-3 rounded-2xl bg-neutral-background/60 border border-neutral-ivory text-xs">
+                <MapPin class="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                <div>
+                  <span class="font-extrabold text-neutral-black block text-[11px]">Campus Headquarters</span>
+                  <span class="text-neutral-black/70 font-medium">Student Union Building (SUB), Room 1420</span>
+                  <span class="text-neutral-black/40 text-[10px] block mt-0.5">SFU Burnaby Campus</span>
+                </div>
               </div>
             </div>
           </div>
 
-          <div v-else class="text-center py-4 text-neutral-black/50">
-            <p class="text-xs font-bold">No active academy course enrollments.</p>
+          <div class="pt-6 border-t border-neutral-ivory mt-6 flex items-center justify-between">
+            <a 
+              href="mailto:support@sfumsa.ca?subject=MSA%20Platform%20Support%20Inquiry" 
+              class="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1"
+            >
+              Contact Support Team &rarr;
+            </a>
+            <router-link to="/about" class="text-xs font-bold text-neutral-black/60 hover:text-primary transition-colors">
+              About SFU MSA
+            </router-link>
           </div>
         </div>
       </div>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin\CMS;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CMS\UploadAssetRequest;
 use App\Http\Requests\CMS\UploadMediaRequest;
+use App\Http\Requests\CMS\UpdateMediaRequest;
 use App\Services\CMS\MediaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -33,6 +34,7 @@ class MediaController extends Controller
         $media = $this->service->upload($file, Auth::id(), [
             'display_name' => $request->validated('display_name'),
             'category_id' => $request->validated('category_id'),
+            'audience' => $request->validated('audience') ?? 'both',
         ]);
 
         return response()->json([
@@ -58,6 +60,22 @@ class MediaController extends Controller
             'url' => $url,
             'owner' => 'cms',
         ], 201);
+    }
+
+    public function update(UpdateMediaRequest $request, string $uuid): JsonResponse
+    {
+        $media = $this->service->findByUuid($uuid);
+        if (!$media) {
+            return response()->json(['message' => 'Media file not found.'], 404);
+        }
+
+        $updated = $this->service->update($media, Auth::id(), $request->validated());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Media updated successfully.',
+            'media' => $updated,
+        ]);
     }
 
     public function destroy(string $uuid): JsonResponse

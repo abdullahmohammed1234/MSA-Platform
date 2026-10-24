@@ -55,6 +55,13 @@ class MediaRepository
         return $media->load(['uploader:id,name', 'category:id,uuid,name,slug']);
     }
 
+    public function update(Media $media, array $data): Media
+    {
+        $media->update($data);
+
+        return $media->fresh(['uploader:id,name', 'category:id,uuid,name,slug']);
+    }
+
     public function delete(Media $media): bool
     {
         return $media->delete();

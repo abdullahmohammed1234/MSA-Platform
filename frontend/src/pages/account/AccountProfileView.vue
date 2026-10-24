@@ -8,6 +8,7 @@ const authStore = useAuthStore();
 
 const name = ref<string>(authStore.user?.name || '');
 const email = ref<string>(authStore.user?.email || '');
+const gender = ref<'male' | 'female' | ''>((authStore.user?.gender as 'male' | 'female') || '');
 
 const isSubmitting = ref<boolean>(false);
 const isResendingVerification = ref<boolean>(false);
@@ -21,10 +22,15 @@ const handleUpdateProfile = async () => {
   errorMessage.value = null;
 
   try {
-    const response = await accountService.updateProfile({
+    const payload: { name: string; email: string; gender?: 'male' | 'female' } = {
       name: name.value,
       email: email.value,
-    });
+    };
+    if (gender.value) {
+      payload.gender = gender.value as 'male' | 'female';
+    }
+
+    const response = await accountService.updateProfile(payload);
 
     // Update store state with refreshed user payload
     await authStore.fetchUser();
@@ -62,6 +68,17 @@ const handleResendVerification = async () => {
           <p class="text-xs text-neutral-black/60 font-medium">Manage your display name and email address.</p>
         </div>
       </div>
+    </div>
+
+    <!-- Unset Gender Migration Banner -->
+    <div v-if="!authStore.user?.gender" class="bg-amber-50 border border-amber-300 rounded-3xl p-6 text-amber-900 shadow-soft space-y-2">
+      <div class="flex items-center gap-2 font-bold text-sm text-amber-900">
+        <AlertCircle class="h-5 w-5 text-amber-600 shrink-0" />
+        Complete Your Profile: Gender Required for Restricted Content
+      </div>
+      <p class="text-xs text-amber-800 leading-relaxed">
+        Your account currently does not have a gender assigned. Please select your gender (Male or Female) below to unlock access to gender-restricted campus events, media galleries, and merchandise model views.
+      </p>
     </div>
 
     <!-- Alert Messages -->
@@ -106,6 +123,40 @@ const handleResendVerification = async () => {
             />
             <p v-if="authStore.isVolunteer" class="text-[10px] text-neutral-black/50 mt-1 font-medium">
               Note: Volunteers must maintain an active @sfu.ca email address.
+            </p>
+          </div>
+
+          <!-- Gender Selection -->
+          <div>
+            <label class="block text-xs font-extrabold uppercase tracking-wider text-neutral-black mb-2">
+              Gender <span class="text-red-500">*</span>
+            </label>
+            <div class="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                id="profile-gender-male"
+                class="flex items-center justify-center p-3.5 rounded-2xl border text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                :class="gender === 'male'
+                  ? 'border-primary bg-primary/10 text-primary font-black shadow-sm'
+                  : 'border-neutral-ivory bg-neutral-background/50 hover:bg-neutral-background text-neutral-black'"
+                @click="gender = 'male'"
+              >
+                Male
+              </button>
+              <button
+                type="button"
+                id="profile-gender-female"
+                class="flex items-center justify-center p-3.5 rounded-2xl border text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+                :class="gender === 'female'
+                  ? 'border-primary bg-primary/10 text-primary font-black shadow-sm'
+                  : 'border-neutral-ivory bg-neutral-background/50 hover:bg-neutral-background text-neutral-black'"
+                @click="gender = 'female'"
+              >
+                Female
+              </button>
+            </div>
+            <p class="text-[10px] text-neutral-black/50 mt-1 font-medium">
+              Required to access gender-restricted campus events, media items, and merchandise views.
             </p>
           </div>
 

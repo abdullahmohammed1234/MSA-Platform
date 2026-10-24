@@ -44,6 +44,7 @@ export interface PublicEvent {
   status: EventStatus;
   status_label: string;
   status_tone: EventStatusTone;
+  audience?: 'both' | 'male' | 'female';
   capacity: number | null;
   remaining_capacity: number | null;
   is_full: boolean;
@@ -76,6 +77,8 @@ export interface PublicEventDetail extends PublicEvent {
   max_tickets_per_order?: number | null;
   max_registrations_per_attendee?: number | null;
   payments_enabled?: boolean;
+  show_volunteer_button?: boolean;
+  volunteer_url?: string | null;
   ticket_types?: import('@/types/ems/ticketing').PublicTicketType[];
   documents?: PublicEventDocument[];
 }

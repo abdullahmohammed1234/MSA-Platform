@@ -73,8 +73,11 @@ class Event extends Model
         'registration_deadline_at',
         'is_public',
         'is_featured',
+        'audience',
         'is_slug_custom',
         'show_remaining_tickets',
+        'show_volunteer_button',
+        'volunteer_url',
         'created_by',
         'updated_by',
         'series_id',
@@ -98,6 +101,7 @@ class Event extends Model
             'capacity' => 'integer',
             'waitlist_enabled' => 'boolean',
             'show_remaining_tickets' => 'boolean',
+            'show_volunteer_button' => 'boolean',
             'max_tickets_per_order' => 'integer',
             'max_registrations_per_attendee' => 'integer',
             'is_public' => 'boolean',
@@ -117,8 +121,10 @@ class Event extends Model
         'status' => EventStatus::Draft->value,
         'is_public' => false,
         'is_featured' => false,
+        'audience' => 'both',
         'is_slug_custom' => false,
         'waitlist_enabled' => false,
+        'show_volunteer_button' => false,
     ];
 
     protected static function newFactory(): EventFactory
@@ -567,5 +573,18 @@ class Event extends Model
             return 'OPEN';
         }
         return 'CLOSED';
+    }
+
+    public function isAudienceEligible(?User $user): bool
+    {
+        if ($this->audience === 'both') {
+            return true;
+        }
+
+        if ($user === null || empty($user->gender)) {
+            return false;
+        }
+
+        return $user->gender === $this->audience;
     }
 }

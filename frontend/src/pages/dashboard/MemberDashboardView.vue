@@ -10,7 +10,6 @@ import {
   Calendar, 
   Ticket, 
   Heart, 
-  BookOpen, 
   ShoppingBag, 
   Bell, 
   Sparkles, 
@@ -125,7 +124,7 @@ onMounted(async () => {
     <!-- Main Dashboard View -->
     <div v-else-if="dashboardData" class="space-y-8">
       <!-- 1. Quick Member Stat Cards -->
-      <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <router-link to="/account/activity" class="bg-white p-5 rounded-2xl border border-neutral-ivory shadow-soft hover:shadow-premium transition-all group">
           <div class="flex items-center justify-between text-primary mb-2">
             <span class="text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/60 group-hover:text-primary transition-colors">Events</span>
@@ -153,16 +152,7 @@ onMounted(async () => {
           <p class="text-[10px] text-neutral-black/50 mt-1">Shifts completed</p>
         </router-link>
 
-        <router-link to="/academy" class="bg-white p-5 rounded-2xl border border-neutral-ivory shadow-soft hover:shadow-premium transition-all group">
-          <div class="flex items-center justify-between text-primary mb-2">
-            <span class="text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/60 group-hover:text-primary transition-colors">Courses</span>
-            <BookOpen class="h-4 w-4" />
-          </div>
-          <div class="text-2xl font-black text-primary">{{ dashboardData.learning?.completed_courses ?? 0 }}</div>
-          <p class="text-[10px] text-neutral-black/50 mt-1">Completed courses</p>
-        </router-link>
-
-        <router-link to="/notifications" class="bg-white p-5 rounded-2xl border border-neutral-ivory shadow-soft hover:shadow-premium transition-all group col-span-2 md:col-span-1">
+        <router-link to="/notifications" class="bg-white p-5 rounded-2xl border border-neutral-ivory shadow-soft hover:shadow-premium transition-all group">
           <div class="flex items-center justify-between text-primary mb-2">
             <span class="text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/60 group-hover:text-primary transition-colors">Unread</span>
             <Bell class="h-4 w-4" />
@@ -585,8 +575,8 @@ onMounted(async () => {
           </div>
         </section>
 
-        <!-- 5. Scope C: Volunteer Activity, Commitments & Learning Snapshots Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <!-- 5. Scope C: Volunteer Activity & Commitments -->
+        <div class="grid grid-cols-1 gap-8">
           <!-- Scope C: Personal Volunteer Activity & Commitments Card -->
           <div class="bg-white p-6 sm:p-8 rounded-3xl border border-neutral-ivory shadow-soft flex flex-col justify-between space-y-4">
             <div class="flex items-center justify-between border-b border-neutral-ivory pb-4">
@@ -704,50 +694,6 @@ onMounted(async () => {
               <router-link to="/volunteer" class="inline-flex items-center gap-1 px-4 py-2 bg-primary text-white rounded-xl text-xs font-bold hover:bg-secondary transition-all">
                 Become a Volunteer
               </router-link>
-            </div>
-          </div>
-
-          <!-- Learning Card (Academy) -->
-          <div class="bg-white p-6 sm:p-8 rounded-3xl border border-neutral-ivory shadow-soft flex flex-col justify-between space-y-4">
-            <div class="flex items-center justify-between border-b border-neutral-ivory pb-4">
-              <div class="flex items-center gap-2">
-                <BookOpen class="h-5 w-5 text-primary" />
-                <h2 class="text-sm font-extrabold uppercase tracking-wider text-primary">Learning Progress</h2>
-              </div>
-              <router-link to="/academy" class="text-xs font-bold text-primary hover:underline">
-                Course Player &rarr;
-              </router-link>
-            </div>
-
-            <div class="space-y-4">
-              <div class="grid grid-cols-2 gap-3 text-center">
-                <div class="p-3 bg-neutral-background rounded-2xl border border-neutral-ivory">
-                  <div class="text-xl font-black text-primary">{{ dashboardData.learning.completed_courses }}</div>
-                  <span class="text-[9px] font-extrabold uppercase text-neutral-black/60">Completed Courses</span>
-                </div>
-                <div class="p-3 bg-neutral-background rounded-2xl border border-neutral-ivory">
-                  <div class="text-xl font-black text-primary">{{ dashboardData.learning.certificates_count }}</div>
-                  <span class="text-[9px] font-extrabold uppercase text-neutral-black/60">Certificates Earned</span>
-                </div>
-              </div>
-
-              <div v-if="dashboardData.learning.active_course" class="p-4 rounded-2xl border border-primary/20 bg-primary/5 space-y-2">
-                <span class="text-[10px] font-extrabold uppercase tracking-wider text-primary">Continue Learning</span>
-                <h4 class="font-extrabold text-xs text-neutral-black">{{ dashboardData.learning.active_course.title }}</h4>
-                <router-link 
-                  to="/academy" 
-                  class="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline pt-1"
-                >
-                  Resume Course &rarr;
-                </router-link>
-              </div>
-
-              <div v-else class="text-center py-4 text-neutral-black/50 space-y-2">
-                <p class="text-xs font-bold">No course in progress</p>
-                <router-link to="/featured-opportunities" class="inline-block text-xs font-bold text-primary hover:underline">
-                  Explore Learning Courses &rarr;
-                </router-link>
-              </div>
             </div>
           </div>
         </div>

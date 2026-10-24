@@ -9,6 +9,7 @@ import {
   membersMatching,
   vicePresidentMembers,
   buildOrgBranches,
+  unassignedTeamMembers,
 } from '@/data/teamOrg';
 
 const props = defineProps<{
@@ -29,6 +30,7 @@ const secretary = computed(() =>
 const execRow = computed(() => [...vicePresidents.value, ...secretary.value]);
 const independents = computed(() => independentCoordinators(props.members));
 const branches = computed(() => buildOrgBranches(props.members));
+const otherMembers = computed(() => unassignedTeamMembers(props.members));
 
 const hasChart = computed(
   () =>
@@ -36,6 +38,7 @@ const hasChart = computed(
     || execRow.value.length > 0
     || branches.value.length > 0
     || independents.value.length > 0
+    || otherMembers.value.length > 0
 );
 </script>
 
@@ -187,6 +190,33 @@ const hasChart = computed(
         <div class="flex flex-wrap justify-center gap-8 sm:gap-10">
           <button
             v-for="member in independents"
+            :key="member.name"
+            type="button"
+            class="group w-36 text-center cursor-zoom-in"
+            @click="emit('select', member)"
+          >
+            <div class="relative mx-auto mb-3 h-20 w-20 rounded-full overflow-hidden ring-2 ring-neutral-gray/20 group-hover:ring-secondary/50 shadow-soft bg-primary/5 transition-all">
+              <img
+                :src="member.img"
+                :alt="member.name"
+                class="h-full w-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700"
+                @error="($event.target as HTMLImageElement).src = TEAM_FALLBACK_IMAGE"
+              />
+            </div>
+            <p class="text-xs font-display font-semibold text-primary leading-tight">{{ member.name }}</p>
+            <p class="mt-1 text-[8px] font-black uppercase tracking-[0.16em] text-neutral-black/40">{{ member.role }}</p>
+          </button>
+        </div>
+      </div>
+
+      <!-- Additional Officers & Team Members -->
+      <div v-if="otherMembers.length" class="mt-16 sm:mt-20 w-full">
+        <p class="text-center text-[10px] font-black uppercase tracking-[0.35em] text-neutral-black/30 mb-8">
+          Additional Officers &amp; Team Members
+        </p>
+        <div class="flex flex-wrap justify-center gap-8 sm:gap-10">
+          <button
+            v-for="member in otherMembers"
             :key="member.name"
             type="button"
             class="group w-36 text-center cursor-zoom-in"

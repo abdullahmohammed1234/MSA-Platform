@@ -87,4 +87,40 @@ class AdminStoreProductController extends Controller
 
         return ApiResponse::deleted('Merchandise product archived successfully.');
     }
+
+    public function uploadImage(Request $request, StoreProduct $product): JsonResponse
+    {
+        $this->authorize('update', $product);
+
+        $request->validate([
+            'image_type' => 'required|string|in:sister,brother,neutral',
+            'view_type' => 'required|string|in:front,back',
+            'file' => 'nullable|file|image|mimes:jpeg,png,webp,jpg|max:10240',
+            'image_url' => 'nullable|string|max:2048',
+        ]);
+
+        if (!$request->hasFile('file') && empty($request->input('image_url'))) {
+            return ApiResponse::error('Either a file or an image_url must be provided.', 422);
+        }
+
+        $fileOrUrl = $request->file('file') ?? $request->input('image_url');
+
+        $image = $this->productService->saveMerchandiseImage(
+            $product,
+            $request->input('image_type'),
+            $request->input('view_type'),
+            $fileOrUrl
+        );
+
+        return ApiResponse::success(
+            [
+                'uuid' => $image->uuid,
+                'image_type' => $image->image_type,
+                'view_type' => $image->view_type,
+                'is_private' => $image->is_private,
+                'image_url' => $image->image_url,
+            ],
+            'Image uploaded and associated successfully.'
+        );
+    }
 }

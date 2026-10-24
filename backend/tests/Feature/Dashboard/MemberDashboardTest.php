@@ -211,5 +211,9 @@ class MemberDashboardTest extends TestCase
             ->assertJsonPath('user.community_status', 'Administrator')
             ->assertJsonPath('next_event', null)
             ->assertJsonPath('recent_order', null);
+
+        $applications = collect($response->json('applications'))->keyBy('slug');
+        $this->assertEquals('/ems', $applications->get('ems')['path']);
+        $this->assertEquals('/library/admin', $applications->get('mlibms')['path']);
     }
 }

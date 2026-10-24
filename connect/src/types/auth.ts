@@ -6,6 +6,7 @@ export interface User {
   uuid: string;
   name: string;
   email: string;
+  gender?: 'male' | 'female' | null;
   avatar: string | null;
   is_active: boolean;
   is_verified: boolean;

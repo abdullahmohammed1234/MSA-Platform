@@ -42,4 +42,18 @@ class UserFactory extends Factory
             'email_verified_at' => null,
         ]);
     }
+
+    public function male(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'gender' => 'male',
+        ]);
+    }
+
+    public function female(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'gender' => 'female',
+        ]);
+    }
 }

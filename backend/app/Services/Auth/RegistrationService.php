@@ -34,6 +34,7 @@ class RegistrationService
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
+            'gender' => $data['gender'] ?? null,
             'uuid' => (string) Str::uuid(),
             'is_active' => true,
         ];

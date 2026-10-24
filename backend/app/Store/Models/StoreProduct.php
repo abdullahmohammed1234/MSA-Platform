@@ -23,12 +23,14 @@ class StoreProduct extends Model
         'sku',
         'status',
         'has_variants',
+        'is_merchandise',
         'inventory_quantity',
     ];
 
     protected $casts = [
         'status' => ProductStatus::class,
         'has_variants' => 'boolean',
+        'is_merchandise' => 'boolean',
         'price_cents' => 'integer',
         'inventory_quantity' => 'integer',
     ];
@@ -70,5 +72,36 @@ class StoreProduct extends Model
     public function getFormattedPriceAttribute(): string
     {
         return '$' . number_format($this->price_cents / 100, 2);
+    }
+
+    public function getMerchandiseImage(string $imageType, string $viewType): ?StoreProductImage
+    {
+        return $this->images->first(function (StoreProductImage $img) use ($imageType, $viewType) {
+            return $img->image_type === $imageType && $img->view_type === $viewType;
+        });
+    }
+
+    public function hasAllRequiredMerchandiseImages(): bool
+    {
+        if (! $this->is_merchandise) {
+            return true;
+        }
+
+        $required = [
+            ['sister', 'front'],
+            ['sister', 'back'],
+            ['brother', 'front'],
+            ['brother', 'back'],
+            ['neutral', 'front'],
+            ['neutral', 'back'],
+        ];
+
+        foreach ($required as [$type, $view]) {
+            if ($this->getMerchandiseImage($type, $view) === null) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

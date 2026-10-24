@@ -226,7 +226,9 @@ onMounted(() => {
               v-model="form.audience"
               class="w-full px-3.5 py-2.5 border border-neutral-ivory rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 bg-white"
             >
-              <option value="All">All Registered Users</option>
+              <option value="All">All eligible recipients</option>
+              <option value="Male">Male only (Brothers)</option>
+              <option value="Female">Female only (Sisters)</option>
               <option value="Volunteers">Volunteers Only</option>
               <option value="Mentors">Mentors Only</option>
               <option value="Coordinators">Coordinators Only</option>

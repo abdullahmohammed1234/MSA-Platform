@@ -502,7 +502,7 @@ class MemberDashboardService
             'ems' => [
                 'title' => 'Event Management System (EMS)',
                 'description' => 'MSA events ticketing, registration, and attendance portal.',
-                'path' => '/admin/systems/ems',
+                'path' => '/ems',
                 'is_admin' => true,
             ],
             'cms' => [
@@ -532,7 +532,7 @@ class MemberDashboardService
             'mlibms' => [
                 'title' => 'Library Management System (MLIBMS)',
                 'description' => 'Library catalog search, book intake, and circulation control.',
-                'path' => '/admin/systems/library',
+                'path' => '/library/admin',
                 'is_admin' => true,
             ],
             'connect' => [

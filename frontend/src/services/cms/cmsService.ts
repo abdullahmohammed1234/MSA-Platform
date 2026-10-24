@@ -8,6 +8,7 @@ import type {
   Media,
   MediaCategory,
   MediaUploadOptions,
+  MediaUpdateOptions,
   CmsRevision,
   CmsDashboardStats,
   CmsDashboardActivity,
@@ -225,11 +226,19 @@ export const cmsService = {
     if (options.category_id != null) {
       formData.append('category_id', String(options.category_id));
     }
+    if (options.audience) {
+      formData.append('audience', options.audience);
+    }
     const response = await client.post('/cms/media', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
+    return response.data.media;
+  },
+
+  async updateMedia(uuid: string, options: MediaUpdateOptions): Promise<Media> {
+    const response = await client.put(`/cms/media/${uuid}`, options);
     return response.data.media;
   },
 

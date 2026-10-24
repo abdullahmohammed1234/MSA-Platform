@@ -53,6 +53,7 @@ class UploadMediaRequest extends FormRequest
             'file' => ['required', 'file'],
             'display_name' => ['nullable', 'string', 'max:255'],
             'category_id' => ['nullable', 'integer', 'exists:media_categories,id'],
+            'audience' => ['required', 'string', 'in:both,brothers,sisters,male,female'],
         ];
     }
 
@@ -130,6 +131,8 @@ class UploadMediaRequest extends FormRequest
             'file.required' => 'Please select a file to upload.',
             'file.mimes' => 'Unsupported file type. Allowed: images, videos (MP4/WebM/MOV/OGV), PDF, DOC, DOCX, ZIP.',
             'category_id.exists' => 'The selected media category is invalid.',
+            'audience.required' => 'The audience field is required.',
+            'audience.in' => 'The selected audience must be one of: brothers, sisters, or both.',
         ];
     }
 

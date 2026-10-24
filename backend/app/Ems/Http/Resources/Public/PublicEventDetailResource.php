@@ -30,6 +30,8 @@ class PublicEventDetailResource extends PublicEventResource
             'registration_closed_at' => $this->registration_closed_at?->toIso8601String(),
             'registration_deadline_at' => $this->registration_deadline_at?->toIso8601String(),
             'waitlist_enabled' => (bool) $this->waitlist_enabled,
+            'show_volunteer_button' => (bool) $this->show_volunteer_button,
+            'volunteer_url' => $this->volunteer_url ?: ($this->show_volunteer_button && $this->slug ? ('/volunteer/' . $this->slug) : $this->volunteer_url),
             'max_tickets_per_order' => $this->max_tickets_per_order,
             'max_registrations_per_attendee' => $this->max_registrations_per_attendee,
             'payments_enabled' => (bool) config('ems.payments.enabled', false),

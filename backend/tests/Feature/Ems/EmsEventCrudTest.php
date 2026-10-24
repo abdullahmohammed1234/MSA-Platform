@@ -317,4 +317,59 @@ class EmsEventCrudTest extends EmsTestCase
             'is_featured' => false,
         ]);
     }
+
+    public function test_an_event_can_be_created_and_updated_with_volunteer_button_and_url(): void
+    {
+        $administrator = $this->emsUser(EmsRoles::EVENT_ADMINISTRATOR);
+        $startAt = now()->addWeeks(2)->startOfHour();
+
+        // 1. Create with show_volunteer_button = true and empty volunteer_url -> auto-generates /volunteer/{slug}
+        $response = $this->actingAsEms($administrator)->postJson($this->url('events'), [
+            'name' => 'Volunteer Driven Event',
+            'start_at' => $startAt->toDateTimeString(),
+            'show_volunteer_button' => true,
+        ]);
+
+        $response->assertCreated();
+        $response->assertJsonPath('data.show_volunteer_button', true);
+        $uuid = $response->json('data.uuid');
+        $slug = $response->json('data.slug');
+        $this->assertNotEmpty($slug);
+        $this->assertSame("/volunteer/{$slug}", $response->json('data.volunteer_url'));
+
+        $this->assertDatabaseHas('ems_events', [
+            'uuid' => $uuid,
+            'show_volunteer_button' => true,
+            'volunteer_url' => "/volunteer/{$slug}",
+        ]);
+
+        // 2. Update with custom volunteer_url
+        $updateResponse = $this->actingAsEms($administrator)->putJson($this->url("events/{$uuid}"), [
+            'volunteer_url' => 'https://forms.gle/custom-volunteer-link',
+        ]);
+
+        $updateResponse->assertOk();
+        $updateResponse->assertJsonPath('data.show_volunteer_button', true);
+        $updateResponse->assertJsonPath('data.volunteer_url', 'https://forms.gle/custom-volunteer-link');
+
+        $this->assertDatabaseHas('ems_events', [
+            'uuid' => $uuid,
+            'show_volunteer_button' => true,
+            'volunteer_url' => 'https://forms.gle/custom-volunteer-link',
+        ]);
+
+        // 3. Update to disable volunteer button
+        $disableResponse = $this->actingAsEms($administrator)->putJson($this->url("events/{$uuid}"), [
+            'show_volunteer_button' => false,
+        ]);
+
+        $disableResponse->assertOk();
+        $disableResponse->assertJsonPath('data.show_volunteer_button', false);
+
+        $this->assertDatabaseHas('ems_events', [
+            'uuid' => $uuid,
+            'show_volunteer_button' => false,
+        ]);
+    }
 }
+

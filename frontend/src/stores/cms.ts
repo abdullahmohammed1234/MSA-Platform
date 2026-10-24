@@ -6,6 +6,7 @@ import type {
   Media,
   MediaCategory,
   MediaUploadOptions,
+  MediaUpdateOptions,
   CmsDashboardStats,
   CmsDashboardActivity,
 } from '@/types/cms';
@@ -150,6 +151,24 @@ export const useCmsStore = defineStore('cms', () => {
     }
   }
 
+  async function updateMedia(uuid: string, options: MediaUpdateOptions) {
+    isLoading.value = true;
+    error.value = null;
+    try {
+      const updated = await cmsService.updateMedia(uuid, options);
+      const index = mediaList.value.findIndex(item => item.uuid === uuid);
+      if (index !== -1) {
+        mediaList.value[index] = updated;
+      }
+      return updated;
+    } catch (err: any) {
+      error.value = err.response?.data?.message || 'Failed to update media.';
+      throw err;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   return {
     sections,
     mediaList,
@@ -166,6 +185,7 @@ export const useCmsStore = defineStore('cms', () => {
     fetchMediaCategories,
     createMediaCategory,
     uploadMedia,
+    updateMedia,
     deleteMedia,
   };
 });

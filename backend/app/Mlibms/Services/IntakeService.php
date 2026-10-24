@@ -68,32 +68,55 @@ class IntakeService
                 $publisherId = $bookPayload['publisher_id'];
             }
 
-            $book = Book::create([
-                'title' => trim($bookPayload['title']),
-                'subtitle' => $bookPayload['subtitle'] ?? null,
-                'primary_category_id' => $bookPayload['primary_category_id'] ?? null,
-                'publisher_id' => $publisherId,
-                'isbn_10' => $cleanIsbn10,
-                'isbn_13' => $cleanIsbn13,
-                'edition' => $bookPayload['edition'] ?? null,
-                'publication_year' => $bookPayload['publication_year'] ?? null,
-                'language' => $bookPayload['language'] ?? 'English',
-                'summary' => $bookPayload['summary'] ?? null,
-                'cover_image_url' => $bookPayload['cover_image_url'] ?? null,
-                'default_loan_days' => $bookPayload['default_loan_days'] ?? 14,
-                'is_reference_only' => $bookPayload['is_reference_only'] ?? false,
-            ]);
+            $existingBook = null;
+            if ($cleanIsbn13 || $cleanIsbn10) {
+                $existingBook = Book::where(function ($q) use ($cleanIsbn13, $cleanIsbn10) {
+                    if ($cleanIsbn13) {
+                        $q->where('isbn_13', $cleanIsbn13);
+                    }
+                    if ($cleanIsbn10) {
+                        $q->orWhere('isbn_10', $cleanIsbn10);
+                    }
+                })->first();
+            }
 
-            if (!empty($bookPayload['author_names'])) {
-                foreach ((array) $bookPayload['author_names'] as $authorName) {
-                    if (trim($authorName) !== '') {
-                        $author = Author::firstOrCreate(
-                            ['name' => trim($authorName)],
-                            ['slug' => \Illuminate\Support\Str::slug($authorName)]
-                        );
-                        $book->authors()->attach($author->id, ['role' => 'author']);
+            if ($existingBook !== null) {
+                $book = $existingBook;
+            } else {
+                $book = Book::create([
+                    'title' => trim($bookPayload['title']),
+                    'subtitle' => $bookPayload['subtitle'] ?? null,
+                    'primary_category_id' => $bookPayload['primary_category_id'] ?? null,
+                    'publisher_id' => $publisherId,
+                    'isbn_10' => $cleanIsbn10,
+                    'isbn_13' => $cleanIsbn13,
+                    'edition' => $bookPayload['edition'] ?? null,
+                    'publication_year' => $bookPayload['publication_year'] ?? null,
+                    'language' => $bookPayload['language'] ?? 'English',
+                    'summary' => $bookPayload['summary'] ?? null,
+                    'cover_image_url' => $bookPayload['cover_image_url'] ?? null,
+                    'default_loan_days' => $bookPayload['default_loan_days'] ?? 14,
+                    'is_reference_only' => $bookPayload['is_reference_only'] ?? false,
+                ]);
+
+                if (!empty($bookPayload['author_names'])) {
+                    foreach ((array) $bookPayload['author_names'] as $authorName) {
+                        if (trim($authorName) !== '') {
+                            $author = Author::firstOrCreate(
+                                ['name' => trim($authorName)],
+                                ['slug' => \Illuminate\Support\Str::slug($authorName)]
+                            );
+                            $book->authors()->attach($author->id, ['role' => 'author']);
+                        }
                     }
                 }
+            }
+
+            // Ensure manual book entry always reliably creates at least one physical copy (barcode/ticket record)
+            if (empty($copiesPayload)) {
+                $copiesPayload = [
+                    ['condition' => 'good', 'notes' => 'Initial intake copy'],
+                ];
             }
 
             foreach ($copiesPayload as $copyData) {
@@ -122,12 +145,12 @@ class IntakeService
         ?int $replacementCostCents = null,
         ?string $notes = null
     ): Copy {
-        $nextId = (Copy::max('id') ?? 0) + 1;
+        $nextId = (Copy::withTrashed()->max('id') ?? 0) + 1;
         do {
             $accessionNumber = 'MLIB-A-' . str_pad((string) $nextId, 6, '0', STR_PAD_LEFT);
             $barcode = 'MLIB-C-' . str_pad((string) $nextId, 6, '0', STR_PAD_LEFT);
             $nextId++;
-        } while (Copy::where('barcode', $barcode)->orWhere('accession_number', $accessionNumber)->exists());
+        } while (Copy::withTrashed()->where('barcode', $barcode)->orWhere('accession_number', $accessionNumber)->exists());
 
         return Copy::create([
             'book_id' => $book->id,

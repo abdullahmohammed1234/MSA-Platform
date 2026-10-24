@@ -16,12 +16,16 @@ class StoreProductImage extends Model
         'product_id',
         'image_path',
         'image_url',
+        'image_type',
+        'view_type',
+        'is_private',
         'display_order',
         'is_primary',
     ];
 
     protected $casts = [
         'is_primary' => 'boolean',
+        'is_private' => 'boolean',
         'display_order' => 'integer',
     ];
 

@@ -17,7 +17,10 @@ export interface ProductVariant {
 export interface ProductImage {
   uuid: string;
   image_url: string;
+  image_type?: 'sister' | 'brother' | 'neutral' | null;
+  view_type?: 'front' | 'back' | null;
   is_primary: boolean;
+  is_private?: boolean;
   display_order: number;
 }
 
@@ -34,10 +37,14 @@ export interface StoreProduct {
   status: ProductStatus;
   status_label: string;
   has_variants: boolean;
+  is_merchandise?: boolean;
   inventory_quantity: number;
   primary_image_url?: string | null;
+  front_image_url?: string | null;
+  back_image_url?: string | null;
   images: ProductImage[];
   variants: ProductVariant[];
+  merchandise_images?: Record<string, { uuid: string; image_url: string; image_type: string; view_type: string; is_private: boolean } | null>;
   created_at: string;
   updated_at: string;
 }

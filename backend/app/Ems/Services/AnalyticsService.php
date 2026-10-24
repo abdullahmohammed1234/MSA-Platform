@@ -115,6 +115,17 @@ class AnalyticsService
             $capacityUtilization = round(($totalRegs / $totalCapacity) * 100, 1);
         }
 
+        // Views, conversions & paid vs free breakdown
+        $views = (int) Event::whereIn('id', $eventIds)->sum('views_count');
+        $started = (int) Event::whereIn('id', $eventIds)->sum('registrations_started_count');
+        $conversionRate = $views > 0 ? round(($totalRegs / $views) * 100, 1) : 0.0;
+
+        $paidRegIds = Payment::whereIn('registration_id', function ($query) use ($eventIds) {
+            $query->select('id')->from('ems_registrations')->whereIn('event_id', $eventIds);
+        })->where('status', PaymentStatus::Paid->value)->pluck('registration_id')->unique();
+        $paidRegs = (int) Registration::whereIn('id', $paidRegIds)->sum('quantity');
+        $freeRegs = max(0, $totalRegs - $paidRegs);
+
         // 4. Registration Trends Over Time
         $registrationTrends = Registration::whereIn('event_id', $eventIds)
             ->selectRaw('DATE(created_at) as date, SUM(quantity) as count')
@@ -141,6 +152,11 @@ class AnalyticsService
                 'total_registrations' => $totalRegs,
                 'confirmed_registrations' => $confirmedRegs,
                 'cancelled_registrations' => $cancelledRegs,
+                'paid_registrations' => $paidRegs,
+                'free_registrations' => $freeRegs,
+                'page_views' => $views,
+                'registrations_started' => $started,
+                'conversion_rate' => $conversionRate,
                 'tickets_issued' => $ticketsIssued,
                 'tickets_sold' => $confirmedRegs, // confirmed registers counts as tickets sold
                 'checked_in' => $checkedIn,
@@ -596,6 +612,11 @@ class AnalyticsService
                 'total_registrations' => 0,
                 'confirmed_registrations' => 0,
                 'cancelled_registrations' => 0,
+                'paid_registrations' => 0,
+                'free_registrations' => 0,
+                'page_views' => 0,
+                'registrations_started' => 0,
+                'conversion_rate' => 0.0,
                 'tickets_issued' => 0,
                 'tickets_sold' => 0,
                 'checked_in' => 0,

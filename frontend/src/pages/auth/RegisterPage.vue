@@ -13,6 +13,7 @@ const authStore = useAuthStore();
 
 const name = ref('');
 const email = ref('');
+const gender = ref<'male' | 'female' | ''>('');
 const password = ref('');
 const passwordConfirmation = ref('');
 const termsAccepted = ref(false);
@@ -54,6 +55,12 @@ const handleRegister = async () => {
     return;
   }
 
+  if (!gender.value) {
+    formError.value = 'Please select your gender (Male or Female).';
+    validationErrors.value = { gender: ['Gender selection is required.'] };
+    return;
+  }
+
   if (password.value !== passwordConfirmation.value) {
     formError.value = 'Passwords do not match.';
     return;
@@ -68,6 +75,7 @@ const handleRegister = async () => {
     await authStore.register({
       name: name.value,
       email: email.value,
+      gender: gender.value as 'male' | 'female',
       password: password.value,
       password_confirmation: passwordConfirmation.value,
       terms: termsAccepted.value,
@@ -135,6 +143,38 @@ const handleRegister = async () => {
             </svg>
           </template>
         </Input>
+
+        <!-- Gender Selection (Required) -->
+        <div class="space-y-2">
+          <label class="text-xs font-bold text-neutral-muted uppercase tracking-wider block">
+            Gender <span class="text-red-500">*</span>
+          </label>
+          <div class="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              id="gender-male-btn"
+              class="flex items-center justify-center gap-2 p-3.5 rounded-2xl border text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+              :class="gender === 'male'
+                ? 'border-primary bg-primary/10 text-primary shadow-sm font-black'
+                : 'border-neutral-gray/20 hover:border-neutral-gray/40 text-neutral-black bg-neutral-background'"
+              @click="gender = 'male'"
+            >
+              <span>Male</span>
+            </button>
+            <button
+              type="button"
+              id="gender-female-btn"
+              class="flex items-center justify-center gap-2 p-3.5 rounded-2xl border text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+              :class="gender === 'female'
+                ? 'border-primary bg-primary/10 text-primary shadow-sm font-black'
+                : 'border-neutral-gray/20 hover:border-neutral-gray/40 text-neutral-black bg-neutral-background'"
+              @click="gender = 'female'"
+            >
+              <span>Female</span>
+            </button>
+          </div>
+          <p v-if="validationErrors.gender?.[0]" class="text-xs text-red-500 font-semibold">{{ validationErrors.gender[0] }}</p>
+        </div>
 
         <!-- Register As -->
         <div class="space-y-2">

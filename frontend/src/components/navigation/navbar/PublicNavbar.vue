@@ -23,26 +23,30 @@ import { useAppAccess } from '@/composables/auth/useAppAccess';
 import NotificationBell from '@/components/notifications/NotificationBell.vue';
 import GlobalSearchModal from '@/components/search/GlobalSearchModal.vue';
 
-interface NavLink {
+interface DropdownItem {
   name: string;
   href: string;
   external?: boolean;
+  requiresAuth?: boolean;
 }
 
-const navLinks: NavLink[] = [
-  { name: 'Home', href: '/' },
-  { name: 'About', href: '/about' },
-  { name: 'Events', href: '/events' },
-  { name: 'Prayer', href: '/prayer' },
-  { name: 'Team', href: '/team' },
-  { name: 'Media', href: '/media' },
-  { name: 'Library', href: '/library' },
-  { name: 'Store', href: '/store' },
-  { name: 'Donate', href: '/donate' },
-  { name: 'Learning Resources', href: '/featured-opportunities' },
-  { name: 'Sponsorship', href: '/sponsorship' },
-  { name: 'Contact', href: '/contact' },
-];
+const aboutDropdown = {
+  name: 'About',
+  items: [
+    { name: 'About', href: '/about' },
+    { name: 'Team', href: '/team' },
+    { name: 'Sponsorship', href: '/sponsorship' },
+    { name: 'Media', href: '/media' },
+  ] as DropdownItem[],
+};
+
+const libraryDropdown = {
+  name: 'Library',
+  items: [
+    { name: 'Library', href: '/library', requiresAuth: true },
+    { name: 'Learning Resources', href: '/featured-opportunities' },
+  ] as DropdownItem[],
+};
 
 const route = useRoute();
 const router = useRouter();
@@ -54,12 +58,69 @@ function isNavActive(href: string): boolean {
   return route.path === href || route.path.startsWith(`${href}/`);
 }
 
+const isAboutActive = computed(() => {
+  return aboutDropdown.items.some(item => isNavActive(item.href));
+});
+
+const isLibraryActive = computed(() => {
+  return libraryDropdown.items.some(item => isNavActive(item.href));
+});
+
+const isAboutOpen = ref(false);
+const isLibraryOpen = ref(false);
+let aboutTimeout: ReturnType<typeof setTimeout> | null = null;
+let libraryTimeout: ReturnType<typeof setTimeout> | null = null;
+
+const openAbout = () => {
+  if (aboutTimeout) clearTimeout(aboutTimeout);
+  isAboutOpen.value = true;
+};
+const closeAboutDelayed = () => {
+  aboutTimeout = setTimeout(() => {
+    isAboutOpen.value = false;
+  }, 150);
+};
+const toggleAbout = (event?: Event) => {
+  event?.stopPropagation();
+  isAboutOpen.value = !isAboutOpen.value;
+  if (isAboutOpen.value) {
+    isLibraryOpen.value = false;
+    isUserMenuOpen.value = false;
+  }
+};
+
+const openLibrary = () => {
+  if (libraryTimeout) clearTimeout(libraryTimeout);
+  isLibraryOpen.value = true;
+};
+const closeLibraryDelayed = () => {
+  libraryTimeout = setTimeout(() => {
+    isLibraryOpen.value = false;
+  }, 150);
+};
+const toggleLibrary = (event?: Event) => {
+  event?.stopPropagation();
+  isLibraryOpen.value = !isLibraryOpen.value;
+  if (isLibraryOpen.value) {
+    isAboutOpen.value = false;
+    isUserMenuOpen.value = false;
+  }
+};
+
+const closeAllDropdowns = () => {
+  isAboutOpen.value = false;
+  isLibraryOpen.value = false;
+  isUserMenuOpen.value = false;
+};
+
 const isOpen = ref(false);
 const scrolled = ref(false);
 const isSearchModalOpen = ref(false);
 
 const openMobileAccordion = ref<Record<string, boolean>>({
   navigation: true,
+  about: false,
+  library: false,
   applications: false,
   admin: false,
 });
@@ -73,20 +134,15 @@ const canAccessAcademy = computed(() => authStore.canAccessAcademy);
 const showPublicAuth = computed(() => isPublicAuthEnabled);
 const isLoading = ref(false);
 
+const visibleLibraryItems = computed(() => {
+  return libraryDropdown.items.filter(item => !item.requiresAuth || isAuthenticated.value);
+});
+
 const logoDestination = computed(() => {
   return { name: 'home' };
 });
 const logoAriaLabel = computed(() => {
   return 'SFU MSA Homepage';
-});
-
-const filteredNavLinks = computed(() => {
-  return navLinks.filter(link => {
-    if (link.href === '/library' && !isAuthenticated.value) {
-      return false;
-    }
-    return true;
-  });
 });
 
 const handleScroll = () => {
@@ -96,20 +152,20 @@ const handleScroll = () => {
 const handleKeydown = (e: KeyboardEvent) => {
   if (e.key === 'Escape') {
     if (isOpen.value) closeMenu();
-    if (isUserMenuOpen.value) closeUserMenu();
+    closeAllDropdowns();
   }
 };
 
 onMounted(() => {
   window.addEventListener('scroll', handleScroll);
-  window.addEventListener('click', closeUserMenu);
+  window.addEventListener('click', closeAllDropdowns);
   window.addEventListener('keydown', handleKeydown);
-  handleScroll(); // Check initial scroll state
+  handleScroll();
 });
 
 onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll);
-  window.removeEventListener('click', closeUserMenu);
+  window.removeEventListener('click', closeAllDropdowns);
   window.removeEventListener('keydown', handleKeydown);
   document.body.style.overflow = '';
 });
@@ -125,14 +181,22 @@ watch(isOpen, (open) => {
 const isUserMenuOpen = ref(false);
 const toggleUserMenu = (event: Event) => {
   event.stopPropagation();
+  isAboutOpen.value = false;
+  isLibraryOpen.value = false;
   isUserMenuOpen.value = !isUserMenuOpen.value;
 };
 const closeUserMenu = () => {
   isUserMenuOpen.value = false;
 };
 
-watch(route, () => {
-  closeUserMenu();
+watch(route, (newRoute) => {
+  closeAllDropdowns();
+  if (['/about', '/team', '/sponsorship', '/media'].some(p => newRoute.path === p || newRoute.path.startsWith(`${p}/`))) {
+    openMobileAccordion.value.about = true;
+  }
+  if (['/library', '/featured-opportunities'].some(p => newRoute.path === p || newRoute.path.startsWith(`${p}/`))) {
+    openMobileAccordion.value.library = true;
+  }
 });
 
 const handleLogout = async () => {
@@ -143,22 +207,22 @@ const handleLogout = async () => {
 </script>
 
 <template>
-  <div class="fixed top-4 inset-x-0 z-50 w-full max-w-full px-3 sm:px-4 pointer-events-none box-border overflow-x-clip">
+  <div class="fixed top-3 sm:top-3.5 inset-x-0 z-50 w-full max-w-full px-3 sm:px-4 pointer-events-none box-border overflow-x-clip">
     <div
       :class="[
-        'pointer-events-auto mx-auto w-full max-w-[96rem] min-w-0 rounded-full border transition-all duration-500 box-border animate-navbar-in',
+        'pointer-events-auto mx-auto w-full max-w-6xl 2xl:max-w-7xl min-w-0 rounded-full border transition-all duration-500 box-border animate-navbar-in',
         scrolled
-          ? 'bg-white/90 backdrop-blur-xl border-neutral-ivory/80 shadow-premium py-2 px-3 sm:py-2.5 sm:px-5'
-          : 'bg-neutral-background/85 backdrop-blur-lg border-neutral-ivory/40 shadow-soft py-2.5 px-3 sm:py-3.5 sm:px-6'
+          ? 'bg-white/90 backdrop-blur-xl border-neutral-ivory/80 shadow-premium py-1.5 px-3 sm:py-2 sm:px-4.5'
+          : 'bg-neutral-background/85 backdrop-blur-lg border-neutral-ivory/40 shadow-soft py-2 px-3 sm:py-2.5 sm:px-5'
       ]"
     >
-      <div class="flex items-center justify-between gap-2 xl:gap-4 min-w-0 w-full">
+      <div class="flex items-center justify-between gap-2 xl:gap-3.5 min-w-0 w-full">
         <router-link
           :to="logoDestination"
           :aria-label="logoAriaLabel"
           class="flex items-center gap-2 sm:gap-2.5 group min-w-0 shrink-0 overflow-hidden pl-0.5 sm:pl-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-xl"
         >
-          <div class="h-9 w-9 sm:h-10 sm:w-10 shrink-0 flex items-center justify-center">
+          <div class="h-8 w-8 sm:h-9 sm:w-9 shrink-0 flex items-center justify-center">
             <img
               src="/logo.webp"
               alt="SFU MSA logo"
@@ -166,59 +230,281 @@ const handleLogout = async () => {
             />
           </div>
           <div class="hidden sm:flex flex-col min-w-0 overflow-hidden">
-            <span class="text-sm sm:text-base font-display font-extrabold text-primary leading-none tracking-tight uppercase truncate">SFU MSA</span>
+            <span class="text-sm sm:text-[15px] font-display font-extrabold text-primary leading-none tracking-tight uppercase truncate">SFU MSA</span>
             <span class="hidden 2xl:block text-[8px] uppercase tracking-[0.15em] text-neutral-black/40 font-bold mt-0.5 truncate">Muslim Students Association</span>
           </div>
           <span class="sr-only">{{ logoAriaLabel }}</span>
         </router-link>
 
         <!-- Desktop Nav -->
-        <nav class="hidden xl:flex items-center gap-4 2xl:gap-8 shrink-0 min-w-0">
-        <div class="flex items-center gap-2.5 xl:gap-3.5 2xl:gap-5.5 whitespace-nowrap shrink-0">
-          <template v-for="link in filteredNavLinks" :key="link.name">
-            <a
-              v-if="link.external"
-              :href="link.href"
-              target="_blank"
-              rel="noopener noreferrer"
+        <nav class="hidden xl:flex items-center gap-3 2xl:gap-6 shrink-0 min-w-0" aria-label="Main Navigation">
+        <div class="flex items-center gap-2 xl:gap-2.5 2xl:gap-4 whitespace-nowrap shrink-0">
+          <!-- Home -->
+          <router-link
+            to="/"
+            :class="[
+              'text-[10px] 2xl:text-[11px] font-extrabold uppercase tracking-[0.1em] transition-all relative py-1 group shrink-0 whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg',
+              isNavActive('/') ? 'text-primary' : 'text-neutral-black/60 hover:text-primary'
+            ]"
+          >
+            Home
+            <span
               :class="[
-                'text-[10px] 2xl:text-[11px] font-extrabold uppercase tracking-[0.1em] transition-all relative py-1.5 group shrink-0 whitespace-nowrap',
-                'text-neutral-black/60 hover:text-primary'
+                'absolute bottom-0 left-0 h-[2px] bg-primary rounded-full transition-all duration-300',
+                isNavActive('/') ? 'w-full' : 'w-0 group-hover:w-full'
+              ]"
+            />
+          </router-link>
+
+          <!-- About Dropdown -->
+          <div
+            class="relative"
+            @mouseenter="openAbout"
+            @mouseleave="closeAboutDelayed"
+          >
+            <button
+              type="button"
+              @click="toggleAbout"
+              @keydown.esc.prevent="isAboutOpen = false"
+              @keydown.down.prevent="openAbout"
+              aria-haspopup="true"
+              :aria-expanded="isAboutOpen"
+              aria-controls="about-desktop-menu"
+              :class="[
+                'inline-flex items-center gap-1 text-[10px] 2xl:text-[11px] font-extrabold uppercase tracking-[0.1em] transition-all relative py-1 group shrink-0 whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg',
+                isAboutActive || isAboutOpen ? 'text-primary' : 'text-neutral-black/60 hover:text-primary'
               ]"
             >
-              {{ link.name }}
-              <span class="absolute bottom-0 left-0 h-[2px] bg-primary rounded-full transition-all duration-300 w-0 group-hover:w-full" />
-            </a>
-            <router-link
-              v-else
-              :to="link.href"
-              :class="[
-                'text-[10px] 2xl:text-[11px] font-extrabold uppercase tracking-[0.1em] transition-all relative py-1.5 group shrink-0 whitespace-nowrap',
-                isNavActive(link.href) ? 'text-primary' : 'text-neutral-black/60 hover:text-primary'
-              ]"
-            >
-              {{ link.name }}
-              <span 
+              <span>About</span>
+              <ChevronDown
                 :class="[
-                  'absolute bottom-0 left-0 h-[2px] bg-primary rounded-full transition-all duration-300',
-                  isNavActive(link.href) ? 'w-full' : 'w-0 group-hover:w-full'
+                  'h-3 w-3 transition-transform duration-200 shrink-0',
+                  isAboutOpen ? 'rotate-180 text-primary' : 'text-neutral-black/40 group-hover:text-primary'
                 ]"
               />
-            </router-link>
-          </template>
+              <span
+                :class="[
+                  'absolute bottom-0 left-0 h-[2px] bg-primary rounded-full transition-all duration-300',
+                  isAboutActive ? 'w-full' : 'w-0 group-hover:w-full'
+                ]"
+              />
+            </button>
+
+            <!-- About Dropdown Menu -->
+            <transition
+              enter-active-class="transition duration-200 ease-out"
+              enter-from-class="transform scale-95 opacity-0 translate-y-1"
+              enter-to-class="transform scale-100 opacity-100 translate-y-0"
+              leave-active-class="transition duration-150 ease-in"
+              leave-from-class="transform scale-100 opacity-100 translate-y-0"
+              leave-to-class="transform scale-95 opacity-0 translate-y-1"
+            >
+              <div
+                v-if="isAboutOpen"
+                id="about-desktop-menu"
+                role="menu"
+                aria-label="About Menu"
+                class="absolute left-0 mt-1.5 w-44 rounded-xl border border-neutral-ivory/80 bg-white/95 backdrop-blur-xl shadow-premium p-1 flex flex-col gap-0.5 z-50 animate-navbar-in"
+                @click.stop
+              >
+                <router-link
+                  v-for="item in aboutDropdown.items"
+                  :key="item.name"
+                  :to="item.href"
+                  role="menuitem"
+                  :class="[
+                    'flex items-center justify-between px-3 py-1.5 rounded-lg text-[10.5px] font-bold uppercase tracking-wider transition-all',
+                    isNavActive(item.href)
+                      ? 'bg-primary/10 text-primary font-black'
+                      : 'text-neutral-black/70 hover:bg-neutral-background hover:text-primary'
+                  ]"
+                  @click="isAboutOpen = false"
+                >
+                  <span>{{ item.name }}</span>
+                  <ChevronRight
+                    :class="[
+                      'w-3 h-3 transition-transform duration-200',
+                      isNavActive(item.href) ? 'text-primary translate-x-0.5' : 'text-neutral-black/30 group-hover:translate-x-0.5'
+                    ]"
+                  />
+                </router-link>
+              </div>
+            </transition>
+          </div>
+
+          <!-- Events -->
+          <router-link
+            to="/events"
+            :class="[
+              'text-[10px] 2xl:text-[11px] font-extrabold uppercase tracking-[0.1em] transition-all relative py-1 group shrink-0 whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg',
+              isNavActive('/events') ? 'text-primary' : 'text-neutral-black/60 hover:text-primary'
+            ]"
+          >
+            Events
+            <span
+              :class="[
+                'absolute bottom-0 left-0 h-[2px] bg-primary rounded-full transition-all duration-300',
+                isNavActive('/events') ? 'w-full' : 'w-0 group-hover:w-full'
+              ]"
+            />
+          </router-link>
+
+          <!-- Prayer -->
+          <router-link
+            to="/prayer"
+            :class="[
+              'text-[10px] 2xl:text-[11px] font-extrabold uppercase tracking-[0.1em] transition-all relative py-1 group shrink-0 whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg',
+              isNavActive('/prayer') ? 'text-primary' : 'text-neutral-black/60 hover:text-primary'
+            ]"
+          >
+            Prayer
+            <span
+              :class="[
+                'absolute bottom-0 left-0 h-[2px] bg-primary rounded-full transition-all duration-300',
+                isNavActive('/prayer') ? 'w-full' : 'w-0 group-hover:w-full'
+              ]"
+            />
+          </router-link>
+
+          <!-- Library Dropdown -->
+          <div
+            class="relative"
+            @mouseenter="openLibrary"
+            @mouseleave="closeLibraryDelayed"
+          >
+            <button
+              type="button"
+              @click="toggleLibrary"
+              @keydown.esc.prevent="isLibraryOpen = false"
+              @keydown.down.prevent="openLibrary"
+              aria-haspopup="true"
+              :aria-expanded="isLibraryOpen"
+              aria-controls="library-desktop-menu"
+              :class="[
+                'inline-flex items-center gap-1 text-[10px] 2xl:text-[11px] font-extrabold uppercase tracking-[0.1em] transition-all relative py-1 group shrink-0 whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg',
+                isLibraryActive || isLibraryOpen ? 'text-primary' : 'text-neutral-black/60 hover:text-primary'
+              ]"
+            >
+              <span>Library</span>
+              <ChevronDown
+                :class="[
+                  'h-3 w-3 transition-transform duration-200 shrink-0',
+                  isLibraryOpen ? 'rotate-180 text-primary' : 'text-neutral-black/40 group-hover:text-primary'
+                ]"
+              />
+              <span
+                :class="[
+                  'absolute bottom-0 left-0 h-[2px] bg-primary rounded-full transition-all duration-300',
+                  isLibraryActive ? 'w-full' : 'w-0 group-hover:w-full'
+                ]"
+              />
+            </button>
+
+            <!-- Library Dropdown Menu -->
+            <transition
+              enter-active-class="transition duration-200 ease-out"
+              enter-from-class="transform scale-95 opacity-0 translate-y-1"
+              enter-to-class="transform scale-100 opacity-100 translate-y-0"
+              leave-active-class="transition duration-150 ease-in"
+              leave-from-class="transform scale-100 opacity-100 translate-y-0"
+              leave-to-class="transform scale-95 opacity-0 translate-y-1"
+            >
+              <div
+                v-if="isLibraryOpen"
+                id="library-desktop-menu"
+                role="menu"
+                aria-label="Library Menu"
+                class="absolute left-0 mt-1.5 w-52 rounded-xl border border-neutral-ivory/80 bg-white/95 backdrop-blur-xl shadow-premium p-1 flex flex-col gap-0.5 z-50 animate-navbar-in"
+                @click.stop
+              >
+                <router-link
+                  v-for="item in visibleLibraryItems"
+                  :key="item.name"
+                  :to="item.href"
+                  role="menuitem"
+                  :class="[
+                    'flex items-center justify-between px-3 py-1.5 rounded-lg text-[10.5px] font-bold uppercase tracking-wider transition-all',
+                    isNavActive(item.href)
+                      ? 'bg-primary/10 text-primary font-black'
+                      : 'text-neutral-black/70 hover:bg-neutral-background hover:text-primary'
+                  ]"
+                  @click="isLibraryOpen = false"
+                >
+                  <span>{{ item.name }}</span>
+                  <ChevronRight
+                    :class="[
+                      'w-3 h-3 transition-transform duration-200',
+                      isNavActive(item.href) ? 'text-primary translate-x-0.5' : 'text-neutral-black/30 group-hover:translate-x-0.5'
+                    ]"
+                  />
+                </router-link>
+              </div>
+            </transition>
+          </div>
+
+          <!-- Store -->
+          <router-link
+            to="/store"
+            :class="[
+              'text-[10px] 2xl:text-[11px] font-extrabold uppercase tracking-[0.1em] transition-all relative py-1 group shrink-0 whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg',
+              isNavActive('/store') ? 'text-primary' : 'text-neutral-black/60 hover:text-primary'
+            ]"
+          >
+            Store
+            <span
+              :class="[
+                'absolute bottom-0 left-0 h-[2px] bg-primary rounded-full transition-all duration-300',
+                isNavActive('/store') ? 'w-full' : 'w-0 group-hover:w-full'
+              ]"
+            />
+          </router-link>
+
+          <!-- Donate -->
+          <router-link
+            to="/donate"
+            :class="[
+              'text-[10px] 2xl:text-[11px] font-extrabold uppercase tracking-[0.1em] transition-all relative py-1 group shrink-0 whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg',
+              isNavActive('/donate') ? 'text-primary' : 'text-neutral-black/60 hover:text-primary'
+            ]"
+          >
+            Donate
+            <span
+              :class="[
+                'absolute bottom-0 left-0 h-[2px] bg-primary rounded-full transition-all duration-300',
+                isNavActive('/donate') ? 'w-full' : 'w-0 group-hover:w-full'
+              ]"
+            />
+          </router-link>
+
+          <!-- Contact -->
+          <router-link
+            to="/contact"
+            :class="[
+              'text-[10px] 2xl:text-[11px] font-extrabold uppercase tracking-[0.1em] transition-all relative py-1 group shrink-0 whitespace-nowrap focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-lg',
+              isNavActive('/contact') ? 'text-primary' : 'text-neutral-black/60 hover:text-primary'
+            ]"
+          >
+            Contact
+            <span
+              :class="[
+                'absolute bottom-0 left-0 h-[2px] bg-primary rounded-full transition-all duration-300',
+                isNavActive('/contact') ? 'w-full' : 'w-0 group-hover:w-full'
+              ]"
+            />
+          </router-link>
         </div>
         
 
-        <div class="flex items-center gap-2 2xl:gap-3 pr-1 shrink-0">
+        <div class="flex items-center gap-1.5 2xl:gap-2.5 pr-0.5 shrink-0">
           <!-- Global Search Button (Icon Only) -->
           <button
             type="button"
             @click="isSearchModalOpen = true"
-            class="inline-flex items-center justify-center w-9 h-9 2xl:w-10 2xl:h-10 bg-white/80 hover:bg-white text-neutral-black/70 hover:text-primary rounded-full border border-neutral-ivory/80 shadow-soft hover:shadow-md transition-all shrink-0"
+            class="inline-flex items-center justify-center w-8 h-8 2xl:w-8.5 2xl:h-8.5 bg-white/80 hover:bg-white text-neutral-black/70 hover:text-primary rounded-full border border-neutral-ivory/80 shadow-soft hover:shadow-md transition-all shrink-0"
             title="Search Platform (Ctrl+K)"
             aria-label="Search Platform"
           >
-            <Search class="h-4 w-4 text-primary" />
+            <Search class="h-3.5 w-3.5 text-primary" />
           </button>
 
           <!-- Guest Actions -->
@@ -226,33 +512,33 @@ const handleLogout = async () => {
             <router-link
               v-if="!isLoading && showPublicAuth"
               to="/login"
-              class="inline-flex items-center gap-1.5 border border-primary/20 text-primary px-3.5 py-2 2xl:px-5 2xl:py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider hover:bg-primary/5 transition-all shrink-0 whitespace-nowrap"
+              class="inline-flex items-center gap-1.5 border border-primary/20 text-primary px-3 py-1.5 2xl:px-4 2xl:py-2 rounded-full text-[10px] font-extrabold uppercase tracking-wider hover:bg-primary/5 transition-all shrink-0 whitespace-nowrap"
             >
-              <LogIn class="h-3.5 w-3.5" />
+              <LogIn class="h-3 w-3" />
               Login
             </router-link>
 
             <router-link
               v-if="showPublicAuth"
               to="/register"
-              class="bg-primary text-white px-4 py-2 2xl:px-6 2xl:py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider hover:bg-secondary hover:shadow-premium transition-all hover:-translate-y-0.5 active:scale-95 shrink-0 whitespace-nowrap"
+              class="bg-primary text-white px-3.5 py-1.5 2xl:px-4.5 2xl:py-2 rounded-full text-[10px] font-extrabold uppercase tracking-wider hover:bg-secondary hover:shadow-premium transition-all hover:-translate-y-0.5 active:scale-95 shrink-0 whitespace-nowrap"
             >
               Register
             </router-link>
           </template>
 
           <!-- Authenticated Account Dropdown -->
-          <div v-else-if="!isLoading" class="flex items-center gap-2 2xl:gap-3 shrink-0">
+          <div v-else-if="!isLoading" class="flex items-center gap-1.5 2xl:gap-2.5 shrink-0">
             <NotificationBell />
 
             <div class="relative shrink-0">
               <button
                 @click="toggleUserMenu"
-                class="inline-flex items-center gap-2 bg-primary text-white hover:bg-secondary px-4 py-2 2xl:px-5 2xl:py-2.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider hover:shadow-premium transition-all hover:-translate-y-0.5 active:scale-95 cursor-pointer shrink-0 whitespace-nowrap"
+                class="inline-flex items-center gap-1.5 bg-primary text-white hover:bg-secondary px-3.5 py-1.5 2xl:px-4.5 2xl:py-2 rounded-full text-[10px] font-extrabold uppercase tracking-wider hover:shadow-premium transition-all hover:-translate-y-0.5 active:scale-95 cursor-pointer shrink-0 whitespace-nowrap"
               >
                 <span>{{ authStore.user?.name || 'My Account' }}</span>
                 <ChevronDown
-                  :class="['h-3.5 w-3.5 transition-transform duration-300 shrink-0', isUserMenuOpen ? 'rotate-180' : '']"
+                  :class="['h-3 w-3 transition-transform duration-300 shrink-0', isUserMenuOpen ? 'rotate-180' : '']"
                 />
               </button>
 
@@ -267,24 +553,24 @@ const handleLogout = async () => {
               >
                 <div
                   v-if="isUserMenuOpen"
-                  class="absolute right-0 mt-3 w-56 rounded-2xl border border-neutral-ivory bg-white shadow-premium p-2 flex flex-col gap-1 z-50"
+                  class="absolute right-0 mt-2 w-52 rounded-xl border border-neutral-ivory bg-white shadow-premium p-1.5 flex flex-col gap-0.5 z-50"
                   @click.stop
                 >
                   <router-link
                     to="/notifications"
-                    class="flex items-center gap-2.5 px-4 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/70 hover:bg-neutral-background hover:text-primary transition-all"
+                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/70 hover:bg-neutral-background hover:text-primary transition-all"
                     @click="closeUserMenu"
                   >
-                    <Bell class="h-4 w-4 shrink-0 text-primary" />
+                    <Bell class="h-3.5 w-3.5 shrink-0 text-primary" />
                     Notification Center
                   </router-link>
 
                   <router-link
                     to="/my-tickets"
-                    class="flex items-center gap-2.5 px-4 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/70 hover:bg-neutral-background hover:text-primary transition-all"
+                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/70 hover:bg-neutral-background hover:text-primary transition-all"
                     @click="closeUserMenu"
                   >
-                    <svg class="h-4 w-4 shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="h-3.5 w-3.5 shrink-0 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
                     </svg>
                     My Tickets
@@ -292,21 +578,21 @@ const handleLogout = async () => {
 
                   <router-link
                     to="/account"
-                    class="flex items-center gap-2.5 px-4 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/70 hover:bg-neutral-background hover:text-primary transition-all font-black text-primary bg-primary/5"
+                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-extrabold uppercase tracking-wider text-neutral-black/70 hover:bg-neutral-background hover:text-primary transition-all font-black text-primary bg-primary/5"
                     @click="closeUserMenu"
                   >
-                    <User class="h-4 w-4 shrink-0 text-primary" />
+                    <User class="h-3.5 w-3.5 shrink-0 text-primary" />
                     My Portal & Dashboard
                   </router-link>
 
-                  <div class="h-px bg-neutral-ivory/80 my-1" />
+                  <div class="h-px bg-neutral-ivory/80 my-0.5" />
 
                   <button
                     type="button"
                     @click="handleLogout(); closeUserMenu();"
-                    class="flex items-center gap-2.5 px-4 py-3 rounded-xl text-[10px] font-extrabold uppercase tracking-wider text-red-600 hover:bg-red-50 transition-all w-full text-left cursor-pointer"
+                    class="flex items-center gap-2 px-3 py-2 rounded-lg text-[10px] font-extrabold uppercase tracking-wider text-red-600 hover:bg-red-50 transition-all w-full text-left cursor-pointer"
                   >
-                    <LogOut class="h-4 w-4 shrink-0" />
+                    <LogOut class="h-3.5 w-3.5 shrink-0" />
                     Logout
                   </button>
                 </div>
@@ -468,37 +754,169 @@ const handleLogout = async () => {
                 </button>
 
                 <nav v-if="openMobileAccordion.navigation" class="flex flex-col gap-1 pt-1">
-                  <div v-for="(link, i) in filteredNavLinks" :key="link.name">
-                    <a
-                      v-if="link.external"
-                      :href="link.href"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="text-lg font-serif min-h-[44px] flex items-center justify-between group transition-colors text-neutral-black hover:text-primary px-2 rounded-xl"
-                      @click="closeMenu"
-                    >
-                      <div class="flex items-center gap-3">
-                        <span class="text-[10px] font-mono text-neutral-black/30">{{ (i + 1).toString().padStart(2, '0') }}</span>
-                        {{ link.name }}
-                      </div>
-                      <ChevronRight class="w-4 h-4 transition-transform group-hover:translate-x-1 opacity-0 group-hover:opacity-100" />
-                    </a>
-                    <router-link
-                      v-else
-                      :to="link.href"
+                  <!-- Home -->
+                  <router-link
+                    to="/"
+                    :class="[
+                      'text-base font-serif min-h-[44px] flex items-center justify-between group transition-colors px-2 rounded-xl',
+                      isNavActive('/') ? 'text-primary font-medium bg-primary/5' : 'text-neutral-black hover:text-primary'
+                    ]"
+                    @click="closeMenu"
+                  >
+                    <div class="flex items-center gap-3">
+                      <span class="text-[10px] font-mono text-neutral-black/30">01</span>
+                      Home
+                    </div>
+                    <ChevronRight :class="['w-4 h-4 transition-transform group-hover:translate-x-1', isNavActive('/') ? 'opacity-100 text-primary' : 'opacity-0']" />
+                  </router-link>
+
+                  <!-- About Sub-Accordion / Group -->
+                  <div class="rounded-xl border border-neutral-ivory/60 bg-white/50 overflow-hidden my-0.5">
+                    <button
+                      type="button"
+                      @click="toggleMobileAccordion('about')"
                       :class="[
-                        'text-lg font-serif min-h-[44px] flex items-center justify-between group transition-colors px-2 rounded-xl',
-                        isNavActive(link.href) ? 'text-primary font-medium bg-primary/5' : 'text-neutral-black hover:text-primary'
+                        'w-full flex items-center justify-between px-3 py-2.5 text-base font-serif transition-colors min-h-[44px]',
+                        isAboutActive ? 'text-primary font-medium' : 'text-neutral-black hover:text-primary'
                       ]"
-                      @click="closeMenu"
                     >
                       <div class="flex items-center gap-3">
-                        <span class="text-[10px] font-mono text-neutral-black/30">{{ (i + 1).toString().padStart(2, '0') }}</span>
-                        {{ link.name }}
+                        <span class="text-[10px] font-mono text-neutral-black/30">02</span>
+                        About
                       </div>
-                      <ChevronRight :class="['w-4 h-4 transition-transform group-hover:translate-x-1', isNavActive(link.href) ? 'opacity-100' : 'opacity-0']" />
-                    </router-link>
+                      <ChevronDown :class="['w-4 h-4 transition-transform duration-200', openMobileAccordion.about ? 'rotate-180 text-primary' : 'text-neutral-black/40']" />
+                    </button>
+
+                    <div v-if="openMobileAccordion.about" class="pl-7 pr-2 pb-2 space-y-1 flex flex-col border-t border-neutral-ivory/40 pt-1.5 bg-neutral-background/40">
+                      <router-link
+                        v-for="sub in aboutDropdown.items"
+                        :key="sub.name"
+                        :to="sub.href"
+                        :class="[
+                          'text-sm font-sans min-h-[40px] flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors',
+                          isNavActive(sub.href) ? 'text-primary font-bold bg-primary/10' : 'text-neutral-black/80 hover:text-primary hover:bg-white'
+                        ]"
+                        @click="closeMenu"
+                      >
+                        <span>{{ sub.name }}</span>
+                        <ChevronRight :class="['w-3.5 h-3.5', isNavActive(sub.href) ? 'text-primary' : 'text-neutral-black/30']" />
+                      </router-link>
+                    </div>
                   </div>
+
+                  <!-- Events -->
+                  <router-link
+                    to="/events"
+                    :class="[
+                      'text-base font-serif min-h-[44px] flex items-center justify-between group transition-colors px-2 rounded-xl',
+                      isNavActive('/events') ? 'text-primary font-medium bg-primary/5' : 'text-neutral-black hover:text-primary'
+                    ]"
+                    @click="closeMenu"
+                  >
+                    <div class="flex items-center gap-3">
+                      <span class="text-[10px] font-mono text-neutral-black/30">03</span>
+                      Events
+                    </div>
+                    <ChevronRight :class="['w-4 h-4 transition-transform group-hover:translate-x-1', isNavActive('/events') ? 'opacity-100 text-primary' : 'opacity-0']" />
+                  </router-link>
+
+                  <!-- Prayer -->
+                  <router-link
+                    to="/prayer"
+                    :class="[
+                      'text-base font-serif min-h-[44px] flex items-center justify-between group transition-colors px-2 rounded-xl',
+                      isNavActive('/prayer') ? 'text-primary font-medium bg-primary/5' : 'text-neutral-black hover:text-primary'
+                    ]"
+                    @click="closeMenu"
+                  >
+                    <div class="flex items-center gap-3">
+                      <span class="text-[10px] font-mono text-neutral-black/30">04</span>
+                      Prayer
+                    </div>
+                    <ChevronRight :class="['w-4 h-4 transition-transform group-hover:translate-x-1', isNavActive('/prayer') ? 'opacity-100 text-primary' : 'opacity-0']" />
+                  </router-link>
+
+                  <!-- Library Sub-Accordion / Group -->
+                  <div class="rounded-xl border border-neutral-ivory/60 bg-white/50 overflow-hidden my-0.5">
+                    <button
+                      type="button"
+                      @click="toggleMobileAccordion('library')"
+                      :class="[
+                        'w-full flex items-center justify-between px-3 py-2.5 text-base font-serif transition-colors min-h-[44px]',
+                        isLibraryActive ? 'text-primary font-medium' : 'text-neutral-black hover:text-primary'
+                      ]"
+                    >
+                      <div class="flex items-center gap-3">
+                        <span class="text-[10px] font-mono text-neutral-black/30">05</span>
+                        Library
+                      </div>
+                      <ChevronDown :class="['w-4 h-4 transition-transform duration-200', openMobileAccordion.library ? 'rotate-180 text-primary' : 'text-neutral-black/40']" />
+                    </button>
+
+                    <div v-if="openMobileAccordion.library" class="pl-7 pr-2 pb-2 space-y-1 flex flex-col border-t border-neutral-ivory/40 pt-1.5 bg-neutral-background/40">
+                      <router-link
+                        v-for="sub in visibleLibraryItems"
+                        :key="sub.name"
+                        :to="sub.href"
+                        :class="[
+                          'text-sm font-sans min-h-[40px] flex items-center justify-between px-2.5 py-1.5 rounded-lg transition-colors',
+                          isNavActive(sub.href) ? 'text-primary font-bold bg-primary/10' : 'text-neutral-black/80 hover:text-primary hover:bg-white'
+                        ]"
+                        @click="closeMenu"
+                      >
+                        <span>{{ sub.name }}</span>
+                        <ChevronRight :class="['w-3.5 h-3.5', isNavActive(sub.href) ? 'text-primary' : 'text-neutral-black/30']" />
+                      </router-link>
+                    </div>
+                  </div>
+
+                  <!-- Store -->
+                  <router-link
+                    to="/store"
+                    :class="[
+                      'text-base font-serif min-h-[44px] flex items-center justify-between group transition-colors px-2 rounded-xl',
+                      isNavActive('/store') ? 'text-primary font-medium bg-primary/5' : 'text-neutral-black hover:text-primary'
+                    ]"
+                    @click="closeMenu"
+                  >
+                    <div class="flex items-center gap-3">
+                      <span class="text-[10px] font-mono text-neutral-black/30">06</span>
+                      Store
+                    </div>
+                    <ChevronRight :class="['w-4 h-4 transition-transform group-hover:translate-x-1', isNavActive('/store') ? 'opacity-100 text-primary' : 'opacity-0']" />
+                  </router-link>
+
+                  <!-- Donate -->
+                  <router-link
+                    to="/donate"
+                    :class="[
+                      'text-base font-serif min-h-[44px] flex items-center justify-between group transition-colors px-2 rounded-xl',
+                      isNavActive('/donate') ? 'text-primary font-medium bg-primary/5' : 'text-neutral-black hover:text-primary'
+                    ]"
+                    @click="closeMenu"
+                  >
+                    <div class="flex items-center gap-3">
+                      <span class="text-[10px] font-mono text-neutral-black/30">07</span>
+                      Donate
+                    </div>
+                    <ChevronRight :class="['w-4 h-4 transition-transform group-hover:translate-x-1', isNavActive('/donate') ? 'opacity-100 text-primary' : 'opacity-0']" />
+                  </router-link>
+
+                  <!-- Contact -->
+                  <router-link
+                    to="/contact"
+                    :class="[
+                      'text-base font-serif min-h-[44px] flex items-center justify-between group transition-colors px-2 rounded-xl',
+                      isNavActive('/contact') ? 'text-primary font-medium bg-primary/5' : 'text-neutral-black hover:text-primary'
+                    ]"
+                    @click="closeMenu"
+                  >
+                    <div class="flex items-center gap-3">
+                      <span class="text-[10px] font-mono text-neutral-black/30">08</span>
+                      Contact
+                    </div>
+                    <ChevronRight :class="['w-4 h-4 transition-transform group-hover:translate-x-1', isNavActive('/contact') ? 'opacity-100 text-primary' : 'opacity-0']" />
+                  </router-link>
                 </nav>
               </div>
 

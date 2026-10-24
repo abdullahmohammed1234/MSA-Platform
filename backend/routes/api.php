@@ -140,6 +140,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/team', [WebsiteController::class, 'team'])->name('api.website.team');
         Route::get('/resources', [WebsiteController::class, 'resources'])->name('api.website.resources');
         Route::get('/media', [WebsiteController::class, 'media'])->name('api.website.media');
+        Route::get('/media/{media:uuid}/file', [WebsiteController::class, 'streamMedia'])->name('api.website.media.file');
         Route::get('/sponsors', [WebsiteController::class, 'sponsors'])->name('api.website.sponsors');
         Route::get('/featured-opportunities', [WebsiteController::class, 'featuredOpportunities'])->name('api.website.featured-opportunities');
         Route::get('/prayer-times', [WebsiteController::class, 'prayerTimes'])->name('api.website.prayer-times');
@@ -738,6 +739,9 @@ Route::prefix('v1')->group(function () {
             Route::post('/cms/assets/upload', [\App\Http\Controllers\Admin\CMS\MediaController::class, 'uploadAsset'])
                 ->middleware('permission:manage_media|manage_team|manage_announcements|manage_events|manage_resources|manage_homepage')
                 ->name('api.admin.cms.assets.upload');
+            Route::put('/cms/media/{uuid}', [\App\Http\Controllers\Admin\CMS\MediaController::class, 'update'])
+                ->middleware('permission:manage_media')
+                ->name('api.admin.cms.media.update');
             Route::delete('/cms/media/{uuid}', [\App\Http\Controllers\Admin\CMS\MediaController::class, 'destroy'])
                 ->middleware('permission:manage_media')
                 ->name('api.admin.cms.media.destroy');
@@ -980,6 +984,9 @@ Route::prefix('v1')->group(function () {
             Route::post('/assets/upload', [\App\Http\Controllers\Admin\CMS\MediaController::class, 'uploadAsset'])
                 ->middleware('permission:manage_media|manage_team|manage_announcements|manage_events|manage_resources|manage_homepage')
                 ->name('assets.upload');
+            Route::put('/media/{uuid}', [\App\Http\Controllers\Admin\CMS\MediaController::class, 'update'])
+                ->middleware('permission:manage_media')
+                ->name('media.update');
             Route::delete('/media/{uuid}', [\App\Http\Controllers\Admin\CMS\MediaController::class, 'destroy'])
                 ->middleware('permission:manage_media')
                 ->name('media.destroy');
@@ -1065,6 +1072,8 @@ Route::prefix('v1')->group(function () {
     Route::prefix('store')->group(function () {
         Route::get('/products', [\App\Store\Http\Controllers\Public\StoreCatalogueController::class, 'index']);
         Route::get('/products/{slug}', [\App\Store\Http\Controllers\Public\StoreCatalogueController::class, 'show']);
+        Route::get('/products/{product:uuid}/images/{image:uuid}', [\App\Store\Http\Controllers\Public\StoreCatalogueController::class, 'streamImage'])
+            ->name('api.store.products.image');
 
         Route::get('/cart', [\App\Store\Http\Controllers\Public\StoreCartController::class, 'show']);
         Route::post('/cart/items', [\App\Store\Http\Controllers\Public\StoreCartController::class, 'addItem']);
@@ -1087,6 +1096,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/products/{product:uuid}', [\App\Store\Http\Controllers\Admin\AdminStoreProductController::class, 'show']);
         Route::put('/products/{product:uuid}', [\App\Store\Http\Controllers\Admin\AdminStoreProductController::class, 'update']);
         Route::delete('/products/{product:uuid}', [\App\Store\Http\Controllers\Admin\AdminStoreProductController::class, 'destroy']);
+        Route::post('/products/{product:uuid}/images', [\App\Store\Http\Controllers\Admin\AdminStoreProductController::class, 'uploadImage'])
+            ->name('api.store-admin.products.upload-image');
 
         Route::get('/inventory', [\App\Store\Http\Controllers\Admin\AdminStoreInventoryController::class, 'index']);
         Route::post('/inventory/adjust', [\App\Store\Http\Controllers\Admin\AdminStoreInventoryController::class, 'adjust']);
@@ -1180,6 +1191,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/intake/store', [\App\Mlibms\Http\Controllers\V1\Admin\AdminIntakeController::class, 'store'])->name('api.admin.library.intake.store');
 
         Route::get('/books', [\App\Mlibms\Http\Controllers\V1\Admin\AdminBookController::class, 'index'])->name('api.admin.library.books.index');
+        Route::post('/books', [\App\Mlibms\Http\Controllers\V1\Admin\AdminBookController::class, 'store'])->name('api.admin.library.books.store');
         Route::get('/books/{uuid}', [\App\Mlibms\Http\Controllers\V1\Admin\AdminBookController::class, 'show'])->name('api.admin.library.books.show');
         Route::put('/books/{uuid}', [\App\Mlibms\Http\Controllers\V1\Admin\AdminBookController::class, 'update'])->name('api.admin.library.books.update');
         Route::delete('/books/{uuid}', [\App\Mlibms\Http\Controllers\V1\Admin\AdminBookController::class, 'destroy'])->name('api.admin.library.books.destroy');

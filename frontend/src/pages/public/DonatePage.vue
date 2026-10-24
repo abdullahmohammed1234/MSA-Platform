@@ -10,6 +10,7 @@ import {
   ChevronDown,
 } from 'lucide-vue-next';
 import ScrollReveal from '@/components/shared/ScrollReveal.vue';
+import DonationVideoFeature from '@/components/website/DonationVideoFeature.vue';
 import { HERO_IMAGES } from '@/constants/publicAssets';
 
 const toast = useToastStore();
@@ -169,10 +170,13 @@ const handleDonate = async () => {
       </div>
     </section>
 
+    <!-- CINEMATIC LOCAL VIDEO FEATURE -->
+    <DonationVideoFeature cta-target="#donation-console" />
+
     <!-- ========================================== -->
     <!-- 2. WIDE & CENTERED DONATION CONSOLE -->
     <!-- ========================================== -->
-    <div class="section-padding space-y-24 w-full">
+    <div id="donation-console" class="section-padding space-y-24 w-full">
       <div class="container-custom flex flex-col items-center justify-center w-full">
         <div class="max-w-6xl w-full mx-auto flex flex-col items-center justify-center">
           <ScrollReveal direction="up" :delay="0.1" width="100%" class="w-full flex justify-center">

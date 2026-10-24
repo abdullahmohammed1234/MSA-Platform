@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { ShoppingBag, Search, Tag, ArrowRight, AlertCircle } from 'lucide-vue-next';
 import storeService from '@/services/storeService';
@@ -46,6 +46,23 @@ onMounted(() => {
   void fetchProducts();
 });
 
+const activeSection = ref<'all' | 'merchandise' | 'general'>('all');
+const hoveredProductUuid = ref<string | null>(null);
+
+const toggleProductView = (uuid: string) => {
+  hoveredProductUuid.value = hoveredProductUuid.value === uuid ? null : uuid;
+};
+
+const displayedProducts = computed(() => {
+  if (activeSection.value === 'merchandise') {
+    return products.value.filter(p => p.is_merchandise);
+  }
+  if (activeSection.value === 'general') {
+    return products.value.filter(p => !p.is_merchandise);
+  }
+  return products.value;
+});
+
 const navigateToProduct = (slug: string) => {
   void router.push({ name: 'public-store-product-detail', params: { slug } });
 };
@@ -67,6 +84,41 @@ const navigateToProduct = (slug: string) => {
         </p>
       </div>
       <ShoppingBag class="absolute -right-8 -bottom-8 w-64 h-64 text-white/5 pointer-events-none" />
+    </div>
+
+    <!-- Category Tabs -->
+    <div class="flex items-center gap-2 border-b border-neutral-gray/15 pb-4">
+      <button
+        type="button"
+        @click="activeSection = 'all'"
+        class="px-5 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+        :class="activeSection === 'all'
+          ? 'bg-primary text-white shadow-sm'
+          : 'bg-white border border-neutral-gray/20 text-neutral-black hover:border-neutral-gray/40'"
+      >
+        All Items ({{ products.length }})
+      </button>
+      <button
+        type="button"
+        @click="activeSection = 'merchandise'"
+        class="px-5 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1.5"
+        :class="activeSection === 'merchandise'
+          ? 'bg-primary text-white shadow-sm'
+          : 'bg-white border border-neutral-gray/20 text-neutral-black hover:border-neutral-gray/40'"
+      >
+        <Tag :size="13" />
+        Merchandise Section ({{ products.filter(p => p.is_merchandise).length }})
+      </button>
+      <button
+        type="button"
+        @click="activeSection = 'general'"
+        class="px-5 py-2.5 rounded-2xl text-xs font-bold uppercase tracking-wider transition-all cursor-pointer"
+        :class="activeSection === 'general'
+          ? 'bg-primary text-white shadow-sm'
+          : 'bg-white border border-neutral-gray/20 text-neutral-black hover:border-neutral-gray/40'"
+      >
+        General Store ({{ products.filter(p => !p.is_merchandise).length }})
+      </button>
     </div>
 
     <!-- Search & Sort Controls -->
@@ -105,39 +157,74 @@ const navigateToProduct = (slug: string) => {
     <!-- Loading Grid -->
     <div v-if="isLoading" class="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
       <div v-for="i in 8" :key="i" class="bg-white rounded-3xl border border-neutral-gray/20 p-4 space-y-4 animate-pulse">
-        <div class="w-full h-48 bg-neutral-gray/20 rounded-2xl" />
+        <div class="w-full h-56 bg-neutral-gray/20 rounded-2xl" />
         <div class="h-4 bg-neutral-gray/20 rounded w-3/4" />
         <div class="h-4 bg-neutral-gray/20 rounded w-1/2" />
       </div>
     </div>
 
     <!-- Empty State -->
-    <div v-else-if="products.length === 0" class="text-center py-16 space-y-4">
+    <div v-else-if="displayedProducts.length === 0" class="text-center py-16 space-y-4">
       <div class="w-16 h-16 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto text-primary">
         <ShoppingBag :size="32" />
       </div>
-      <h3 class="text-lg font-bold text-neutral-black">No products found</h3>
+      <h3 class="text-lg font-bold text-neutral-black">Coming soon ... Stay Tuned!</h3>
       <p class="text-sm text-neutral-muted">Check back soon for new merchandise drops!</p>
     </div>
 
     <!-- Products Grid -->
     <div v-else class="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
       <div
-        v-for="product in products"
+        v-for="product in displayedProducts"
         :key="product.uuid"
         @click="navigateToProduct(product.slug)"
-        class="group bg-white rounded-3xl border border-neutral-gray/20 p-4 shadow-soft hover:shadow-hover transition-all duration-300 cursor-pointer flex flex-col justify-between"
+        @mouseenter="hoveredProductUuid = product.uuid"
+        @mouseleave="hoveredProductUuid = null"
+        @focusin="hoveredProductUuid = product.uuid"
+        @focusout="hoveredProductUuid = null"
+        tabindex="0"
+        role="button"
+        :aria-label="`View details for ${product.name}`"
+        class="group bg-white rounded-3xl border border-neutral-gray/20 p-4 shadow-soft hover:shadow-hover transition-all duration-300 cursor-pointer flex flex-col justify-between focus:ring-2 focus:ring-primary/30 outline-none"
       >
         <div class="space-y-4">
-          <!-- Image -->
+          <!-- Image with Smooth Front/Back Transition -->
           <div class="w-full h-56 bg-neutral-background rounded-2xl overflow-hidden relative flex items-center justify-center">
+            <!-- Front View -->
             <img
-              v-if="product.primary_image_url"
-              :src="product.primary_image_url"
+              v-if="product.front_image_url || product.primary_image_url"
+              :src="product.front_image_url || product.primary_image_url!"
               :alt="product.name"
-              class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              class="w-full h-full object-cover transition-all duration-500 ease-out"
+              :class="hoveredProductUuid === product.uuid && product.back_image_url ? 'opacity-0 scale-95' : 'opacity-100 scale-100'"
+              loading="lazy"
             />
-            <ShoppingBag v-else class="text-neutral-muted opacity-40" :size="48" />
+            <!-- Back View -->
+            <img
+              v-if="product.back_image_url"
+              :src="product.back_image_url"
+              :alt="`${product.name} back view`"
+              class="absolute inset-0 w-full h-full object-cover transition-all duration-500 ease-out"
+              :class="hoveredProductUuid === product.uuid ? 'opacity-100 scale-100' : 'opacity-0 scale-105 pointer-events-none'"
+              loading="lazy"
+            />
+            <ShoppingBag v-else-if="!product.front_image_url && !product.primary_image_url" class="text-neutral-muted opacity-40" :size="48" />
+
+            <!-- Merchandise Badge -->
+            <div v-if="product.is_merchandise" class="absolute top-3 left-3 bg-primary text-white text-[9px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full shadow-sm">
+              Merchandise
+            </div>
+
+            <!-- Touch / Mobile Flip Button -->
+            <button
+              v-if="product.back_image_url"
+              type="button"
+              @click.stop="toggleProductView(product.uuid)"
+              class="absolute bottom-2.5 right-2.5 bg-white/90 hover:bg-white text-neutral-black text-[9px] font-bold px-2 py-1 rounded-lg backdrop-blur-sm shadow-sm transition-all flex items-center gap-1 border border-neutral-gray/20"
+              title="Flip view"
+            >
+              <span>{{ hoveredProductUuid === product.uuid ? 'Front' : 'Back' }}</span>
+            </button>
 
             <div v-if="product.has_variants" class="absolute top-3 right-3 bg-white/90 backdrop-blur-md text-[10px] font-bold px-2.5 py-1 rounded-full text-neutral-black shadow-sm">
               Multiple Options

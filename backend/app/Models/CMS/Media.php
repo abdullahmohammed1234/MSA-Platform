@@ -23,6 +23,7 @@ class Media extends Model
         'mime_type',
         'size',
         'uploaded_by',
+        'audience',
     ];
 
     protected $hidden = [
@@ -35,6 +36,10 @@ class Media extends Model
 
     public function getUrlAttribute($value): ?string
     {
+        if (!empty($this->attributes['audience']) && $this->attributes['audience'] !== 'both' && !empty($this->uuid)) {
+            return url("/api/v1/website/media/{$this->uuid}/file");
+        }
+
         if (!empty($this->attributes['filepath'])) {
             return Storage::disk('public')->url($this->attributes['filepath']);
         }
@@ -83,5 +88,27 @@ class Media extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(MediaCategory::class, 'category_id');
+    }
+
+    public function isAudienceEligible(?User $user): bool
+    {
+        $audience = $this->audience ?? 'both';
+        if ($audience === 'both') {
+            return true;
+        }
+
+        if ($user === null || empty($user->gender)) {
+            return false;
+        }
+
+        if ($audience === 'brothers' || $audience === 'male') {
+            return $user->gender === 'male';
+        }
+
+        if ($audience === 'sisters' || $audience === 'female') {
+            return $user->gender === 'female';
+        }
+
+        return false;
     }
 }

@@ -48,12 +48,20 @@ class Copy extends Model
                 $copy->uuid = (string) Str::uuid();
             }
             if (empty($copy->accession_number)) {
-                $latest = static::max('id') + 1;
-                $copy->accession_number = 'MLIB-A-' . str_pad((string) $latest, 6, '0', STR_PAD_LEFT);
+                $nextId = (static::withTrashed()->max('id') ?? 0) + 1;
+                do {
+                    $acc = 'MLIB-A-' . str_pad((string) $nextId, 6, '0', STR_PAD_LEFT);
+                    $nextId++;
+                } while (static::withTrashed()->where('accession_number', $acc)->exists());
+                $copy->accession_number = $acc;
             }
             if (empty($copy->barcode)) {
-                $latest = static::max('id') + 1;
-                $copy->barcode = 'MLIB-C-' . str_pad((string) $latest, 6, '0', STR_PAD_LEFT);
+                $nextId = (static::withTrashed()->max('id') ?? 0) + 1;
+                do {
+                    $bar = 'MLIB-C-' . str_pad((string) $nextId, 6, '0', STR_PAD_LEFT);
+                    $nextId++;
+                } while (static::withTrashed()->where('barcode', $bar)->exists());
+                $copy->barcode = $bar;
             }
         });
     }

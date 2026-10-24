@@ -6,6 +6,11 @@ import type { Permission, AuditLog, Role } from '@/types/auth';
 import { useToastStore } from '@/components/feedback/toast';
 import { Button } from '@/components/ui/button';
 import { useAuthorization } from '@/composables/auth/useAuthorization';
+import {
+  PERMISSION_SYSTEMS,
+  classifyPermissionSystem,
+  filterPermissionsByGroup,
+} from '@/utils/permissionSystems';
 
 interface UserItem {
   id: number;
@@ -36,7 +41,11 @@ const selectedUserUuid = ref('');
 const userRoles = ref<string[]>([]);
 const userPermissions = ref<string[]>([]);
 
-// Permission Directory search & filter
+// Direct Permissions Group & Search Filtering (Tab 1)
+const selectedPermissionGroup = ref('all');
+const directPermissionSearchQuery = ref('');
+
+// Permission Directory search & filter (Tab 2)
 const directorySearchQuery = ref('');
 const directoryModuleFilter = ref('all');
 
@@ -156,7 +165,75 @@ const modulesList = computed(() => {
   return Array.from(mods).sort();
 });
 
-// Group permissions by module with optional search filtering
+// System-based Direct Permissions Grouping & Filtering (Tab 1)
+const availablePermissionGroups = computed(() => {
+  const counts: Record<string, number> = {};
+  PERMISSION_SYSTEMS.forEach((g) => {
+    counts[g.id] = 0;
+  });
+
+  permissions.value.forEach((p) => {
+    const sysId = classifyPermissionSystem(p);
+    counts[sysId] = (counts[sysId] || 0) + 1;
+  });
+
+  // Always include 'all' and 'general', plus any system group with at least 1 permission
+  return PERMISSION_SYSTEMS.filter((g) => {
+    if (g.id === 'all' || g.id === 'general') return true;
+    return (counts[g.id] || 0) > 0;
+  });
+});
+
+const getGroupPermissionCount = (groupId: string): number => {
+  if (groupId === 'all') return permissions.value.length;
+  return permissions.value.filter((p) => classifyPermissionSystem(p) === groupId).length;
+};
+
+const currentGroupName = computed(() => {
+  const group = PERMISSION_SYSTEMS.find((g) => g.id === selectedPermissionGroup.value);
+  return group ? group.shortName : 'System';
+});
+
+const currentGroupDescription = computed(() => {
+  const group = PERMISSION_SYSTEMS.find((g) => g.id === selectedPermissionGroup.value);
+  return group ? group.description : '';
+});
+
+const filteredDirectPermissions = computed(() => {
+  return filterPermissionsByGroup(
+    permissions.value,
+    selectedPermissionGroup.value,
+    directPermissionSearchQuery.value
+  );
+});
+
+const selectedGroupAssignedCount = computed(() => {
+  const groupPerms = filterPermissionsByGroup(permissions.value, selectedPermissionGroup.value, '');
+  return groupPerms.filter((p) => userPermissions.value.includes(p.slug)).length;
+});
+
+const groupedDirectPermissions = computed(() => {
+  const groups: Record<string, { label: string; permissions: Permission[] }> = {};
+  const perms = filteredDirectPermissions.value;
+
+  perms.forEach((p) => {
+    const sysId = classifyPermissionSystem(p);
+    const sysDef = PERMISSION_SYSTEMS.find((g) => g.id === sysId);
+    const label = sysDef ? sysDef.name : sysId.toUpperCase();
+
+    if (!groups[sysId]) {
+      groups[sysId] = {
+        label,
+        permissions: [],
+      };
+    }
+    groups[sysId].permissions.push(p);
+  });
+
+  return groups;
+});
+
+// Group permissions by module with optional search filtering (Tab 2: Directory)
 const groupedPermissions = computed(() => {
   const groups: Record<string, Permission[]> = {};
   const query = directorySearchQuery.value.toLowerCase().trim();
@@ -359,17 +436,71 @@ const getActionClass = (action: string) => {
             </Button>
           </div>
 
-          <div class="space-y-6 max-h-[360px] overflow-y-auto pr-2">
-            <div v-for="(perms, moduleName) in groupedPermissions" :key="moduleName" class="space-y-2">
-              <div class="text-xs font-bold text-neutral-black border-b border-neutral-ivory/30 pb-1">
-                {{ moduleName }} Module
+          <!-- Assigned Permissions Group Selector & Scoped Search -->
+          <div class="mb-5 space-y-2.5">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-neutral-background/70 border border-neutral-ivory/80 rounded-xl">
+              <div class="flex flex-col sm:flex-row sm:items-center gap-2">
+                <label for="assigned-permissions-group-select" class="text-xs font-bold text-neutral-black whitespace-nowrap">
+                  Assigned Permissions Group:
+                </label>
+                <select
+                  id="assigned-permissions-group-select"
+                  v-model="selectedPermissionGroup"
+                  class="p-2 text-xs font-semibold rounded-lg border border-neutral-ivory focus:border-primary focus:outline-none bg-white cursor-pointer shadow-2xs text-neutral-800"
+                >
+                  <option v-for="group in availablePermissionGroups" :key="group.id" :value="group.id">
+                    {{ group.name }} ({{ getGroupPermissionCount(group.id) }})
+                  </option>
+                </select>
+              </div>
+
+              <!-- Scoped Search within Selected Group -->
+              <div class="relative w-full sm:w-56">
+                <input
+                  v-model="directPermissionSearchQuery"
+                  type="text"
+                  :placeholder="`Search ${currentGroupName}...`"
+                  class="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-neutral-ivory focus:border-primary focus:outline-none bg-white"
+                />
+                <span class="absolute left-2.5 top-2 text-neutral-muted">
+                  <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </span>
+              </div>
+            </div>
+
+            <!-- Group Description & Assignment Counter -->
+            <div class="flex items-center justify-between text-[11px] text-neutral-muted px-1">
+              <span class="truncate max-w-md">{{ currentGroupDescription }}</span>
+              <span class="font-semibold text-neutral-700 whitespace-nowrap shrink-0 ml-2">
+                {{ selectedGroupAssignedCount }} assigned in this view
+              </span>
+            </div>
+          </div>
+
+          <!-- Permissions List by System -->
+          <div class="space-y-6 max-h-[380px] overflow-y-auto pr-2">
+            <!-- Empty state when no permissions match the selected group/filter -->
+            <div
+              v-if="filteredDirectPermissions.length === 0"
+              class="py-12 text-center text-xs text-neutral-muted border border-neutral-ivory/50 border-dashed rounded-xl p-6"
+            >
+              <p class="font-semibold text-neutral-700 mb-1">No permissions found</p>
+              <p>There are no capabilities matching this system group or filter criteria.</p>
+            </div>
+
+            <div v-for="(group, sysId) in groupedDirectPermissions" :key="sysId" class="space-y-2">
+              <div class="text-xs font-bold text-neutral-black border-b border-neutral-ivory/30 pb-1 flex items-center justify-between">
+                <span>{{ group.label }}</span>
+                <span class="text-[10px] font-medium text-neutral-500">{{ group.permissions.length }} permissions</span>
               </div>
               <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pl-1">
                 <label
-                  v-for="perm in perms"
+                  v-for="perm in group.permissions"
                   :key="perm.uuid"
                   class="flex items-start gap-2.5 p-2 rounded-xl hover:bg-neutral-background cursor-pointer select-none transition-colors border border-neutral-ivory/30"
-                  :class="{ 'border-primary/20 bg-neutral-background/40': userPermissions.includes(perm.slug) }"
+                  :class="{ 'border-primary/20 bg-primary/5': userPermissions.includes(perm.slug) }"
                 >
                   <input
                     type="checkbox"
@@ -378,8 +509,13 @@ const getActionClass = (action: string) => {
                     class="mt-0.5 h-4 w-4 rounded border-neutral-ivory text-primary focus:ring-primary focus:ring-offset-0 cursor-pointer"
                   />
                   <div>
-                    <span class="text-xs font-semibold text-neutral-black">{{ perm.name }}</span>
-                    <p class="text-[10px] text-neutral-muted leading-relaxed">{{ perm.description }}</p>
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                      <span class="text-xs font-semibold text-neutral-black">{{ perm.name }}</span>
+                      <span class="text-[9.5px] px-1.5 py-0.2 rounded font-mono font-medium bg-neutral-100 text-neutral-600">
+                        {{ perm.slug }}
+                      </span>
+                    </div>
+                    <p class="text-[10px] text-neutral-muted leading-relaxed mt-0.5">{{ perm.description }}</p>
                   </div>
                 </label>
               </div>

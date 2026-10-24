@@ -108,7 +108,12 @@ class AnnouncementDeliveryService
         $now = now();
 
         $users = User::query()->where('is_active', true);
-        if ($dispatch->audience !== 'All') {
+        $audienceLower = strtolower((string) $dispatch->audience);
+        if ($audienceLower === 'male') {
+            $users->where('gender', 'male');
+        } elseif ($audienceLower === 'female') {
+            $users->where('gender', 'female');
+        } elseif ($dispatch->audience !== 'All') {
             $users->whereHas('roles', function ($q) use ($dispatch) {
                 $q->where('slug', strtolower($dispatch->audience))->orWhere('name', $dispatch->audience);
             });
@@ -504,6 +509,12 @@ class AnnouncementDeliveryService
         // Re-check at send time: deactivation or an opt-out since preparation wins.
         if ($user === null || ! $user->is_active || $channelClass === null
             || ! in_array($channelClass, $probe->via($user), true)) {
+            return AnnouncementDelivery::STATUS_SKIPPED;
+        }
+
+        // Re-check gender at send time to prevent delivering to wrong audience if user changed profile
+        $audienceLower = strtolower((string) $dispatch->audience);
+        if (in_array($audienceLower, ['male', 'female'], true) && $user->gender !== $audienceLower) {
             return AnnouncementDelivery::STATUS_SKIPPED;
         }
 

@@ -8,6 +8,7 @@ use App\Ems\Exceptions\TicketNotValidException;
 use App\Ems\Models\Event;
 use App\Ems\Models\EventCategory;
 use App\Ems\Models\Ticket;
+use App\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -26,7 +27,7 @@ class PublicEventService
      * @param  array<string, mixed>  $filters
      * @return LengthAwarePaginator<int, Event>
      */
-    public function paginate(array $filters = []): LengthAwarePaginator
+    public function paginate(array $filters = [], ?User $viewer = null): LengthAwarePaginator
     {
         $sortBy = in_array($filters['sort_by'] ?? null, self::SORTABLE, true)
             ? $filters['sort_by']
@@ -35,7 +36,7 @@ class PublicEventService
         $direction = strtolower((string) ($filters['sort_direction'] ?? 'asc')) === 'desc' ? 'desc' : 'asc';
         $perPage = $this->resolvePerPage($filters['per_page'] ?? null);
 
-        return $this->baseQuery($filters)
+        return $this->baseQuery($filters, $viewer)
             ->with(['category', 'series'])
             ->withSum(['registrations as occupied_seats' => fn (Builder $q) => $q->occupyingCapacity()], 'quantity')
             ->orderBy($sortBy, $direction)
@@ -47,7 +48,7 @@ class PublicEventService
     /**
      * Resolve a public event by slug, or null when it must stay hidden.
      */
-    public function findBySlug(string $slug): ?Event
+    public function findBySlug(string $slug, ?User $viewer = null): ?Event
     {
         /** @var Event|null $event */
         $event = Event::query()
@@ -63,6 +64,10 @@ class PublicEventService
             ->withSum(['registrations as occupied_seats' => fn (Builder $q) => $q->occupyingCapacity()], 'quantity')
             ->first();
 
+        if ($event && ! $event->isAudienceEligible($viewer)) {
+            return null;
+        }
+
         return $event;
     }
 
@@ -74,12 +79,12 @@ class PublicEventService
      * @param  array<string, mixed>  $filters
      * @return Collection<int, Event>
      */
-    public function calendar(array $filters = []): Collection
+    public function calendar(array $filters = [], ?User $viewer = null): Collection
     {
         $startsAfter = $filters['starts_after'] ?? null;
         $startsBefore = $filters['starts_before'] ?? null;
 
-        return $this->baseQuery($filters)
+        return $this->baseQuery($filters, $viewer)
             ->with(['category'])
             ->when($startsAfter || $startsBefore, function (Builder $q) use ($startsAfter, $startsBefore) {
                 if ($startsAfter) {
@@ -151,10 +156,19 @@ class PublicEventService
      * @param  array<string, mixed>  $filters
      * @return Builder<Event>
      */
-    private function baseQuery(array $filters): Builder
+    private function baseQuery(array $filters, ?User $viewer = null): Builder
     {
         return Event::query()
             ->publiclyDiscoverable()
+            ->when($viewer && $viewer->gender === 'male', function (Builder $q) {
+                $q->whereIn('audience', ['both', 'male']);
+            })
+            ->when($viewer && $viewer->gender === 'female', function (Builder $q) {
+                $q->whereIn('audience', ['both', 'female']);
+            })
+            ->when(!$viewer || empty($viewer->gender), function (Builder $q) {
+                $q->where('audience', 'both');
+            })
             ->search($filters['search'] ?? null)
             ->when(
                 isset($filters['category_id']),

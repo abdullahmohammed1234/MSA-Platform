@@ -61,7 +61,8 @@ class PublicEventController extends EmsController
             );
         }
 
-        $paginator = $this->events->paginate($request->filters());
+        $viewer = $request->user('sanctum') ?? $request->user();
+        $paginator = $this->events->paginate($request->filters(), $viewer);
 
         return ApiResponse::paginated(
             $paginator,
@@ -90,7 +91,8 @@ class PublicEventController extends EmsController
      */
     public function calendar(CalendarPublicEventRequest $request): JsonResponse
     {
-        $items = $this->events->calendar($request->filters());
+        $viewer = $request->user('sanctum') ?? $request->user();
+        $items = $this->events->calendar($request->filters(), $viewer);
 
         return ApiResponse::success(
             PublicCalendarEventResource::collection($items),
@@ -101,11 +103,16 @@ class PublicEventController extends EmsController
     /**
      * GET /api/v1/ems/public/events/{slug}
      */
-    public function show(string $slug): JsonResponse
+    public function show(Request $request, string $slug): JsonResponse
     {
-        $event = $this->events->findBySlug($slug);
+        $viewer = $request->user('sanctum') ?? $request->user();
+        $event = $this->events->findBySlug($slug, $viewer);
 
         if ($event === null) {
+            $rawEvent = \App\Ems\Models\Event::query()->publiclyDiscoverable()->where('slug', $slug)->first();
+            if ($rawEvent && ! $rawEvent->isAudienceEligible($viewer)) {
+                abort(403, 'This event is restricted to ' . ($rawEvent->audience === 'male' ? 'brothers' : 'sisters') . ' only.');
+            }
             throw new NotFoundHttpException('The requested event was not found.');
         }
 
@@ -133,10 +140,19 @@ class PublicEventController extends EmsController
      */
     public function register(RegisterForEventRequest $request, string $slug): JsonResponse
     {
-        $event = $this->events->findBySlug($slug);
+        $viewer = $request->user('sanctum') ?? $request->user();
+        $event = $this->events->findBySlug($slug, $viewer);
 
         if ($event === null) {
+            $rawEvent = \App\Ems\Models\Event::query()->publiclyDiscoverable()->where('slug', $slug)->first();
+            if ($rawEvent && ! $rawEvent->isAudienceEligible($viewer)) {
+                abort(403, 'This event is restricted to ' . ($rawEvent->audience === 'male' ? 'brothers' : 'sisters') . ' only.');
+            }
             throw new NotFoundHttpException('The requested event was not found.');
+        }
+
+        if (! $event->isAudienceEligible($viewer)) {
+            abort(403, 'This event is restricted to ' . ($event->audience === 'male' ? 'brothers' : 'sisters') . ' only.');
         }
 
         $event->increment('registrations_started_count');
@@ -144,7 +160,7 @@ class PublicEventController extends EmsController
         $registration = $this->registrations->registerFree(
             $event,
             $request->validated(),
-            $request->user()
+            $viewer
         );
 
         return ApiResponse::created(
@@ -158,10 +174,19 @@ class PublicEventController extends EmsController
      */
     public function checkout(CheckoutEventRequest $request, string $slug): JsonResponse
     {
-        $event = $this->events->findBySlug($slug);
+        $viewer = $request->user('sanctum') ?? $request->user();
+        $event = $this->events->findBySlug($slug, $viewer);
 
         if ($event === null) {
+            $rawEvent = \App\Ems\Models\Event::query()->publiclyDiscoverable()->where('slug', $slug)->first();
+            if ($rawEvent && ! $rawEvent->isAudienceEligible($viewer)) {
+                abort(403, 'This event is restricted to ' . ($rawEvent->audience === 'male' ? 'brothers' : 'sisters') . ' only.');
+            }
             throw new NotFoundHttpException('The requested event was not found.');
+        }
+
+        if (! $event->isAudienceEligible($viewer)) {
+            abort(403, 'This event is restricted to ' . ($event->audience === 'male' ? 'brothers' : 'sisters') . ' only.');
         }
 
         $event->increment('registrations_started_count');
@@ -169,7 +194,7 @@ class PublicEventController extends EmsController
         $result = $this->checkout->checkout(
             $event,
             $request->validated(),
-            $request->user()
+            $viewer
         );
 
         $message = $result['checkout_url']

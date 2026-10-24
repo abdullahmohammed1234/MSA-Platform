@@ -36,6 +36,16 @@ export const publicEventsService = {
     return emsHttp.get<PublicCalendarEvent[]>('/public/events/calendar', compact(filters));
   },
 
+  async getCalendarLinks(slug: string): Promise<{ google: string; outlook: string; yahoo: string; ics: string }> {
+    return emsHttp.get<{ google: string; outlook: string; yahoo: string; ics: string }>(
+      `/public/events/${encodeURIComponent(slug)}/calendar`
+    );
+  },
+
+  getIcsDownloadUrl(slug: string): string {
+    return `/api/v1/ems/public/events/${encodeURIComponent(slug)}/ics`;
+  },
+
   async listTicketTypes(slug: string): Promise<PublicTicketType[]> {
     return emsHttp.get(`/public/events/${encodeURIComponent(slug)}/tickets`);
   },

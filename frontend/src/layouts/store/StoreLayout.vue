@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch, onMounted, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import {
   ShoppingBag,
@@ -8,6 +8,7 @@ import {
   ShoppingBasket,
   LayoutDashboard,
   Menu,
+  X,
   ArrowLeft,
 } from 'lucide-vue-next';
 import { ToastContainer, useToastStore } from '@/components/feedback/toast';
@@ -43,6 +44,39 @@ const navigation = [
   },
 ];
 
+const closeMobileNav = () => {
+  isMobileNavOpen.value = false;
+};
+
+// Route changes dismiss drawer
+watch(() => route.path, () => {
+  closeMobileNav();
+});
+
+// Scroll locking and keyboard escape handling
+watch(isMobileNavOpen, (open) => {
+  if (typeof document !== 'undefined') {
+    document.body.style.overflow = open ? 'hidden' : '';
+  }
+});
+
+const handleKeyDown = (e: KeyboardEvent) => {
+  if (e.key === 'Escape' && isMobileNavOpen.value) {
+    closeMobileNav();
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown);
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown);
+  if (typeof document !== 'undefined') {
+    document.body.style.overflow = '';
+  }
+});
+
 const handleLogout = async () => {
   try {
     const serverConfirmed = await authStore.logout();
@@ -61,6 +95,92 @@ const handleLogout = async () => {
 <template>
   <div class="min-h-screen flex bg-neutral-background text-neutral-black overflow-x-hidden">
     <ToastContainer />
+
+    <!-- Mobile Drawer Backdrop Overlay (STORE-01) -->
+    <transition
+      enter-active-class="transition-opacity duration-300 ease-out"
+      enter-from-class="opacity-0"
+      enter-to-class="opacity-100"
+      leave-active-class="transition-opacity duration-200 ease-in"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
+    >
+      <div
+        v-if="isMobileNavOpen"
+        class="fixed inset-0 bg-neutral-black/50 backdrop-blur-xs z-40 lg:hidden"
+        @click="closeMobileNav"
+        aria-hidden="true"
+      />
+    </transition>
+
+    <!-- Mobile Slide-Over Navigation Drawer (STORE-01) -->
+    <aside
+      :class="[
+        'fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-white border-r border-neutral-gray/20 flex flex-col justify-between shadow-premium z-50 lg:hidden transition-transform duration-300 ease-in-out',
+        isMobileNavOpen ? 'translate-x-0' : '-translate-x-full'
+      ]"
+      style="padding-top: max(1rem, env(safe-area-inset-top)); padding-bottom: max(1rem, env(safe-area-inset-bottom));"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Store navigation menu"
+    >
+      <div class="p-5 flex-1 overflow-y-auto space-y-6">
+        <!-- Drawer Header with Brand & Close Button -->
+        <div class="flex items-center justify-between border-b border-neutral-gray/10 pb-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-primary/10 text-primary rounded-2xl flex items-center justify-center font-black">
+              <ShoppingBag :size="22" />
+            </div>
+            <div>
+              <h2 class="font-black text-base text-neutral-black leading-tight">MSA Store</h2>
+              <p class="text-[11px] font-bold text-neutral-muted uppercase tracking-wider">Store Admin Shell</p>
+            </div>
+          </div>
+          <button
+            @click="closeMobileNav"
+            class="p-2 rounded-xl text-neutral-muted hover:text-neutral-black hover:bg-neutral-background transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+            aria-label="Close navigation menu"
+          >
+            <X :size="20" />
+          </button>
+        </div>
+
+        <!-- Mobile Navigation items -->
+        <nav class="space-y-1.5" aria-label="Mobile store navigation">
+          <router-link
+            v-for="item in navigation"
+            :key="item.to"
+            :to="item.to"
+            @click="closeMobileNav"
+            :class="[
+              'flex items-center gap-3 px-4 py-3.5 rounded-2xl font-bold text-xs transition-all cursor-pointer min-h-[44px]',
+              route.path === item.to || (item.to !== '/store/admin' && route.path.startsWith(item.to))
+                ? 'bg-primary text-white shadow-sm'
+                : 'text-neutral-muted hover:text-neutral-black hover:bg-neutral-background',
+            ]"
+          >
+            <component :is="item.icon" :size="18" />
+            <span>{{ item.label }}</span>
+          </router-link>
+        </nav>
+      </div>
+
+      <!-- Mobile Quick Links & User Info Footer -->
+      <div class="p-5 border-t border-neutral-gray/10 space-y-3 bg-neutral-background/40">
+        <router-link
+          to="/admin"
+          @click="closeMobileNav"
+          class="flex items-center gap-2 px-4 py-3 rounded-2xl border border-neutral-gray/20 text-xs font-bold text-neutral-muted hover:text-neutral-black hover:bg-white transition-all min-h-[44px]"
+        >
+          <ArrowLeft :size="16" /> Return to MSA Admin
+        </router-link>
+
+        <div class="pt-2 flex items-center justify-between text-xs">
+          <span class="font-semibold text-neutral-black truncate">{{ authStore.user?.name || 'Store Administrator' }}</span>
+          <button @click="handleLogout" class="font-bold text-primary hover:underline cursor-pointer py-1 px-2">Logout</button>
+        </div>
+      </div>
+    </aside>
 
     <!-- Desktop Sidebar -->
     <aside class="hidden lg:flex flex-col w-64 bg-white border-r border-neutral-gray/20 p-6 shrink-0 shadow-soft fixed inset-y-0 left-0 h-screen z-40">
@@ -116,7 +236,9 @@ const handleLogout = async () => {
         <div class="flex items-center gap-3">
           <button
             @click="isMobileNavOpen = !isMobileNavOpen"
-            class="lg:hidden p-2 rounded-xl border border-neutral-gray/20 text-neutral-muted hover:text-neutral-black"
+            class="lg:hidden p-2 rounded-xl border border-neutral-gray/20 text-neutral-muted hover:text-neutral-black min-h-[44px] min-w-[44px] flex items-center justify-center cursor-pointer transition-colors"
+            aria-label="Toggle navigation menu"
+            :aria-expanded="isMobileNavOpen"
           >
             <Menu :size="20" />
           </button>
@@ -125,7 +247,7 @@ const handleLogout = async () => {
 
         <div class="flex items-center gap-4 text-xs">
           <span class="font-semibold text-neutral-muted hidden sm:inline">{{ authStore.user?.name || 'Store Administrator' }}</span>
-          <button @click="handleLogout" class="font-bold text-primary hover:underline cursor-pointer">Logout</button>
+          <button @click="handleLogout" class="font-bold text-primary hover:underline cursor-pointer py-1 px-2">Logout</button>
         </div>
       </header>
 

@@ -119,6 +119,7 @@ export const accountService = {
   async updateProfile(payload: {
     name?: string;
     email?: string;
+    gender?: 'male' | 'female';
   }): Promise<{ message: string; user: any }> {
     const response = await api.put('/users/profile', payload);
     return response.data;

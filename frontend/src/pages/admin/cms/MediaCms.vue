@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useCmsStore } from '@/stores/cms';
 import { resolveCmsMediaUrl } from '@/constants/publicAssets';
+import SecureMedia from '@/components/shared/SecureMedia.vue';
 import {
   CMS_MEDIA_MAX_DOCUMENT_KB,
   CMS_MEDIA_MAX_IMAGE_KB,
@@ -10,6 +11,7 @@ import {
   getCmsMediaFileKind,
   validateCmsMediaFileSize,
 } from '@/constants/cmsMediaUpload';
+import type { Media } from '@/types/cms';
 import {
   UploadCloud,
   Search,
@@ -23,6 +25,7 @@ import {
   Plus,
   X,
   Loader2,
+  Edit,
 } from 'lucide-vue-next';
 
 const cmsStore = useCmsStore();
@@ -35,12 +38,21 @@ const selectedFile = ref<File | null>(null);
 const selectedPreviewUrl = ref<string | null>(null);
 const customName = ref('');
 const selectedCategoryId = ref<number | ''>('');
+const selectedAudience = ref<'both' | 'brothers' | 'sisters'>('both');
 const formError = ref<string | null>(null);
 
 const showCategoryModal = ref(false);
 const newCategoryName = ref('');
 const categoryModalError = ref<string | null>(null);
 const isCreatingCategory = ref(false);
+
+const showEditModal = ref(false);
+const editingMedia = ref<Media | null>(null);
+const editDisplayName = ref('');
+const editCategoryId = ref<number | ''>('');
+const editAudience = ref<'both' | 'brothers' | 'sisters'>('both');
+const editModalError = ref<string | null>(null);
+const isUpdatingMedia = ref(false);
 
 const maxImageMb = formatCmsMediaLimitMb(CMS_MEDIA_MAX_IMAGE_KB);
 const maxVideoMb = formatCmsMediaLimitMb(CMS_MEDIA_MAX_VIDEO_KB);
@@ -106,6 +118,7 @@ const handleDrop = (e: DragEvent) => {
 const clearSelectedFile = () => {
   selectedFile.value = null;
   customName.value = '';
+  selectedAudience.value = 'both';
   formError.value = null;
 };
 
@@ -145,6 +158,50 @@ const createCategory = async () => {
   }
 };
 
+const openEditModal = (media: Media) => {
+  editingMedia.value = media;
+  editDisplayName.value = media.display_name || '';
+  editCategoryId.value = media.category_id || '';
+  const rawAud = media.audience || 'both';
+  editAudience.value = rawAud === 'male' ? 'brothers' : (rawAud === 'female' ? 'sisters' : (rawAud as 'both' | 'brothers' | 'sisters'));
+  editModalError.value = null;
+  showEditModal.value = true;
+};
+
+const closeEditModal = () => {
+  showEditModal.value = false;
+  editingMedia.value = null;
+  editModalError.value = null;
+};
+
+const saveEditMedia = async () => {
+  if (!editingMedia.value) return;
+  isUpdatingMedia.value = true;
+  editModalError.value = null;
+  try {
+    await cmsStore.updateMedia(editingMedia.value.uuid, {
+      display_name: editDisplayName.value.trim() || null,
+      category_id: editCategoryId.value === '' ? null : Number(editCategoryId.value),
+      audience: editAudience.value,
+    });
+    closeEditModal();
+  } catch (err: any) {
+    editModalError.value = err.response?.data?.message || cmsStore.error || 'Failed to update media.';
+  } finally {
+    isUpdatingMedia.value = false;
+  }
+};
+
+const audienceBadge = (audience?: string | null) => {
+  if (audience === 'brothers' || audience === 'male') {
+    return { label: 'Brothers', class: 'bg-blue-50 text-blue-700 border-blue-200' };
+  }
+  if (audience === 'sisters' || audience === 'female') {
+    return { label: 'Sisters', class: 'bg-rose-50 text-rose-700 border-rose-200' };
+  }
+  return { label: 'Both', class: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+};
+
 const handleUpload = async () => {
   if (!selectedFile.value) {
     formError.value = 'Please select a file to upload.';
@@ -162,6 +219,7 @@ const handleUpload = async () => {
     await cmsStore.uploadMedia(selectedFile.value, {
       display_name: customName.value.trim() || undefined,
       category_id: selectedCategoryId.value === '' ? null : Number(selectedCategoryId.value),
+      audience: selectedAudience.value,
     });
     clearSelectedFile();
   } catch {
@@ -356,6 +414,58 @@ const selectedFileHint = computed(() => {
             </button>
           </div>
         </div>
+
+        <div class="space-y-1.5 md:col-span-2">
+          <label class="text-[10px] font-black uppercase tracking-widest text-neutral-black/50">
+            Target Audience <span class="text-secondary">*</span>
+          </label>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <label
+              :class="[
+                'p-3.5 rounded-2xl border cursor-pointer transition-all flex flex-col gap-1',
+                selectedAudience === 'both'
+                  ? 'border-primary bg-primary/5 text-primary shadow-sm'
+                  : 'border-neutral-gray/20 hover:border-neutral-gray/40 bg-neutral-background/50 text-neutral-black'
+              ]"
+            >
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold">Both</span>
+                <input type="radio" value="both" v-model="selectedAudience" class="accent-primary" />
+              </div>
+              <p class="text-[10px] opacity-70">Public gallery — visible to everyone including visitors.</p>
+            </label>
+
+            <label
+              :class="[
+                'p-3.5 rounded-2xl border cursor-pointer transition-all flex flex-col gap-1',
+                selectedAudience === 'brothers'
+                  ? 'border-primary bg-primary/5 text-primary shadow-sm'
+                  : 'border-neutral-gray/20 hover:border-neutral-gray/40 bg-neutral-background/50 text-neutral-black'
+              ]"
+            >
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold">Brothers</span>
+                <input type="radio" value="brothers" v-model="selectedAudience" class="accent-primary" />
+              </div>
+              <p class="text-[10px] opacity-70">Protected storage — visible only to authenticated male members.</p>
+            </label>
+
+            <label
+              :class="[
+                'p-3.5 rounded-2xl border cursor-pointer transition-all flex flex-col gap-1',
+                selectedAudience === 'sisters'
+                  ? 'border-primary bg-primary/5 text-primary shadow-sm'
+                  : 'border-neutral-gray/20 hover:border-neutral-gray/40 bg-neutral-background/50 text-neutral-black'
+              ]"
+            >
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold">Sisters</span>
+                <input type="radio" value="sisters" v-model="selectedAudience" class="accent-primary" />
+              </div>
+              <p class="text-[10px] opacity-70">Protected storage — visible only to authenticated female members.</p>
+            </label>
+          </div>
+        </div>
       </div>
 
       <div v-if="formError || cmsStore.error" class="p-3 bg-secondary/10 border border-secondary/20 text-secondary rounded-2xl text-xs font-bold">
@@ -415,20 +525,12 @@ const selectedFileHint = computed(() => {
       >
         <!-- Preview -->
         <div class="aspect-square bg-neutral-background flex items-center justify-center overflow-hidden border-b border-neutral-gray/10 relative">
-          <img
-            v-if="isImageMedia(media)"
-            :src="resolveCmsMediaUrl(media.url)"
-            class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          <SecureMedia
+            v-if="isImageMedia(media) || isVideoMedia(media)"
+            :src="media.url"
             :alt="mediaLabel(media)"
-            loading="lazy"
-          />
-          <video
-            v-else-if="isVideoMedia(media)"
-            :src="`${resolveCmsMediaUrl(media.url)}#t=0.1`"
-            class="w-full h-full object-cover bg-black"
-            muted
-            preload="metadata"
-            playsinline
+            :is-video="isVideoMedia(media)"
+            media-class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
           <div v-else class="text-neutral-black/45 flex flex-col items-center gap-2">
             <component :is="getIcon(media)" :size="36" />
@@ -440,6 +542,14 @@ const selectedFileHint = computed(() => {
             class="absolute top-2 left-2 px-2 py-0.5 rounded-lg bg-white/90 text-[8px] font-black uppercase tracking-wider text-primary shadow-sm"
           >
             {{ mediaTypeLabel(media) }}
+          </span>
+          <span
+            :class="[
+              'absolute top-2 right-2 px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-wider border shadow-sm',
+              audienceBadge(media.audience).class
+            ]"
+          >
+            {{ audienceBadge(media.audience).label }}
           </span>
         </div>
 
@@ -469,6 +579,13 @@ const selectedFileHint = computed(() => {
             >
               <component :is="copiedUuid === media.uuid ? Check : Copy" :size="10" />
               {{ copiedUuid === media.uuid ? 'Copied' : 'Link' }}
+            </button>
+            <button
+              @click="openEditModal(media)"
+              class="p-2 bg-neutral-black/5 text-neutral-black hover:bg-primary hover:text-white rounded-xl transition-all cursor-pointer"
+              title="Edit Details & Audience"
+            >
+              <Edit :size="10" />
             </button>
             <button
               @click="handleDelete(media.uuid, mediaLabel(media))"
@@ -537,6 +654,140 @@ const selectedFileHint = computed(() => {
           >
             <Loader2 v-if="isCreatingCategory" :size="12" class="animate-spin" />
             Create Category
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Edit Media Modal -->
+    <div
+      v-if="showEditModal && editingMedia"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-black/40"
+      @click.self="closeEditModal"
+    >
+      <div class="bg-white rounded-3xl shadow-premium w-full max-w-lg p-6 space-y-5">
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <h3 class="text-lg font-display font-bold text-primary">Edit Media Item</h3>
+            <p class="text-xs text-neutral-black/45 mt-1">
+              Update metadata and audience segregation for "{{ editingMedia.display_name || editingMedia.filename }}".
+            </p>
+          </div>
+          <button
+            type="button"
+            @click="closeEditModal"
+            class="p-2 rounded-xl hover:bg-neutral-background text-neutral-black/40"
+            aria-label="Close"
+          >
+            <X :size="16" />
+          </button>
+        </div>
+
+        <div class="space-y-4">
+          <div class="space-y-1.5">
+            <label class="text-[10px] font-black uppercase tracking-widest text-neutral-black/50">
+              Display Name
+            </label>
+            <input
+              v-model="editDisplayName"
+              type="text"
+              placeholder="e.g. MSA Gala 2026"
+              class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="text-[10px] font-black uppercase tracking-widest text-neutral-black/50">
+              Category
+            </label>
+            <select
+              v-model="editCategoryId"
+              class="w-full bg-neutral-background border border-neutral-gray/20 rounded-2xl py-3 px-4 text-xs focus:outline-none focus:ring-2 focus:ring-primary/20 text-neutral-black"
+            >
+              <option value="">Select existing category</option>
+              <option
+                v-for="category in cmsStore.mediaCategories"
+                :key="category.id"
+                :value="category.id"
+              >
+                {{ category.name }}
+              </option>
+            </select>
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="text-[10px] font-black uppercase tracking-widest text-neutral-black/50">
+              Target Audience <span class="text-secondary">*</span>
+            </label>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <label
+                :class="[
+                  'p-3 rounded-2xl border cursor-pointer transition-all flex flex-col gap-1',
+                  editAudience === 'both'
+                    ? 'border-primary bg-primary/5 text-primary shadow-sm'
+                    : 'border-neutral-gray/20 hover:border-neutral-gray/40 bg-neutral-background/50 text-neutral-black'
+                ]"
+              >
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold">Both</span>
+                  <input type="radio" value="both" v-model="editAudience" class="accent-primary" />
+                </div>
+                <p class="text-[10px] opacity-70">Public gallery — visible to everyone including visitors.</p>
+              </label>
+
+              <label
+                :class="[
+                  'p-3 rounded-2xl border cursor-pointer transition-all flex flex-col gap-1',
+                  editAudience === 'brothers'
+                    ? 'border-primary bg-primary/5 text-primary shadow-sm'
+                    : 'border-neutral-gray/20 hover:border-neutral-gray/40 bg-neutral-background/50 text-neutral-black'
+                ]"
+              >
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold">Brothers</span>
+                  <input type="radio" value="brothers" v-model="editAudience" class="accent-primary" />
+                </div>
+                <p class="text-[10px] opacity-70">Protected storage — visible only to authenticated male members.</p>
+              </label>
+
+              <label
+                :class="[
+                  'p-3 rounded-2xl border cursor-pointer transition-all flex flex-col gap-1',
+                  editAudience === 'sisters'
+                    ? 'border-primary bg-primary/5 text-primary shadow-sm'
+                    : 'border-neutral-gray/20 hover:border-neutral-gray/40 bg-neutral-background/50 text-neutral-black'
+                ]"
+              >
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-bold">Sisters</span>
+                  <input type="radio" value="sisters" v-model="editAudience" class="accent-primary" />
+                </div>
+                <p class="text-[10px] opacity-70">Protected storage — visible only to authenticated female members.</p>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="editModalError" class="p-3 bg-secondary/10 border border-secondary/20 text-secondary rounded-2xl text-xs font-bold">
+          {{ editModalError }}
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button
+            type="button"
+            @click="closeEditModal"
+            class="px-5 py-2.5 bg-white border border-neutral-gray/20 rounded-xl text-[10px] font-black uppercase tracking-widest"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            @click="saveEditMedia"
+            :disabled="isUpdatingMedia"
+            class="px-5 py-2.5 bg-primary text-white rounded-xl text-[10px] font-black uppercase tracking-widest disabled:opacity-50 flex items-center gap-2"
+          >
+            <Loader2 v-if="isUpdatingMedia" :size="12" class="animate-spin" />
+            Save Changes
           </button>
         </div>
       </div>

@@ -132,19 +132,22 @@ class CmsSeeder extends Seeder
             );
         }
 
-        // 4. Seed Team Members
-        $team = config('website_defaults.team', []);
+        // 4. Seed Team Members (Initial reference defaults only on fresh installation)
+        if (TeamMember::withTrashed()->count() === 0) {
+            $team = config('website_defaults.team', []);
 
-        foreach ($team as $index => $member) {
-            TeamMember::firstOrCreate(
-                ['name' => $member['name'], 'role' => $member['role']],
-                array_merge($member, [
-                    'uuid' => (string) Str::uuid(),
-                    'display_order' => $index,
-                    'status' => 'published',
-                    'bio' => 'Serving the SFU Muslim community.',
-                ])
-            );
+            foreach ($team as $index => $member) {
+                TeamMember::create(
+                    array_merge($member, [
+                        'uuid' => (string) Str::uuid(),
+                        'display_order' => $index,
+                        'status' => 'published',
+                        'bio' => 'Serving the SFU Muslim community.',
+                    ])
+                );
+            }
+
+            \Illuminate\Support\Facades\Cache::forget('website_team');
         }
 
         // 5. Seed Resources

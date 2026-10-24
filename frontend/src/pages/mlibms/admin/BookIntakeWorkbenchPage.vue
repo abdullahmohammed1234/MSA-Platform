@@ -113,6 +113,29 @@ const removeAuthorField = (index: number) => {
   form.value.author_names.splice(index, 1);
 };
 
+const resetForm = () => {
+  form.value = {
+    title: '',
+    subtitle: '',
+    isbn_13: '',
+    isbn_10: '',
+    author_names: [''],
+    publisher_name: '',
+    publication_year: null,
+    edition: '',
+    language: 'English',
+    summary: '',
+    cover_image_url: '',
+    default_loan_days: 14,
+    is_reference_only: false,
+    copies_count: 1,
+    condition: 'good',
+  };
+  isbnInput.value = '';
+  lookupResult.value = null;
+  createdBook.value = null;
+};
+
 const handleSubmitIntake = async () => {
   if (!form.value.title.trim()) {
     toast.error('Book title is required.');
@@ -122,27 +145,28 @@ const handleSubmitIntake = async () => {
   isSubmitting.value = true;
   try {
     const copies = [];
-    for (let i = 0; i < form.value.copies_count; i++) {
+    const copyCount = form.value.copies_count && form.value.copies_count > 0 ? form.value.copies_count : 1;
+    for (let i = 0; i < copyCount; i++) {
       copies.push({
-        condition: form.value.condition,
+        condition: form.value.condition || 'good',
         notes: `Initial intake batch copy ${i + 1}`,
       });
     }
 
     const payload = {
-      title: form.value.title,
-      subtitle: form.value.subtitle,
-      isbn_13: form.value.isbn_13,
-      isbn_10: form.value.isbn_10,
+      title: form.value.title.trim(),
+      subtitle: form.value.subtitle ? form.value.subtitle.trim() : null,
+      isbn_13: form.value.isbn_13 ? form.value.isbn_13.trim() : null,
+      isbn_10: form.value.isbn_10 ? form.value.isbn_10.trim() : null,
       author_names: form.value.author_names.filter(a => a.trim() !== ''),
-      publisher_name: form.value.publisher_name,
-      publication_year: form.value.publication_year,
-      edition: form.value.edition,
-      language: form.value.language,
-      summary: form.value.summary,
-      cover_image_url: form.value.cover_image_url,
-      default_loan_days: form.value.default_loan_days,
-      is_reference_only: form.value.is_reference_only,
+      publisher_name: form.value.publisher_name ? form.value.publisher_name.trim() : null,
+      publication_year: form.value.publication_year || null,
+      edition: form.value.edition ? form.value.edition.trim() : null,
+      language: form.value.language || 'English',
+      summary: form.value.summary ? form.value.summary.trim() : null,
+      cover_image_url: form.value.cover_image_url ? form.value.cover_image_url.trim() : null,
+      default_loan_days: form.value.default_loan_days || 14,
+      is_reference_only: !!form.value.is_reference_only,
       copies: copies,
     };
 
@@ -317,13 +341,27 @@ const printBarcodeLabels = () => {
           <h3 class="text-xs font-bold text-neutral-muted uppercase tracking-wider">Step 3: Barcode Label Print Preview</h3>
           <p class="text-xs text-neutral-muted mt-0.5">Print generated barcode labels for physical copies.</p>
         </div>
-        <button
-          @click="printBarcodeLabels"
-          class="px-4 py-2 rounded-xl bg-white hover:bg-neutral-background text-neutral-black font-bold text-xs border border-neutral-ivory transition-all flex items-center space-x-2 shadow-sm"
-        >
-          <Printer class="w-4 h-4 text-primary" />
-          <span>Print Labels</span>
-        </button>
+        <div class="flex items-center space-x-2">
+          <button
+            @click="resetForm"
+            class="px-3.5 py-2 rounded-xl bg-neutral-background hover:bg-neutral-ivory/50 text-neutral-black font-bold text-xs border border-neutral-ivory transition-all shadow-sm"
+          >
+            + Intake Another Book
+          </button>
+          <router-link
+            to="/library/admin/books"
+            class="px-3.5 py-2 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-xs shadow-soft transition-all"
+          >
+            View in Catalog
+          </router-link>
+          <button
+            @click="printBarcodeLabels"
+            class="px-4 py-2 rounded-xl bg-white hover:bg-neutral-background text-neutral-black font-bold text-xs border border-neutral-ivory transition-all flex items-center space-x-2 shadow-sm"
+          >
+            <Printer class="w-4 h-4 text-primary" />
+            <span>Print Labels</span>
+          </button>
+        </div>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">

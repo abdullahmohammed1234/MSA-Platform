@@ -92,6 +92,28 @@ class SendEventNotificationJob implements ShouldQueue
             return;
         }
 
+        // Re-render notification content if event logistics have changed, guaranteeing authoritative current event details
+        if ($notification->event_id !== null && ! empty($notification->template_key)) {
+            $registration = $notification->registration;
+            if ($registration !== null) {
+                $registration->loadMissing(['event.organizer', 'ticketType', 'tickets', 'order', 'settledPayment', 'user']);
+            }
+            $renderer = app(\App\Ems\Services\Notifications\TemplateRenderer::class);
+            $freshRender = $renderer->render(
+                $notification->template_key,
+                $notification->payload ?? [],
+                $registration
+            );
+
+            $notification->subject = $freshRender['subject'];
+            $notification->body = $freshRender['body_text'];
+            $payload = $notification->payload ?? [];
+            $payload['body_html'] = $freshRender['body_html'];
+            $payload['body_text'] = $freshRender['body_text'];
+            $notification->payload = $payload;
+            $notification->save();
+        }
+
         try {
             $sentMessage = Mail::to($notification->recipient_email)
                 ->send(new EventNotificationMail($notification));

@@ -38,6 +38,8 @@ const appsList = [
   { key: 'donations', label: 'Donations' },
   { key: 'sponsorship', label: 'SPMS (Sponsorship)' },
   { key: 'mlibms', label: 'MLibMS (Library)' },
+  { key: 'vms', label: 'VMS (Volunteering)' },
+  { key: 'connect', label: 'MSA Connect' },
   { key: 'admin-portal', label: 'Admin Portal' },
 ];
 

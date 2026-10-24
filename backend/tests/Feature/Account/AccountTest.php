@@ -169,4 +169,30 @@ class AccountTest extends TestCase
         $response->assertStatus(422)
             ->assertJsonValidationErrors(['current_password']);
     }
+
+    public function test_account_summary_returns_direct_system_paths_for_ems_and_mlibms(): void
+    {
+        $admin = User::factory()->create([
+            'email' => 'admin_direct@sfu.ca',
+        ]);
+        $adminRole = Role::firstOrCreate(['slug' => 'admin'], ['name' => 'Admin']);
+        $admin->roles()->attach($adminRole->id);
+
+        Sanctum::actingAs($admin);
+
+        $response = $this->getJson('/api/v1/account/summary');
+        $response->assertStatus(200);
+
+        $applications = collect($response->json('data.applications'))->keyBy('slug');
+
+        $this->assertTrue($applications->has('ems'));
+        $this->assertEquals('/ems', $applications->get('ems')['path']);
+
+        $this->assertTrue($applications->has('mlibms'));
+        $this->assertEquals('/library/admin', $applications->get('mlibms')['path']);
+
+        $this->assertEquals('/cms', $applications->get('cms')['path']);
+        $this->assertEquals('/store/admin', $applications->get('store')['path']);
+        $this->assertEquals('/donations/admin', $applications->get('donations')['path']);
+    }
 }

@@ -10,6 +10,8 @@ export interface MediaGalleryItem {
   isLandscape?: boolean;
   media_type?: 'image' | 'video' | 'document';
   mime_type?: string;
+  created_at?: string;
+  audience?: string;
 }
 
 function titleFromFilename(filename: string): string {

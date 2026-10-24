@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { Plus, Search, Edit2, Trash2, RefreshCw, X } from 'lucide-vue-next';
+import { Plus, Search, Edit2, Trash2, RefreshCw, X, Eye } from 'lucide-vue-next';
 import storeService from '@/services/storeService';
+import cmsService from '@/services/cms/cmsService';
 import { useToastStore } from '@/components/feedback/toast';
 import type { StoreProduct } from '@/types/store';
 import ImageInput from '@/components/admin/ImageInput.vue';
@@ -13,6 +14,8 @@ const isLoading = ref(true);
 const search = ref('');
 const isModalOpen = ref(false);
 const editingProduct = ref<StoreProduct | null>(null);
+const previewAudience = ref<'male' | 'female' | 'logged_out'>('logged_out');
+const previewHovered = ref(false);
 
 const form = ref({
   name: '',
@@ -22,8 +25,17 @@ const form = ref({
   sku: '',
   status: 'active',
   has_variants: false,
+  is_merchandise: false,
   inventory_quantity: 0,
   image_url: '',
+  merchandise_images: {
+    sister_front: '',
+    sister_back: '',
+    brother_front: '',
+    brother_back: '',
+    neutral_front: '',
+    neutral_back: '',
+  },
   variants: [] as Array<{ name: string; sku: string; price_override_dollars: number; inventory_quantity: number }>,
 });
 
@@ -46,7 +58,18 @@ onMounted(() => {
 
 const openModal = (product: StoreProduct | null = null) => {
   editingProduct.value = product;
+  previewAudience.value = 'logged_out';
+  previewHovered.value = false;
+
   if (product) {
+    const findSlotUrl = (type: string, view: string) => {
+      if (product.merchandise_images && product.merchandise_images[`${type}_${view}`]) {
+        return product.merchandise_images[`${type}_${view}`]?.image_url || '';
+      }
+      const found = product.images?.find(img => img.image_type === type && img.view_type === view);
+      return found?.image_url || '';
+    };
+
     form.value = {
       name: product.name,
       slug: product.slug,
@@ -55,8 +78,17 @@ const openModal = (product: StoreProduct | null = null) => {
       sku: product.sku || '',
       status: product.status,
       has_variants: product.has_variants,
+      is_merchandise: Boolean(product.is_merchandise),
       inventory_quantity: product.inventory_quantity,
       image_url: product.primary_image_url || '',
+      merchandise_images: {
+        sister_front: findSlotUrl('sister', 'front'),
+        sister_back: findSlotUrl('sister', 'back'),
+        brother_front: findSlotUrl('brother', 'front'),
+        brother_back: findSlotUrl('brother', 'back'),
+        neutral_front: findSlotUrl('neutral', 'front'),
+        neutral_back: findSlotUrl('neutral', 'back'),
+      },
       variants: product.variants.map(v => ({
         name: v.name,
         sku: v.sku || '',
@@ -73,12 +105,37 @@ const openModal = (product: StoreProduct | null = null) => {
       sku: '',
       status: 'active',
       has_variants: false,
+      is_merchandise: false,
       inventory_quantity: 10,
       image_url: '',
+      merchandise_images: {
+        sister_front: '',
+        sister_back: '',
+        brother_front: '',
+        brother_back: '',
+        neutral_front: '',
+        neutral_back: '',
+      },
       variants: [],
     };
   }
   isModalOpen.value = true;
+};
+
+const createSlotUploadFn = (imageType: string, viewType: string) => {
+  return async (file: File) => {
+    if (editingProduct.value) {
+      const fd = new FormData();
+      fd.append('file', file);
+      fd.append('image_type', imageType);
+      fd.append('view_type', viewType);
+      const res = await storeService.uploadAdminProductImage(editingProduct.value.uuid, fd);
+      return { url: res.data.image_url };
+    } else {
+      const res = await cmsService.uploadAsset(file);
+      return { url: res.url };
+    }
+  };
 };
 
 const addVariantRow = () => {
@@ -100,7 +157,23 @@ const handleSave = async () => {
     return;
   }
 
-  const payload = {
+  if (form.value.is_merchandise) {
+    const required = [
+      { key: 'sister_front', label: 'Sister Model Front' },
+      { key: 'sister_back', label: 'Sister Model Back' },
+      { key: 'brother_front', label: 'Brother Model Front' },
+      { key: 'brother_back', label: 'Brother Model Back' },
+      { key: 'neutral_front', label: 'Neutral Front' },
+      { key: 'neutral_back', label: 'Neutral Back' },
+    ];
+    const missing = required.filter(r => !form.value.merchandise_images[r.key as keyof typeof form.value.merchandise_images]);
+    if (missing.length > 0) {
+      toast.error(`All 6 merchandise images are mandatory. Missing: ${missing.map(m => m.label).join(', ')}`);
+      return;
+    }
+  }
+
+  const payload: any = {
     name: form.value.name,
     slug: form.value.slug,
     description: form.value.description,
@@ -108,6 +181,7 @@ const handleSave = async () => {
     sku: form.value.sku,
     status: form.value.status,
     has_variants: form.value.has_variants,
+    is_merchandise: form.value.is_merchandise,
     inventory_quantity: form.value.inventory_quantity,
     image_url: form.value.image_url,
     variants: form.value.variants.map(v => ({
@@ -118,18 +192,22 @@ const handleSave = async () => {
     })),
   };
 
+  if (form.value.is_merchandise) {
+    payload.merchandise_images = form.value.merchandise_images;
+  }
+
   try {
     if (editingProduct.value) {
       await storeService.updateAdminProduct(editingProduct.value.uuid, payload);
-      toast.success('Product updated!');
+      toast.success('Merchandise product updated!');
     } else {
       await storeService.createAdminProduct(payload);
-      toast.success('Product created!');
+      toast.success('Merchandise product created!');
     }
     isModalOpen.value = false;
     void fetchProducts();
   } catch (err: any) {
-    toast.error(err.message || 'Failed to save product.');
+    toast.error(err.response?.data?.message || err.message || 'Failed to save product.');
   }
 };
 
@@ -199,6 +277,9 @@ const handleDelete = async (product: StoreProduct) => {
             <tr v-for="product in products" :key="product.uuid" class="hover:bg-neutral-background/40 transition-colors">
               <td class="p-3 font-semibold text-neutral-black">
                 {{ product.name }}
+                <span v-if="product.is_merchandise" class="ml-2 px-2 py-0.5 bg-primary/10 text-primary border border-primary/20 rounded-full text-[10px] font-bold">
+                  Merch (6 Images)
+                </span>
                 <span v-if="product.has_variants" class="ml-2 px-2 py-0.5 bg-neutral-background rounded-full text-[10px] text-neutral-muted">
                   {{ product.variants.length }} options
                 </span>
@@ -263,13 +344,176 @@ const handleDelete = async (product: StoreProduct) => {
             </select>
           </div>
 
-          <ImageInput
-            v-model="form.image_url"
-            label="Product Image"
-            hint="Upload an image directly from your device (drag & drop or click) or paste an image URL link."
-            placeholder="Paste an image link (https://...) or upload a file"
-            preview-class="w-full max-h-48 object-contain rounded-2xl bg-neutral-background"
-          />
+          <!-- Merchandise Toggle -->
+          <div class="flex items-center gap-2 p-3.5 bg-primary/5 rounded-2xl border border-primary/20">
+            <input type="checkbox" id="is_merchandise" v-model="form.is_merchandise" class="rounded cursor-pointer" />
+            <label for="is_merchandise" class="font-bold text-neutral-black cursor-pointer text-xs">
+              This is an Official Merchandise Product (Requires 6 Mandatory Audience-Specific Images)
+            </label>
+          </div>
+
+          <!-- Non-Merchandise Single Image -->
+          <div v-if="!form.is_merchandise">
+            <ImageInput
+              v-model="form.image_url"
+              label="Product Image"
+              hint="Upload an image directly from your device (drag & drop or click) or paste an image URL link."
+              placeholder="Paste an image link (https://...) or upload a file"
+              preview-class="w-full max-h-48 object-contain rounded-2xl bg-neutral-background"
+            />
+          </div>
+
+          <!-- Merchandise 6-Image Grid -->
+          <div v-else class="space-y-6 p-4 rounded-2xl border border-primary/20 bg-primary/[0.02]">
+            <div class="border-b border-primary/10 pb-2">
+              <h4 class="font-bold text-xs uppercase tracking-wider text-primary">
+                Required Merchandise Imagery (All 6 Slots Mandatory)
+              </h4>
+              <p class="text-[11px] text-neutral-muted">
+                Each type requires both a front and back view. Sister & Brother model images are strictly protected and streamed only to authorized audiences.
+              </p>
+            </div>
+
+            <!-- Sister Model Images -->
+            <div class="space-y-3 bg-white p-3.5 rounded-xl border border-purple-200 shadow-sm">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-purple-700 block">
+                1. Sister Model Views (Delivered to female users only)
+              </span>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <ImageInput
+                  v-model="form.merchandise_images.sister_front"
+                  :upload-fn="createSlotUploadFn('sister', 'front')"
+                  label="Sister Model Front View *"
+                  placeholder="Paste URL or upload sister front photo"
+                  preview-class="w-full max-h-36 object-contain rounded-xl bg-neutral-background"
+                />
+                <ImageInput
+                  v-model="form.merchandise_images.sister_back"
+                  :upload-fn="createSlotUploadFn('sister', 'back')"
+                  label="Sister Model Back View *"
+                  placeholder="Paste URL or upload sister back photo"
+                  preview-class="w-full max-h-36 object-contain rounded-xl bg-neutral-background"
+                />
+              </div>
+            </div>
+
+            <!-- Brother Model Images -->
+            <div class="space-y-3 bg-white p-3.5 rounded-xl border border-blue-200 shadow-sm">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-blue-700 block">
+                2. Brother Model Views (Delivered to male users only)
+              </span>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <ImageInput
+                  v-model="form.merchandise_images.brother_front"
+                  :upload-fn="createSlotUploadFn('brother', 'front')"
+                  label="Brother Model Front View *"
+                  placeholder="Paste URL or upload brother front photo"
+                  preview-class="w-full max-h-36 object-contain rounded-xl bg-neutral-background"
+                />
+                <ImageInput
+                  v-model="form.merchandise_images.brother_back"
+                  :upload-fn="createSlotUploadFn('brother', 'back')"
+                  label="Brother Model Back View *"
+                  placeholder="Paste URL or upload brother back photo"
+                  preview-class="w-full max-h-36 object-contain rounded-xl bg-neutral-background"
+                />
+              </div>
+            </div>
+
+            <!-- Neutral Product Images -->
+            <div class="space-y-3 bg-white p-3.5 rounded-xl border border-neutral-gray/20 shadow-sm">
+              <span class="text-[11px] font-bold uppercase tracking-wider text-neutral-black block">
+                3. Neutral Product Views (Delivered to logged-out and unset-gender visitors)
+              </span>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <ImageInput
+                  v-model="form.merchandise_images.neutral_front"
+                  :upload-fn="createSlotUploadFn('neutral', 'front')"
+                  label="Neutral Product Front View *"
+                  placeholder="Paste URL or upload neutral front photo"
+                  preview-class="w-full max-h-36 object-contain rounded-xl bg-neutral-background"
+                />
+                <ImageInput
+                  v-model="form.merchandise_images.neutral_back"
+                  :upload-fn="createSlotUploadFn('neutral', 'back')"
+                  label="Neutral Product Back View *"
+                  placeholder="Paste URL or upload neutral back photo"
+                  preview-class="w-full max-h-36 object-contain rounded-xl bg-neutral-background"
+                />
+              </div>
+            </div>
+
+            <!-- Audience Live Presentation Preview -->
+            <div class="border-t border-primary/10 pt-4 space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="font-bold text-xs uppercase tracking-wider text-neutral-black flex items-center gap-1.5">
+                  <Eye :size="14" class="text-primary" /> Audience Presentation Preview
+                </span>
+                <div class="flex items-center gap-1 bg-neutral-background p-1 rounded-xl text-[10px] font-bold">
+                  <button
+                    type="button"
+                    @click="previewAudience = 'logged_out'"
+                    class="px-2 py-1 rounded-lg transition-all"
+                    :class="previewAudience === 'logged_out' ? 'bg-primary text-white shadow-sm' : 'text-neutral-muted hover:text-neutral-black'"
+                  >
+                    Logged-out Public
+                  </button>
+                  <button
+                    type="button"
+                    @click="previewAudience = 'male'"
+                    class="px-2 py-1 rounded-lg transition-all"
+                    :class="previewAudience === 'male' ? 'bg-blue-600 text-white shadow-sm' : 'text-neutral-muted hover:text-neutral-black'"
+                  >
+                    Male Audience
+                  </button>
+                  <button
+                    type="button"
+                    @click="previewAudience = 'female'"
+                    class="px-2 py-1 rounded-lg transition-all"
+                    :class="previewAudience === 'female' ? 'bg-purple-600 text-white shadow-sm' : 'text-neutral-muted hover:text-neutral-black'"
+                  >
+                    Female Audience
+                  </button>
+                </div>
+              </div>
+
+              <!-- Preview Card -->
+              <div
+                @mouseenter="previewHovered = true"
+                @mouseleave="previewHovered = false"
+                class="bg-white border border-neutral-gray/20 rounded-2xl p-3 flex items-center gap-4 cursor-pointer hover:border-primary/40 transition-all max-w-sm mx-auto shadow-sm"
+              >
+                <div class="w-20 h-24 bg-neutral-background rounded-xl overflow-hidden relative flex items-center justify-center shrink-0">
+                  <img
+                    v-if="previewAudience === 'logged_out' && (form.merchandise_images.neutral_front || form.merchandise_images.neutral_back)"
+                    :src="(previewHovered && form.merchandise_images.neutral_back) ? form.merchandise_images.neutral_back : (form.merchandise_images.neutral_front || form.merchandise_images.neutral_back)"
+                    alt="Preview"
+                    class="w-full h-full object-cover"
+                  />
+                  <img
+                    v-else-if="previewAudience === 'male' && (form.merchandise_images.brother_front || form.merchandise_images.brother_back)"
+                    :src="(previewHovered && form.merchandise_images.brother_back) ? form.merchandise_images.brother_back : (form.merchandise_images.brother_front || form.merchandise_images.brother_back)"
+                    alt="Preview"
+                    class="w-full h-full object-cover"
+                  />
+                  <img
+                    v-else-if="previewAudience === 'female' && (form.merchandise_images.sister_front || form.merchandise_images.sister_back)"
+                    :src="(previewHovered && form.merchandise_images.sister_back) ? form.merchandise_images.sister_back : (form.merchandise_images.sister_front || form.merchandise_images.sister_back)"
+                    alt="Preview"
+                    class="w-full h-full object-cover"
+                  />
+                  <span v-else class="text-[9px] text-neutral-muted p-1 text-center">Upload images</span>
+                </div>
+                <div class="space-y-1 text-left">
+                  <span class="text-[9px] font-bold uppercase tracking-wider text-primary">
+                    {{ previewHovered ? 'Hover / Back View' : 'Default / Front View' }}
+                  </span>
+                  <div class="font-bold text-xs text-neutral-black">{{ form.name || 'Sample Product' }}</div>
+                  <div class="text-[10px] text-neutral-muted">Hover cursor to see back transition</div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div class="flex items-center gap-2 pt-2">
             <input type="checkbox" id="has_variants" v-model="form.has_variants" class="rounded cursor-pointer" />

@@ -26,6 +26,7 @@ class RegistrationTest extends TestCase
             'email' => 'student@sfu.ca',
             'password' => 'SecurePassword123!',
             'password_confirmation' => 'SecurePassword123!',
+            'gender' => 'male',
             'terms' => true,
             'role' => 'volunteer',
         ]);
@@ -38,6 +39,7 @@ class RegistrationTest extends TestCase
                     'uuid',
                     'name',
                     'email',
+                    'gender',
                     'avatar',
                     'is_active',
                     'is_verified',
@@ -48,6 +50,8 @@ class RegistrationTest extends TestCase
             ]);
 
         $user = User::where('email', 'student@sfu.ca')->first();
+        $this->assertEquals('male', $user->gender);
+        $this->assertEquals('male', $response->json('user.gender'));
         $this->assertTrue($user->hasRole('volunteer'));
         $this->assertFalse($user->hasRole('member'));
         $this->assertFalse($user->hasVerifiedEmail());
@@ -63,6 +67,7 @@ class RegistrationTest extends TestCase
             'email' => 'member@sfu.ca',
             'password' => 'SecurePassword123!',
             'password_confirmation' => 'SecurePassword123!',
+            'gender' => 'female',
             'terms' => true,
             'role' => 'member',
         ]);
@@ -70,9 +75,42 @@ class RegistrationTest extends TestCase
         $response->assertStatus(201);
 
         $user = User::where('email', 'member@sfu.ca')->first();
+        $this->assertEquals('female', $user->gender);
+        $this->assertEquals('female', $response->json('user.gender'));
         $this->assertTrue($user->hasRole('member'));
         $this->assertFalse($user->hasRole('volunteer'));
         $this->assertTrue($response->json('user.requires_email_verification'));
+    }
+
+    public function test_user_cannot_register_without_gender(): void
+    {
+        $response = $this->postJson(route('api.auth.register'), [
+            'name' => 'Abdullah bin Muhammad',
+            'email' => 'student@sfu.ca',
+            'password' => 'SecurePassword123!',
+            'password_confirmation' => 'SecurePassword123!',
+            'terms' => true,
+            'role' => 'member',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['gender']);
+    }
+
+    public function test_user_cannot_register_with_invalid_gender(): void
+    {
+        $response = $this->postJson(route('api.auth.register'), [
+            'name' => 'Abdullah bin Muhammad',
+            'email' => 'student@sfu.ca',
+            'password' => 'SecurePassword123!',
+            'password_confirmation' => 'SecurePassword123!',
+            'gender' => 'unspecified',
+            'terms' => true,
+            'role' => 'member',
+        ]);
+
+        $response->assertStatus(422)
+            ->assertJsonValidationErrors(['gender']);
     }
 
     public function test_user_cannot_register_without_accepting_terms(): void
@@ -82,6 +120,7 @@ class RegistrationTest extends TestCase
             'email' => 'student@sfu.ca',
             'password' => 'SecurePassword123!',
             'password_confirmation' => 'SecurePassword123!',
+            'gender' => 'male',
             'terms' => false,
             'role' => 'member',
         ]);
@@ -97,6 +136,7 @@ class RegistrationTest extends TestCase
             'email' => 'student@sfu.ca',
             'password' => 'SecurePassword123!',
             'password_confirmation' => 'DifferentPassword123!',
+            'gender' => 'male',
             'terms' => true,
             'role' => 'member',
         ]);
@@ -116,6 +156,7 @@ class RegistrationTest extends TestCase
             'email' => 'student@sfu.ca',
             'password' => 'SecurePassword123!',
             'password_confirmation' => 'SecurePassword123!',
+            'gender' => 'male',
             'terms' => true,
             'role' => 'member',
         ]);
@@ -131,12 +172,14 @@ class RegistrationTest extends TestCase
             'email' => 'member@example.com',
             'password' => 'SecurePassword123!',
             'password_confirmation' => 'SecurePassword123!',
+            'gender' => 'female',
             'terms' => true,
             'role' => 'member',
         ]);
 
         $response->assertStatus(201);
         $user = User::where('email', 'member@example.com')->first();
+        $this->assertEquals('female', $user->gender);
         $this->assertTrue($user->hasRole('member'));
     }
 
@@ -147,6 +190,7 @@ class RegistrationTest extends TestCase
             'email' => 'volunteer@example.com',
             'password' => 'SecurePassword123!',
             'password_confirmation' => 'SecurePassword123!',
+            'gender' => 'male',
             'terms' => true,
             'role' => 'volunteer',
         ]);
@@ -162,6 +206,7 @@ class RegistrationTest extends TestCase
             'email' => 'student@sfu.ca',
             'password' => 'SecurePassword123!',
             'password_confirmation' => 'SecurePassword123!',
+            'gender' => 'male',
             'terms' => true,
         ]);
 
@@ -176,6 +221,7 @@ class RegistrationTest extends TestCase
             'email' => 'student@sfu.ca',
             'password' => 'SecurePassword123!',
             'password_confirmation' => 'SecurePassword123!',
+            'gender' => 'male',
             'terms' => true,
             'role' => 'mentor',
         ]);

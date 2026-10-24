@@ -57,10 +57,19 @@ const form = reactive({
   end_at: '',
   capacity: '',
   is_public: false,
+  audience: 'both' as 'both' | 'male' | 'female',
   is_featured: false,
+  show_volunteer_button: false,
+  volunteer_url: '',
   banner_url: '',
   notify_audience: 'none' as 'everyone' | 'registered' | 'ticket_holders' | 'none',
 });
+
+const audienceOptions = [
+  { label: 'Both audiences (All welcome)', value: 'both' },
+  { label: 'Male only (Brothers only)', value: 'male' },
+  { label: 'Female only (Sisters only)', value: 'female' },
+];
 
 function slugify(text: string): string {
   return text
@@ -88,6 +97,51 @@ function onSlugInput(val: string) {
 function resetToAuto() {
   form.slug_mode = 'auto';
   form.slug = slugify(form.name);
+}
+
+const volunteerUrlMode = ref<'auto' | 'manual'>('auto');
+
+function getAutoVolunteerUrl(slugVal?: string | null): string {
+  const cleanSlug = (slugVal || '').trim();
+  return cleanSlug ? `/volunteer/${cleanSlug}` : '/volunteer';
+}
+
+watch(
+  () => form.slug,
+  (newSlug, oldSlug) => {
+    if (volunteerUrlMode.value === 'auto') {
+      const oldAuto = getAutoVolunteerUrl(oldSlug);
+      if (!form.volunteer_url || form.volunteer_url === oldAuto || form.volunteer_url === '/volunteer') {
+        form.volunteer_url = getAutoVolunteerUrl(newSlug);
+      }
+    }
+  }
+);
+
+watch(
+  () => form.show_volunteer_button,
+  (enabled) => {
+    if (enabled && (!form.volunteer_url || form.volunteer_url.trim() === '')) {
+      form.volunteer_url = getAutoVolunteerUrl(form.slug);
+      volunteerUrlMode.value = 'auto';
+    }
+  }
+);
+
+function onVolunteerUrlInput(val: string) {
+  const trimmed = val.trim();
+  const currentAuto = getAutoVolunteerUrl(form.slug);
+  if (!trimmed || trimmed === currentAuto) {
+    volunteerUrlMode.value = 'auto';
+  } else {
+    volunteerUrlMode.value = 'manual';
+  }
+  form.volunteer_url = val;
+}
+
+function resetVolunteerUrlToAuto() {
+  volunteerUrlMode.value = 'auto';
+  form.volunteer_url = getAutoVolunteerUrl(form.slug);
 }
 
 const categoryOptions = computed(() => [
@@ -154,7 +208,18 @@ onMounted(async () => {
           form.end_at = toDateTimeLocal(orig.end_at);
           form.capacity = orig.capacity ? String(orig.capacity) : '';
           form.is_public = orig.is_public;
+          form.audience = orig.audience ?? 'both';
           form.is_featured = orig.is_featured ?? false;
+          form.show_volunteer_button = Boolean(orig.show_volunteer_button);
+          form.volunteer_url = orig.volunteer_url ?? '';
+          if (form.show_volunteer_button && !form.volunteer_url) {
+            form.volunteer_url = getAutoVolunteerUrl(form.slug);
+            volunteerUrlMode.value = 'auto';
+          } else if (form.volunteer_url && form.volunteer_url === getAutoVolunteerUrl(form.slug)) {
+            volunteerUrlMode.value = 'auto';
+          } else if (form.volunteer_url) {
+            volunteerUrlMode.value = 'manual';
+          }
           form.banner_url = orig.banner_url ?? '';
           toast.info('Copied details from original event.');
         }
@@ -186,7 +251,18 @@ onMounted(async () => {
       form.end_at = toDateTimeLocal(event.end_at);
       form.capacity = event.capacity ? String(event.capacity) : '';
       form.is_public = event.is_public;
+      form.audience = event.audience ?? 'both';
       form.is_featured = event.is_featured ?? false;
+      form.show_volunteer_button = Boolean(event.show_volunteer_button);
+      form.volunteer_url = event.volunteer_url ?? '';
+      if (form.show_volunteer_button && !form.volunteer_url) {
+        form.volunteer_url = getAutoVolunteerUrl(event.slug);
+        volunteerUrlMode.value = 'auto';
+      } else if (form.volunteer_url && form.volunteer_url === getAutoVolunteerUrl(event.slug)) {
+        volunteerUrlMode.value = 'auto';
+      } else if (form.volunteer_url) {
+        volunteerUrlMode.value = 'manual';
+      }
       form.banner_url = event.banner_url ?? '';
     }
   } catch (caught) {
@@ -209,7 +285,12 @@ const buildPayload = (): EventPayload => ({
   end_at: fromDateTimeLocal(form.end_at),
   capacity: form.capacity ? Number(form.capacity) : null,
   is_public: form.is_public,
+  audience: form.audience,
   is_featured: form.is_featured,
+  show_volunteer_button: Boolean(form.show_volunteer_button),
+  volunteer_url: form.show_volunteer_button
+    ? (form.volunteer_url.trim() || getAutoVolunteerUrl(form.slug))
+    : (form.volunteer_url.trim() || null),
   banner_url: form.banner_url.trim() || null,
   ...(isEditing.value ? { notify_audience: form.notify_audience } : {}),
 });
@@ -406,11 +487,67 @@ const cancel = () =>
           description="Marks the event as eligible for public discovery once it is published."
         />
 
+        <Select
+          v-model="form.audience"
+          label="Intended Audience"
+          description="Restricts event visibility, ticket purchase, and registration to the specified audience."
+          :options="audienceOptions"
+          :error="fieldError('audience')"
+          class="mb-4"
+        />
+
         <Switch
           v-model="form.is_featured"
           label="Featured event"
           description="Highlight this event in the Featured Events section on the Home Page."
         />
+
+        <Switch
+          v-model="form.show_volunteer_button"
+          label="Enable 'Volunteer with us' button"
+          description="Display an optional volunteer callout and application link on the public event page."
+        />
+
+        <div
+          v-if="form.show_volunteer_button"
+          class="mb-6 rounded-xl border border-neutral-ivory bg-neutral-background/50 p-4"
+        >
+          <div class="flex items-center justify-between">
+            <label class="text-xs font-bold uppercase tracking-wider text-neutral-black">
+              Volunteer Signup Link
+            </label>
+            <div class="flex items-center gap-2">
+              <button
+                v-if="volunteerUrlMode === 'manual' || (form.volunteer_url && form.volunteer_url !== getAutoVolunteerUrl(form.slug))"
+                type="button"
+                class="text-xs font-semibold text-primary hover:underline"
+                @click="resetVolunteerUrlToAuto"
+              >
+                Reset to Automatic
+              </button>
+              <span
+                class="rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider"
+                :class="volunteerUrlMode === 'manual' && form.volunteer_url !== getAutoVolunteerUrl(form.slug)
+                  ? 'bg-amber-100 text-amber-800'
+                  : 'bg-emerald-100 text-emerald-800'"
+              >
+                {{ volunteerUrlMode === 'manual' && form.volunteer_url !== getAutoVolunteerUrl(form.slug) ? 'Custom Link' : 'Automatic' }}
+              </span>
+            </div>
+          </div>
+          <div class="mt-2">
+            <Input
+              :model-value="form.volunteer_url"
+              placeholder="/volunteer/your-event-slug"
+              class="font-mono text-sm"
+              :error="fieldError('volunteer_url')"
+              @update:model-value="onVolunteerUrlInput"
+            />
+          </div>
+          <p class="mt-1 text-xs text-neutral-black/60">
+            Automatically set to the event link starting with <code class="font-mono font-semibold">/volunteer</code>. You can customize it if you need an external or specific signup link.
+          </p>
+        </div>
 
         <Select
           v-if="isEditing"

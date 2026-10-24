@@ -4,8 +4,11 @@ import { useRoute, useRouter } from 'vue-router';
 import {
   ArrowLeft,
   Calendar,
+  CalendarPlus,
   CheckCircle2,
   Clock,
+  Download,
+  ExternalLink,
   MapPin,
   Users,
 } from 'lucide-vue-next';
@@ -30,6 +33,25 @@ const { formatDateRange, formatTimeRange, categorySolidStyle } = useEventFormatt
 
 const slug = computed(() => String(route.params.slug || ''));
 const event = ref<PublicEventDetail | null>(null);
+const calendarLinks = ref<{ google: string; outlook: string; yahoo: string; ics: string } | null>(null);
+
+const icsDownloadUrl = computed(() => {
+  return slug.value ? publicEventsService.getIcsDownloadUrl(slug.value) : '#';
+});
+
+const isExternalUrl = (url?: string | null): boolean => {
+  if (!url) return false;
+  return /^https?:\/\//i.test(url.trim());
+};
+
+const formatVolunteerRoute = (url?: string | null, eventSlug?: string | null): string => {
+  if (url && url.trim()) {
+    const trimmed = url.trim();
+    if (isExternalUrl(trimmed)) return trimmed;
+    return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
+  }
+  return eventSlug ? `/volunteer/${eventSlug}` : '/volunteer';
+};
 
 function formatFileSize(bytes: number): string {
   if (!bytes) return '0 B';
@@ -226,6 +248,13 @@ async function load() {
     event.value = await publicEventsService.getEvent(slug.value);
     const available = (event.value.ticket_types ?? []).filter((t) => t.is_on_sale && !t.is_sold_out);
     selectedTicketId.value = available[0]?.uuid || event.value.ticket_types?.[0]?.uuid || '';
+    
+    try {
+      calendarLinks.value = await publicEventsService.getCalendarLinks(slug.value);
+    } catch {
+      calendarLinks.value = null;
+    }
+
     await restorePending();
   } catch (err) {
     event.value = null;
@@ -555,6 +584,13 @@ const previewSubtotal = computed(() =>
               >
                 {{ event.category.name }}
               </span>
+              <span
+                v-if="event.audience && event.audience !== 'both'"
+                class="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest"
+                :class="event.audience === 'male' ? 'bg-blue-600/90 text-white' : 'bg-purple-600/90 text-white'"
+              >
+                {{ event.audience === 'male' ? 'Brothers Only' : 'Sisters Only' }}
+              </span>
               <span class="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest bg-accent-gold/20 text-accent-gold">
                 {{ event.registration_label }}
               </span>
@@ -604,17 +640,83 @@ const previewSubtotal = computed(() =>
                 </div>
               </div>
             </div>
+
+            <!-- Add to Calendar -->
+            <div class="mt-6 pt-5 border-t border-neutral-ivory">
+              <div class="flex items-center justify-between mb-3">
+                <span class="text-xs font-bold uppercase tracking-wider text-neutral-black/60 flex items-center gap-1.5">
+                  <CalendarPlus class="text-primary" :size="15" /> Add to Calendar
+                </span>
+              </div>
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <a
+                  v-if="calendarLinks?.google"
+                  :href="calendarLinks.google"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-neutral-ivory hover:border-primary/30 hover:bg-neutral-background text-xs font-semibold text-neutral-black transition"
+                  title="Add to Google Calendar"
+                >
+                  <span>Google</span>
+                  <ExternalLink :size="12" class="text-neutral-black/40" />
+                </a>
+                <a
+                  v-if="calendarLinks?.outlook"
+                  :href="calendarLinks.outlook"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-neutral-ivory hover:border-primary/30 hover:bg-neutral-background text-xs font-semibold text-neutral-black transition"
+                  title="Add to Outlook Calendar"
+                >
+                  <span>Outlook</span>
+                  <ExternalLink :size="12" class="text-neutral-black/40" />
+                </a>
+                <a
+                  v-if="calendarLinks?.yahoo"
+                  :href="calendarLinks.yahoo"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-neutral-ivory hover:border-primary/30 hover:bg-neutral-background text-xs font-semibold text-neutral-black transition"
+                  title="Add to Yahoo Calendar"
+                >
+                  <span>Yahoo</span>
+                  <ExternalLink :size="12" class="text-neutral-black/40" />
+                </a>
+                <a
+                  :href="icsDownloadUrl"
+                  download
+                  class="flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-neutral-ivory hover:border-primary/30 hover:bg-neutral-background text-xs font-semibold text-neutral-black transition"
+                  title="Download .ics Calendar File (Apple Calendar)"
+                >
+                  <Download :size="12" class="text-primary" />
+                  <span>iCal / .ics</span>
+                </a>
+              </div>
+            </div>
           </div>
 
-          <div class="rounded-[1.75rem] border border-primary/15 bg-primary/5 p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <!-- Optional Volunteer Callout (EMS-02) -->
+          <div
+            v-if="event.show_volunteer_button"
+            class="rounded-[1.75rem] border border-primary/15 bg-primary/5 p-6 flex flex-col sm:flex-row items-center justify-between gap-4"
+          >
             <div>
               <h3 class="font-bold text-neutral-black text-base">Want to Volunteer for this Event?</h3>
               <p class="text-xs text-neutral-black/70 mt-0.5">Help us organize and run {{ event.name }}. Join our event volunteer team.</p>
             </div>
             <div class="flex flex-wrap items-center gap-2 shrink-0">
+              <a
+                v-if="event.volunteer_url && isExternalUrl(event.volunteer_url)"
+                :href="event.volunteer_url"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider text-white bg-primary hover:bg-secondary rounded-xl transition shadow-sm inline-flex items-center gap-1.5"
+              >
+                Volunteer for this Event <ExternalLink :size="13" />
+              </a>
               <RouterLink
-                v-if="event.slug"
-                :to="`/volunteer/${event.slug}`"
+                v-else
+                :to="formatVolunteerRoute(event.volunteer_url, event.slug)"
                 class="px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider text-white bg-primary hover:bg-secondary rounded-xl transition shadow-sm"
               >
                 Volunteer for this Event &rarr;

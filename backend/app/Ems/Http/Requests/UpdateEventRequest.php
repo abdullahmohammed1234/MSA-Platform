@@ -55,6 +55,9 @@ class UpdateEventRequest extends EmsFormRequest
             'registration_deadline_at' => ['sometimes', 'nullable', 'date'],
             'is_public' => ['sometimes', 'boolean'],
             'is_featured' => ['sometimes', 'boolean'],
+            'audience' => ['sometimes', 'nullable', 'string', Rule::in(['both', 'male', 'female'])],
+            'show_volunteer_button' => ['sometimes', 'boolean'],
+            'volunteer_url' => ['sometimes', 'nullable', 'string', 'max:500'],
             'notify_audience' => ['sometimes', 'nullable', 'string', Rule::in(['everyone', 'registered', 'ticket_holders', 'none'])],
         ];
     }
@@ -98,6 +101,8 @@ class UpdateEventRequest extends EmsFormRequest
             'max_tickets_per_order',
             'max_registrations_per_attendee',
             'registration_deadline_at',
+            'audience',
+            'volunteer_url',
         ]);
 
         if (isset($merge['slug']) && is_string($merge['slug'])) {

@@ -110,6 +110,13 @@ export const storeService = {
     });
     return res.data.data;
   },
+
+  async uploadAdminProductImage(uuid: string, formData: FormData): Promise<any> {
+    const res = await client.post(`/store-admin/products/${uuid}/images`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return res.data;
+  },
 };
 
 export default storeService;

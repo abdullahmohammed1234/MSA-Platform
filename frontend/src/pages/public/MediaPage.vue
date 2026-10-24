@@ -6,13 +6,12 @@ import {
   Maximize2,
   Filter,
   Users,
-  Heart,
-  Share2,
   Play,
 } from 'lucide-vue-next';
 import ScrollReveal from '@/components/shared/ScrollReveal.vue';
 import FloatingElement from '@/components/shared/FloatingElement.vue';
 import ImageLightbox from '@/components/shared/ImageLightbox.vue';
+import SecureMedia from '@/components/shared/SecureMedia.vue';
 import type { LightboxImage } from '@/types/lightbox';
 import { HERO_IMAGES } from '@/constants/publicAssets';
 import {
@@ -20,7 +19,16 @@ import {
   type MediaGalleryItem,
 } from '@/data/mediaGallery';
 
-const GALLERY_DATA = ref<MediaGalleryItem[]>([...DISPLAYABLE_MEDIA_GALLERY]);
+const sortGallery = (items: MediaGalleryItem[]): MediaGalleryItem[] => {
+  return [...items].sort((a, b) => {
+    const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+    const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+    if (timeB !== timeA) return timeB - timeA;
+    return String(b.id).localeCompare(String(a.id));
+  });
+};
+
+const GALLERY_DATA = ref<MediaGalleryItem[]>(sortGallery(DISPLAYABLE_MEDIA_GALLERY));
 const CATEGORIES = computed(() => {
   const cats = new Set(GALLERY_DATA.value.map((item) => item.category));
   return ['All', ...Array.from(cats).sort()];
@@ -28,7 +36,7 @@ const CATEGORIES = computed(() => {
 
 const activeCategory = ref('All');
 const selectedImageIndex = ref<number | null>(null);
-const visibleItems = ref(6);
+const visibleItems = ref(9);
 const isInfiniteLoading = ref(false);
 const loaderRef = ref<HTMLElement | null>(null);
 
@@ -48,10 +56,12 @@ onMounted(async () => {
   try {
     const cmsMedia = await websiteService.getMediaGallery();
     if (cmsMedia.length > 0) {
-      GALLERY_DATA.value = [...cmsMedia, ...DISPLAYABLE_MEDIA_GALLERY];
+      GALLERY_DATA.value = sortGallery([...cmsMedia, ...DISPLAYABLE_MEDIA_GALLERY]);
+    } else {
+      GALLERY_DATA.value = sortGallery(DISPLAYABLE_MEDIA_GALLERY);
     }
   } catch {
-    // Keep static gallery fallback when API is unavailable.
+    GALLERY_DATA.value = sortGallery(DISPLAYABLE_MEDIA_GALLERY);
   }
 
   observer = new IntersectionObserver((entries) => {
@@ -194,57 +204,58 @@ const openLightbox = (item: MediaGalleryItem) => {
         <div
           v-for="item in currentItems"
           :key="item.id"
-          class="group relative rounded-[2rem] overflow-hidden bg-neutral-white shadow-soft border border-neutral-gray/10 hover:shadow-premium transition-all duration-700 cursor-zoom-in break-inside-avoid-column"
+          class="group rounded-3xl overflow-hidden bg-white shadow-soft border border-neutral-gray/15 hover:shadow-premium transition-all duration-500 cursor-zoom-in break-inside-avoid-column flex flex-col"
           @click="openLightbox(item)"
         >
-          <!-- Media preview -->
-          <div class="aspect-[4/5] md:aspect-auto overflow-hidden relative bg-neutral-black/5">
-            <img
-              v-if="!isVideoItem(item)"
+          <!-- Media preview: Full color, no black overlay, immediate visibility -->
+          <div class="relative overflow-hidden bg-neutral-black/5 aspect-[4/3]">
+            <SecureMedia
               :src="item.url"
               :alt="item.title"
-              class="w-full h-full object-cover grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-1000 group-hover:scale-110"
-              loading="lazy"
-              referrerpolicy="no-referrer"
+              :is-video="isVideoItem(item)"
+              media-class="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
             />
-            <video
-              v-else
-              :src="`${item.url}#t=0.1`"
-              class="w-full h-full object-cover bg-black"
-              muted
-              playsinline
-              preload="metadata"
-            />
+
+            <!-- Video Play Indicator -->
             <div
               v-if="isVideoItem(item)"
               class="absolute inset-0 flex items-center justify-center pointer-events-none"
             >
-              <span class="w-14 h-14 rounded-full bg-neutral-black/55 border border-neutral-white/30 text-neutral-white flex items-center justify-center backdrop-blur-sm">
-                <Play class="w-6 h-6 fill-current" />
+              <span class="w-12 h-12 rounded-full bg-neutral-black/60 border border-white/40 text-white flex items-center justify-center backdrop-blur-sm shadow-md">
+                <Play class="w-5 h-5 fill-current ml-0.5" />
+              </span>
+            </div>
+
+            <!-- Subtle hover expand icon -->
+            <div class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+              <span class="p-2 rounded-full bg-white/90 shadow-soft text-primary flex items-center justify-center backdrop-blur-sm">
+                <Maximize2 class="w-3.5 h-3.5" />
               </span>
             </div>
           </div>
 
-          <!-- Overlay -->
-          <div class="absolute inset-0 bg-gradient-to-t from-primary/90 via-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-end p-8">
-            <div class="space-y-3 transform translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-              <div class="flex items-center gap-2">
-                 <span class="px-3 py-1 bg-secondary-light text-neutral-white text-[9px] font-bold rounded-md uppercase tracking-wider">
-                   {{ item.category }}
-                 </span>
-                 <span class="text-neutral-white/60 text-[9px] font-mono tracking-widest uppercase">{{ item.date }}</span>
-              </div>
-              <h3 class="text-xl font-display font-medium text-neutral-white">{{ item.title }}</h3>
-              <div class="flex gap-4 text-neutral-white/50 pt-2">
-                 <button class="hover:text-accent-gold transition-colors"><Heart class="w-[18px] h-[18px]" /></button>
-                 <button class="hover:text-accent-gold transition-colors"><Share2 class="w-[18px] h-[18px]" /></button>
-                 <button class="ml-auto hover:text-accent-gold transition-colors"><Maximize2 class="w-[18px] h-[18px]" /></button>
-              </div>
+          <!-- Editorial Caption Card (Pixieset Inspired) -->
+          <div class="p-4 sm:p-5 flex flex-col gap-1.5 bg-white border-t border-neutral-gray/10">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-[10px] font-extrabold uppercase tracking-widest text-primary">
+                {{ item.category }}
+              </span>
+              <span class="text-[10px] text-neutral-muted font-medium font-mono">{{ item.date }}</span>
+            </div>
+
+            <h3 class="font-display font-bold text-sm sm:text-base text-neutral-black group-hover:text-primary transition-colors line-clamp-1">
+              {{ item.title }}
+            </h3>
+
+            <div v-if="item.audience && item.audience !== 'both'" class="pt-1">
+              <span
+                class="inline-block text-[9px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full"
+                :class="(item.audience === 'brothers' || item.audience === 'male') ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-purple-50 text-purple-700 border border-purple-200'"
+              >
+                {{ (item.audience === 'brothers' || item.audience === 'male') ? 'Brothers Only' : 'Sisters Only' }}
+              </span>
             </div>
           </div>
-
-          <!-- Aesthetic Border Glow -->
-          <div class="absolute inset-0 border border-neutral-white/0 group-hover:border-neutral-white/10 transition-colors pointer-events-none rounded-[2rem]" />
         </div>
       </div>
 

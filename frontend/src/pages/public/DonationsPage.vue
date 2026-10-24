@@ -10,6 +10,7 @@ import {
 import ScrollReveal from '@/components/shared/ScrollReveal.vue';
 import PublicButton from '@/components/shared/PublicButton.vue';
 import PublicCard from '@/components/shared/PublicCard.vue';
+import DonationVideoFeature from '@/components/website/DonationVideoFeature.vue';
 
 const frequencies = ['One-time', 'Monthly'];
 const selectedFrequency = ref('One-time');
@@ -100,6 +101,9 @@ const impacts = [
       </div>
     </section>
 
+    <!-- CINEMATIC LOCAL VIDEO FEATURE -->
+    <DonationVideoFeature cta-target="#donation-portal" />
+
     <!-- Impact Areas -->
     <section class="section-padding">
       <div class="container-custom">
@@ -134,7 +138,7 @@ const impacts = [
     </section>
 
     <!-- Donation Portal (Form + Selector) -->
-    <section class="section-padding bg-neutral-white border-y border-neutral-gray/20">
+    <section id="donation-portal" class="section-padding bg-neutral-white border-y border-neutral-gray/20">
       <div class="container-custom">
         <div class="grid lg:grid-cols-2 gap-16 items-start">
           <div class="space-y-6 max-w-lg">

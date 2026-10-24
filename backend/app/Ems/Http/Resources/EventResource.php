@@ -53,6 +53,9 @@ class EventResource extends JsonResource
             'status_tone' => $this->status->tone(),
             'is_public' => (bool) $this->is_public,
             'is_featured' => (bool) $this->is_featured,
+            'audience' => $this->audience ?? 'both',
+            'show_volunteer_button' => (bool) $this->show_volunteer_button,
+            'volunteer_url' => $this->volunteer_url ?: ($this->show_volunteer_button && $this->slug ? ('/volunteer/' . $this->slug) : $this->volunteer_url),
             'is_publicly_visible' => $this->status->isPubliclyVisible(),
             'is_accepting_registrations' => $this->isAcceptingRegistrations(),
 

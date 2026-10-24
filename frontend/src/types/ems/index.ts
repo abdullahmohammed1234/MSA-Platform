@@ -156,6 +156,8 @@ export interface Event {
   timezone: string | null;
   capacity: number | null;
   waitlist_enabled?: boolean;
+  show_volunteer_button?: boolean;
+  volunteer_url?: string | null;
   max_tickets_per_order?: number | null;
   max_registrations_per_attendee?: number | null;
   registration_deadline_at?: string | null;
@@ -163,6 +165,7 @@ export interface Event {
   status: EventStatus;
   status_label: string;
   status_tone: EventStatusTone;
+  audience?: 'both' | 'male' | 'female';
   is_public: boolean;
   is_featured: boolean;
   is_publicly_visible: boolean;
@@ -294,7 +297,10 @@ export interface EventPayload {
   max_registrations_per_attendee?: number | null;
   registration_deadline_at?: string | null;
   is_public?: boolean;
+  audience?: 'both' | 'male' | 'female';
   is_featured?: boolean;
+  show_volunteer_button?: boolean;
+  volunteer_url?: string | null;
   notify_audience?: 'everyone' | 'registered' | 'ticket_holders' | 'none';
 }
 

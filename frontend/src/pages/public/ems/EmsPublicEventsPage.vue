@@ -548,13 +548,22 @@ function capacityLabel(event: PublicEvent): string {
                 </template>
                 <div class="absolute inset-0 z-[2] bg-gradient-to-t from-primary/80 via-primary/10 to-transparent" />
                 <div class="absolute bottom-3 left-3 right-3 z-[3] flex items-center justify-between gap-2 min-w-0">
-                  <span
-                    v-if="event.category"
-                    class="text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded-full truncate max-w-[55%]"
-                    :style="categorySolidStyle(event.category.color)"
-                  >
-                    {{ event.category.name }}
-                  </span>
+                  <div class="flex items-center gap-1.5 min-w-0">
+                    <span
+                      v-if="event.category"
+                      class="text-[10px] font-extrabold uppercase tracking-widest px-3 py-1 rounded-full truncate"
+                      :style="categorySolidStyle(event.category.color)"
+                    >
+                      {{ event.category.name }}
+                    </span>
+                    <span
+                      v-if="event.audience && event.audience !== 'both'"
+                      class="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shrink-0"
+                      :class="event.audience === 'male' ? 'bg-blue-600/90 text-white' : 'bg-purple-600/90 text-white'"
+                    >
+                      {{ event.audience === 'male' ? 'Brothers' : 'Sisters' }}
+                    </span>
+                  </div>
                   <span class="text-[10px] font-bold uppercase tracking-wider text-accent-gold bg-primary/80 px-3 py-1 rounded-full truncate max-w-[45%] shrink-0">
                     {{ event.registration_label }}
                   </span>

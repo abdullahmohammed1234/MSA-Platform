@@ -18,6 +18,11 @@ export const mlibmsAdminService = {
     return response.data;
   },
 
+  async createBook(payload: any) {
+    const response = await api.post('/admin/library/books', payload);
+    return response.data;
+  },
+
   async getBook(uuid: string) {
     const response = await api.get(`/admin/library/books/${uuid}`);
     return response.data;
@@ -30,6 +35,11 @@ export const mlibmsAdminService = {
 
   async deleteBook(uuid: string) {
     const response = await api.delete(`/admin/library/books/${uuid}`);
+    return response.data;
+  },
+
+  async getCategories() {
+    const response = await api.get('/library/categories');
     return response.data;
   },
 

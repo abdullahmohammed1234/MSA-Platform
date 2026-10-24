@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import { authService } from '@/services/auth/auth.service';
 import { userService } from '@/services/user/userService';
 import { isAcademyEnabled } from '@/config/features';
+import { clearAuthenticatedMediaCache } from '@/composables/useAuthenticatedMedia';
 import type { 
   User, 
   LoginPayload, 
@@ -72,6 +73,9 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Set auth state
   const setSession = (newToken: string | null, newUser: User | null) => {
+    if (newToken !== token.value) {
+      clearAuthenticatedMediaCache();
+    }
     token.value = newToken;
     user.value = newUser;
 
@@ -134,6 +138,10 @@ export const useAuthStore = defineStore('auth', () => {
     } catch (error) {
       console.error('Logout API request failed', error);
     } finally {
+      clearAuthenticatedMediaCache();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('auth:logout'));
+      }
       setSession(null, null);
       isInitialized.value = true;
       isLoading.value = false;

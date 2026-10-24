@@ -8,9 +8,9 @@ export interface OrgBranch {
 }
 
 export const EXEC_ROLES = {
-  president: ['President'],
-  vicePresidents: ['Brothers VP', 'Sisters VP', 'Vice President', 'VP'],
-  secretary: ['Secretary'],
+  president: ['President', 'Co-President', 'Interim President'],
+  vicePresidents: ['Brothers VP', 'Sisters VP', 'Vice President', 'VP', 'Executive VP'],
+  secretary: ['Secretary', 'General Secretary'],
 } as const;
 
 export const EXEC_DEPTS = {
@@ -105,6 +105,10 @@ function roleFuzzyMatch(memberRole: string, wantedRole: string): boolean {
   }
 
   // "President" must not match "Vice President".
+  if (wantedTokens.length === 1 && wantedTokens[0] === 'president') {
+    return !actualTokens.has('vice') && actualTokens.has('president');
+  }
+
   if (wantedTokens.length === 1) {
     return actualTokens.size === 1 && actualTokens.has(wantedTokens[0]);
   }
@@ -245,7 +249,9 @@ function collectAssigned(members: TeamMember[]): Set<string> {
 export function unassignedCoordinators(members: TeamMember[]): TeamMember[] {
   const assigned = collectAssigned(members);
   return members.filter(
-    (member) => member.dept === 'Coordinators' && !assigned.has(member.name)
+    (member) =>
+      (member.dept.toLowerCase().includes('coordinator') || member.role.toLowerCase().includes('coordinator'))
+      && !assigned.has(member.name)
   );
 }
 
@@ -254,4 +260,11 @@ export function independentCoordinators(members: TeamMember[]): TeamMember[] {
   const leftovers = unassignedCoordinators(members);
   const seen = new Set(named.map((member) => member.name));
   return [...named, ...leftovers.filter((member) => !seen.has(member.name))];
+}
+
+/** Any team members who were not placed into executive, branches, or coordinators. */
+export function unassignedTeamMembers(members: TeamMember[]): TeamMember[] {
+  const assigned = collectAssigned(members);
+  const independents = new Set(independentCoordinators(members).map((m) => m.name));
+  return members.filter((member) => !assigned.has(member.name) && !independents.has(member.name));
 }

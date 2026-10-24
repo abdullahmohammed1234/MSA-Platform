@@ -9,8 +9,10 @@ use App\Store\Models\StoreProduct;
 use App\Store\Models\StoreProductImage;
 use App\Store\Models\StoreProductVariant;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class StoreProductService
@@ -101,6 +103,7 @@ class StoreProductService
                 'sku' => $data['sku'] ?? null,
                 'status' => $data['status'] ?? ProductStatus::Draft->value,
                 'has_variants' => !empty($data['has_variants']),
+                'is_merchandise' => !empty($data['is_merchandise']),
                 'inventory_quantity' => (int) ($data['inventory_quantity'] ?? 0),
             ]);
 
@@ -116,7 +119,23 @@ class StoreProductService
                 }
             }
 
-            if (!empty($data['image_url'])) {
+            if (!empty($data['merchandise_images']) && is_array($data['merchandise_images'])) {
+                foreach ($data['merchandise_images'] as $slotKey => $item) {
+                    if ($item !== null && $item !== '' && str_contains($slotKey, '_')) {
+                        [$type, $view] = explode('_', $slotKey, 2);
+                        $this->saveMerchandiseImage($product, $type, $view, $item);
+                    }
+                }
+            } elseif (!empty($data['images']) && is_array($data['images'])) {
+                foreach ($data['images'] as $item) {
+                    if (isset($item['image_type'], $item['view_type'])) {
+                        $val = $item['image_url'] ?? $item['image_path'] ?? $item['file'] ?? null;
+                        if ($val !== null) {
+                            $this->saveMerchandiseImage($product, $item['image_type'], $item['view_type'], $val, $item['image_path'] ?? null);
+                        }
+                    }
+                }
+            } elseif (!empty($data['image_url'])) {
                 $product->images()->create([
                     'image_url' => $data['image_url'],
                     'image_path' => $data['image_path'] ?? null,
@@ -152,6 +171,7 @@ class StoreProductService
                 'sku' => $data['sku'] ?? $product->sku,
                 'status' => $data['status'] ?? $product->status,
                 'has_variants' => isset($data['has_variants']) ? (bool) $data['has_variants'] : $product->has_variants,
+                'is_merchandise' => isset($data['is_merchandise']) ? (bool) $data['is_merchandise'] : $product->is_merchandise,
                 'inventory_quantity' => isset($data['inventory_quantity']) ? (int) $data['inventory_quantity'] : $product->inventory_quantity,
             ]);
 
@@ -184,7 +204,23 @@ class StoreProductService
                 }
             }
 
-            if (!empty($data['image_url'])) {
+            if (!empty($data['merchandise_images']) && is_array($data['merchandise_images'])) {
+                foreach ($data['merchandise_images'] as $slotKey => $item) {
+                    if ($item !== null && $item !== '' && str_contains($slotKey, '_')) {
+                        [$type, $view] = explode('_', $slotKey, 2);
+                        $this->saveMerchandiseImage($product, $type, $view, $item);
+                    }
+                }
+            } elseif (!empty($data['images']) && is_array($data['images'])) {
+                foreach ($data['images'] as $item) {
+                    if (isset($item['image_type'], $item['view_type'])) {
+                        $val = $item['image_url'] ?? $item['image_path'] ?? $item['file'] ?? null;
+                        if ($val !== null) {
+                            $this->saveMerchandiseImage($product, $item['image_type'], $item['view_type'], $val, $item['image_path'] ?? null);
+                        }
+                    }
+                }
+            } elseif (!$product->is_merchandise && !empty($data['image_url'])) {
                 $product->images()->delete();
                 $product->images()->create([
                     'image_url' => $data['image_url'],
@@ -204,6 +240,87 @@ class StoreProductService
 
             return $product->load(['variants', 'images']);
         });
+    }
+
+    /**
+     * Save or replace an individual merchandise image.
+     */
+    public function saveMerchandiseImage(
+        StoreProduct $product,
+        string $imageType,
+        string $viewType,
+        mixed $fileOrUrl,
+        ?string $imagePath = null
+    ): StoreProductImage {
+        $isPrivate = ($imageType !== 'neutral');
+        $imageUrl = null;
+
+        if ($fileOrUrl instanceof UploadedFile) {
+            $disk = $isPrivate ? 'local' : 'public';
+            $dir = $isPrivate ? "private/store_merchandise/{$product->uuid}" : "store/merchandise/{$product->uuid}";
+            $filename = "{$imageType}_{$viewType}_" . Str::random(12) . '.' . $fileOrUrl->getClientOriginalExtension();
+            $storedPath = Storage::disk($disk)->putFileAs($dir, $fileOrUrl, $filename);
+            $imagePath = $storedPath;
+            $imageUrl = $isPrivate
+                ? url("/api/v1/store/products/{$product->uuid}/images")
+                : Storage::disk('public')->url($storedPath);
+        } else {
+            $imageUrl = (string) $fileOrUrl;
+        }
+
+        $existing = $product->images()
+            ->where('image_type', $imageType)
+            ->where('view_type', $viewType)
+            ->first();
+
+        if ($existing) {
+            if ($existing->image_path && $imagePath && $existing->image_path !== $imagePath) {
+                Storage::disk($existing->is_private ? 'local' : 'public')->delete($existing->image_path);
+            }
+
+            $existing->update([
+                'image_path' => $imagePath ?? $existing->image_path,
+                'image_url' => $imageUrl ?? $existing->image_url,
+                'is_private' => $isPrivate,
+            ]);
+
+            if ($isPrivate) {
+                $existing->update([
+                    'image_url' => url("/api/v1/store/products/{$product->uuid}/images/{$existing->uuid}"),
+                ]);
+            }
+
+            return $existing;
+        }
+
+        $orderMap = [
+            'neutral_front' => 0,
+            'neutral_back' => 1,
+            'sister_front' => 2,
+            'sister_back' => 3,
+            'brother_front' => 4,
+            'brother_back' => 5,
+        ];
+
+        $displayOrder = $orderMap["{$imageType}_{$viewType}"] ?? 0;
+
+        $created = $product->images()->create([
+            'image_path' => $imagePath,
+            'image_url' => $imageUrl,
+            'image_type' => $imageType,
+            'view_type' => $viewType,
+            'is_private' => $isPrivate,
+            'is_primary' => ($imageType === 'neutral' && $viewType === 'front'),
+            'display_order' => $displayOrder,
+        ]);
+
+        if ($isPrivate) {
+            $created->update([
+                'image_url' => url("/api/v1/store/products/{$product->uuid}/images/{$created->uuid}"),
+            ]);
+        }
+
+        return $created;
     }
 
     /**

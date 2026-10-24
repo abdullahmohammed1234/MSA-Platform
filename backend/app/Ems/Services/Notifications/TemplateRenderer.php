@@ -94,16 +94,27 @@ class TemplateRenderer
             ? $frontendUrl . '/volunteer/' . $opportunity->slug
             : $frontendUrl . '/volunteer';
 
+        $eventTz = (string) ($event?->timezone ?? config('ems.defaults.timezone', 'America/Vancouver'));
         $tz = (string) ($event?->timezone ?? $opportunity?->event?->timezone ?? config('ems.defaults.timezone', 'America/Vancouver'));
 
-        $start = $event?->start_at?->timezone($tz);
+        $eventStart = $event?->start_at?->timezone($eventTz);
+        $eventEnd = $event?->end_at?->timezone($eventTz);
+
         $shiftStart = $shift?->start_at?->timezone($tz) ?? $opportunity?->start_at?->timezone($tz);
         $shiftEnd = $shift?->end_at?->timezone($tz) ?? $opportunity?->end_at?->timezone($tz);
 
-        $shiftDateFormatted = $shiftStart?->format('l, F j, Y') ?? $start?->format('l, F j, Y') ?? '';
+        $eventDateFormatted = $eventStart?->format('l, F j, Y') ?? '';
+        $eventTimeFormatted = $eventStart && $eventEnd
+            ? $eventStart->format('g:i A') . ' – ' . $eventEnd->format('g:i A T')
+            : ($eventStart?->format('g:i A T') ?? '');
+
+        $shiftDateFormatted = $shiftStart?->format('l, F j, Y') ?? $eventDateFormatted;
         $shiftTimeFormatted = $shiftStart && $shiftEnd
             ? $shiftStart->format('g:i A') . ' – ' . $shiftEnd->format('g:i A T')
-            : ($shiftStart?->format('g:i A T') ?? $start?->format('g:i A T') ?? '');
+            : ($shiftStart?->format('g:i A T') ?? $eventTimeFormatted);
+
+        $eventLocation = (string) ($event?->location ?? $extra['location'] ?? '');
+        $vmsLocation = (string) ($shift?->location ?? $opportunity?->location ?? $eventLocation);
 
         $volunteerName = (string) ($extra['volunteer_name'] ?? $signup?->name ?? $extra['attendee_name'] ?? $registration?->attendee_name ?? '');
         $volunteerEmail = (string) ($extra['volunteer_email'] ?? $signup?->email ?? $extra['attendee_email'] ?? $registration?->attendee_email ?? '');
@@ -111,7 +122,6 @@ class TemplateRenderer
         $opportunityTitle = (string) ($opportunity?->title ?? $extra['opportunity_title'] ?? $event?->name ?? '');
         $teamName = (string) ($team?->name ?? $extra['team_name'] ?? '');
         $shiftName = (string) ($shift?->name ?? $extra['shift_name'] ?? '');
-        $location = (string) ($shift?->location ?? $opportunity?->location ?? $event?->location ?? $extra['location'] ?? '');
         $instructions = (string) ($extra['instructions'] ?? $opportunity?->description ?? '');
 
         return [
@@ -120,16 +130,16 @@ class TemplateRenderer
             'volunteer_name' => $volunteerName,
             'volunteer_email' => $volunteerEmail,
             'event_name' => (string) ($event?->name ?? $opportunityTitle ?? ''),
-            'event_date' => $shiftDateFormatted,
-            'event_time' => $shiftTimeFormatted,
-            'event_location' => $location,
-            'event_timezone' => $tz,
+            'event_date' => $eventDateFormatted !== '' ? $eventDateFormatted : $shiftDateFormatted,
+            'event_time' => $eventTimeFormatted !== '' ? $eventTimeFormatted : $shiftTimeFormatted,
+            'event_location' => $eventLocation !== '' ? $eventLocation : $vmsLocation,
+            'event_timezone' => $eventTz,
             'opportunity_title' => $opportunityTitle,
             'team_name' => $teamName,
             'shift_name' => $shiftName,
             'shift_date' => $shiftDateFormatted,
             'shift_time' => $shiftTimeFormatted,
-            'location' => $location,
+            'location' => $vmsLocation,
             'instructions' => $instructions,
             'change_summary' => (string) ($extra['change_summary'] ?? ''),
             'promotion_deadline' => (string) ($extra['promotion_deadline'] ?? ''),

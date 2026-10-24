@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, RouterLink } from 'vue-router';
 import {
   ArrowLeft,
+  BarChart2,
   CheckCircle2,
   Clock,
   Download,
@@ -201,7 +202,7 @@ const getFormatBadgeColor = (format: string) => {
 
 <template>
   <div class="space-y-6">
-    <!-- Back to details link -->
+    <!-- Back to details link & actions -->
     <div class="flex items-center justify-between">
       <RouterLink
         :to="{ name: 'ems-event-detail', params: { uuid: eventUuid } }"
@@ -209,6 +210,14 @@ const getFormatBadgeColor = (format: string) => {
       >
         <ArrowLeft class="h-4 w-4" />
         Back to Event Details
+      </RouterLink>
+
+      <RouterLink
+        :to="{ name: 'ems-analytics-compare' }"
+        class="inline-flex items-center gap-1.5 text-xs font-bold text-primary hover:text-secondary px-3 py-1.5 rounded-xl border border-primary/20 bg-white hover:bg-primary/5 transition shadow-xs"
+      >
+        <BarChart2 class="h-3.5 w-3.5" />
+        Compare Events
       </RouterLink>
     </div>
 
@@ -258,17 +267,26 @@ const getFormatBadgeColor = (format: string) => {
 
     <!-- TAB 1: Analytics -->
     <template v-if="activeTab === 'analytics'">
-      <div v-if="isAnalyticsLoading" class="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <div v-for="i in 4" :key="i" class="h-24 animate-pulse rounded-2xl bg-neutral-ivory/50" />
+      <div v-if="isAnalyticsLoading" class="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
+        <div v-for="i in 6" :key="i" class="h-24 animate-pulse rounded-2xl bg-neutral-ivory/50" />
       </div>
 
       <div v-else-if="payload" class="space-y-6">
         <!-- KPIs Row -->
-        <section aria-label="Key Performance Indicators" class="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <section aria-label="Key Performance Indicators" class="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
           <div class="rounded-2xl border border-neutral-ivory bg-white p-4 shadow-soft">
             <span class="text-[10px] font-bold uppercase tracking-wider text-neutral-muted">Registrations</span>
             <p class="mt-1 text-xl font-bold font-serif text-neutral-black">{{ payload.kpis.total_registrations }}</p>
-            <p class="text-[9px] text-neutral-muted">Capacity Limit: {{ event?.capacity || 'Unlimited' }}</p>
+            <p class="text-[9px] text-neutral-muted">
+              Capacity: {{ event?.capacity || 'Unlimited' }}
+              <span v-if="payload.kpis.capacity_utilization">({{ payload.kpis.capacity_utilization }}%)</span>
+            </p>
+          </div>
+
+          <div class="rounded-2xl border border-neutral-ivory bg-white p-4 shadow-soft">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-neutral-muted">Page Views</span>
+            <p class="mt-1 text-xl font-bold font-serif text-neutral-black">{{ payload.kpis.page_views ?? 0 }}</p>
+            <p class="text-[9px] text-neutral-muted">Conversion: {{ payload.kpis.conversion_rate ?? 0 }}%</p>
           </div>
 
           <div class="rounded-2xl border border-neutral-ivory bg-white p-4 shadow-soft">
@@ -281,6 +299,14 @@ const getFormatBadgeColor = (format: string) => {
             <span class="text-[10px] font-bold uppercase tracking-wider text-neutral-muted">No-Show Rate</span>
             <p class="mt-1 text-xl font-bold font-serif text-amber-600">{{ payload.kpis.no_show_rate }}%</p>
             <p class="text-[9px] text-neutral-muted">No-shows count: {{ payload.kpis.no_shows }}</p>
+          </div>
+
+          <div class="rounded-2xl border border-neutral-ivory bg-white p-4 shadow-soft">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-neutral-muted">Paid vs Free</span>
+            <p class="mt-1 text-xl font-bold font-serif text-neutral-black">
+              {{ payload.kpis.paid_registrations ?? 0 }} <span class="text-xs font-normal text-neutral-muted">/ {{ payload.kpis.free_registrations ?? 0 }}</span>
+            </p>
+            <p class="text-[9px] text-neutral-muted">Paid / Free attendees</p>
           </div>
 
           <div class="rounded-2xl border border-neutral-ivory bg-white p-4 shadow-soft">

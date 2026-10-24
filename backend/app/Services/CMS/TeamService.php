@@ -4,6 +4,7 @@ namespace App\Services\CMS;
 
 use App\Models\CMS\TeamMember;
 use App\Repositories\CMS\TeamRepository;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class TeamService
@@ -49,6 +50,8 @@ class TeamService
         // Audit Log
         $this->revisionService->logAction($userId, 'create_team_member', $member, "Created team member: {$member->name}");
 
+        Cache::forget('website_team');
+
         return $member;
     }
 
@@ -63,6 +66,8 @@ class TeamService
         // Audit Log
         $this->revisionService->logAction($userId, 'update_team_member', $member, "Updated team member: {$member->name}");
 
+        Cache::forget('website_team');
+
         return $member;
     }
 
@@ -74,6 +79,8 @@ class TeamService
         if ($deleted) {
             $this->revisionService->logAction($userId, 'delete_team_member', $member, "Deleted team member: {$name}");
         }
+
+        Cache::forget('website_team');
 
         return $deleted;
     }
@@ -88,12 +95,15 @@ class TeamService
         }
 
         $this->revisionService->logAction($userId, 'reorder_team', null, "Reordered team member listing.");
+        Cache::forget('website_team');
         return true;
     }
 
     public function rollback(TeamMember $member, int $version, ?int $userId): bool
     {
-        return $this->revisionService->rollback($member, $version, $userId);
+        $result = $this->revisionService->rollback($member, $version, $userId);
+        Cache::forget('website_team');
+        return $result;
     }
 
     public function getRevisions(TeamMember $member)

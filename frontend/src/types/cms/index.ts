@@ -115,12 +115,20 @@ export interface Media {
     id: number;
     name: string;
   } | null;
+  audience?: 'both' | 'brothers' | 'sisters' | 'male' | 'female';
   created_at: string;
 }
 
 export interface MediaUploadOptions {
   display_name?: string;
   category_id?: number | null;
+  audience?: 'both' | 'brothers' | 'sisters' | 'male' | 'female';
+}
+
+export interface MediaUpdateOptions {
+  display_name?: string | null;
+  category_id?: number | null;
+  audience?: 'both' | 'brothers' | 'sisters' | 'male' | 'female';
 }
 
 export interface CmsRevision {

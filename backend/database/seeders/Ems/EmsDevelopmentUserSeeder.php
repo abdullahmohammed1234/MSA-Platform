@@ -56,16 +56,27 @@ class EmsDevelopmentUserSeeder extends Seeder
                 continue;
             }
 
-            $user = User::firstOrCreate(
-                ['email' => $definition['email']],
-                [
+            $user = User::withTrashed()->where('email', $definition['email'])->first();
+
+            if (! $user) {
+                $user = User::create([
                     'uuid' => (string) Str::uuid(),
+                    'email' => $definition['email'],
                     'name' => $definition['name'],
                     'password' => Hash::make($password),
                     'email_verified_at' => now(),
                     'is_active' => true,
-                ]
-            );
+                ]);
+            } else {
+                if ($user->trashed()) {
+                    $user->restore();
+                }
+                $user->update([
+                    'name' => $definition['name'],
+                    'password' => Hash::make($password),
+                    'is_active' => true,
+                ]);
+            }
 
             $user->roles()->syncWithoutDetaching([$role->id]);
         }
