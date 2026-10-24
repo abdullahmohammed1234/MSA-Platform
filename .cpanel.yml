@@ -21,12 +21,12 @@ deployment:
 
     # 2. Deploy pre-built main frontend files directly to public_html (sfumsa.ca)
     # Fail closed if build output is missing or empty
-    - test -f frontend/dist/index.html || { echo "ERROR: frontend/dist/index.html missing! Build frontend before deploying." >&2; exit 1; }
+    - 'test -f frontend/dist/index.html || { echo "ERROR - frontend/dist/index.html missing! Build frontend before deploying." >&2; exit 1; }'
     - /bin/mkdir -p /home2/sfums1d5/public_html
     - /bin/rsync -avz --exclude='.env*' --exclude='*.map' --exclude='*.bak' --exclude='connect*' --exclude='storage*' frontend/dist/ /home2/sfums1d5/public_html/
 
     # 3. Deploy pre-built MSA Connect frontend files to connect document root
     # Fail closed if Connect build output is missing or empty
-    - test -f connect/dist/index.html || { echo "ERROR: connect/dist/index.html missing! Build connect before deploying." >&2; exit 1; }
+    - 'test -f connect/dist/index.html || { echo "ERROR - connect/dist/index.html missing! Build connect before deploying." >&2; exit 1; }'
     - /bin/mkdir -p /home2/sfums1d5/public_html/connect
     - /bin/rsync -avz --exclude='.env*' --exclude='*.map' --exclude='*.bak' connect/dist/ /home2/sfums1d5/public_html/connect/
