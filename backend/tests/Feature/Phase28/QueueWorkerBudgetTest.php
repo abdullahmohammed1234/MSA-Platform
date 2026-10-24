@@ -200,6 +200,7 @@ class QueueWorkerBudgetTest extends TestCase
             'email' => 'queue.student@sfu.ca',
             'password' => 'SecurePassword123!',
             'password_confirmation' => 'SecurePassword123!',
+            'gender' => 'male',
             'terms' => true,
             'role' => 'volunteer',
         ])->assertCreated()->assertJsonPath('verification_email_sent', true);

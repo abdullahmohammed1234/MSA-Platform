@@ -51,6 +51,7 @@ class RegistrationMailFailureTest extends TestCase
             'email' => self::EMAIL,
             'password' => 'SecurePassword123!',
             'password_confirmation' => 'SecurePassword123!',
+            'gender' => 'male',
             'terms' => true,
             'role' => 'volunteer',
         ]);

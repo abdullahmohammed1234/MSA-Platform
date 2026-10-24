@@ -243,7 +243,10 @@ class ProductionHardeningContractTest extends TestCase
         $file = UploadedFile::fake()->create('gallery.jpg', 100, 'image/jpeg');
 
         $this->actingAs($this->cmsUser)
-            ->postJson('/api/v1/admin/cms/media', ['file' => $file])
+            ->postJson('/api/v1/admin/cms/media', [
+                'file' => $file,
+                'audience' => 'both',
+            ])
             ->assertStatus(201);
 
         $this->assertDatabaseCount('media', 1);

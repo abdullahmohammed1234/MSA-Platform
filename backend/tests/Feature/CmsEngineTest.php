@@ -224,7 +224,8 @@ class CmsEngineTest extends TestCase
         // 1. Upload
         $response = $this->actingAs($this->adminUser)
             ->postJson(route('api.admin.cms.media.store'), [
-                'file' => $file
+                'file' => $file,
+                'audience' => 'both',
             ])
             ->assertStatus(201)
             ->assertJsonPath('success', true);
@@ -272,6 +273,7 @@ class CmsEngineTest extends TestCase
                 'file' => $file,
                 'display_name' => 'MSA Welcome Night 2026',
                 'category_id' => $categoryId,
+                'audience' => 'both',
             ])
             ->assertStatus(201)
             ->assertJsonPath('media.display_name', 'MSA Welcome Night 2026')
@@ -298,6 +300,7 @@ class CmsEngineTest extends TestCase
             ->postJson(route('api.admin.cms.media.store'), [
                 'file' => $file,
                 'display_name' => 'Test/../../../file',
+                'audience' => 'both',
             ])
             ->assertStatus(201);
 
@@ -321,6 +324,7 @@ class CmsEngineTest extends TestCase
             ->postJson(route('api.admin.cms.media.store'), [
                 'file' => $empty,
                 'display_name' => '   ',
+                'audience' => 'both',
             ])
             ->assertStatus(201)
             ->assertJsonPath('media.display_name', null)
@@ -331,6 +335,7 @@ class CmsEngineTest extends TestCase
             ->postJson(route('api.admin.cms.media.store'), [
                 'file' => $special,
                 'display_name' => 'Jummah & Community Event',
+                'audience' => 'both',
             ])
             ->assertStatus(201)
             ->assertJsonPath('media.display_name', 'Jummah & Community Event');
@@ -340,6 +345,7 @@ class CmsEngineTest extends TestCase
             ->postJson(route('api.admin.cms.media.store'), [
                 'file' => $arabic,
                 'display_name' => 'ليلة الترحيب',
+                'audience' => 'both',
             ])
             ->assertStatus(201)
             ->assertJsonPath('media.display_name', 'ليلة الترحيب');
@@ -349,6 +355,7 @@ class CmsEngineTest extends TestCase
             ->postJson(route('api.admin.cms.media.store'), [
                 'file' => $tooLong,
                 'display_name' => str_repeat('A', 256),
+                'audience' => 'both',
             ])
             ->assertStatus(422)
             ->assertJsonValidationErrors(['display_name']);
@@ -371,6 +378,7 @@ class CmsEngineTest extends TestCase
             $this->actingAs($this->adminUser)
                 ->postJson(route('api.admin.cms.media.store'), [
                     'file' => UploadedFile::fake()->create($name, 500, $mime),
+                    'audience' => 'both',
                 ])
                 ->assertStatus(201)
                 ->assertJsonPath('media.media_type', 'video');
@@ -472,6 +480,7 @@ class CmsEngineTest extends TestCase
             ->postJson(route('api.admin.cms.media.store'), [
                 'file' => $file,
                 'display_name' => 'Welcome Video',
+                'audience' => 'both',
             ])
             ->assertStatus(201)
             ->assertJsonPath('media.media_type', 'video')
@@ -493,6 +502,7 @@ class CmsEngineTest extends TestCase
         $this->actingAs($this->adminUser)
             ->postJson(route('api.admin.cms.media.store'), [
                 'file' => $file,
+                'audience' => 'both',
             ])
             ->assertStatus(201)
             ->assertJsonPath('media.media_type', 'image');
@@ -658,6 +668,7 @@ class CmsEngineTest extends TestCase
             ->postJson(route('api.admin.cms.media.store'), [
                 'file' => $file,
                 'display_name' => 'Gallery Photo',
+                'audience' => 'both',
             ])
             ->assertStatus(201)
             ->assertJsonPath('media.display_name', 'Gallery Photo');

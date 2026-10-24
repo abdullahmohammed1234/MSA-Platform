@@ -45,6 +45,7 @@ class VolunteeringAdminBoundaryTest extends TestCase
             'email' => 'selfserve@sfu.ca',
             'password' => 'Password123!',
             'password_confirmation' => 'Password123!',
+            'gender' => 'male',
             'terms' => true,
             'role' => 'volunteer',
         ])->assertSuccessful();

@@ -24,17 +24,26 @@ const RouterLinkMock = {
 };
 
 // Mock lucide icons
-vi.mock('lucide-vue-next', () => ({
-  ArrowLeft: { template: '<svg data-icon="ArrowLeft" />' },
-  Calendar: { template: '<svg data-icon="Calendar" />' },
-  CalendarPlus: { template: '<svg data-icon="CalendarPlus" />' },
-  CheckCircle2: { template: '<svg data-icon="CheckCircle2" />' },
-  Clock: { template: '<svg data-icon="Clock" />' },
-  Download: { template: '<svg data-icon="Download" />' },
-  ExternalLink: { template: '<svg data-icon="ExternalLink" />' },
-  MapPin: { template: '<svg data-icon="MapPin" />' },
-  Users: { template: '<svg data-icon="Users" />' },
-}));
+vi.mock('lucide-vue-next', () => {
+  const componentCache: Record<string, any> = {};
+  return new Proxy(
+    { __esModule: true },
+    {
+      get: (target, prop: string) => {
+        if (prop in target) return (target as any)[prop];
+        if (typeof prop === 'symbol' || prop === 'default') return undefined;
+        if (!componentCache[prop]) {
+          componentCache[prop] = {
+            name: prop,
+            template: `<svg data-icon="${prop}" />`,
+          };
+        }
+        return componentCache[prop];
+      },
+      has: () => true,
+    }
+  );
+});
 
 // Mock publicEventsService
 vi.mock('@/services/ems/publicEventsService', () => ({
