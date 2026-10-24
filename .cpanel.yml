@@ -16,6 +16,7 @@ deployment:
     # Never: migrate:fresh / migrate:refresh on production.
 
     # 1. Sync the Laravel backend to a secure folder outside public_html
+    - /bin/mkdir -p /home2/sfums1d5/msa-backend
     - /bin/rsync -avz --exclude='node_modules' --exclude='.git' --exclude='.env*' --exclude='tests' --exclude='storage/' --exclude='*.sqlite*' backend/ /home2/sfums1d5/msa-backend/
 
     # 2. Deploy pre-built main frontend files directly to public_html (sfumsa.ca)
