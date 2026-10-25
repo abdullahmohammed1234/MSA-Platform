@@ -99,7 +99,7 @@ const lightboxImages = computed<LightboxImage[]>(() =>
   filteredData.value.map((item) => ({
     id: item.id,
     url: item.url,
-    title: item.title,
+    title: undefined,
     description: item.description,
     category: item.category,
     date: item.date,
@@ -204,14 +204,14 @@ const openLightbox = (item: MediaGalleryItem) => {
         <div
           v-for="item in currentItems"
           :key="item.id"
-          class="group rounded-3xl overflow-hidden bg-white shadow-soft border border-neutral-gray/15 hover:shadow-premium transition-all duration-500 cursor-zoom-in break-inside-avoid-column flex flex-col"
+          class="group rounded-3xl overflow-hidden bg-white shadow-soft border border-neutral-gray/15 hover:shadow-premium transition-all duration-500 cursor-zoom-in break-inside-avoid-column"
           @click="openLightbox(item)"
         >
-          <!-- Media preview: Full color, no black overlay, immediate visibility -->
+          <!-- Media preview: Full color, clean photo display -->
           <div class="relative overflow-hidden bg-neutral-black/5 aspect-[4/3]">
             <SecureMedia
               :src="item.url"
-              :alt="item.title"
+              :alt="item.title || 'Media photo'"
               :is-video="isVideoItem(item)"
               media-class="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.03]"
             />
@@ -226,33 +226,25 @@ const openLightbox = (item: MediaGalleryItem) => {
               </span>
             </div>
 
+            <!-- Audience restriction badge overlay (Brothers Only / Sisters Only) -->
+            <div
+              v-if="item.audience && item.audience !== 'both'"
+              class="absolute top-3 left-3 z-10 pointer-events-none"
+            >
+              <span
+                class="inline-block text-[9px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full backdrop-blur-md shadow-sm"
+                :class="(item.audience === 'brothers' || item.audience === 'male')
+                  ? 'bg-blue-900/80 text-blue-100 border border-blue-400/30'
+                  : 'bg-purple-900/80 text-purple-100 border border-purple-400/30'"
+              >
+                {{ (item.audience === 'brothers' || item.audience === 'male') ? 'Brothers Only' : 'Sisters Only' }}
+              </span>
+            </div>
+
             <!-- Subtle hover expand icon -->
             <div class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
               <span class="p-2 rounded-full bg-white/90 shadow-soft text-primary flex items-center justify-center backdrop-blur-sm">
                 <Maximize2 class="w-3.5 h-3.5" />
-              </span>
-            </div>
-          </div>
-
-          <!-- Editorial Caption Card (Pixieset Inspired) -->
-          <div class="p-4 sm:p-5 flex flex-col gap-1.5 bg-white border-t border-neutral-gray/10">
-            <div class="flex items-center justify-between gap-2">
-              <span class="text-[10px] font-extrabold uppercase tracking-widest text-primary">
-                {{ item.category }}
-              </span>
-              <span class="text-[10px] text-neutral-muted font-medium font-mono">{{ item.date }}</span>
-            </div>
-
-            <h3 class="font-display font-bold text-sm sm:text-base text-neutral-black group-hover:text-primary transition-colors line-clamp-1">
-              {{ item.title }}
-            </h3>
-
-            <div v-if="item.audience && item.audience !== 'both'" class="pt-1">
-              <span
-                class="inline-block text-[9px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full"
-                :class="(item.audience === 'brothers' || item.audience === 'male') ? 'bg-blue-50 text-blue-700 border border-blue-200' : 'bg-purple-50 text-purple-700 border border-purple-200'"
-              >
-                {{ (item.audience === 'brothers' || item.audience === 'male') ? 'Brothers Only' : 'Sisters Only' }}
               </span>
             </div>
           </div>
