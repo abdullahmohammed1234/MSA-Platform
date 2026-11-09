@@ -631,10 +631,14 @@ class EmsSquareProductionSignOffTest extends EmsTestCase
         $this->expectException(EmsException::class);
         $this->expectExceptionCode(Response::HTTP_SERVICE_UNAVAILABLE);
 
+        $body = '{"event_id":"evt_1","type":"payment.updated"}';
+        $url = 'https://example.test/api/v1/webhooks/square';
+        $sig = base64_encode(hash_hmac('sha256', $url . $body, 'valid-secret', true));
+
         $webhookService->handle(
-            '{"event_id":"evt_1","type":"payment.updated"}',
-            'any-sig',
-            'https://example.test/api/v1/webhooks/square'
+            $body,
+            $sig,
+            $url
         );
     }
 

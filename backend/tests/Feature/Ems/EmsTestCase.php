@@ -35,6 +35,7 @@ abstract class EmsTestCase extends TestCase
         );
 
         $this->seed(EmsRolePermissionSeeder::class);
+        config(['ems.notifications.enabled' => true]);
     }
 
     /**

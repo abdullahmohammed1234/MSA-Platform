@@ -39,17 +39,6 @@ class SquareWebhookService
 
     public function handle(string $rawBody, string $signature, string $notificationUrl): ?Payment
     {
-        if (! (bool) config('ems.payments.enabled', false)) {
-            Log::channel((string) config('ems.logging.channel', 'ems'))
-                ->warning('ems.webhooks.square.payments_disabled_fail_closed');
-
-            throw new EmsException(
-                'Square payments are disabled.',
-                [],
-                Response::HTTP_SERVICE_UNAVAILABLE
-            );
-        }
-
         $provider = $this->providers->driver(PaymentProviderEnum::Square);
 
         if (! $provider->verifyWebhookSignature($rawBody, $signature, $notificationUrl)) {
@@ -60,6 +49,17 @@ class SquareWebhookService
                 'Invalid webhook signature.',
                 [],
                 Response::HTTP_UNAUTHORIZED
+            );
+        }
+
+        if (! (bool) config('ems.payments.enabled', false)) {
+            Log::channel((string) config('ems.logging.channel', 'ems'))
+                ->warning('ems.webhooks.square.payments_disabled_fail_closed');
+
+            throw new EmsException(
+                'Square payments are disabled.',
+                [],
+                Response::HTTP_SERVICE_UNAVAILABLE
             );
         }
 

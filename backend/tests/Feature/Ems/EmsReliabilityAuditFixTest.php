@@ -409,6 +409,7 @@ class EmsReliabilityAuditFixTest extends EmsTestCase
     public function test_notifications_retry_command_skips_future_scheduled_notifications(): void
     {
         Mail::fake();
+        config(['ems.notifications.enabled' => true]);
 
         $event = $this->publishedEvent();
         $reg = Registration::factory()->create([

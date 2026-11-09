@@ -50,6 +50,7 @@ class EmsPhase5SystemHardeningTest extends EmsTestCase
             'ems.tickets.enabled' => true,
             'ems.tickets.qr_enabled' => true,
             'ems.notifications.enabled' => true,
+            'ems.payments.enabled' => true,
             'ems.payments.square.webhook_signature_key' => 'webhook-secret',
             'ems.payments.square.webhook_notification_url' => 'https://example.test/api/v1/webhooks/square',
         ]);

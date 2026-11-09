@@ -44,7 +44,7 @@ class SchedulerCoarseIntervalTest extends TestCase
         $lastDay = $start->copy()->endOfMonth()->startOfDay();
 
         $coarse = $this->scheduleRegisteredAt($lastDay->copy()->setTime(12, 0), $interval);
-        $this->assertCount(24, $coarse, 'all 24 scheduled tasks (8 console, 16 bootstrap) are registered');
+        $this->assertCount(26, $coarse, 'all 26 scheduled tasks (10 console, 16 bootstrap) are registered');
 
         $monthly = $this->dueTimes($coarse[self::MONTHLY], $start, $end, $interval);
         $this->assertCount(1, $monthly);
