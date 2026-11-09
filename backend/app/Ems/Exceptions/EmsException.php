@@ -19,18 +19,27 @@ class EmsException extends RuntimeException
 
     protected int $status = Response::HTTP_BAD_REQUEST;
 
+    protected ?string $providerCode = null;
+
+    protected ?string $providerCategory = null;
+
     /**
      * @param  array<string, array<int, string>>  $errors
      */
-    public function __construct(string $message, array $errors = [], ?int $status = null)
-    {
-        parent::__construct($message);
+    public function __construct(
+        string $message,
+        array $errors = [],
+        ?int $status = null,
+        ?string $providerCode = null,
+        ?string $providerCategory = null
+    ) {
+        $code = $status ?? Response::HTTP_BAD_REQUEST;
+        parent::__construct($message, $code);
 
         $this->errors = $errors;
-
-        if ($status !== null) {
-            $this->status = $status;
-        }
+        $this->status = $code;
+        $this->providerCode = $providerCode;
+        $this->providerCategory = $providerCategory;
     }
 
     /**
@@ -44,5 +53,15 @@ class EmsException extends RuntimeException
     public function status(): int
     {
         return $this->status;
+    }
+
+    public function providerCode(): ?string
+    {
+        return $this->providerCode;
+    }
+
+    public function providerCategory(): ?string
+    {
+        return $this->providerCategory;
     }
 }

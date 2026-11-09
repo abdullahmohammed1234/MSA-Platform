@@ -216,7 +216,7 @@ class CheckoutService
         $lastName = trim($data['last_name']);
         $attendeeName = trim($firstName . ' ' . $lastName);
 
-        return DB::transaction(function () use ($event, $data, $user, $quantity, $email, $attendeeName, $firstName, $lastName): array {
+        $prepared = DB::transaction(function () use ($event, $data, $user, $quantity, $email, $attendeeName, $firstName, $lastName): array {
             $locked = Event::query()->whereKey($event->id)->lockForUpdate()->firstOrFail();
             $ticketType = $this->resolveTicketType($locked, $data['ticket_type_id'] ?? null, requireFree: false);
 
@@ -442,15 +442,92 @@ class CheckoutService
             );
             $payment->save();
 
-            $this->attachSquareCheckout($order, $payment);
+            return [
+                'type' => 'new',
+                'order' => $order,
+                'registration' => $registration,
+                'payment' => $payment,
+                'ticket_type_id' => $ticketType->id,
+                'quantity' => $quantity,
+            ];
+        });
+
+        // Completed free/discounted order or reusable live checkout returned directly
+        if (! isset($prepared['type'])) {
+            return $prepared;
+        }
+
+        if (($prepared['type'] ?? '') === 'replace') {
+            /** @var Order $order */
+            $order = $prepared['order'];
+            /** @var Payment $payment */
+            $payment = $prepared['payment'];
+            /** @var Registration $registration */
+            $registration = $prepared['registration'];
+            $oldCheckoutId = $prepared['old_checkout_id'];
+            $oldHash = $prepared['old_hash'];
+            $requestedHash = $prepared['requested_hash'];
+
+            $order->load(['items', 'event', 'promoCode']);
+
+            try {
+                $this->attachSquareCheckout($order, $payment);
+            } catch (\Throwable $e) {
+                if ($this->isDefinitiveProviderRejection($e)) {
+                    $this->releaseReservationIdempotent(
+                        $order,
+                        $payment,
+                        $registration,
+                        'Square checkout replacement rejected: ' . $e->getMessage()
+                    );
+
+                    Log::channel((string) config('ems.logging.channel', 'ems'))
+                        ->error('ems.checkout.replacement_rejected', [
+                            'order_uuid' => $order->uuid,
+                            'payment_uuid' => $payment->uuid,
+                            'error' => $e->getMessage(),
+                        ]);
+
+                    throw $e;
+                }
+
+                $metadata = $payment->metadata ?? [];
+                $metadata['provider_creation_ambiguous'] = true;
+                $metadata['ambiguous_reason'] = $e->getMessage();
+                $metadata['ambiguous_at'] = now()->toIso8601String();
+                $payment->metadata = $metadata;
+                $payment->failure_reason = 'Ambiguous provider checkout outcome: ' . substr($e->getMessage(), 0, 150);
+                $payment->save();
+
+                Log::channel((string) config('ems.logging.channel', 'ems'))
+                    ->warning('ems.checkout.replacement_ambiguous', [
+                        'order_uuid' => $order->uuid,
+                        'payment_uuid' => $payment->uuid,
+                        'order_reference' => $order->reference,
+                        'error' => $e->getMessage(),
+                    ]);
+
+                throw new EmsException(
+                    'Unable to reach payment provider. If your card was charged, your reservation is safely recorded and will be confirmed automatically, or you may try again shortly.',
+                    ['payment' => ['Payment provider timed out or returned an ambiguous outcome.']],
+                    Response::HTTP_GATEWAY_TIMEOUT
+                );
+            }
+
+            if ($oldCheckoutId) {
+                $this->providers->default()->deletePaymentLink($oldCheckoutId);
+            }
 
             Log::channel((string) config('ems.logging.channel', 'ems'))
-                ->info('ems.checkout.created', [
-                    'order_uuid' => $order->uuid,
+                ->info('ems.square.checkout.replaced', [
                     'payment_uuid' => $payment->uuid,
-                    'provider_checkout_id' => $payment->provider_checkout_id,
+                    'order_uuid' => $order->uuid,
                     'checkout_version' => $payment->checkout_version,
-                    'fingerprint_prefix' => CheckoutFingerprint::prefix($payment->checkout_details_hash),
+                    'old_checkout' => $oldCheckoutId,
+                    'new_checkout' => $payment->provider_checkout_id,
+                    'old_fingerprint' => CheckoutFingerprint::prefix($oldHash),
+                    'new_fingerprint' => CheckoutFingerprint::prefix($requestedHash),
+                    'reason' => 'order_details_changed',
                 ]);
 
             $registration->load(['event.category', 'ticketType', 'order']);
@@ -461,7 +538,81 @@ class CheckoutService
                 'checkout_url' => $payment->checkout_url,
                 'payment' => $payment->fresh(),
             ];
-        });
+        }
+
+        // New checkout flow: attach Square checkout outside transaction
+        /** @var Order $order */
+        $order = $prepared['order'];
+        /** @var Payment $payment */
+        $payment = $prepared['payment'];
+        /** @var Registration $registration */
+        $registration = $prepared['registration'];
+        $ticketTypeId = $prepared['ticket_type_id'];
+        $quantity = $prepared['quantity'];
+
+        try {
+            $this->attachSquareCheckout($order, $payment);
+        } catch (\Throwable $e) {
+            if ($this->isDefinitiveProviderRejection($e)) {
+                $this->releaseReservationIdempotent(
+                    $order,
+                    $payment,
+                    $registration,
+                    'Square checkout creation rejected: ' . $e->getMessage()
+                );
+
+                Log::channel((string) config('ems.logging.channel', 'ems'))
+                    ->error('ems.checkout.creation_rejected', [
+                        'order_uuid' => $order->uuid,
+                        'payment_uuid' => $payment->uuid,
+                        'error' => $e->getMessage(),
+                    ]);
+
+                throw $e;
+            }
+
+            // Ambiguous provider outcome (timeout, connection drop, 5xx):
+            // Do NOT cancel local payment or release inventory. Square may have processed the request.
+            $metadata = $payment->metadata ?? [];
+            $metadata['provider_creation_ambiguous'] = true;
+            $metadata['ambiguous_reason'] = $e->getMessage();
+            $metadata['ambiguous_at'] = now()->toIso8601String();
+            $payment->metadata = $metadata;
+            $payment->failure_reason = 'Ambiguous provider checkout outcome: ' . substr($e->getMessage(), 0, 150);
+            $payment->save();
+
+            Log::channel((string) config('ems.logging.channel', 'ems'))
+                ->warning('ems.checkout.creation_ambiguous', [
+                    'order_uuid' => $order->uuid,
+                    'payment_uuid' => $payment->uuid,
+                    'order_reference' => $order->reference,
+                    'error' => $e->getMessage(),
+                ]);
+
+            throw new EmsException(
+                'Unable to reach payment provider. If your card was charged, your reservation is safely recorded and will be confirmed automatically, or you may try again shortly.',
+                ['payment' => ['Payment provider timed out or returned an ambiguous outcome.']],
+                Response::HTTP_GATEWAY_TIMEOUT
+            );
+        }
+
+        Log::channel((string) config('ems.logging.channel', 'ems'))
+            ->info('ems.checkout.created', [
+                'order_uuid' => $order->uuid,
+                'payment_uuid' => $payment->uuid,
+                'provider_checkout_id' => $payment->provider_checkout_id,
+                'checkout_version' => $payment->checkout_version,
+                'fingerprint_prefix' => CheckoutFingerprint::prefix($payment->checkout_details_hash),
+            ]);
+
+        $registration->load(['event.category', 'ticketType', 'order']);
+
+        return [
+            'order' => $order->fresh(['items', 'event']),
+            'registration' => $registration,
+            'checkout_url' => $payment->checkout_url,
+            'payment' => $payment->fresh(),
+        ];
     }
 
     private function assertEventAcceptsRegistration(Event $event): void
@@ -808,30 +959,14 @@ class CheckoutService
         ]);
         $payment->save();
 
-        $order->load(['items', 'event', 'promoCode']);
-        $this->attachSquareCheckout($order, $payment);
-
-        $this->providers->default()->deletePaymentLink($oldCheckoutId);
-
-        Log::channel((string) config('ems.logging.channel', 'ems'))
-            ->info('ems.square.checkout.replaced', [
-                'payment_uuid' => $payment->uuid,
-                'order_uuid' => $order->uuid,
-                'checkout_version' => $payment->checkout_version,
-                'old_checkout' => $oldCheckoutId,
-                'new_checkout' => $payment->provider_checkout_id,
-                'old_fingerprint' => CheckoutFingerprint::prefix($oldHash),
-                'new_fingerprint' => CheckoutFingerprint::prefix($requestedHash),
-                'reason' => 'order_details_changed',
-            ]);
-
-        $registration->load(['event.category', 'ticketType', 'order']);
-
         return [
-            'order' => $order->fresh(['items', 'event']),
+            'type' => 'replace',
+            'order' => $order,
             'registration' => $registration,
-            'checkout_url' => $payment->checkout_url,
-            'payment' => $payment->fresh(),
+            'payment' => $payment,
+            'old_checkout_id' => $oldCheckoutId,
+            'old_hash' => $oldHash,
+            'requested_hash' => $requestedHash,
         ];
     }
 
@@ -1209,5 +1344,108 @@ class CheckoutService
         }
 
         return $metadata;
+    }
+
+    public function isDefinitiveProviderRejection(\Throwable $e): bool
+    {
+        if (! ($e instanceof EmsException)) {
+            return false;
+        }
+
+        $status = $e->status();
+        $code = strtoupper((string) ($e->providerCode() ?? ''));
+
+        // Ambiguous / Non-Rejection HTTP Statuses:
+        // 401 (Auth error/credentials), 403 (Forbidden/WAF), 404 (Not Found/routing),
+        // 408 (Request Timeout), 409 (Conflict/Idempotency key reused), 429 (Rate Limited),
+        // and all 5xx (Server/Gateway errors).
+        if (in_array($status, [
+            Response::HTTP_UNAUTHORIZED,
+            Response::HTTP_FORBIDDEN,
+            Response::HTTP_NOT_FOUND,
+            Response::HTTP_REQUEST_TIMEOUT,
+            Response::HTTP_CONFLICT,
+            Response::HTTP_TOO_MANY_REQUESTS,
+            Response::HTTP_INTERNAL_SERVER_ERROR,
+            Response::HTTP_BAD_GATEWAY,
+            Response::HTTP_SERVICE_UNAVAILABLE,
+            Response::HTTP_GATEWAY_TIMEOUT,
+        ], true) || $status >= 500) {
+            return false;
+        }
+
+        // Provider error codes that represent ambiguous outcomes, conflicts, or transient limits
+        $ambiguousCodes = [
+            'IDEMPOTENCY_KEY_REUSED',
+            'CONFLICT',
+            'RATE_LIMITED',
+            'GATEWAY_TIMEOUT',
+            'REQUEST_TIMEOUT',
+            'INTERNAL_SERVER_ERROR',
+            'SERVICE_UNAVAILABLE',
+            'TEMPORARY_ERROR',
+        ];
+
+        if ($code !== '' && in_array($code, $ambiguousCodes, true)) {
+            return false;
+        }
+
+        // Definitive rejections occur under HTTP 400 (Bad Request) or HTTP 422 (Unprocessable Entity)
+        if ($status === Response::HTTP_BAD_REQUEST || $status === Response::HTTP_UNPROCESSABLE_ENTITY) {
+            if ($code !== '') {
+                return ! in_array($code, $ambiguousCodes, true);
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+    public function releaseReservationIdempotent(Order $order, Payment $payment, Registration $registration, string $reason): void
+    {
+        DB::transaction(function () use ($order, $payment, $registration, $reason): void {
+            /** @var Payment|null $lockedPayment */
+            $lockedPayment = Payment::query()->whereKey($payment->id)->lockForUpdate()->first();
+            /** @var Registration|null $lockedReg */
+            $lockedReg = Registration::query()->whereKey($registration->id)->lockForUpdate()->first();
+            /** @var Order|null $lockedOrder */
+            $lockedOrder = Order::query()->whereKey($order->id)->lockForUpdate()->first();
+
+            if (! $lockedPayment || ! $lockedReg || ! $lockedOrder) {
+                return;
+            }
+
+            $meta = $lockedPayment->metadata ?? [];
+            if (! empty($meta['inventory_released'])) {
+                // Idempotent guard: capacity and order have already been released
+                return;
+            }
+
+            if (in_array($lockedReg->status, [RegistrationStatus::AwaitingPayment, RegistrationStatus::Pending], true)) {
+                $lockedReg->status = RegistrationStatus::Cancelled;
+                $lockedReg->cancelled_at = now();
+                $lockedReg->save();
+
+                if ($lockedReg->ticket_type_id) {
+                    $ticketType = TicketType::query()->whereKey($lockedReg->ticket_type_id)->lockForUpdate()->first();
+                    if ($ticketType) {
+                        $ticketType->quantity_sold = max(0, (int) $ticketType->quantity_sold - (int) $lockedReg->quantity);
+                        $ticketType->save();
+                    }
+                }
+            }
+
+            $lockedPayment->status = PaymentStatus::Cancelled;
+            $lockedPayment->failure_reason = $reason;
+            $meta['inventory_released'] = true;
+            $meta['released_at'] = now()->toIso8601String();
+            $lockedPayment->metadata = $meta;
+            $lockedPayment->save();
+
+            $lockedOrder->status = OrderStatus::Cancelled;
+            $lockedOrder->cancelled_at = now();
+            $lockedOrder->save();
+        });
     }
 }

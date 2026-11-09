@@ -24,9 +24,14 @@ const event = computed(() => events.current);
 const summary = ref<EmsOperationsSummary | null>(null);
 const result = ref<EmsCheckInResult | null>(null);
 const busy = ref(false);
+const isRefreshing = ref(false);
 let timer: ReturnType<typeof setInterval> | null = null;
 
 const refresh = async () => {
+  if (isRefreshing.value || (typeof document !== 'undefined' && document.hidden)) {
+    return;
+  }
+  isRefreshing.value = true;
   try {
     if (!event.value || event.value.uuid !== uuid.value) {
       await events.fetchOne(uuid.value);
@@ -34,6 +39,14 @@ const refresh = async () => {
     summary.value = await operationsService.getSummary(uuid.value);
   } catch (error) {
     handle(error, { silent: true });
+  } finally {
+    isRefreshing.value = false;
+  }
+};
+
+const handleVisibilityChange = () => {
+  if (typeof document !== 'undefined' && !document.hidden) {
+    refresh();
   }
 };
 
@@ -46,7 +59,14 @@ const onScan = async (code: string) => {
       method: 'qr_scan',
       device: 'staff-mode',
     });
-    await refresh();
+    // Optimistically increment local attendance stats to eliminate immediate heavy polling
+    if (summary.value && result.value?.ok) {
+      summary.value.checked_in_count = (summary.value.checked_in_count ?? 0) + 1;
+      const confirmed = summary.value.confirmed_count ?? 0;
+      if (confirmed > 0) {
+        summary.value.attendance_percentage = Math.round((summary.value.checked_in_count / confirmed) * 1000) / 10;
+      }
+    }
   } catch (error) {
     result.value = checkInErrorPayload(error) ?? {
       ok: false,
@@ -59,10 +79,16 @@ const onScan = async (code: string) => {
 };
 
 onMounted(async () => {
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+  }
   await refresh();
-  timer = setInterval(refresh, 8000);
+  timer = setInterval(refresh, 20000);
 });
 onUnmounted(() => {
+  if (typeof document !== 'undefined') {
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }
   if (timer) clearInterval(timer);
 });
 </script>

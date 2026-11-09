@@ -290,7 +290,16 @@ class SquarePosIngestService
             return $existing;
         }
 
-        if ($this->isSettledStatus($status, $channel)) {
+        // If the existing payment is Terminal or Online, it strictly requires COMPLETED/PAID.
+        // It can NEVER be treated as settled with APPROVED, even if ingested via a POS path.
+        $effectiveChannel = $channel;
+        if ($existing->source_channel === PaymentSourceChannel::Terminal->value) {
+            $effectiveChannel = PaymentSourceChannel::Terminal;
+        } elseif ($existing->source_channel === PaymentSourceChannel::Online->value) {
+            $effectiveChannel = PaymentSourceChannel::Online;
+        }
+
+        if ($this->isSettledStatus($status, $effectiveChannel)) {
             return $this->fulfillment->markPaid($existing, $this->providerData($squarePayment));
         }
 

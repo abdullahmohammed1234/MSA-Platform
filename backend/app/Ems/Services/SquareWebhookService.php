@@ -39,6 +39,17 @@ class SquareWebhookService
 
     public function handle(string $rawBody, string $signature, string $notificationUrl): ?Payment
     {
+        if (! (bool) config('ems.payments.enabled', false)) {
+            Log::channel((string) config('ems.logging.channel', 'ems'))
+                ->warning('ems.webhooks.square.payments_disabled_fail_closed');
+
+            throw new EmsException(
+                'Square payments are disabled.',
+                [],
+                Response::HTTP_SERVICE_UNAVAILABLE
+            );
+        }
+
         $provider = $this->providers->driver(PaymentProviderEnum::Square);
 
         if (! $provider->verifyWebhookSignature($rawBody, $signature, $notificationUrl)) {
@@ -517,6 +528,7 @@ class SquareWebhookService
 
         return match ($status) {
             PaymentStatus::Paid->value => $this->applyPaidFromWebhook($payment, $parsed, $record),
+            PaymentStatus::Authorized->value => $this->applyAuthorizedFromWebhook($payment, $parsed, $record),
             PaymentStatus::Failed->value => $this->fulfillment->markFailed(
                 $payment,
                 'Provider reported payment failure.',
@@ -528,6 +540,41 @@ class SquareWebhookService
             ),
             default => $payment,
         };
+    }
+
+    /**
+     * @param  array<string, mixed>  $parsed
+     */
+    private function applyAuthorizedFromWebhook(Payment $payment, array $parsed, WebhookEvent $record): Payment
+    {
+        $payment->refresh();
+
+        // Delayed webhook protection: never downgrade an already Paid payment
+        if ($payment->status === PaymentStatus::Paid) {
+            return $payment;
+        }
+
+        if ($payment->status === PaymentStatus::Cancelled) {
+            return $payment;
+        }
+
+        $payment->status = PaymentStatus::Authorized;
+        if (! empty($parsed['provider_payment_id'])) {
+            $payment->provider_payment_id = (string) $parsed['provider_payment_id'];
+        }
+        $payment->metadata = array_merge($payment->metadata ?? [], [
+            'square_status' => 'APPROVED',
+            'authorized_at' => now()->toIso8601String(),
+        ]);
+        $payment->save();
+
+        Log::channel((string) config('ems.logging.channel', 'ems'))
+            ->info('ems.webhooks.square.payment_approved_held_authorized', [
+                'event_id' => $record->event_id,
+                'payment_uuid' => $payment->uuid,
+            ]);
+
+        return $payment;
     }
 
     /**

@@ -20,9 +20,24 @@ class SquareClient
 
     public function enabled(): bool
     {
-        return (bool) config('ems.payments.enabled', false)
+        $basic = (bool) config('ems.payments.enabled', false)
             && $this->accessToken() !== ''
             && $this->locationId() !== '';
+
+        if (! $basic) {
+            return false;
+        }
+
+        if (app()->isProduction()) {
+            return $this->applicationId() !== '';
+        }
+
+        return true;
+    }
+
+    public function applicationId(): string
+    {
+        return (string) config('ems.payments.square.application_id', '');
     }
 
     public function locationId(): string

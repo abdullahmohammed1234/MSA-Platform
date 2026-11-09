@@ -164,6 +164,8 @@ return [
         'webhook_unmatched_max_attempts' => (int) env('EMS_WEBHOOK_UNMATCHED_MAX_ATTEMPTS', 6),
         'webhook_unmatched_backoff_minutes' => [5, 15, 60, 240, 720],
         'checkout_ttl_minutes' => (int) env('EMS_CHECKOUT_TTL_MINUTES', 1440),
+        'allow_test_simulation' => (bool) env('EMS_ALLOW_TEST_PAYMENT_SIMULATION', false),
+        'authorized_review_threshold_hours' => (int) env('EMS_AUTHORIZED_REVIEW_THRESHOLD_HOURS', 24),
 
         'square' => [
             'environment' => env('SQUARE_ENVIRONMENT', 'sandbox'),

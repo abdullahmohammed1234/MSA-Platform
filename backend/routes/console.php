@@ -24,3 +24,18 @@ Schedule::command('vms:send-reminders')->everyFifteenMinutes()->withoutOverlappi
 // --hours must stay non-negative: a negative value deletes still-valid tokens.
 Schedule::command('sanctum:prune-expired', ['--hours' => 24])->dailyAt('03:30')->withoutOverlapping(60);
 
+// Bounded queue worker for shared hosting (CloudLinux/cPanel): processes queued jobs
+// without maintaining a long-running supervisor daemon.
+// Under the actual 15-minute cPanel cron schedule, --max-time=800 allows the worker to continue
+// processing newly arriving jobs for 13.3 minutes before exiting cleanly ahead of the next invocation.
+// withoutOverlapping(15) prevents duplicate concurrent workers and expires safely on the 15-minute cron boundary.
+Schedule::command('queue:work --max-time=800 --sleep=3 --tries=3 --timeout=60 --queue=ems-payments,ems-notifications,ems-operations,high,default,low')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping(20);
+
+// Square payment reconciliation runs every ten minutes to correlate missed webhooks,
+// settle captured authorizations, and resolve ambiguous checkouts.
+// withoutOverlapping(20) bounds lock duration so crashed runs never block indefinitely.
+Schedule::command('ems:square-reconcile')->everyFifteenMinutes()->withoutOverlapping(20);
+
+

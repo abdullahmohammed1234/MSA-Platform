@@ -49,6 +49,7 @@ class EventNotification extends Model
         'sent_at',
         'failed_at',
         'alert_sent_at',
+        'alert_claimed_at',
         'error',
         'retry_count',
         'payload',
@@ -65,6 +66,7 @@ class EventNotification extends Model
             'sent_at' => 'datetime',
             'failed_at' => 'datetime',
             'alert_sent_at' => 'datetime',
+            'alert_claimed_at' => 'datetime',
             'payload' => 'array',
             'retry_count' => 'integer',
         ];
@@ -150,6 +152,11 @@ class EventNotification extends Model
     public static function processingLeaseSeconds(): int
     {
         return max(60, (int) config('ems.notifications.processing_lease_seconds', 300));
+    }
+
+    public static function alertLeaseSeconds(): int
+    {
+        return max(60, (int) config('ems.notifications.alert_lease_seconds', 300));
     }
 
     public static function requeueAfterMinutes(): int

@@ -133,8 +133,14 @@ class SendEventNotificationJob implements ShouldQueue
                     'provider_message_id' => $messageId,
                 ]);
         } catch (Throwable $e) {
-            $handOffToWorker = $this->runningSynchronously() && $this->asyncConnection() !== null;
-            $willRetry = $handOffToWorker || ($this->job !== null && $this->attempts() < $this->tries);
+            $isPermanent = blank($notification->recipient_email)
+                || ! filter_var($notification->recipient_email, FILTER_VALIDATE_EMAIL)
+                || str_contains(strtolower($e->getMessage()), 'syntax error')
+                || str_contains(strtolower($e->getMessage()), 'invalid address')
+                || str_contains(strtolower($e->getMessage()), 'rfc 2822');
+
+            $handOffToWorker = ! $isPermanent && $this->runningSynchronously() && $this->asyncConnection() !== null;
+            $willRetry = ! $isPermanent && ($handOffToWorker || ($this->job !== null && $this->attempts() < $this->tries));
 
             if ($willRetry) {
                 $notification->markRetryPending($e->getMessage());
@@ -152,7 +158,9 @@ class SendEventNotificationJob implements ShouldQueue
                     'will_retry' => $willRetry,
                 ]);
 
-            app(\App\Ems\Services\Notifications\NotificationFailureAlertService::class)->sendAlert($notification, $e->getMessage());
+            if (! $willRetry) {
+                app(\App\Ems\Services\Notifications\NotificationFailureAlertService::class)->sendAlert($notification, $e->getMessage());
+            }
 
             if ($handOffToWorker) {
                 // An inline (request-time) send failed: hand the retry to a worker

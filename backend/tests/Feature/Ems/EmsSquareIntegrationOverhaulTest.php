@@ -1425,6 +1425,14 @@ class EmsSquareIntegrationOverhaulTest extends EmsTestCase
             '*/v2/terminals/checkouts' => Http::sequence()
                 ->push(['checkout' => ['id' => 'TERM_1', 'status' => 'PENDING', 'order_id' => 'sq_term_order']], 200)
                 ->push(['checkout' => ['id' => 'TERM_FAIL', 'status' => 'PENDING']], 200),
+            '*/v2/payments/sq_term_pay' => Http::response([
+                'payment' => [
+                    'id' => 'sq_term_pay',
+                    'status' => 'COMPLETED',
+                    'amount_money' => ['amount' => 1500, 'currency' => 'CAD'],
+                    'order_id' => 'sq_term_order',
+                ],
+            ], 200),
         ]);
 
         $create = $this->actingAsEms($user)->postJson($this->url("events/{$event->uuid}/terminal-checkout"), [

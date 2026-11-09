@@ -41,12 +41,12 @@ enum PaymentSourceChannel: string
     }
 
     /**
-     * Square Online Store requires a captured payment (COMPLETED/PAID).
-     * POS/Terminal historically treat APPROVED as settled; keep that.
+     * Square Online Store and Terminal require a captured payment (COMPLETED/PAID).
+     * POS historically treats APPROVED as settled; Terminal strictly requires COMPLETED.
      */
     public function treatsApprovedAsSettled(): bool
     {
-        return $this !== self::SquareOnlineStore;
+        return $this === self::Pos;
     }
 
     public static function fromSquarePayment(array $payment): self

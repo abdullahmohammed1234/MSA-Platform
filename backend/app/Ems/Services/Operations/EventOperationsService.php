@@ -11,6 +11,7 @@ use App\Ems\Models\Payment;
 use App\Ems\Models\Registration;
 use App\Ems\Models\WaitlistEntry;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class EventOperationsService
 {
@@ -19,19 +20,35 @@ class EventOperationsService
      */
     public function summary(Event $event, bool $includePaymentSummary = true): array
     {
-        $registered = (int) Registration::query()
+        $registrationStats = Registration::query()
             ->where('event_id', $event->id)
-            ->whereIn('status', [
+            ->selectRaw('status, COUNT(*) as total, SUM(quantity) as qty')
+            ->groupBy('status')
+            ->get();
+
+        $statusSummary = [];
+        $registered = 0;
+        $confirmed = 0;
+
+        foreach ($registrationStats as $stat) {
+            $status = $stat->status instanceof RegistrationStatus ? $stat->status->value : (string) $stat->status;
+            $count = (int) $stat->total;
+            $qty = (int) ($stat->qty ?? 0);
+
+            $statusSummary[$status] = $count;
+
+            if (in_array($status, [
                 RegistrationStatus::Pending->value,
                 RegistrationStatus::AwaitingPayment->value,
                 RegistrationStatus::Confirmed->value,
-            ])
-            ->sum('quantity');
+            ], true)) {
+                $registered += $qty;
+            }
 
-        $confirmed = (int) Registration::query()
-            ->where('event_id', $event->id)
-            ->where('status', RegistrationStatus::Confirmed->value)
-            ->sum('quantity');
+            if ($status === RegistrationStatus::Confirmed->value) {
+                $confirmed += $qty;
+            }
+        }
 
         $checkedIn = (int) CheckIn::query()
             ->where('event_id', $event->id)
@@ -52,13 +69,6 @@ class EventOperationsService
         $attendancePct = $confirmed > 0
             ? round(($checkedIn / $confirmed) * 100, 1)
             : 0.0;
-
-        $statusSummary = Registration::query()
-            ->where('event_id', $event->id)
-            ->selectRaw('status, COUNT(*) as total')
-            ->groupBy('status')
-            ->pluck('total', 'status')
-            ->all();
 
         $payload = [
             'event_uuid' => $event->uuid,
@@ -110,32 +120,41 @@ class EventOperationsService
      */
     private function paymentSummary(Event $event): array
     {
-        $paid = (float) Payment::query()
-            ->whereHas('registration', fn ($q) => $q->where('event_id', $event->id))
-            ->where('status', PaymentStatus::Paid->value)
-            ->sum('amount');
+        $paymentRows = DB::table('ems_payments')
+            ->join('ems_registrations', 'ems_registrations.id', '=', 'ems_payments.registration_id')
+            ->where('ems_registrations.event_id', $event->id)
+            ->whereNull('ems_registrations.deleted_at')
+            ->selectRaw('ems_payments.status, SUM(ems_payments.amount) as total_amount, COUNT(*) as total_count')
+            ->groupBy('ems_payments.status')
+            ->get();
 
-        $pending = (float) Payment::query()
-            ->whereHas('registration', fn ($q) => $q->where('event_id', $event->id))
-            ->whereIn('status', [
+        $paid = 0.0;
+        $pending = 0.0;
+        $failed = 0;
+        $refunded = 0.0;
+
+        foreach ($paymentRows as $row) {
+            $status = (string) $row->status;
+            $amt = (float) $row->total_amount;
+            $cnt = (int) $row->total_count;
+
+            if ($status === PaymentStatus::Paid->value) {
+                $paid += $amt;
+            } elseif (in_array($status, [
                 PaymentStatus::Pending->value,
                 PaymentStatus::Processing->value,
                 PaymentStatus::Authorized->value,
-            ])
-            ->sum('amount');
-
-        $failed = (int) Payment::query()
-            ->whereHas('registration', fn ($q) => $q->where('event_id', $event->id))
-            ->where('status', PaymentStatus::Failed->value)
-            ->count();
-
-        $refunded = (float) Payment::query()
-            ->whereHas('registration', fn ($q) => $q->where('event_id', $event->id))
-            ->whereIn('status', [
+            ], true)) {
+                $pending += $amt;
+            } elseif ($status === PaymentStatus::Failed->value) {
+                $failed += $cnt;
+            } elseif (in_array($status, [
                 PaymentStatus::Refunded->value,
                 PaymentStatus::PartiallyRefunded->value,
-            ])
-            ->sum('amount');
+            ], true)) {
+                $refunded += $amt;
+            }
+        }
 
         return [
             'paid_amount' => $paid,

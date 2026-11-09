@@ -117,17 +117,38 @@ class SquarePaymentProvider implements PaymentProvider
             ->post('/v2/online-checkout/payment-links', $payload);
 
         if (! $response->successful()) {
+            $status = $response->status();
+            $body = $this->safeBody($response->json());
+            $firstError = $body['errors'][0] ?? [];
+            $errorCode = isset($firstError['code']) ? (string) $firstError['code'] : null;
+            $errorCategory = isset($firstError['category']) ? (string) $firstError['category'] : null;
+            $detail = isset($firstError['detail']) ? (string) $firstError['detail'] : 'Square rejected checkout parameters.';
+
             Log::channel((string) config('ems.logging.channel', 'ems'))
                 ->error('ems.payments.square.checkout_failed', [
                     'order_uuid' => $order->uuid,
-                    'status' => $response->status(),
-                    'body' => $this->safeBody($response->json()),
+                    'status' => $status,
+                    'error_code' => $errorCode,
+                    'error_category' => $errorCategory,
+                    'body' => $body,
                 ]);
 
+            if ($status >= 400 && $status < 500 && $status !== Response::HTTP_REQUEST_TIMEOUT) {
+                throw new EmsException(
+                    "Square rejected the checkout request: {$detail}",
+                    ['payment' => [$detail]],
+                    $status,
+                    $errorCode,
+                    $errorCategory
+                );
+            }
+
             throw new EmsException(
-                'Unable to start Square checkout. Please try again shortly.',
-                [],
-                Response::HTTP_BAD_GATEWAY
+                'Unable to start Square checkout due to provider timeout or connection issue. Please try again shortly.',
+                ['payment' => ['Payment provider is temporarily unavailable.']],
+                $status === Response::HTTP_GATEWAY_TIMEOUT ? Response::HTTP_GATEWAY_TIMEOUT : Response::HTTP_BAD_GATEWAY,
+                $errorCode,
+                $errorCategory
             );
         }
 
@@ -235,7 +256,8 @@ class SquarePaymentProvider implements PaymentProvider
         $rawStatus = strtoupper((string) ($paymentObject['status'] ?? ''));
 
         $status = match (true) {
-            in_array($rawStatus, ['COMPLETED', 'APPROVED', 'PAID'], true) => PaymentStatus::Paid->value,
+            in_array($rawStatus, ['COMPLETED', 'PAID'], true) => PaymentStatus::Paid->value,
+            $rawStatus === 'APPROVED' => PaymentStatus::Authorized->value,
             $rawStatus === 'FAILED' => PaymentStatus::Failed->value,
             in_array($rawStatus, ['CANCELED', 'CANCELLED'], true) => PaymentStatus::Cancelled->value,
             str_contains((string) $type, 'refund') => PaymentStatus::Refunded->value,
@@ -307,7 +329,8 @@ class SquarePaymentProvider implements PaymentProvider
         $rawStatus = strtoupper((string) ($object['status'] ?? ''));
 
         $status = match (true) {
-            in_array($rawStatus, ['COMPLETED', 'APPROVED', 'PAID'], true) => PaymentStatus::Paid->value,
+            in_array($rawStatus, ['COMPLETED', 'PAID'], true) => PaymentStatus::Paid->value,
+            $rawStatus === 'APPROVED' => PaymentStatus::Authorized->value,
             $rawStatus === 'FAILED' => PaymentStatus::Failed->value,
             in_array($rawStatus, ['CANCELED', 'CANCELLED'], true) => PaymentStatus::Cancelled->value,
             default => PaymentStatus::Pending->value,
@@ -346,7 +369,11 @@ class SquarePaymentProvider implements PaymentProvider
             );
         }
 
-        if ($this->accessToken() === '' || $this->locationId() === '') {
+        $missingCredentials = $this->accessToken() === ''
+            || $this->locationId() === ''
+            || (app()->isProduction() && (string) config('ems.payments.square.application_id', '') === '');
+
+        if ($missingCredentials) {
             throw new EmsException(
                 'Square is not configured.',
                 [],

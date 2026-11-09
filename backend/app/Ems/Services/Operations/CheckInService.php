@@ -30,7 +30,10 @@ use App\Ems\Services\CheckoutService;
 use App\Ems\Services\Ticketing\TicketCodeGenerator;
 use App\Ems\Support\EmsPermissions;
 use App\Models\User;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 class CheckInService
@@ -55,10 +58,23 @@ class CheckInService
         bool $override = false,
         ?string $ip = null,
     ): array {
+        $startTime = microtime(true);
+        $correlationId = (string) Str::uuid();
+
         try {
             $validation = $this->validator->validate($event, $rawCode);
         } catch (CheckInException $e) {
             $this->auditFailure($event, $staff, $e, $method, $device, $ip, $rawCode);
+
+            Log::channel((string) config('ems.logging.channel', 'ems'))
+                ->warning('ems.checkin.validation_failed', [
+                    'correlation_id' => $correlationId,
+                    'event_uuid' => $event->uuid,
+                    'result_code' => $e->resultCode(),
+                    'method' => $method->value,
+                    'device' => $device,
+                    'duration_ms' => round((microtime(true) - $startTime) * 1000, 2),
+                ]);
 
             if ($e->resultCode() === 'already_checked_in' && $override) {
                 if (! $staff->hasPermission(EmsPermissions::CHECK_INS_OVERRIDE)) {
@@ -82,7 +98,35 @@ class CheckInService
         /** @var Registration $registration */
         $registration = $validation['registration'];
 
-        return $this->redeem($event, $ticket, $registration, $staff, $method, $device, $ip);
+        try {
+            $result = $this->redeem($event, $ticket, $registration, $staff, $method, $device, $ip);
+
+            Log::channel((string) config('ems.logging.channel', 'ems'))
+                ->info('ems.checkin.success', [
+                    'correlation_id' => $correlationId,
+                    'event_uuid' => $event->uuid,
+                    'ticket_code_prefix' => substr($ticket->code, 0, 4) . '***',
+                    'method' => $method->value,
+                    'device' => $device,
+                    'duration_ms' => round((microtime(true) - $startTime) * 1000, 2),
+                ]);
+
+            return $result;
+        } catch (CheckInException $e) {
+            $this->auditFailure($event, $staff, $e, $method, $device, $ip, $rawCode);
+
+            Log::channel((string) config('ems.logging.channel', 'ems'))
+                ->warning('ems.checkin.redeem_failed', [
+                    'correlation_id' => $correlationId,
+                    'event_uuid' => $event->uuid,
+                    'result_code' => $e->resultCode(),
+                    'method' => $method->value,
+                    'device' => $device,
+                    'duration_ms' => round((microtime(true) - $startTime) * 1000, 2),
+                ]);
+
+            throw $e;
+        }
     }
 
     /**
@@ -412,55 +456,59 @@ class CheckInService
         ?string $device,
         ?string $ip,
     ): array {
-        return DB::transaction(function () use ($event, $ticket, $registration, $staff, $method, $device, $ip) {
-            $locked = Ticket::query()->whereKey($ticket->id)->lockForUpdate()->firstOrFail();
+        try {
+            return DB::transaction(function () use ($event, $ticket, $registration, $staff, $method, $device, $ip) {
+                $locked = Ticket::query()->whereKey($ticket->id)->lockForUpdate()->firstOrFail();
 
-            if (CheckIn::query()->where('ticket_id', $locked->id)->exists()) {
-                throw CheckInException::alreadyCheckedIn();
-            }
+                if (CheckIn::query()->where('ticket_id', $locked->id)->exists()) {
+                    throw CheckInException::alreadyCheckedIn();
+                }
 
-            if ($locked->status !== TicketStatus::Issued) {
-                throw CheckInException::inactiveTicket($locked->status->label());
-            }
+                if ($locked->status !== TicketStatus::Issued) {
+                    throw CheckInException::inactiveTicket($locked->status->label());
+                }
 
-            $checkIn = new CheckIn();
-            $checkIn->event_id = $event->id;
-            $checkIn->ticket_id = $locked->id;
-            $checkIn->registration_id = $registration->id;
-            $checkIn->checked_in_by = $staff->id;
-            $checkIn->checked_in_at = now();
-            $checkIn->method = $method;
-            $checkIn->device = $device;
-            $checkIn->save();
+                $checkIn = new CheckIn();
+                $checkIn->event_id = $event->id;
+                $checkIn->ticket_id = $locked->id;
+                $checkIn->registration_id = $registration->id;
+                $checkIn->checked_in_by = $staff->id;
+                $checkIn->checked_in_at = now();
+                $checkIn->method = $method;
+                $checkIn->device = $device;
+                $checkIn->save();
 
-            $locked->status = TicketStatus::Redeemed;
-            $locked->save();
+                $locked->status = TicketStatus::Redeemed;
+                $locked->save();
 
-            CheckInAudit::query()->create([
-                'event_id' => $event->id,
-                'ticket_id' => $locked->id,
-                'registration_id' => $registration->id,
-                'actor_id' => $staff->id,
-                'action' => 'check_in',
-                'method' => $method->value,
-                'result_code' => 'success',
-                'message' => 'Checked in successfully.',
-                'ip_address' => $ip,
-                'device' => $device,
-                'context' => [
-                    'check_in_uuid' => $checkIn->uuid,
-                    'ticket_code' => $locked->code,
-                ],
-            ]);
+                CheckInAudit::query()->create([
+                    'event_id' => $event->id,
+                    'ticket_id' => $locked->id,
+                    'registration_id' => $registration->id,
+                    'actor_id' => $staff->id,
+                    'action' => 'check_in',
+                    'method' => $method->value,
+                    'result_code' => 'success',
+                    'message' => 'Checked in successfully.',
+                    'ip_address' => $ip,
+                    'device' => $device,
+                    'context' => [
+                        'check_in_uuid' => $checkIn->uuid,
+                        'ticket_code' => $locked->code,
+                    ],
+                ]);
 
-            AttendeeCheckedIn::dispatch($checkIn, $staff);
+                DB::afterCommit(fn () => AttendeeCheckedIn::dispatch($checkIn, $staff));
 
-            return [
-                'check_in' => $checkIn->fresh(['checkedInBy', 'ticket', 'registration']),
-                'ticket' => $locked->fresh(),
-                'registration' => $registration->fresh(),
-            ];
-        });
+                return [
+                    'check_in' => $checkIn->fresh(['checkedInBy', 'ticket', 'registration']),
+                    'ticket' => $locked->fresh(),
+                    'registration' => $registration->fresh(),
+                ];
+            });
+        } catch (UniqueConstraintViolationException) {
+            throw CheckInException::alreadyCheckedIn();
+        }
     }
 
     private function auditFailure(
