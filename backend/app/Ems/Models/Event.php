@@ -461,13 +461,17 @@ class Event extends Model
     }
 
     /**
-     * Registration is only accepted while the event sits in the open state
-     * and before any configured registration deadline.
+     * Registration is accepted while the event is in the open or live state,
+     * has not yet ended, and sits before any configured registration deadline.
      */
     public function isAcceptingRegistrations(): bool
     {
+        if ($this->hasEnded()) {
+            return false;
+        }
+
         $statusVal = $this->status instanceof EventStatus ? $this->status->value : (string) $this->status;
-        if ($statusVal !== EventStatus::RegistrationOpen->value) {
+        if (! in_array($statusVal, [EventStatus::RegistrationOpen->value, EventStatus::Live->value], true)) {
             return false;
         }
 
@@ -566,13 +570,20 @@ class Event extends Model
 
     public function getRegistrationAvailabilityAttribute(): string
     {
+        if (! $this->isAcceptingRegistrations()) {
+            return 'CLOSED';
+        }
+
         if ($this->isSoldOut()) {
             return 'SOLD_OUT';
         }
-        if ($this->isAcceptingRegistrations()) {
-            return 'OPEN';
-        }
-        return 'CLOSED';
+
+        return 'OPEN';
+    }
+
+    public function isAcceptingWaitlist(): bool
+    {
+        return $this->registration_availability === 'SOLD_OUT' && (bool) $this->waitlist_enabled;
     }
 
     public function isAudienceEligible(?User $user): bool

@@ -53,6 +53,9 @@ export interface PublicEvent {
   show_remaining_tickets?: boolean;
   is_featured?: boolean;
   is_accepting_registrations: boolean;
+  registration_availability?: 'OPEN' | 'SOLD_OUT' | 'CLOSED';
+  lifecycle_state?: 'UPCOMING' | 'LIVE' | 'ENDED';
+  is_accepting_waitlist?: boolean;
   registration_label: string;
 }
 

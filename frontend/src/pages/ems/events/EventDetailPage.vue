@@ -246,6 +246,17 @@ const confirmDelete = async () => {
               <dt class="text-[11px] font-bold uppercase tracking-wider text-neutral-muted">Capacity</dt>
               <dd class="mt-1 text-sm text-neutral-black">{{ event.capacity ?? 'Unlimited' }}</dd>
             </div>
+            <div>
+              <dt class="text-[11px] font-bold uppercase tracking-wider text-neutral-muted">Waitlist</dt>
+              <dd class="mt-1 text-sm text-neutral-black">
+                <span
+                  class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold"
+                  :class="event.waitlist_enabled ? 'bg-purple-100 text-purple-800' : 'bg-neutral-100 text-neutral-600'"
+                >
+                  {{ event.waitlist_enabled ? 'Enabled' : 'Disabled' }}
+                </span>
+              </dd>
+            </div>
           </dl>
 
           <div v-if="event.description">

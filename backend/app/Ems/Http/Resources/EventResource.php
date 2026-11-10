@@ -58,6 +58,9 @@ class EventResource extends JsonResource
             'volunteer_url' => $this->volunteer_url ?: ($this->show_volunteer_button && $this->slug ? ('/volunteer/' . $this->slug) : $this->volunteer_url),
             'is_publicly_visible' => $this->status->isPubliclyVisible(),
             'is_accepting_registrations' => $this->isAcceptingRegistrations(),
+            'lifecycle_state' => $this->lifecycle_state,
+            'registration_availability' => $this->registration_availability,
+            'is_accepting_waitlist' => $this->isAcceptingWaitlist(),
 
             'published_at' => $this->published_at?->toIso8601String(),
             'registration_open_at' => $this->registration_open_at?->toIso8601String(),

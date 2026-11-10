@@ -224,17 +224,39 @@ const selectedTicket = computed(() =>
   ticketTypes.value.find((t) => t.uuid === selectedTicketId.value) ?? null
 );
 
-const isSoldOut = computed(() => Boolean(event.value?.is_full || event.value?.is_sold_out));
+const isSoldOut = computed(() =>
+  Boolean(event.value?.is_full || event.value?.is_sold_out || event.value?.registration_availability === 'SOLD_OUT')
+);
+
+const isRegistrationClosed = computed(() =>
+  Boolean(
+    event.value?.status === 'registration_closed' ||
+    event.value?.status === 'completed' ||
+    event.value?.status === 'cancelled' ||
+    event.value?.lifecycle_state === 'ENDED' ||
+    event.value?.registration_availability === 'CLOSED'
+  )
+);
 
 const canRegister = computed(() =>
-  Boolean(event.value?.is_accepting_registrations && !isSoldOut.value)
+  Boolean(
+    !isRegistrationClosed.value &&
+    !isSoldOut.value &&
+    (event.value?.registration_availability === 'OPEN' || event.value?.is_accepting_registrations)
+  )
 );
 
 const canJoinWaitlist = computed(() =>
-  Boolean(event.value?.is_accepting_registrations && isSoldOut.value && event.value?.waitlist_enabled)
+  Boolean(
+    !isRegistrationClosed.value &&
+    isSoldOut.value &&
+    Boolean(event.value?.waitlist_enabled || event.value?.is_accepting_waitlist)
+  )
 );
 
-const requiresPayment = computed(() => Boolean(selectedTicket.value && discountedTotal.value > 0));
+const requiresPayment = computed(() =>
+  Boolean(!canJoinWaitlist.value && selectedTicket.value && discountedTotal.value > 0)
+);
 
 async function load() {
   loading.value = true;
@@ -519,12 +541,12 @@ function fieldError(field: string): string | undefined {
 function capacityText(): string {
   if (!event.value) return '';
   if (event.value.capacity === null) return 'Open seating';
-  if (isSoldOut.value) return event.value.waitlist_enabled ? 'Sold out — waitlist open' : 'Sold out';
+  if (isSoldOut.value) return (event.value.waitlist_enabled || event.value.is_accepting_waitlist) ? 'Sold out — waitlist open' : 'Sold out';
   return 'Available';
 }
 
 function ctaLabel(): string {
-  if (canJoinWaitlist.value) return submitting.value ? 'Joining…' : 'Join waitlist';
+  if (canJoinWaitlist.value) return submitting.value ? 'Joining waitlist…' : 'Join waitlist';
   if (requiresPayment.value) {
     const price = selectedTicket.value
       ? formatMoney(discountedTotal.value, selectedTicket.value.currency)
@@ -774,15 +796,53 @@ const previewSubtotal = computed(() =>
 
         <aside class="lg:sticky lg:top-28 h-fit">
           <div class="rounded-[1.75rem] border border-neutral-ivory bg-white p-6 sm:p-8 shadow-sm">
-            <h2 class="font-display text-2xl font-bold mb-2">Registration</h2>
-            <p class="text-sm text-neutral-black/55 mb-6">{{ event.registration_label }}</p>
+            <h2 class="font-display text-2xl font-bold mb-2">
+              {{ canJoinWaitlist ? 'Waitlist Registration' : 'Registration' }}
+            </h2>
+            <p class="text-sm text-neutral-black/55 mb-6">
+              {{ canJoinWaitlist ? 'Event sold out — join the waitlist queue below' : event.registration_label }}
+            </p>
+
+            <div
+              v-if="canJoinWaitlist && !waitlistSuccess"
+              class="mb-6 rounded-2xl bg-amber-500/10 border border-amber-500/25 p-4 text-xs text-amber-950 space-y-1.5"
+              role="note"
+              aria-label="Waitlist notice"
+            >
+              <div class="flex items-center gap-2 font-bold text-amber-900 text-sm">
+                <Users :size="16" class="text-amber-700 shrink-0" />
+                <span>Waitlist Notice</span>
+              </div>
+              <p class="leading-relaxed text-amber-900/90">
+                This event is currently at full capacity. Submitting this form adds you to the official waitlist.
+                <strong>Joining the waitlist does not guarantee a confirmed ticket or event admission.</strong>
+                If a spot becomes available, you will be notified at your registered email address with instructions to confirm your place.
+              </p>
+            </div>
 
             <div
               v-if="waitlistSuccess"
-              class="rounded-2xl bg-emerald-50 border border-emerald-100 p-4 text-sm text-emerald-900"
+              class="rounded-2xl bg-emerald-50 border border-emerald-200 p-5 text-sm text-emerald-950 space-y-3"
               role="status"
             >
-              You're on the waitlist at position {{ waitlistSuccess.position }}.
+              <div class="flex items-center gap-2.5 font-bold text-base text-emerald-900">
+                <CheckCircle2 :size="20" class="text-emerald-600 shrink-0" />
+                <span>You're on the waitlist!</span>
+              </div>
+              <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-100/80 border border-emerald-200 text-xs font-bold text-emerald-800">
+                Queue Position: #{{ waitlistSuccess.position }}
+              </div>
+              <p class="text-xs leading-relaxed text-emerald-900/80">
+                We've added your details to the waitlist queue. If tickets become available, we will contact you directly with instructions to confirm your ticket.
+              </p>
+              <div class="pt-2">
+                <RouterLink
+                  :to="EMS_PUBLIC_EVENTS_PATH"
+                  class="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 hover:text-emerald-950 underline"
+                >
+                  <ArrowLeft :size="13" /> Browse other events
+                </RouterLink>
+              </div>
             </div>
 
             <div
@@ -791,7 +851,7 @@ const previewSubtotal = computed(() =>
               role="status"
             >
               <template v-if="isSoldOut">Sold out</template>
-              <template v-else-if="event.status === 'completed'">This event has concluded.</template>
+              <template v-else-if="event.status === 'completed' || event.lifecycle_state === 'ENDED'">This event has concluded.</template>
               <template v-else-if="event.status === 'live'">This event is live — registration is closed.</template>
               <template v-else-if="event.status === 'registration_closed'">Registration is closed.</template>
               <template v-else>Registration is not open yet.</template>
@@ -799,7 +859,9 @@ const previewSubtotal = computed(() =>
 
             <form v-else class="space-y-4" @submit.prevent="submit(true)">
               <div v-if="ticketTypes.length" class="space-y-2">
-                <p class="text-xs font-bold uppercase tracking-wider text-neutral-black/50">Choose ticket</p>
+                <p class="text-xs font-bold uppercase tracking-wider text-neutral-black/50">
+                  {{ canJoinWaitlist ? 'Select ticket to waitlist' : 'Choose ticket' }}
+                </p>
                 <label
                   v-for="ticket in ticketTypes"
                   :key="ticket.uuid"
@@ -813,7 +875,7 @@ const previewSubtotal = computed(() =>
                     type="radio"
                     class="mt-1"
                     :value="ticket.uuid"
-                    :disabled="ticket.is_sold_out || !ticket.is_on_sale"
+                    :disabled="!ticket.is_on_sale || (!canJoinWaitlist && ticket.is_sold_out)"
                   />
                   <div class="flex-1">
                     <div class="flex items-center justify-between gap-2">
@@ -821,7 +883,8 @@ const previewSubtotal = computed(() =>
                       <span class="text-sm font-bold">{{ formatMoney(ticket.price, ticket.currency) }}</span>
                     </div>
                     <p v-if="ticket.description" class="mt-0.5 text-xs text-neutral-black/55">{{ ticket.description }}</p>
-                    <p v-if="ticket.is_sold_out" class="mt-1 text-xs font-semibold text-amber-700">Sold out</p>
+                    <p v-if="canJoinWaitlist" class="mt-1 text-xs font-semibold text-amber-700">Waitlist open</p>
+                    <p v-else-if="ticket.is_sold_out" class="mt-1 text-xs font-semibold text-amber-700">Sold out</p>
                     <p v-else-if="!ticket.is_on_sale" class="mt-1 text-xs text-neutral-muted">Not on sale</p>
                     <p v-else class="mt-1 text-xs font-semibold text-emerald-600">Available</p>
                   </div>
@@ -962,7 +1025,7 @@ const previewSubtotal = computed(() =>
                 </div>
               </div>
 
-              <label v-if="selectedTicket && !selectedTicket.is_free" class="block text-xs font-bold uppercase tracking-wider text-neutral-black/50">
+              <label v-if="!canJoinWaitlist && selectedTicket && !selectedTicket.is_free" class="block text-xs font-bold uppercase tracking-wider text-neutral-black/50">
                 Promo Code
                 <div class="flex gap-2 mt-1.5">
                   <input
@@ -985,7 +1048,7 @@ const previewSubtotal = computed(() =>
               </label>
 
               <div
-                v-if="selectedTicket"
+                v-if="!canJoinWaitlist && selectedTicket"
                 class="rounded-2xl border border-neutral-ivory bg-neutral-background/80 p-4 text-sm space-y-1.5"
               >
                 <p class="text-[10px] font-extrabold uppercase tracking-widest text-neutral-black/45">Order preview</p>

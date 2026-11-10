@@ -284,13 +284,56 @@ class PublicEventController extends EmsController
      */
     public function joinWaitlist(JoinWaitlistRequest $request, string $slug): JsonResponse
     {
-        $event = $this->events->findBySlug($slug);
+        $viewer = $request->user('sanctum') ?? $request->user();
+        $event = $this->events->findBySlug($slug, $viewer);
 
         if ($event === null) {
+            $rawEvent = \App\Ems\Models\Event::query()->publiclyDiscoverable()->where('slug', $slug)->first();
+            if ($rawEvent && ! $rawEvent->isAudienceEligible($viewer)) {
+                abort(403, 'This event is restricted to ' . ($rawEvent->audience === 'male' ? 'brothers' : 'sisters') . ' only.');
+            }
             throw new NotFoundHttpException('The requested event was not found.');
         }
 
-        $entry = $this->waitlists->join($event, $request->validated(), $request->user());
+        if (! $event->isAudienceEligible($viewer)) {
+            abort(403, 'This event is restricted to ' . ($event->audience === 'male' ? 'brothers' : 'sisters') . ' only.');
+        }
+
+        if ($event->hasEnded()) {
+            throw new \App\Ems\Exceptions\EmsException(
+                'This event has concluded. Waitlist registration is unavailable.',
+                ['event' => ['Event has ended.']],
+                \Symfony\Component\HttpFoundation\Response::HTTP_CONFLICT
+            );
+        }
+
+        if (! in_array($event->status->value, [\App\Ems\Enums\EventStatus::RegistrationOpen->value, \App\Ems\Enums\EventStatus::Live->value], true)
+            || ($event->registration_deadline_at !== null && now()->greaterThan($event->registration_deadline_at))
+        ) {
+            throw new \App\Ems\Exceptions\EmsException(
+                'Registration for this event is closed.',
+                ['event' => ['Registration closed.']],
+                \Symfony\Component\HttpFoundation\Response::HTTP_CONFLICT
+            );
+        }
+
+        if (! $event->waitlist_enabled) {
+            throw new \App\Ems\Exceptions\EmsException(
+                'The waitlist is not enabled for this event.',
+                ['event' => ['Waitlist disabled.']],
+                \Symfony\Component\HttpFoundation\Response::HTTP_CONFLICT
+            );
+        }
+
+        if (! $event->isSoldOut()) {
+            throw new \App\Ems\Exceptions\EmsException(
+                'Capacity is available for this event. Please complete standard registration.',
+                ['event' => ['Event has available capacity.']],
+                \Symfony\Component\HttpFoundation\Response::HTTP_CONFLICT
+            );
+        }
+
+        $entry = $this->waitlists->join($event, $request->validated(), $viewer, enforceSoldOut: true);
 
         return ApiResponse::created(
             new PublicWaitlistResource($entry),

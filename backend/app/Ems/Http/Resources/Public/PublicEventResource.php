@@ -63,6 +63,9 @@ class PublicEventResource extends JsonResource
             'is_featured' => (bool) $this->is_featured,
             'audience' => $this->audience ?? 'both',
             'is_accepting_registrations' => $this->isAcceptingRegistrations(),
+            'lifecycle_state' => $this->lifecycle_state,
+            'registration_availability' => $this->registration_availability,
+            'is_accepting_waitlist' => $this->isAcceptingWaitlist(),
 
             'registration_label' => $this->registrationLabel($remaining),
         ];
@@ -70,11 +73,15 @@ class PublicEventResource extends JsonResource
 
     private function registrationLabel(?int $remaining): string
     {
-        if ($this->isAcceptingRegistrations()) {
-            if ($this->capacity !== null && $remaining === 0) {
-                return $this->waitlist_enabled ? 'Join Waitlist' : 'Sold Out';
-            }
+        if ($this->hasEnded()) {
+            return 'Completed';
+        }
 
+        if ($this->registration_availability === 'SOLD_OUT') {
+            return $this->waitlist_enabled ? 'Join Waitlist' : 'Sold Out';
+        }
+
+        if ($this->registration_availability === 'OPEN') {
             return 'Registration Open';
         }
 

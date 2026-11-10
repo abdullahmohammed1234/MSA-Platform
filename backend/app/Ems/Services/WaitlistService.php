@@ -3,6 +3,7 @@
 namespace App\Ems\Services;
 
 use App\Ems\Contracts\TicketIssuer;
+use App\Ems\Enums\EventStatus;
 use App\Ems\Enums\RegistrationStatus;
 use App\Ems\Enums\WaitlistStatus;
 use App\Ems\Exceptions\EmsException;
@@ -36,7 +37,7 @@ class WaitlistService
      *     ticket_type_id?: string|null
      * }  $data
      */
-    public function join(Event $event, array $data, ?User $user = null): WaitlistEntry
+    public function join(Event $event, array $data, ?User $user = null, bool $enforceSoldOut = false): WaitlistEntry
     {
         if (! $event->waitlist_enabled) {
             throw new EmsException(
@@ -50,8 +51,67 @@ class WaitlistService
         $quantity = max(1, (int) ($data['quantity'] ?? 1));
         $name = trim(trim($data['first_name']) . ' ' . trim($data['last_name']));
 
-        return DB::transaction(function () use ($event, $data, $user, $email, $quantity, $name): WaitlistEntry {
+        return DB::transaction(function () use ($event, $data, $user, $email, $quantity, $name, $enforceSoldOut): WaitlistEntry {
             $locked = Event::query()->whereKey($event->id)->lockForUpdate()->firstOrFail();
+
+            if (! $locked->waitlist_enabled) {
+                throw new EmsException(
+                    'The waitlist is not enabled for this event.',
+                    ['event' => ['Waitlist disabled.']],
+                    Response::HTTP_CONFLICT
+                );
+            }
+
+            if ($locked->hasEnded()) {
+                throw new EmsException(
+                    'This event has concluded. Waitlist registration is unavailable.',
+                    ['event' => ['Event has ended.']],
+                    Response::HTTP_CONFLICT
+                );
+            }
+
+            if ($locked->status === EventStatus::RegistrationClosed
+                || ($locked->registration_deadline_at !== null && now()->greaterThan($locked->registration_deadline_at))
+            ) {
+                throw new EmsException(
+                    'Registration for this event is closed.',
+                    ['event' => ['Registration closed.']],
+                    Response::HTTP_CONFLICT
+                );
+            }
+
+            if ($enforceSoldOut && ! $locked->isSoldOut()) {
+                throw new EmsException(
+                    'Capacity is available for this event. Please complete standard registration.',
+                    ['event' => ['Event has available capacity.']],
+                    Response::HTTP_CONFLICT
+                );
+            }
+
+            if (! $locked->isAudienceEligible($user)) {
+                throw new EmsException(
+                    'You are not eligible for this event based on audience restrictions.',
+                    ['audience' => ['Ineligible audience.']],
+                    Response::HTTP_FORBIDDEN
+                );
+            }
+
+            // Invariant check: Prevent duplicate or conflicting registrations
+            $hasActiveRegistration = $locked->registrations()
+                ->where('attendee_email', $email)
+                ->whereIn('status', [
+                    RegistrationStatus::Confirmed->value,
+                    RegistrationStatus::AwaitingPayment->value,
+                ])
+                ->exists();
+
+            if ($hasActiveRegistration) {
+                throw new EmsException(
+                    'You already have a confirmed registration for this event.',
+                    ['email' => ['Already registered for this event.']],
+                    Response::HTTP_CONFLICT
+                );
+            }
 
             $existing = WaitlistEntry::query()
                 ->where('event_id', $locked->id)
@@ -66,7 +126,12 @@ class WaitlistService
             $ticketTypeId = null;
             if (! empty($data['ticket_type_id'])) {
                 $ticketType = $locked->ticketTypes()
-                    ->where('uuid', $data['ticket_type_id'])
+                    ->where(function ($q) use ($data): void {
+                        $q->where('uuid', $data['ticket_type_id']);
+                        if (is_numeric($data['ticket_type_id'])) {
+                            $q->orWhere('id', (int) $data['ticket_type_id']);
+                        }
+                    })
                     ->first();
                 $ticketTypeId = $ticketType?->id;
             }

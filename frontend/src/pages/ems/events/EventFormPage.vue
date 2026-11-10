@@ -56,6 +56,7 @@ const form = reactive({
   start_at: '',
   end_at: '',
   capacity: '',
+  waitlist_enabled: false,
   is_public: false,
   audience: 'both' as 'both' | 'male' | 'female',
   is_featured: false,
@@ -179,6 +180,7 @@ watch(selectedTemplateUuid, (val) => {
     form.description = template.description ?? '';
     form.category_id = template.category_id ? String(template.category_id) : UNCATEGORISED;
     form.capacity = template.capacity ? String(template.capacity) : '';
+    form.waitlist_enabled = Boolean(template.waitlist_enabled);
     form.is_public = template.is_public;
     toast.success(`Applied template: ${template.name}`);
   }
@@ -207,6 +209,7 @@ onMounted(async () => {
           form.start_at = toDateTimeLocal(orig.start_at);
           form.end_at = toDateTimeLocal(orig.end_at);
           form.capacity = orig.capacity ? String(orig.capacity) : '';
+          form.waitlist_enabled = Boolean(orig.waitlist_enabled);
           form.is_public = orig.is_public;
           form.audience = orig.audience ?? 'both';
           form.is_featured = orig.is_featured ?? false;
@@ -250,6 +253,7 @@ onMounted(async () => {
       form.start_at = toDateTimeLocal(event.start_at);
       form.end_at = toDateTimeLocal(event.end_at);
       form.capacity = event.capacity ? String(event.capacity) : '';
+      form.waitlist_enabled = Boolean(event.waitlist_enabled);
       form.is_public = event.is_public;
       form.audience = event.audience ?? 'both';
       form.is_featured = event.is_featured ?? false;
@@ -284,6 +288,7 @@ const buildPayload = (): EventPayload => ({
   start_at: fromDateTimeLocal(form.start_at) ?? '',
   end_at: fromDateTimeLocal(form.end_at),
   capacity: form.capacity ? Number(form.capacity) : null,
+  waitlist_enabled: form.waitlist_enabled,
   is_public: form.is_public,
   audience: form.audience,
   is_featured: form.is_featured,
@@ -463,6 +468,13 @@ const cancel = () =>
             label="Capacity"
             description="Leave blank for unlimited."
             :error="fieldError('capacity')"
+          />
+
+          <Switch
+            v-model="form.waitlist_enabled"
+            label="Enable waitlist"
+            description="Allow visitors to join a waitlist queue when this event reaches full capacity."
+            class="sm:col-span-2"
           />
         </div>
 
