@@ -105,6 +105,8 @@ class ProductionReadinessCheckCommand extends Command
             'ems',
             'main-website',
             'mlibms',
+            'msa-connect',
+            'pms',
             'sponsorship',
             'store',
             'vms',

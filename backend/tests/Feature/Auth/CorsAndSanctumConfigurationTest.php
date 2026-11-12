@@ -150,6 +150,8 @@ class CorsAndSanctumConfigurationTest extends TestCase
             'ems',
             'main-website',
             'mlibms',
+            'msa-connect',
+            'pms',
             'sponsorship',
             'store',
             'vms',

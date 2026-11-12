@@ -46,21 +46,12 @@ return new class extends Migration
             $permissions[$slug] = $permission;
         }
 
-        // 3. Seed/update the 6 canonical PMS roles and map permissions
+        // 3. Sync permissions to existing PMS roles (role creation is handled by seeders)
         foreach (PmRoles::definitions() as $slug => $definition) {
-            $role = Role::firstOrCreate(
-                ['slug' => $slug],
-                [
-                    'uuid' => (string) Str::uuid(),
-                    'name' => $definition['name'],
-                    'description' => $definition['description'],
-                ]
-            );
-
-            $role->fill([
-                'name' => $definition['name'],
-                'description' => $definition['description'],
-            ])->save();
+            $role = Role::where('slug', $slug)->first();
+            if (!$role) {
+                continue;
+            }
 
             $permIds = [];
             foreach ($definition['permissions'] as $permSlug) {

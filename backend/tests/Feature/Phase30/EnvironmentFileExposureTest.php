@@ -21,6 +21,8 @@ class EnvironmentFileExposureTest extends TestCase
         'connect/.env.example',
         'connect/.env.production',
         'connect/.env.staging',
+        'projects/.env.example',
+        'projects/.env.production',
     ];
 
     /**

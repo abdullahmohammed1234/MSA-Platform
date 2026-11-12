@@ -304,8 +304,6 @@ return [
         'cms',
         'ems',
         'connect',
-        'msa-connect',
-        'pms',
     ],
 
     'platform_services' => [

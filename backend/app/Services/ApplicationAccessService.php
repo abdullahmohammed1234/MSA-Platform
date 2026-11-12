@@ -150,9 +150,13 @@ class ApplicationAccessService
     {
         $result = [];
 
+        $grants = $user->relationLoaded('applicationAccess')
+            ? $user->applicationAccess->keyBy('application')
+            : $user->applicationAccess()->get()->keyBy('application');
+
         foreach (self::APPLICATIONS as $app) {
             $access = $this->canAccess($user, $app);
-            
+
             if ($access) {
                 if ($user->hasAnyRole(self::PRIVILEGED_ROLES)) {
                     $source = 'privileged';
@@ -165,7 +169,7 @@ class ApplicationAccessService
                 $source = 'none';
             }
 
-            $grant = $user->applicationAccess()->where('application', $app)->first();
+            $grant = $grants->get($app);
             $status = $grant ? ($grant->status ?? 'active') : ($access ? 'active' : 'none');
 
             $result[$app] = [
