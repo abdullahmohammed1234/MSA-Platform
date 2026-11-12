@@ -14,15 +14,25 @@ export const permissionGuard = (
   });
 
   if (requiredPermissions.length > 0) {
-    const hasRequiredPermission = requiredPermissions.some(permission => 
-      authStore.permissions.includes(permission) || (
-        typeof authStore.isPrivilegedAdmin === 'boolean'
-          ? authStore.isPrivilegedAdmin
-          : authStore.roles.includes('admin') || authStore.roles.includes('super-admin')
-      )
-    );
+    const isPrivileged =
+      Boolean(authStore.isPrivilegedAdmin) ||
+      (Array.isArray(authStore.roles) && (
+        authStore.roles.includes('admin') ||
+        authStore.roles.includes('super-admin')
+      ));
+
+    const hasRequiredPermission =
+      isPrivileged ||
+      requiredPermissions.some(permission => authStore.permissions.includes(permission));
     
-    if (!authStore.isAuthenticated || !hasRequiredPermission) {
+    if (!authStore.isAuthenticated) {
+      return to.path.startsWith('/admin') ? { path: '/admin' } : { name: 'home' };
+    }
+
+    if (!hasRequiredPermission) {
+      if (to.path && to.path.startsWith('/admin')) {
+        return { name: 'admin-dashboard' };
+      }
       return { name: 'academy-dashboard' };
     }
   }

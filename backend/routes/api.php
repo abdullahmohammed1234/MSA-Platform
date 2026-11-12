@@ -58,6 +58,15 @@ Route::prefix('v1')->group(function () {
     Route::get('/cms/prayers', [\App\Http\Controllers\Api\V1\PublicPrayerController::class, 'index'])
         ->name('api.cms.prayers.index');
 
+    // SSO Ticket Issuance & Exchange (SEC-11-01)
+    Route::prefix('sso')->group(function () {
+        Route::post('/tickets', [\App\Http\Controllers\Api\SsoController::class, 'store'])
+            ->middleware('auth:sanctum')
+            ->name('api.sso.tickets.store');
+        Route::post('/exchange', [\App\Http\Controllers\Api\SsoController::class, 'exchange'])
+            ->name('api.sso.exchange');
+    });
+
     // Unified Platform Discovery Search (Phase 36)
     Route::get('/search', [\App\Http\Controllers\Api\V1\UnifiedSearchController::class, 'search'])
         ->name('api.search');
@@ -165,6 +174,21 @@ Route::prefix('v1')->group(function () {
                 Route::get('/', [\App\Http\Controllers\Api\V1\Admin\ApplicationAccessController::class, 'index'])->name('api.admin.application-access.index');
                 Route::get('/{user}', [\App\Http\Controllers\Api\V1\Admin\ApplicationAccessController::class, 'show'])->name('api.admin.application-access.show');
                 Route::put('/{user}', [\App\Http\Controllers\Api\V1\Admin\ApplicationAccessController::class, 'update'])->name('api.admin.application-access.update');
+            });
+
+            Route::prefix('pms/access')->group(function () {
+                Route::get('/users', [\App\Pm\Controllers\Admin\PmAccessManagementController::class, 'index'])->name('api.admin.pms.access.users');
+                Route::post('/grant', [\App\Pm\Controllers\Admin\PmAccessManagementController::class, 'grantAccess'])->name('api.admin.pms.access.grant');
+                Route::post('/suspend', [\App\Pm\Controllers\Admin\PmAccessManagementController::class, 'suspendAccess'])->name('api.admin.pms.access.suspend');
+                Route::post('/restore', [\App\Pm\Controllers\Admin\PmAccessManagementController::class, 'restoreAccess'])->name('api.admin.pms.access.restore');
+                Route::post('/revoke', [\App\Pm\Controllers\Admin\PmAccessManagementController::class, 'revokeAccess'])->name('api.admin.pms.access.revoke');
+                Route::post('/assign-role', [\App\Pm\Controllers\Admin\PmAccessManagementController::class, 'assignRole'])->name('api.admin.pms.access.assign-role');
+                Route::get('/roles-reference', [\App\Pm\Controllers\Admin\PmAccessManagementController::class, 'rolesReference'])->name('api.admin.pms.access.roles-reference');
+                Route::get('/role-history', [\App\Pm\Controllers\Admin\PmAccessManagementController::class, 'roleHistory'])->name('api.admin.pms.access.role-history');
+                Route::post('/departments/assign', [\App\Pm\Controllers\Admin\PmAccessManagementController::class, 'assignDepartment'])->name('api.admin.pms.access.departments.assign');
+                Route::post('/departments/remove', [\App\Pm\Controllers\Admin\PmAccessManagementController::class, 'removeDepartment'])->name('api.admin.pms.access.departments.remove');
+                Route::get('/departments', [\App\Pm\Controllers\Admin\PmAccessManagementController::class, 'departments'])->name('api.admin.pms.access.departments');
+                Route::get('/logs', [\App\Pm\Controllers\Admin\PmAccessManagementController::class, 'accessLogs'])->name('api.admin.pms.access.logs');
             });
 
             Route::prefix('volunteering-registrars')->middleware('permission:manage_users')->group(function () {
@@ -1308,6 +1332,16 @@ Route::prefix('v1')->group(function () {
         Route::get('/events', [\App\Http\Controllers\Api\V1\Admin\ConnectSystemController::class, 'events'])->name('api.admin.connect.events');
         Route::get('/announcements', [\App\Http\Controllers\Api\V1\Admin\ConnectSystemController::class, 'announcements'])->name('api.admin.connect.announcements');
         Route::get('/audit', [\App\Http\Controllers\Api\V1\Admin\ConnectSystemController::class, 'audit'])->name('api.admin.connect.audit');
+    });
+
+    // --- Public PMS Webcal Subscription Feed (Token Authentication) ---
+    Route::get('/pm/calendar/feed/{token}', [\App\Pm\Controllers\PmCalendarFeedController::class, 'feed'])
+        ->middleware('throttle:60,1')
+        ->name('api.pm.calendar.feed');
+
+    // --- Project Management System (PMS) Application routes ---
+    Route::prefix('pm')->middleware(['auth:sanctum', 'app.access:projects'])->group(function () {
+        require __DIR__ . '/pm.php';
     });
 
 });

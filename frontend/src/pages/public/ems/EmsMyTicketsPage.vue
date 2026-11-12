@@ -112,7 +112,21 @@ const getStatusClass = (status: string) => {
   }
 };
 
+const isPaidRegistration = (reg: PublicRegistration): boolean => {
+  return reg.is_free === false || reg.type === 'paid';
+};
+
+const canMemberCancelRegistration = (reg: PublicRegistration): boolean => {
+  if (reg.can_cancel !== undefined) return reg.can_cancel;
+  if (isPaidRegistration(reg)) return false;
+  return !isPastEvent(reg.event?.end_at ?? reg.event?.start_at ?? null);
+};
+
 const confirmCancel = (reg: PublicRegistration) => {
+  if (!canMemberCancelRegistration(reg)) {
+    toast.error('Paid registrations cannot be cancelled online. Please contact the MSA team.');
+    return;
+  }
   registrationToCancel.value = reg;
   showCancelConfirm.value = true;
 };
@@ -521,13 +535,33 @@ function payLocalPending(item: StoredPendingCheckout) {
                     View Ticket
                   </RouterLink>
 
+                  <!-- Free Ticket: Allow self-cancellation -->
                   <button
-                    v-if="!isPastEvent(reg.event?.end_at ?? reg.event?.start_at ?? null)"
+                    v-if="canMemberCancelRegistration(reg)"
                     @click="confirmCancel(reg)"
                     class="block w-full text-center border border-red-200 text-red-600 hover:bg-red-50 py-2.5 px-4 rounded-xl text-[10px] font-extrabold uppercase tracking-widest transition-all cursor-pointer"
                   >
                     Cancel Booking
                   </button>
+
+                  <!-- Paid Ticket: No actionable button, display clear contact instructions -->
+                  <div
+                    v-else-if="isPaidRegistration(reg)"
+                    class="p-2.5 rounded-xl bg-neutral-background border border-neutral-ivory text-center"
+                  >
+                    <span class="block text-[9px] font-extrabold uppercase tracking-wider text-neutral-black/45 mb-1">
+                      Paid Ticket
+                    </span>
+                    <p class="text-[10px] text-neutral-black/60 leading-tight">
+                      To request a cancellation or refund, contact
+                      <a
+                        :href="`mailto:events@sfumsa.ca?subject=Cancellation Request: ${encodeURIComponent(reg.reference)}`"
+                        class="text-primary font-bold hover:underline"
+                      >
+                        events@sfumsa.ca
+                      </a>
+                    </p>
+                  </div>
                   <button
                     v-if="canHideRegistration(reg)"
                     type="button"

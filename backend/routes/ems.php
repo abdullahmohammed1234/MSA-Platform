@@ -104,6 +104,12 @@ Route::prefix('public')
 
         Route::get('/documents/{documentUuid}/{token}', [PublicDocumentAccessController::class, 'access'])
             ->name('documents.access');
+
+        Route::get('/cancel-registration/{token}', [PublicEventController::class, 'showGuestCancellation'])
+            ->name('registrations.guest-show');
+        Route::post('/cancel-registration/{token}', [PublicEventController::class, 'cancelGuestRegistration'])
+            ->middleware('throttle:' . config('ems.public.registration_throttle', 'ems_registration'))
+            ->name('registrations.guest-cancel');
     });
 
 // --- Authenticated operations (Phase 1 / 3) -----------------------------
@@ -196,6 +202,8 @@ Route::middleware(['auth:sanctum', 'throttle:' . config('ems.route.throttle', 'e
             ->name('events.operations');
         Route::get('/events/{event}/attendees', [EventOperationsController::class, 'attendees'])
             ->name('events.attendees');
+        Route::get('/events/{event}/cancellation-history', [EventOperationsController::class, 'cancellationHistory'])
+            ->name('events.cancellation-history');
         Route::get('/events/{event}/attendees/export-csv', [\App\Ems\Http\Controllers\V1\AttendeeExportController::class, 'exportCsv'])
             ->name('events.attendees.export-csv');
         Route::get('/events/{event}/check-ins/recent', [EventOperationsController::class, 'recentCheckIns'])
@@ -288,6 +296,10 @@ Route::middleware(['auth:sanctum', 'throttle:' . config('ems.route.throttle', 'e
 
         Route::get('/registrations/{registration}', [RegistrationController::class, 'show'])
             ->name('registrations.show');
+        Route::post('/registrations/{registration}/cancel', [RegistrationController::class, 'cancel'])
+            ->name('registrations.cancel');
+        Route::get('/registrations/{registration}/cancellation-history', [RegistrationController::class, 'cancellationHistory'])
+            ->name('registrations.cancellation-history');
 
         // --- Event categories -------------------------------------------
         Route::get('/event-categories', [EventCategoryController::class, 'index'])

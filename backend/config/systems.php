@@ -233,6 +233,57 @@ return [
                 'users_identity',
             ],
         ],
+        'msa-connect' => [
+            'id' => 'msa-connect',
+            'name' => 'MSA Connect',
+            'description' => 'Member-facing mobile and web application for announcements, prayer times, event notifications, direct messaging, and community engagement.',
+            'type' => 'application',
+            'url' => env('CONNECT_URL', 'http://localhost:5174'),
+            'admin_path' => '/admin/systems/msa-connect',
+            'version' => env('CONNECT_APP_VERSION', env('CONNECT_VERSION', '1.0.0')),
+            'dependencies' => [
+                'platform-auth',
+                'database',
+                'web-push',
+                'cms-content-apis',
+                'ems-event-apis',
+            ],
+            'owns' => [
+                'member_experience',
+                'push_notifications',
+                'device_subscriptions',
+                'conversations',
+            ],
+            'does_not_own' => [
+                'connect_management',
+                'ems_events',
+                'cms_announcements',
+                'users_identity',
+            ],
+        ],
+        'pms' => [
+            'id' => 'pms',
+            'name' => 'Project Management System (PMS)',
+            'description' => 'Authoritative platform system for projects, milestones, task scheduling, volunteer workload balancing, and department collaboration.',
+            'type' => 'application',
+            'url' => env('PROJECTS_URL', env('PMS_URL', env('APP_ENV') === 'production' ? 'https://projects.sfumsa.ca' : 'http://localhost:5175')),
+            'admin_path' => '/admin/systems/pms',
+            'version' => env('PMS_VERSION', '1.0.0'),
+            'dependencies' => [
+                'platform-auth',
+                'database',
+            ],
+            'owns' => [
+                'pm_projects',
+                'pm_tasks',
+                'milestones',
+                'capacity_schedules',
+            ],
+            'does_not_own' => [
+                'ems_events',
+                'users_identity',
+            ],
+        ],
     ],
 
     /*
@@ -253,6 +304,8 @@ return [
         'cms',
         'ems',
         'connect',
+        'msa-connect',
+        'pms',
     ],
 
     'platform_services' => [

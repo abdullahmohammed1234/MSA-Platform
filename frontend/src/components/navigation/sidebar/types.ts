@@ -3,6 +3,7 @@ export interface SidebarItem {
   path: string;
   icon?: string;
   children?: SidebarItem[];
+  external?: boolean;
 }
 
 export interface SidebarProps {

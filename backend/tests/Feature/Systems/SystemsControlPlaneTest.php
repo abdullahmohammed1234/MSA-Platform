@@ -111,11 +111,11 @@ class SystemsControlPlaneTest extends TestCase
 
         $ids = collect($response->json('applications'))->pluck('id')->all();
         $this->assertSame(
-            ['main-website', 'cms', 'dawah-academy', 'dams', 'ems', 'store', 'donations', 'sponsorship', 'mlibms', 'vms', 'connect'],
+            ['main-website', 'cms', 'dawah-academy', 'dams', 'ems', 'store', 'donations', 'sponsorship', 'mlibms', 'vms', 'connect', 'msa-connect', 'pms'],
             $ids
         );
-        $this->assertCount(11, $ids);
-        $this->assertCount(11, array_unique($ids));
+        $this->assertCount(13, $ids);
+        $this->assertCount(13, array_unique($ids));
 
         $urls = collect($response->json('applications'))->pluck('url', 'id');
         $this->assertSame('/', $urls['main-website']);
@@ -124,6 +124,8 @@ class SystemsControlPlaneTest extends TestCase
         $this->assertSame('/dams', $urls['dams']);
         $this->assertSame('/ems', $urls['ems']);
         $this->assertSame('/connect/admin', $urls['connect']);
+        $this->assertSame(env('CONNECT_URL', 'http://localhost:5174'), $urls['msa-connect']);
+        $this->assertSame(env('PROJECTS_URL', env('PMS_URL', env('APP_ENV') === 'production' ? 'https://projects.sfumsa.ca' : 'http://localhost:5175')), $urls['pms']);
 
         $serviceIds = collect($response->json('platform_services'))->pluck('id')->all();
         $this->assertEqualsCanonicalizing(['queues', 'database', 'email', 'storage'], $serviceIds);
@@ -162,6 +164,18 @@ class SystemsControlPlaneTest extends TestCase
             ->assertJsonPath('system.url', '/cms');
 
         $this->actingAs($this->viewer)
+            ->getJson('/api/v1/admin/systems/registry/msa-connect')
+            ->assertStatus(200)
+            ->assertJsonPath('system.id', 'msa-connect')
+            ->assertJsonPath('system.name', 'MSA Connect');
+
+        $this->actingAs($this->viewer)
+            ->getJson('/api/v1/admin/systems/registry/pms')
+            ->assertStatus(200)
+            ->assertJsonPath('system.id', 'pms')
+            ->assertJsonPath('system.name', 'Project Management System (PMS)');
+
+        $this->actingAs($this->viewer)
             ->getJson('/api/v1/admin/systems/registry/dams/health')
             ->assertStatus(200)
             ->assertJsonStructure(['health' => ['status', 'last_checked_at']]);
@@ -185,6 +199,10 @@ class SystemsControlPlaneTest extends TestCase
         $this->assertContains('learner_experience', $byId['dawah-academy']['owns']);
         $this->assertContains('courses_admin', $byId['dams']['owns']);
         $this->assertContains('ems_events', $byId['cms']['does_not_own']);
+        $this->assertContains('conversations', $byId['msa-connect']['owns']);
+        $this->assertContains('connect_management', $byId['msa-connect']['does_not_own']);
+        $this->assertContains('pm_projects', $byId['pms']['owns']);
+        $this->assertContains('ems_events', $byId['pms']['does_not_own']);
     }
 
     /** @test */

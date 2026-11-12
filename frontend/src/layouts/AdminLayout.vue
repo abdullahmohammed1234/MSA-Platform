@@ -7,10 +7,12 @@ import { useAuthStore } from '@/stores/auth';
 import NotificationBell from '@/components/notifications/NotificationBell.vue';
 
 import { useAppAccess } from '@/composables/auth/useAppAccess';
+import { getPmsLaunchUrl } from '@/config/api';
+import type { SidebarItem } from '@/components/navigation/sidebar/types';
 
 const route = useRoute();
 const authStore = useAuthStore();
-const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasStoreAccess, hasDonationsAccess, hasSponsorshipAccess, hasMlibmsAccess, hasVolunteeringAccess, hasVmsAccess, hasConnectAccess } = useAppAccess();
+const { hasCmsAccess, hasDamsAccess, hasEmsAccess, hasStoreAccess, hasDonationsAccess, hasSponsorshipAccess, hasMlibmsAccess, hasVolunteeringAccess, hasVmsAccess, hasConnectAccess, hasProjectsAccess } = useAppAccess();
 const isSidebarCollapsed = ref(false);
 const isMobileOpen = ref(false);
 
@@ -23,7 +25,7 @@ const adminName = computed(() => {
 });
 
 const adminItems = computed(() => {
-  const items = [
+  const items: SidebarItem[] = [
     {
       label: 'Administration',
       path: '#',
@@ -33,24 +35,16 @@ const adminItems = computed(() => {
     }
   ];
 
-  const adminGroup = items[0].children;
+  const adminGroup = items[0].children!;
   const isSuper = authStore.roles.includes('super-admin');
 
   if (isSuper || authStore.permissions.includes('view_analytics') || authStore.permissions.includes('platform.view') || authStore.permissions.includes('system.view')) {
     adminGroup.push({ label: 'Platform Analytics', path: '/admin/analytics', icon: 'trending-up' });
   }
 
-  if (isSuper || authStore.permissions.includes('manage_roles')) {
-    adminGroup.push({ label: 'Manage Roles', path: '/admin/roles', icon: 'shield' });
-    if (isSuper) {
-      adminGroup.push({ label: 'Manage Permissions', path: '/admin/permissions', icon: 'key' });
-    }
-  }
-
   if (isSuper || authStore.permissions.includes('manage_users')) {
     adminGroup.push({ label: 'Volunteering Registrars', path: '/admin/volunteering-registrars', icon: 'users' });
     adminGroup.push({ label: 'User Management', path: '/admin/academy/user-management', icon: 'users' });
-    adminGroup.push({ label: 'Application Access', path: '/admin/application-access', icon: 'key' });
   }
 
   // Phase 12 Direct Messaging
@@ -58,8 +52,22 @@ const adminItems = computed(() => {
     adminGroup.push({ label: 'Direct Messages', path: '/admin/messages', icon: 'message-square' });
   }
 
-  // Applications: open shells — not embedded inside MSA Admin
-  const appChildren: Array<{ label: string; path: string; icon: string }> = [];
+  // APPLICATIONS section: In-Portal Application Access & Registry + External Shells
+  const appChildren: SidebarItem[] = [];
+
+  if (isSuper || authStore.permissions.includes('manage_users') || authStore.permissions.includes('pm.access') || authStore.permissions.includes('pm.admin')) {
+    appChildren.push({ label: 'Application Registry', path: '/admin/application-access', icon: 'key' });
+    appChildren.push({ label: 'Project Management Access', path: '/admin/pms/access', icon: 'layers' });
+  }
+
+  if (hasProjectsAccess.value) {
+    appChildren.push({
+      label: 'Open PMS (Projects)',
+      path: getPmsLaunchUrl(authStore.token),
+      icon: 'layers',
+      external: true,
+    });
+  }
   if (hasCmsAccess.value) {
     appChildren.push({ label: 'Open CMS', path: '/cms', icon: 'book' });
   }
@@ -87,16 +95,17 @@ const adminItems = computed(() => {
   if (hasConnectAccess.value) {
     appChildren.push({ label: 'Open Connect Management', path: '/connect/admin', icon: 'smartphone' });
   }
+
   if (appChildren.length > 0) {
     items.push({
       label: 'Applications',
-      path: '#',
+      path: '/admin/application-access',
       children: appChildren,
     });
   }
 
   // Security & Operations section
-  const secOpsChildren: Array<{ label: string; path: string; icon: string }> = [];
+  const secOpsChildren: SidebarItem[] = [];
 
   if (authStore.permissions.includes('view_security') || isSuper) {
     secOpsChildren.push({ label: 'Security Center', path: '/admin/security', icon: 'shield' });
@@ -122,13 +131,21 @@ const adminItems = computed(() => {
   if (secOpsChildren.length > 0) {
     items.push({
       label: 'Security & Operations',
-      path: '#',
+      path: '/admin/operations',
       children: secOpsChildren
     });
   }
 
-  // Systems Control section
-  const systemChildren: Array<{ label: string; path: string; icon: string }> = [];
+  // SYSTEM CONTROL section: Role & Permission Management + System Consoles
+  const systemChildren: SidebarItem[] = [];
+
+  if (isSuper || authStore.permissions.includes('manage_roles') || authStore.permissions.includes('pm.roles.view') || authStore.permissions.includes('pm.roles.manage')) {
+    systemChildren.push({ label: 'Role Management', path: '/admin/roles', icon: 'shield' });
+  }
+
+  if (isSuper || authStore.permissions.includes('manage_permissions') || authStore.permissions.includes('pm.permissions.view') || authStore.permissions.includes('pm.permissions.manage')) {
+    systemChildren.push({ label: 'Permission Management', path: '/admin/permissions', icon: 'key' });
+  }
 
   if (authStore.permissions.includes('platform.view') || authStore.permissions.includes('system.view') || authStore.permissions.includes('platform.operations') || isSuper) {
     systemChildren.push({ label: 'Systems Control Plane', path: '/admin/systems', icon: 'layers' });
@@ -143,12 +160,14 @@ const adminItems = computed(() => {
     systemChildren.push({ label: 'Library Management System (MLibMS)', path: '/admin/systems/library', icon: 'book' });
     systemChildren.push({ label: 'Volunteer System (VMS)', path: '/admin/systems/vms', icon: 'users' });
     systemChildren.push({ label: 'MSA Connect Management', path: '/admin/systems/connect', icon: 'smartphone' });
+    systemChildren.push({ label: 'MSA Connect', path: '/admin/systems/msa-connect', icon: 'smartphone' });
+    systemChildren.push({ label: 'Project Management (PMS)', path: '/admin/systems/pms', icon: 'layers' });
   }
 
   if (systemChildren.length > 0) {
     items.push({
       label: 'Systems Control',
-      path: '#',
+      path: '/admin/roles',
       children: systemChildren
     });
   }

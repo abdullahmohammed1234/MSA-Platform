@@ -7,6 +7,8 @@ import { ExternalLink, ChevronRight } from 'lucide-vue-next'
 defineProps<{
   app: SystemApplication
 }>()
+
+const isExternal = (url?: string | null) => !!url && /^(https?:)?\/\//i.test(url)
 </script>
 
 <template>
@@ -48,16 +50,36 @@ defineProps<{
     </div>
 
     <div class="mt-auto flex flex-wrap gap-2 pt-1">
+      <a
+        v-if="app.url && isExternal(app.url)"
+        :href="app.url"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
+      >
+        Open application
+        <ExternalLink class="h-4 w-4" />
+      </a>
       <router-link
-        v-if="app.url"
+        v-else-if="app.url"
         :to="app.url"
         class="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
       >
         Open application
         <ExternalLink class="h-4 w-4" />
       </router-link>
+      <a
+        v-if="app.admin_path && isExternal(app.admin_path)"
+        :href="app.admin_path"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center gap-2 rounded-xl border border-neutral-ivory px-3 py-2 text-sm font-semibold text-neutral-black hover:bg-neutral-background"
+      >
+        Investigate
+        <ChevronRight class="h-4 w-4" />
+      </a>
       <router-link
-        v-if="app.admin_path"
+        v-else-if="app.admin_path"
         :to="app.admin_path"
         class="inline-flex items-center gap-2 rounded-xl border border-neutral-ivory px-3 py-2 text-sm font-semibold text-neutral-black hover:bg-neutral-background"
       >

@@ -131,6 +131,18 @@ const adminRoutes: Array<RouteRecordRaw> = [
         component: () => import('@/pages/admin/system/SystemApplicationDetailPage.vue'),
         meta: { permissions: 'system.view', systemId: 'connect' }
       },
+      {
+        path: 'systems/msa-connect',
+        name: 'admin-systems-msa-connect',
+        component: () => import('@/pages/admin/system/SystemApplicationDetailPage.vue'),
+        meta: { permissions: 'system.view', systemId: 'msa-connect' }
+      },
+      {
+        path: 'systems/pms',
+        name: 'admin-systems-pms',
+        component: () => import('@/pages/admin/system/SystemApplicationDetailPage.vue'),
+        meta: { permissions: 'system.view', systemId: 'pms' }
+      },
       { path: 'connect', redirect: '/connect/admin' },
       { path: 'connect/dashboard', redirect: '/connect/admin' },
       {
@@ -181,6 +193,30 @@ const adminRoutes: Array<RouteRecordRaw> = [
         component: () => import('@/pages/admin/ApplicationAccess.vue'),
         meta: { permissions: 'manage_users' }
       },
+      {
+        path: 'pms/access',
+        name: 'admin-pms-access',
+        component: () => import('@/pages/admin/pms/AccessManagement.vue'),
+        meta: { permissions: 'manage_users' }
+      },
+      {
+        path: 'pms/roles',
+        name: 'admin-pms-roles',
+        component: () => import('@/pages/admin/Roles.vue'),
+        meta: { permissions: 'manage_roles', activeSystem: 'pms' }
+      },
+      {
+        path: 'pms/permissions',
+        name: 'admin-pms-permissions',
+        component: () => import('@/pages/admin/Permissions.vue'),
+        meta: { permissions: 'manage_permissions', activeSystem: 'pms' }
+      },
+      // Applications & System Control routing aliases to prevent homepage fallbacks
+      { path: 'applications', redirect: '/admin/application-access' },
+      { path: 'applications/registry', redirect: '/admin/application-access' },
+      { path: 'applications/pms', redirect: '/admin/pms/access' },
+      { path: 'systems-control', redirect: '/admin/roles' },
+      { path: 'system-control', redirect: '/admin/roles' },
       // CMS announcements — Phase 4 rehome
       { path: 'academy/announcements', redirect: '/cms/announcements' },
 

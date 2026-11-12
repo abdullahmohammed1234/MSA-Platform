@@ -107,4 +107,41 @@ describe('AccountAppsView — Direct System Navigation', () => {
     expect(hrefs).toContain('/cms');
     expect(hrefs).toContain('/store/admin');
   });
+
+  it('renders PMS portal link using configured environment URL and token', async () => {
+    vi.mocked(accountService.getSummary).mockResolvedValueOnce({
+      user: {
+        uuid: 'test-user',
+        name: 'PMS User',
+        email: 'pms@sfu.ca',
+        community_status: 'Active Member',
+        roles: ['Team Member'],
+      },
+      counts: { upcoming_events: 0, orders: 0, volunteer_shifts: 0, courses: 0, unread_notifications: 0 },
+      academy: { enrolled_courses: 0, completed_courses: 0, certificates: 0, recent_courses: [] },
+      activity: { events: [], orders: [] },
+      applications: [
+        {
+          slug: 'projects',
+          title: 'Project Management System (PMS)',
+          description: 'Department projects and tasks.',
+          path: 'https://projects.sfumsa.ca',
+          is_admin: true,
+          source: 'privileged',
+        },
+      ],
+    } as any);
+
+    const wrapper = mount(AccountAppsView);
+    await flushPromises();
+
+    const pmsAnchor = wrapper.find('a[target="_blank"]');
+    expect(pmsAnchor.exists()).toBe(true);
+    const pmsHref = pmsAnchor.attributes('href');
+    expect(pmsHref).toBeDefined();
+    // Must be either localhost origin or production projects.sfumsa.ca
+    expect(pmsHref).toMatch(/https:\/\/projects\.sfumsa\.ca|http:\/\/localhost:5175/);
+    // Sanctum bearer tokens must NEVER be exposed in URL query parameters (SEC-11-01)
+    expect(pmsHref).not.toContain('token=');
+  });
 });

@@ -96,6 +96,16 @@ class AppServiceProvider extends ServiceProvider
                 return null;
             }
 
+            // Do not bypass PMS project privacy checks or notification privacy for admins (department-private boundaries are strictly enforced)
+            if (str_starts_with($ability, 'pm.') || (isset($arguments[0]) && (
+                $arguments[0] instanceof \App\Pm\Models\PmProject ||
+                $arguments[0] instanceof \App\Pm\Models\PmTask ||
+                $arguments[0] instanceof \App\Pm\Models\PmMilestone ||
+                $arguments[0] instanceof \App\Models\Notification
+            ))) {
+                return null;
+            }
+
             if ($user->hasRole('super-admin') || $user->hasRole('admin')) {
                 return true;
             }
@@ -103,6 +113,10 @@ class AppServiceProvider extends ServiceProvider
 
         \Illuminate\Support\Facades\Gate::policy(\App\Models\SupportInquiry::class, \App\Policies\SupportInquiryPolicy::class);
         \Illuminate\Support\Facades\Gate::policy(\App\Models\Conversation::class, \App\Policies\ConversationPolicy::class);
+        \Illuminate\Support\Facades\Gate::policy(\App\Models\Notification::class, \App\Policies\NotificationPolicy::class);
+        \Illuminate\Support\Facades\Gate::policy(\App\Pm\Models\PmProject::class, \App\Pm\Policies\PmProjectPolicy::class);
+        \Illuminate\Support\Facades\Gate::policy(\App\Pm\Models\PmTask::class, \App\Pm\Policies\PmTaskPolicy::class);
+        \Illuminate\Support\Facades\Gate::policy(\App\Pm\Models\PmMilestone::class, \App\Pm\Policies\PmMilestonePolicy::class);
 
         \Illuminate\Support\Facades\Event::subscribe(\App\Listeners\NotificationEventSubscriber::class);
 

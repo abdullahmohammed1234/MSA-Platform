@@ -4,6 +4,7 @@ import type { EmsPaginated, EmsSuccessEnvelope } from '@/types/ems';
 import type {
   AttendeeListParams,
   EmsAttendee,
+  EmsCancellationAudit,
   EmsCheckInResult,
   EmsImportMapping,
   EmsImportPreview,
@@ -126,6 +127,30 @@ export const operationsService = {
 
   refundPayment(paymentUuid: string, payload: { amount?: number; reason?: string } = {}) {
     return emsHttp.post(`/payments/${encodeURIComponent(paymentUuid)}/refund`, payload);
+  },
+
+  cancelRegistration(
+    registrationUuid: string,
+    payload: {
+      reason: string;
+      issue_refund?: boolean;
+      refund_amount?: number;
+    }
+  ): Promise<{
+    registration: EmsAttendee;
+    audit: EmsCancellationAudit;
+    refund_status: string;
+    refund_message?: string;
+  }> {
+    return emsHttp.post(`/registrations/${encodeURIComponent(registrationUuid)}/cancel`, payload);
+  },
+
+  listEventCancellationHistory(eventUuid: string): Promise<EmsCancellationAudit[]> {
+    return emsHttp.get<EmsCancellationAudit[]>(`/events/${encodeURIComponent(eventUuid)}/cancellation-history`);
+  },
+
+  listRegistrationCancellationHistory(registrationUuid: string): Promise<EmsCancellationAudit[]> {
+    return emsHttp.get<EmsCancellationAudit[]>(`/registrations/${encodeURIComponent(registrationUuid)}/cancellation-history`);
   },
 
   undoCheckIn(

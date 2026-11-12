@@ -36,7 +36,8 @@ if ($cpanelExists) {
     Assert-Check ".cpanel.yml defines deployment tasks" ($cpanelContent -match "deployment:\s+tasks:")
     Assert-Check "Contains msa-backend destination" ($cpanelContent -match "/home2/sfums1d5/msa-backend")
     Assert-Check "Contains public_html destination" ($cpanelContent -match "/home2/sfums1d5/public_html")
-    Assert-Check "Contains connect.sfumsa.ca destination" ($cpanelContent -match "/home2/sfums1d5/connect.sfumsa.ca")
+    Assert-Check "Contains connect destination" ($cpanelContent -match "/home2/sfums1d5/(connect\.sfumsa\.ca|public_html/connect)")
+    Assert-Check "Contains projects destination" ($cpanelContent -match "/home2/sfums1d5/public_html/projects")
     Assert-Check "Excludes .env files from sync" ($cpanelContent -match "--exclude='\*?\.env\*'")
     Assert-Check "Excludes source maps from sync" ($cpanelContent -match "--exclude='\*\.map'")
     Assert-Check "Excludes tests from backend sync" ($cpanelContent -match "--exclude='tests'")
@@ -98,7 +99,28 @@ foreach ($f in $connectJsFiles) {
 Assert-Check "connect/dist targets production API (https://api.sfumsa.ca/api/v1)" $foundConnectApiUrl
 Assert-Check "connect/dist has NO hardcoded localhost:8000" (-not $foundConnectDevUrl)
 
-# --- 4. Backend Configuration & CORS Invariants ---
+# --- 4. Projects PMS Build Validation (projects/dist) ---
+Write-Host "`n--- Checking projects/dist ---" -ForegroundColor Yellow
+$projectsDist = Join-Path $root "projects/dist"
+Assert-Check "projects/dist exists" (Test-Path $projectsDist)
+Assert-Check "projects/dist/index.html exists" (Test-Path (Join-Path $projectsDist "index.html"))
+Assert-Check "projects/dist/.htaccess exists" (Test-Path (Join-Path $projectsDist ".htaccess"))
+
+$projectsMaps = Get-ChildItem -Path $projectsDist -Filter "*.map" -Recurse -ErrorAction SilentlyContinue
+Assert-Check "No source maps in projects/dist" ($projectsMaps.Count -eq 0)
+
+$projectsEnvs = Get-ChildItem -Path $projectsDist -Filter ".env*" -Recurse -Force -ErrorAction SilentlyContinue
+Assert-Check "No .env files in projects/dist" ($projectsEnvs.Count -eq 0)
+
+$projectsJsFiles = Get-ChildItem -Path "$projectsDist/assets" -Filter "*.js" -ErrorAction SilentlyContinue
+$foundProjectsApiUrl = $false
+foreach ($f in $projectsJsFiles) {
+    $content = Get-Content $f.FullName -Raw
+    if ($content -match "https://api\.sfumsa\.ca/api/v1") { $foundProjectsApiUrl = $true }
+}
+Assert-Check "projects/dist targets production API (https://api.sfumsa.ca/api/v1)" $foundProjectsApiUrl
+
+# --- 5. Backend Configuration & CORS Invariants ---
 Write-Host "`n--- Checking Backend Configuration ---" -ForegroundColor Yellow
 $corsConfig = Join-Path $root "backend/config/cors.php"
 $corsContent = Get-Content $corsConfig -Raw

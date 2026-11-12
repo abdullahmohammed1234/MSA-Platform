@@ -284,5 +284,65 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return $this->hasMany(DeviceSubscription::class, 'user_id');
     }
+
+    /**
+     * Get the PMS projects this user is a member of.
+     */
+    public function pmProjects()
+    {
+        return $this->belongsToMany(\App\Pm\Models\PmProject::class, 'pm_project_members', 'user_id', 'project_id')
+            ->withPivot(['id', 'project_role', 'invitation_status', 'invited_by', 'invited_at', 'accepted_at', 'revoked_at'])
+            ->withTimestamps();
+    }
+
+    /**
+     * Get the PMS department memberships for the user.
+     */
+    public function pmDepartmentMemberships()
+    {
+        return $this->hasMany(\App\Pm\Models\PmDepartmentMembership::class, 'user_id');
+    }
+
+    /**
+     * Get the PMS departments this user is assigned to.
+     */
+    public function pmDepartments()
+    {
+        return $this->belongsToMany(\App\Models\Department::class, 'pm_department_memberships', 'user_id', 'department_id')
+            ->withPivot(['id', 'department_role', 'status', 'start_date', 'end_date', 'assigned_by'])
+            ->withTimestamps();
+    }
+
+    /**
+     * Get the PMS tasks assigned to the user.
+     */
+    public function pmTasksAssigned()
+    {
+        return $this->hasMany(\App\Pm\Models\PmTask::class, 'assigned_to');
+    }
+
+    /**
+     * Get the PMS calendar feeds owned by the user.
+     */
+    public function pmCalendarFeeds()
+    {
+        return $this->hasMany(\App\Pm\Models\PmCalendarFeed::class, 'user_id');
+    }
+
+    /**
+     * Get the PMS working capacity settings for the user.
+     */
+    public function pmCapacity()
+    {
+        return $this->hasOne(\App\Pm\Models\PmUserCapacity::class, 'user_id');
+    }
+
+    /**
+     * Get all PMS capacity configuration records for the user.
+     */
+    public function pmCapacities()
+    {
+        return $this->hasMany(\App\Pm\Models\PmUserCapacity::class, 'user_id');
+    }
 }
 

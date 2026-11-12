@@ -2,6 +2,7 @@
 
 namespace App\Ems\Models;
 
+use App\Ems\Enums\RefundStatus;
 use App\Ems\Enums\RegistrationStatus;
 use App\Ems\Enums\RegistrationType;
 use App\Ems\Models\Concerns\HasEmsUuid;
@@ -58,6 +59,14 @@ class Registration extends Model
         'promo_code_id',
         'discount_amount',
         'promoted_expires_at',
+        'cancellation_token_hash',
+        'cancellation_token_expires_at',
+        'cancellation_token_used_at',
+        'cancellation_reason',
+        'cancellation_initiator_type',
+        'cancelled_by_id',
+        'refund_status',
+        'refund_amount',
     ];
 
     protected function casts(): array
@@ -65,12 +74,16 @@ class Registration extends Model
         return [
             'status' => RegistrationStatus::class,
             'type' => RegistrationType::class,
+            'refund_status' => RefundStatus::class,
             'quantity' => 'integer',
             'waitlist_position' => 'integer',
             'amount_due' => 'decimal:2',
+            'refund_amount' => 'decimal:2',
             'registered_at' => 'datetime',
             'confirmed_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'cancellation_token_expires_at' => 'datetime',
+            'cancellation_token_used_at' => 'datetime',
             'metadata' => 'array',
             'promo_code_id' => 'integer',
             'discount_amount' => 'decimal:2',
@@ -169,6 +182,32 @@ class Registration extends Model
     public function notifications(): HasMany
     {
         return $this->hasMany(EventNotification::class, 'registration_id');
+    }
+
+    /**
+     * @return HasMany<CancellationAudit, $this>
+     */
+    public function cancellationAudits(): HasMany
+    {
+        return $this->hasMany(CancellationAudit::class, 'registration_id');
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function cancelledBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cancelled_by_id');
+    }
+
+    public function isFree(): bool
+    {
+        return $this->type === RegistrationType::Free && (float) $this->amount_due <= 0.0;
+    }
+
+    public function isPaid(): bool
+    {
+        return ! $this->isFree();
     }
 
     /**

@@ -2,6 +2,7 @@ import { emsHttp, toPaginated } from '@/services/ems/emsClient';
 import type { EmsPaginated } from '@/types/ems';
 import type {
   CalendarFilters,
+  GuestCancellationInspection,
   PublicCalendarEvent,
   PublicCategory,
   PublicEvent,
@@ -104,6 +105,14 @@ export const publicEventsService = {
 
   async cancelRegistration(uuid: string): Promise<PublicRegistration> {
     return emsHttp.post<PublicRegistration>(`/public/registrations/${encodeURIComponent(uuid)}/cancel`);
+  },
+
+  async inspectGuestCancellation(token: string): Promise<GuestCancellationInspection> {
+    return emsHttp.get<GuestCancellationInspection>(`/public/cancel-registration/${encodeURIComponent(token)}`);
+  },
+
+  async confirmGuestCancellation(token: string): Promise<PublicRegistration> {
+    return emsHttp.post<PublicRegistration>(`/public/cancel-registration/${encodeURIComponent(token)}`);
   },
 
   async validatePromoCode(payload: {

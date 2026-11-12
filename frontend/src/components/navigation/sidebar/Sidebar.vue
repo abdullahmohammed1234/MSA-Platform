@@ -56,6 +56,10 @@ const handleKeyDown = (e: KeyboardEvent) => {
   }
 };
 
+const isExternal = (path: string) => {
+  return /^https?:\/\//i.test(path);
+};
+
 onMounted(() => {
   window.addEventListener('keydown', handleKeyDown);
 });
@@ -199,27 +203,67 @@ onUnmounted(() => {
                 </svg>
               </button>
               <div v-if="isGroupExpanded(item.label) || isCollapsed" class="space-y-1">
-                <router-link
-                  v-for="subItem in item.children"
-                  :key="subItem.path"
-                  :to="subItem.path"
-                  class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-neutral-muted hover:text-primary hover:bg-neutral-background transition-all"
-                  active-class="text-primary font-semibold bg-neutral-ivory/50 border-l-4 border-primary"
-                  @click="closeMobileDrawer"
-                >
-                  <!-- Render Icon -->
-                  <div class="flex-shrink-0">
-                    <slot :name="subItem.icon || 'default-icon'">
-                      <!-- Default SVG dot/circle if none supplied -->
-                      <span class="h-2 w-2 rounded-full bg-current block mx-1.5"></span>
-                    </slot>
-                  </div>
-                  <span v-if="!isCollapsed" class="truncate">{{ subItem.label }}</span>
-                </router-link>
+                <template v-for="subItem in item.children" :key="subItem.path">
+                  <a
+                    v-if="subItem.external || isExternal(subItem.path)"
+                    :href="subItem.path"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-neutral-muted hover:text-primary hover:bg-neutral-background transition-all group"
+                    @click="closeMobileDrawer"
+                  >
+                    <!-- Render Icon -->
+                    <div class="flex-shrink-0">
+                      <slot :name="subItem.icon || 'default-icon'">
+                        <span class="h-2 w-2 rounded-full bg-current block mx-1.5"></span>
+                      </slot>
+                    </div>
+                    <span v-if="!isCollapsed" class="truncate flex-1">{{ subItem.label }}</span>
+                    <svg v-if="!isCollapsed" class="w-3.5 h-3.5 opacity-40 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </a>
+                  <router-link
+                    v-else
+                    :to="subItem.path"
+                    class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-neutral-muted hover:text-primary hover:bg-neutral-background transition-all"
+                    active-class="text-primary font-semibold bg-neutral-ivory/50 border-l-4 border-primary"
+                    @click="closeMobileDrawer"
+                  >
+                    <!-- Render Icon -->
+                    <div class="flex-shrink-0">
+                      <slot :name="subItem.icon || 'default-icon'">
+                        <!-- Default SVG dot/circle if none supplied -->
+                        <span class="h-2 w-2 rounded-full bg-current block mx-1.5"></span>
+                      </slot>
+                    </div>
+                    <span v-if="!isCollapsed" class="truncate">{{ subItem.label }}</span>
+                  </router-link>
+                </template>
               </div>
             </div>
 
             <!-- Direct Item -->
+            <a
+              v-if="item.external || isExternal(item.path)"
+              :href="item.path"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-medium text-neutral-muted hover:text-primary hover:bg-neutral-background transition-all group"
+              @click="emit('closeMobile')"
+            >
+              <div class="flex-shrink-0">
+                <slot :name="item.icon || 'default-icon'">
+                  <svg class="h-5 w-5 text-current" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                  </svg>
+                </slot>
+              </div>
+              <span v-if="!isCollapsed" class="truncate flex-1">{{ item.label }}</span>
+              <svg v-if="!isCollapsed" class="w-3.5 h-3.5 opacity-40 group-hover:opacity-100 transition-opacity" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
             <router-link
               v-else
               :to="item.path"

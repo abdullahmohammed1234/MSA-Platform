@@ -81,6 +81,20 @@ class EventPolicy
             && $this->inScope($user, $event);
     }
 
+    public function cancelRegistration(User $user, Event $event): bool
+    {
+        return $user->hasPermission(EmsPermissions::REGISTRATIONS_DELETE)
+            && $this->inScope($user, $event);
+    }
+
+    public function viewCancellationHistory(User $user, Event $event): bool
+    {
+        return (
+            $user->hasPermission(EmsPermissions::REGISTRATIONS_VIEW)
+            || $user->hasPermission(EmsPermissions::REGISTRATIONS_DELETE)
+        ) && $this->inScope($user, $event);
+    }
+
     public function viewOperations(User $user, Event $event): bool
     {
         return (

@@ -19,14 +19,14 @@ class EventCommunicationService
     ) {
     }
 
-    public function sendRegistrationBundle(Registration $registration, bool $includePayment = false): void
+    public function sendRegistrationBundle(Registration $registration, bool $includePayment = false, array $extra = []): void
     {
         $registration->loadMissing(['event', 'tickets', 'ticketType', 'order', 'settledPayment']);
 
         $this->dispatcher->notifyRegistrationImmediately(
             $registration,
             NotificationType::RegistrationConfirmed->value,
-            ['idempotency_suffix' => 'confirm']
+            array_merge(['idempotency_suffix' => 'confirm'], $extra)
         );
 
         if ($includePayment) {
@@ -124,6 +124,18 @@ class EventCommunicationService
             $registration,
             $type->value,
             ['force' => true, 'idempotency_suffix' => 'manual_resend']
+        );
+    }
+
+    public function sendRegistrationCancelled(Registration $registration, array $extra = []): void
+    {
+        $this->dispatcher->notifyRegistration(
+            $registration,
+            NotificationType::RegistrationCancelled->value,
+            array_merge([
+                'idempotency_suffix' => 'cancel:' . ($registration->cancelled_at?->timestamp ?? time()),
+                'force' => true,
+            ], $extra)
         );
     }
 

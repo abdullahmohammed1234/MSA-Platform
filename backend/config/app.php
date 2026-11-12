@@ -80,6 +80,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Projects (PMS) Application URL
+    |--------------------------------------------------------------------------
+    |
+    | Origin for SFU MSA Project Management System (PMS).
+    |
+    */
+
+    'projects_url' => env('PROJECTS_URL', env('PMS_URL', env('APP_ENV') === 'production' ? 'https://projects.sfumsa.ca' : 'http://localhost:5175')),
+
+    /*
+    |--------------------------------------------------------------------------
     | Force HTTPS
     |--------------------------------------------------------------------------
     |

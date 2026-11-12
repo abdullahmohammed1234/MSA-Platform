@@ -44,8 +44,11 @@ if [ -f "$CPANEL_PATH" ]; then
     grep -q "/home2/sfums1d5/public_html" "$CPANEL_PATH"
     assert_check "Contains public_html destination" $?
 
-    grep -q "/home2/sfums1d5/connect.sfumsa.ca" "$CPANEL_PATH"
-    assert_check "Contains connect.sfumsa.ca destination" $?
+    grep -qE "/home2/sfums1d5/(connect\.sfumsa\.ca|public_html/connect)" "$CPANEL_PATH"
+    assert_check "Contains connect destination" $?
+
+    grep -q "/home2/sfums1d5/public_html/projects" "$CPANEL_PATH"
+    assert_check "Contains projects destination" $?
 
     grep -q -- "--exclude='.*\.env\*'" "$CPANEL_PATH" || grep -q -- "--exclude='\.env\*'" "$CPANEL_PATH"
     assert_check "Excludes .env files from sync" $?
@@ -117,7 +120,24 @@ else
     assert_check "connect/dist has NO hardcoded localhost:8000" 0
 fi
 
-# --- 4. Backend Configuration & CORS Invariants ---
+# --- 4. Projects PMS Build Validation (projects/dist) ---
+echo ""
+echo "--- Checking projects/dist ---"
+PROJECTS_DIST="$ROOT/projects/dist"
+[ -d "$PROJECTS_DIST" ]; assert_check "projects/dist exists" $?
+[ -f "$PROJECTS_DIST/index.html" ]; assert_check "projects/dist/index.html exists" $?
+[ -f "$PROJECTS_DIST/.htaccess" ]; assert_check "projects/dist/.htaccess exists" $?
+
+P_MAP_COUNT=$(find "$PROJECTS_DIST" -name "*.map" 2>/dev/null | wc -l)
+[ "$P_MAP_COUNT" -eq 0 ]; assert_check "No source maps in projects/dist" $?
+
+P_ENV_COUNT=$(find "$PROJECTS_DIST" -name ".env*" 2>/dev/null | wc -l)
+[ "$P_ENV_COUNT" -eq 0 ]; assert_check "No .env files in projects/dist" $?
+
+grep -rq "https://api\.sfumsa\.ca/api/v1" "$PROJECTS_DIST/assets" 2>/dev/null
+assert_check "projects/dist targets production API (https://api.sfumsa.ca/api/v1)" $?
+
+# --- 5. Backend Configuration & CORS Invariants ---
 echo ""
 echo "--- Checking Backend Configuration ---"
 CORS_CONFIG="$ROOT/backend/config/cors.php"

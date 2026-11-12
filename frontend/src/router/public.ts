@@ -132,6 +132,15 @@ const publicRoutes: Array<RouteRecordRaw> = [
           desc: 'View your SFU MSA event ticket and QR code.',
         },
       },
+      {
+        path: 'cancel-registration/:token',
+        name: 'ems-guest-cancellation',
+        component: () => import('@/pages/public/ems/EmsGuestCancellationPage.vue'),
+        meta: {
+          title: 'Cancel Registration | SFU MSA',
+          desc: 'Manage or cancel your event registration.',
+        },
+      },
       // { 
       //   path: 'resources', 
       //   name: 'resources', 

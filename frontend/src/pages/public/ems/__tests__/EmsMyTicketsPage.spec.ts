@@ -125,6 +125,10 @@ function awaitingPaymentRegistration(overrides: Partial<PublicRegistration> = {}
 function confirmedRegistration(): PublicRegistration {
   return awaitingPaymentRegistration({
     uuid: 'reg-confirmed-uuid',
+    type: 'free',
+    is_free: true,
+    can_cancel: true,
+    amount_due: 0,
     status: 'confirmed',
     status_label: 'Registered',
     confirmed_at: new Date().toISOString(),
@@ -203,6 +207,23 @@ describe('EmsMyTicketsPage pending payment cancellation', () => {
     expect(wrapper.text()).toContain('Complete Payment');
     expect(wrapper.text()).toContain('View Ticket');
     expect(wrapper.text()).toContain('Cancel Booking');
+  });
+
+  it('hides Cancel Booking for paid registrations and provides MSA contact instructions', async () => {
+    const paidConfirmed: PublicRegistration = {
+      ...confirmedRegistration(),
+      uuid: 'reg-paid-confirmed-uuid',
+      type: 'paid',
+      is_free: false,
+      can_cancel: false,
+    };
+    getMyTickets.mockResolvedValue([paidConfirmed]);
+
+    const wrapper = await mountPage();
+
+    expect(wrapper.text()).not.toContain('Cancel Booking');
+    expect(wrapper.text()).toContain('Paid Ticket');
+    expect(wrapper.text()).toContain('events@sfumsa.ca');
   });
 
   it('cancels pending payment through cancelCheckout and clears local storage after success', async () => {

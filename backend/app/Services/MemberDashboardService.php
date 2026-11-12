@@ -219,7 +219,7 @@ class MemberDashboardService
         }
 
         // 6. Unread Notifications Preview (Phase 33)
-        $unreadQuery = $user->customNotifications()->unread();
+        $unreadQuery = $user->customNotifications()->unread()->accessibleToUser($user);
         $unreadCount = (clone $unreadQuery)->count();
         $latestNotifications = (clone $unreadQuery)
             ->orderBy('created_at', 'desc')
@@ -539,6 +539,18 @@ class MemberDashboardService
                 'title' => 'MSA Connect Management',
                 'description' => 'Member communications, direct messaging, push dispatch, and audits.',
                 'path' => '/connect/admin',
+                'is_admin' => true,
+            ],
+            'projects' => [
+                'title' => 'Project Management System (PMS)',
+                'description' => 'Department projects, milestones, cross-team collaboration, and internal calendar.',
+                'path' => rtrim((string) config('app.projects_url', env('PROJECTS_URL', 'https://projects.sfumsa.ca')), '/'),
+                'is_admin' => true,
+            ],
+            'pms' => [
+                'title' => 'Project Management System (PMS)',
+                'description' => 'Department projects, milestones, cross-team collaboration, and internal calendar.',
+                'path' => rtrim((string) config('app.projects_url', env('PROJECTS_URL', 'https://projects.sfumsa.ca')), '/'),
                 'is_admin' => true,
             ],
             'admin-portal' => [

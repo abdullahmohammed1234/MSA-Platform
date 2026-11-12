@@ -132,6 +132,12 @@ export interface PublicRegistration {
   status: string;
   status_label: string;
   is_active?: boolean;
+  is_free?: boolean;
+  can_cancel?: boolean;
+  cancellation_reason?: string | null;
+  cancelled_at?: string | null;
+  refund_status?: string | null;
+  refund_status_label?: string | null;
   type: string;
   attendee_name: string;
   attendee_email: string;
@@ -160,6 +166,30 @@ export interface PublicRegistration {
     status_label?: string;
   } | null;
   tickets: PublicTicket[];
+}
+
+export interface GuestCancellationRegistrationSummary {
+  reference: string;
+  attendee_name: string;
+  attendee_email_masked: string;
+  ticket_type_name: string;
+  quantity: number;
+  status: string;
+  is_cancelled: boolean;
+  cancelled_at?: string | null;
+  event: {
+    name: string;
+    slug: string;
+    start_at: string | null;
+    end_at: string | null;
+    location: string | null;
+  };
+}
+
+export interface GuestCancellationInspection {
+  state: 'valid' | 'invalid' | 'expired' | 'already_cancelled' | 'forbidden';
+  message: string;
+  registration?: GuestCancellationRegistrationSummary;
 }
 
 export interface PublicEventFilters {

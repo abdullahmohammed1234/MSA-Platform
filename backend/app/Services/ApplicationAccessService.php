@@ -25,7 +25,10 @@ class ApplicationAccessService
         'volunteering',
         'vms',
         'connect',
-        'admin-portal'
+        'msa-connect',
+        'admin-portal',
+        'projects',
+        'pms',
     ];
 
 
@@ -50,8 +53,13 @@ class ApplicationAccessService
             return true;
         }
 
-        // Check if there is an explicit record in the table first (check both vms and volunteering if asking for either)
-        $appsToCheck = ($application === 'vms' || $application === 'volunteering') ? ['vms', 'volunteering'] : [$application];
+        // Check if there is an explicit record in the table first (check aliases)
+        $appsToCheck = match ($application) {
+            'vms', 'volunteering' => ['vms', 'volunteering'],
+            'projects', 'pms' => ['projects', 'pms'],
+            'connect', 'msa-connect' => ['connect', 'msa-connect'],
+            default => [$application],
+        };
         if ($this->hasExplicitGrant($user, $appsToCheck)) {
             return true;
         }
@@ -95,11 +103,15 @@ class ApplicationAccessService
             }
         }
 
-        if ($application === 'connect') {
-            if ($user->hasAnyRole(['connect-administrator', 'connect-staff']) || $this->hasPermissionSafe($user, 'connect.view') || $this->hasPermissionSafe($user, 'connect.manage')) {
+        if ($application === 'connect' || $application === 'msa-connect') {
+            if ($user->hasAnyRole(['connect-administrator', 'connect-staff', 'member']) || $this->hasPermissionSafe($user, 'connect.view') || $this->hasPermissionSafe($user, 'connect.manage')) {
                 return true;
             }
         }
+
+        // 'projects' / 'pms' requires an explicit application-access grant in the application_access table.
+        // Formally appointed team members, department members, leads, and volunteers cannot enter PMS
+        // without an explicit grant (or privileged super-admin status).
 
         return false;
     }
@@ -114,7 +126,12 @@ class ApplicationAccessService
             return $memo->hasApplicationGrant($user, $applications);
         }
 
-        return $user->applicationAccess()->whereIn('application', $applications)->exists();
+        return $user->applicationAccess()
+            ->whereIn('application', $applications)
+            ->where(function ($q) {
+                $q->where('status', 'active')->orWhereNull('status');
+            })
+            ->exists();
     }
 
     private function hasPermissionSafe(User $user, string $permission): bool
@@ -148,8 +165,12 @@ class ApplicationAccessService
                 $source = 'none';
             }
 
+            $grant = $user->applicationAccess()->where('application', $app)->first();
+            $status = $grant ? ($grant->status ?? 'active') : ($access ? 'active' : 'none');
+
             $result[$app] = [
                 'access' => $access,
+                'status' => $status,
                 'source' => $source
             ];
         }
@@ -170,15 +191,20 @@ class ApplicationAccessService
             return;
         }
 
-        $access = $user->applicationAccess()->firstOrCreate([
+        $access = $user->applicationAccess()->firstOrNew([
             'application' => $application
-        ], [
-            'granted_by' => $grantedBy?->id
         ]);
 
-        if ($access->wasRecentlyCreated) {
+        $wasNew = !$access->exists;
+        $wasSuspended = $access->status === 'suspended';
+
+        $access->status = 'active';
+        $access->granted_by = $grantedBy?->id ?? Auth::id();
+        $access->save();
+
+        if ($wasNew || $wasSuspended) {
             $this->auditLogger->log(
-                'grant_application_access',
+                $wasSuspended ? 'restore_application_access' : 'grant_application_access',
                 $user,
                 "Granted access to application: {$application} for user: {$user->email}",
                 [
@@ -190,6 +216,44 @@ class ApplicationAccessService
                 $grantedBy?->id ?? Auth::id()
             );
         }
+    }
+
+    /**
+     * Suspend explicit application access.
+     */
+    public function suspend(User $user, string $application, ?User $suspendedBy = null, ?string $reason = null): void
+    {
+        if (!in_array($application, self::APPLICATIONS, true)) {
+            throw new \InvalidArgumentException("Invalid application identifier: {$application}");
+        }
+
+        $access = $user->applicationAccess()->where('application', $application)->first();
+        if ($access) {
+            $access->status = 'suspended';
+            $access->save();
+
+            $this->auditLogger->log(
+                'suspend_application_access',
+                $user,
+                "Suspended access to application: {$application} for user: {$user->email}",
+                [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'application' => $application,
+                    'suspended_by' => $suspendedBy?->id ?? Auth::id(),
+                    'reason' => $reason,
+                ],
+                $suspendedBy?->id ?? Auth::id()
+            );
+        }
+    }
+
+    /**
+     * Restore suspended application access.
+     */
+    public function restore(User $user, string $application, ?User $restoredBy = null): void
+    {
+        $this->grant($user, $application, $restoredBy);
     }
 
     /**

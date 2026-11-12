@@ -446,6 +446,10 @@ class DatabaseSeeder extends Seeder
 
         // 11. System, Platform, VMS, and Connect permissions
         $this->call(SystemPermissionSeeder::class);
+
+        // 12. Seed Project Management System departments and roles/permissions
+        $this->call(PmDepartmentSeeder::class);
+        $this->call(PmRolePermissionSeeder::class);
     }
 }
 

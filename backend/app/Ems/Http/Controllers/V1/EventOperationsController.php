@@ -66,6 +66,18 @@ class EventOperationsController extends EmsController
         );
     }
 
+    public function cancellationHistory(Event $event): JsonResponse
+    {
+        $this->authorize('viewCancellationHistory', $event);
+
+        $history = app(\App\Ems\Services\RegistrationCancellationService::class)->getEventCancellationHistory($event);
+
+        return ApiResponse::success(
+            \App\Ems\Http\Resources\CancellationAuditResource::collection($history),
+            'Event cancellation history retrieved.'
+        );
+    }
+
     public function recentCheckIns(Event $event): JsonResponse
     {
         $this->authorize('viewOperations', $event);

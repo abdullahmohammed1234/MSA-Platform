@@ -40,6 +40,7 @@ const appsList = [
   { key: 'mlibms', label: 'MLibMS (Library)' },
   { key: 'vms', label: 'VMS (Volunteering)' },
   { key: 'connect', label: 'MSA Connect' },
+  { key: 'projects', label: 'PMS (Projects)' },
   { key: 'admin-portal', label: 'Admin Portal' },
 ];
 

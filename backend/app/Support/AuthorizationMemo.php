@@ -105,7 +105,12 @@ final class AuthorizationMemo
     {
         if (! isset($this->applications[$user->id])) {
             $this->applications[$user->id] = array_fill_keys(
-                $user->applicationAccess()->pluck('application')->all(),
+                $user->applicationAccess()
+                    ->where(function ($q) {
+                        $q->where('status', 'active')->orWhereNull('status');
+                    })
+                    ->pluck('application')
+                    ->all(),
                 true
             );
         }

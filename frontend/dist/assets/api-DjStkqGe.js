@@ -1,1 +1,0 @@
-function e(){return`https://api.sfumsa.ca/api/v1`.replace(/\/$/,``)}function t(){return e().replace(/\/api\/v1\/?$/,``)}function n(e){let n=t();return e.replace(/^https?:\/\/localhost(?::\d+)?/i,n)}export{t as n,n as r,e as t};

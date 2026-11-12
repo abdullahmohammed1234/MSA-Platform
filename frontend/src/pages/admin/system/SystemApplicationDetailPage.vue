@@ -15,6 +15,7 @@ const error = ref<string | null>(null)
 const app = ref<SystemApplication | null>(null)
 
 const systemId = computed(() => String(route.meta.systemId || route.params.systemId || ''))
+const isExternal = (url?: string | null) => !!url && /^(https?:)?\/\//i.test(url)
 
 const load = async (refresh = false) => {
   if (!systemId.value) {
@@ -58,8 +59,18 @@ onMounted(() => load(false))
           <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': loading }" />
           Refresh
         </button>
+        <a
+          v-if="app?.url && isExternal(app.url)"
+          :href="app.url"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
+        >
+          Open application
+          <ExternalLink class="h-4 w-4" />
+        </a>
         <router-link
-          v-if="app?.url"
+          v-else-if="app?.url"
           :to="app.url"
           class="inline-flex items-center gap-2 rounded-xl bg-primary px-3 py-2 text-sm font-semibold text-white hover:opacity-90"
         >

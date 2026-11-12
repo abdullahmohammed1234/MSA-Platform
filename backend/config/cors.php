@@ -2,6 +2,7 @@
 
 $frontendUrl = rtrim(trim((string) env('FRONTEND_URL', 'http://localhost:5173')), '/');
 $connectUrl = rtrim(trim((string) env('CONNECT_URL', 'http://localhost:5174')), '/');
+$projectsUrl = rtrim(trim((string) env('PROJECTS_URL', 'http://localhost:5175')), '/');
 $extraOrigins = array_values(array_filter(array_map(
     fn (string $origin): string => rtrim(trim($origin), '/'),
     explode(',', (string) env('CORS_ALLOWED_ORIGINS', ''))
@@ -10,10 +11,13 @@ $extraOrigins = array_values(array_filter(array_map(
 $allowedOrigins = array_values(array_unique(array_filter([
     $frontendUrl,
     $connectUrl,
+    $projectsUrl,
     'http://localhost:5173',
     'http://localhost:5174',
+    'http://localhost:5175',
     'http://127.0.0.1:5173',
     'http://127.0.0.1:5174',
+    'http://127.0.0.1:5175',
     ...$extraOrigins,
 ])));
 

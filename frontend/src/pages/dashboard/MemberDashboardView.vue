@@ -25,10 +25,13 @@ import {
   CheckCircle,
   UserCheck
 } from 'lucide-vue-next';
+import { getPmsLaunchUrl, getPmsBaseUrl } from '@/config/api';
+import { ssoService } from '@/services/sso/ssoService';
 
 const dashboardData = ref<DashboardDataResponse | null>(null);
 const announcements = ref<AnnouncementItem[]>([]);
 const isLoading = ref<boolean>(true);
+const isLaunchingPms = ref<boolean>(false);
 const errorMessage = ref<string | null>(null);
 const markingNotificationId = ref<string | number | null>(null);
 
@@ -84,6 +87,33 @@ const adminApps = computed(() => {
   if (!dashboardData.value) return [];
   return dashboardData.value.applications.filter((app) => app.is_admin);
 });
+
+const isExternal = (path: string) => {
+  return /^https?:\/\//i.test(path);
+};
+
+const resolveAppUrl = (app: { slug: string; path: string }): string => {
+  if (app.slug === 'pms' || app.slug === 'projects') {
+    return getPmsLaunchUrl();
+  }
+  return app.path;
+};
+
+const handleLaunch = async (app: { slug: string; path: string }, event: MouseEvent) => {
+  if (app.slug === 'pms' || app.slug === 'projects') {
+    event.preventDefault();
+    if (isLaunchingPms.value) return;
+    isLaunchingPms.value = true;
+    try {
+      const launchUrl = await ssoService.getPmsSsoLaunchUrl();
+      window.open(launchUrl, '_blank', 'noopener,noreferrer');
+    } catch {
+      window.open(getPmsBaseUrl(), '_blank', 'noopener,noreferrer');
+    } finally {
+      isLaunchingPms.value = false;
+    }
+  }
+};
 
 onMounted(async () => {
   fetchDashboard();
@@ -529,8 +559,20 @@ onMounted(async () => {
               </div>
 
               <div class="mt-4 pt-2 border-t border-neutral-ivory/60 flex justify-end">
+                <a 
+                  v-if="isExternal(resolveAppUrl(app))"
+                  :href="resolveAppUrl(app)"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  @click="handleLaunch(app, $event)"
+                  class="px-3.5 py-1.5 bg-primary text-white rounded-xl text-[10px] font-extrabold uppercase tracking-wider hover:bg-secondary transition-all inline-flex items-center gap-1 shadow-soft"
+                >
+                  Launch
+                  <ExternalLink class="h-3 w-3" />
+                </a>
                 <router-link 
-                  :to="app.path" 
+                  v-else
+                  :to="resolveAppUrl(app)" 
                   class="px-3.5 py-1.5 bg-primary text-white rounded-xl text-[10px] font-extrabold uppercase tracking-wider hover:bg-secondary transition-all inline-flex items-center gap-1 shadow-soft"
                 >
                   Launch
@@ -562,8 +604,20 @@ onMounted(async () => {
                 </div>
 
                 <div class="mt-4 pt-2 border-t border-neutral-ivory/60 flex justify-end">
+                  <a 
+                    v-if="isExternal(resolveAppUrl(app))"
+                    :href="resolveAppUrl(app)"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    @click="handleLaunch(app, $event)"
+                    class="px-3.5 py-1.5 bg-neutral-black text-white hover:bg-purple-950 rounded-xl text-[10px] font-extrabold uppercase tracking-wider transition-all inline-flex items-center gap-1 shadow-soft"
+                  >
+                    Open Portal
+                    <ExternalLink class="h-3 w-3" />
+                  </a>
                   <router-link 
-                    :to="app.path" 
+                    v-else
+                    :to="resolveAppUrl(app)" 
                     class="px-3.5 py-1.5 bg-neutral-black text-white hover:bg-purple-950 rounded-xl text-[10px] font-extrabold uppercase tracking-wider transition-all inline-flex items-center gap-1 shadow-soft"
                   >
                     Open Portal

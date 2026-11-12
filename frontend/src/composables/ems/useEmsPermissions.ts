@@ -42,6 +42,9 @@ export function useEmsPermissions() {
 
     canViewAttendees: computed(() => can(EMS_PERMISSIONS.REGISTRATIONS_VIEW)),
     canCreateRegistrations: computed(() => can(EMS_PERMISSIONS.REGISTRATIONS_CREATE)),
+    canDeleteRegistrations: computed(() => can(EMS_PERMISSIONS.REGISTRATIONS_DELETE)),
+    canCancelRegistrations: computed(() => can(EMS_PERMISSIONS.REGISTRATIONS_DELETE)),
+    canViewCancellationHistory: computed(() => can(EMS_PERMISSIONS.REGISTRATIONS_VIEW)),
     canViewCheckIns: computed(() => can(EMS_PERMISSIONS.CHECK_INS_VIEW)),
     canCheckIn: computed(() => can(EMS_PERMISSIONS.CHECK_INS_PERFORM)),
     canUndoCheckIn: computed(() => can(EMS_PERMISSIONS.CHECK_INS_UNDO)),

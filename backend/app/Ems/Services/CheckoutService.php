@@ -177,8 +177,12 @@ class CheckoutService
 
             $registration->load(['tickets.event.category', 'event.category', 'event.organizer', 'ticketType', 'order']);
 
+            $cancellationService = app(\App\Ems\Services\RegistrationCancellationService::class);
+            $guestToken = $cancellationService->generateGuestCancellation($registration);
+            $cancellationUrl = $guestToken ? $cancellationService->guestCancellationUrl($guestToken) : null;
+
             RegistrationCreated::dispatch($registration, $user);
-            QueueRegistrationConfirmation::dispatch($registration->id, false);
+            QueueRegistrationConfirmation::dispatch($registration->id, false, $cancellationUrl);
 
             Log::channel((string) config('ems.logging.channel', 'ems'))
                 ->info('ems.checkout.free_completed', [

@@ -166,6 +166,10 @@ class CheckInService
             ->with(['tickets.checkIn', 'payments'])
             ->firstOrFail();
 
+        if ($registration->status === RegistrationStatus::Cancelled) {
+            throw CheckInException::inactiveTicket('Registration has been cancelled.');
+        }
+
         $ticket = $registration->tickets->first(fn (Ticket $t) => $t->checkIn === null && $t->status === TicketStatus::Issued)
             ?? $registration->tickets->first();
 
@@ -462,6 +466,10 @@ class CheckInService
 
                 if (CheckIn::query()->where('ticket_id', $locked->id)->exists()) {
                     throw CheckInException::alreadyCheckedIn();
+                }
+
+                if ($registration->status === RegistrationStatus::Cancelled) {
+                    throw CheckInException::inactiveTicket('Registration has been cancelled.');
                 }
 
                 if ($locked->status !== TicketStatus::Issued) {

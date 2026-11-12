@@ -113,6 +113,25 @@ export function useAppAccess() {
     );
   });
 
+  const hasProjectsAccess = computed(() => {
+    if (authStore.user?.application_access?.projects) {
+      return authStore.user.application_access.projects.access;
+    }
+    if (authStore.user?.application_access?.pms) {
+      return authStore.user.application_access.pms.access;
+    }
+    return (
+      isSuperOrAdmin.value ||
+      authStore.roles.includes('pms-administrator') ||
+      authStore.roles.includes('president') ||
+      authStore.roles.includes('executive') ||
+      authStore.roles.includes('department-lead') ||
+      authStore.roles.includes('coordinator') ||
+      authStore.permissions.includes('pm.access') ||
+      authStore.permissions.includes('pm.view')
+    );
+  });
+
   return {
     hasCmsAccess,
     hasDamsAccess,
@@ -125,6 +144,7 @@ export function useAppAccess() {
     hasVmsAccess,
     hasVolunteeringAccess,
     hasConnectAccess,
+    hasProjectsAccess,
     isSuperOrAdmin,
   };
 }

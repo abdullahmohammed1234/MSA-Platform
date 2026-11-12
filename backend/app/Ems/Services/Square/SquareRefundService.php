@@ -690,11 +690,13 @@ class SquareRefundService
         }
 
         $inventoryReleased = (bool) data_get($payment->metadata, 'refund_inventory_released', false);
+        $targetRefundStatus = $full ? \App\Ems\Enums\RefundStatus::Succeeded : \App\Ems\Enums\RefundStatus::PartiallyRefunded;
 
-        if ($full) {
-            foreach ($registrations as $registration) {
-                $registration->status = RegistrationStatus::Refunded;
-                $registration->save();
+        foreach ($registrations as $registration) {
+            if ($full) {
+                if ($registration->status !== RegistrationStatus::Cancelled) {
+                    $registration->status = RegistrationStatus::Refunded;
+                }
 
                 $registration->loadMissing('tickets');
                 foreach ($registration->tickets as $ticket) {
@@ -706,12 +708,29 @@ class SquareRefundService
                 }
             }
 
-            if (! $inventoryReleased) {
-                $metadata = $payment->metadata ?? [];
-                $metadata['refund_inventory_released'] = true;
-                $payment->metadata = $metadata;
-                $payment->save();
-            }
+            $registration->refund_status = $targetRefundStatus;
+            $registration->refund_amount = $completed;
+            $registration->save();
+
+            \App\Ems\Models\CancellationAudit::query()
+                ->where('registration_id', $registration->id)
+                ->where(function ($q) use ($refund): void {
+                    $q->where('square_refund_id', $refund->id)
+                        ->orWhereNull('square_refund_id');
+                })
+                ->update([
+                    'refund_status' => $targetRefundStatus->value,
+                    'provider_refund_id' => $refund->provider_refund_id,
+                    'square_refund_id' => $refund->id,
+                    'refunded_at' => now(),
+                ]);
+        }
+
+        if ($full && ! $inventoryReleased) {
+            $metadata = $payment->metadata ?? [];
+            $metadata['refund_inventory_released'] = true;
+            $payment->metadata = $metadata;
+            $payment->save();
         }
 
         Log::channel((string) config('ems.logging.channel', 'ems'))

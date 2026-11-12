@@ -23,6 +23,13 @@ Schedule::command('vms:send-reminders')->everyFifteenMinutes()->withoutOverlappi
 // Expiry is enforced at authentication time by Sanctum; this only reclaims rows.
 // --hours must stay non-negative: a negative value deletes still-valid tokens.
 Schedule::command('sanctum:prune-expired', ['--hours' => 24])->dailyAt('03:30')->withoutOverlapping(60);
+// Prune expired and consumed SSO single-use exchange tickets daily
+Schedule::command('sso:clean-tickets', ['--hours' => 24])->dailyAt('04:00')->withoutOverlapping(60);
+// Reconcile and clean orphaned PMS attachment files daily
+Schedule::command('pm:clean-attachments')->dailyAt('04:30')->withoutOverlapping(60);
+// Phase 14 Stage 2: Scheduled deadline reminders and daily digests
+Schedule::command('pm:send-deadline-reminders')->hourly()->withoutOverlapping(30);
+Schedule::command('pm:send-daily-digest')->dailyAt('08:00')->withoutOverlapping(60);
 
 // Bounded queue worker for shared hosting (CloudLinux/cPanel): processes queued jobs
 // without maintaining a long-running supervisor daemon.

@@ -69,6 +69,12 @@ export const PERMISSION_SYSTEMS: PermissionSystemGroup[] = [
     description: 'MSA Connect application configuration, member feeds, and health.',
   },
   {
+    id: 'pms',
+    name: 'PMS — Project Management System',
+    shortName: 'PMS',
+    description: 'Projects, tasks, milestones, departmental collaboration, and project-level roles.',
+  },
+  {
     id: 'general',
     name: 'General / Platform',
     shortName: 'General / Platform',
@@ -249,13 +255,40 @@ export const SYSTEM_PERMISSION_SLUGS: Record<string, string[]> = {
     'platform.operations',
     'manage_support',
   ],
+  pms: [
+    'pm.access',
+    'pm.view',
+    'pm.admin',
+    'pm.projects.view',
+    'pm.projects.create',
+    'pm.projects.update',
+    'pm.projects.delete',
+    'pm.projects.manage',
+    'pm.departments.view',
+    'pm.departments.manage',
+    'pm.tasks.view',
+    'pm.tasks.create',
+    'pm.tasks.update',
+    'pm.tasks.delete',
+    'pm.tasks.assign',
+    'pm.tasks.manage',
+    'pm.members.view',
+    'pm.members.manage',
+    'pm.invitations.create',
+    'pm.invitations.manage',
+    'pm.roles.view',
+    'pm.roles.manage',
+    'pm.permissions.view',
+    'pm.permissions.manage',
+    'pm.settings.manage',
+  ],
 };
 
 // Total count of all authoritative registered permissions in the platform
 export const TOTAL_PLATFORM_PERMISSIONS = Object.values(SYSTEM_PERMISSION_SLUGS).reduce(
   (acc, slugs) => acc + slugs.length,
   0
-); // Exactly 149
+);
 
 /**
  * Checks whether a permission slug is known in the authoritative registry.
@@ -308,6 +341,7 @@ export function classifyPermissionSystem(perm: Pick<Permission, 'slug' | 'module
   if (mod === 'vms') return 'vms';
   if (mod === 'academy' || mod === 'dams') return 'dams';
   if (mod === 'connect') return 'connect';
+  if (mod === 'pms' || mod === 'pm' || mod === 'projects') return 'pms';
 
   // 3. Namespace prefix matching
   if (
@@ -330,6 +364,7 @@ export function classifyPermissionSystem(perm: Pick<Permission, 'slug' | 'module
   if (slug.startsWith('vms.')) return 'vms';
   if (slug.startsWith('connect.')) return 'connect';
   if (slug.startsWith('cms.')) return 'cms';
+  if (slug.startsWith('pm.')) return 'pms';
 
   // 4. Default fallback to general platform administration
   return 'general';

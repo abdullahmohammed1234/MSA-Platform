@@ -1,0 +1,1 @@
+import{t as e}from"./api-xelzuKGu.js";import{i as t,r as n}from"./api-Z7HxHaAe.js";var r={async requestTicket(t=`pms`){return(await e.post(`/sso/tickets`,{service:t})).data.ticket},async getPmsSsoLaunchUrl(){try{return t(await this.requestTicket(`pms`))}catch(e){return console.error(`Failed to issue SSO ticket, falling back to standard login:`,e),n()}}};export{r as t};

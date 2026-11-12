@@ -14,7 +14,7 @@ class NotificationController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
-        $query = $user->customNotifications();
+        $query = $user->customNotifications()->accessibleToUser($user);
 
         if ($request->has('unread') && filter_var($request->unread, FILTER_VALIDATE_BOOLEAN)) {
             $query->unread();
@@ -48,9 +48,17 @@ class NotificationController extends Controller
     public function unread(Request $request)
     {
         $user = $request->user();
-        $unreadQuery = $user->customNotifications()->unread();
+        $unreadQuery = $user->customNotifications()->unread()->accessibleToUser($user);
+
+        if ($request->has('category') && !empty($request->category)) {
+            $unreadQuery->where(function ($q) use ($request) {
+                $q->where('type', 'like', '%' . $request->category . '%')
+                  ->orWhere('data->type', 'like', '%' . $request->category . '%');
+            });
+        }
+
         $unreadCount = (clone $unreadQuery)->count();
-        $latestUnread = $unreadQuery->limit(5)->get();
+        $latestUnread = $unreadQuery->latest()->limit(10)->get();
 
         return response()->json([
             'unread_count' => $unreadCount,
@@ -82,7 +90,16 @@ class NotificationController extends Controller
     public function readAll(Request $request)
     {
         $user = $request->user();
-        $user->customNotifications()->unread()->update(['read_at' => now()]);
+        $query = $user->customNotifications()->unread()->accessibleToUser($user);
+
+        if ($request->has('category') && !empty($request->category)) {
+            $query->where(function ($q) use ($request) {
+                $q->where('type', 'like', '%' . $request->category . '%')
+                  ->orWhere('data->type', 'like', '%' . $request->category . '%');
+            });
+        }
+
+        $query->update(['read_at' => now()]);
 
         return response()->json([
             'success' => true,

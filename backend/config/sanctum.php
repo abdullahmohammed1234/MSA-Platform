@@ -5,7 +5,7 @@ use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Laravel\Sanctum\Http\Middleware\AuthenticateSession;
 use Laravel\Sanctum\Sanctum;
 
-$statefulHosts = 'localhost,localhost:5173,localhost:5174,127.0.0.1,127.0.0.1:5173,127.0.0.1:5174,127.0.0.1:8000,::1';
+$statefulHosts = 'localhost,localhost:5173,localhost:5174,localhost:5175,127.0.0.1,127.0.0.1:5173,127.0.0.1:5174,127.0.0.1:5175,127.0.0.1:8000,::1';
 $appHost = Sanctum::currentApplicationUrlWithPort();
 
 if ($appHost) {
@@ -26,6 +26,14 @@ $connectHost = parse_url($connectUrl, PHP_URL_HOST);
 if ($connectHost) {
     $connectPort = parse_url($connectUrl, PHP_URL_PORT);
     $statefulHosts .= ','.$connectHost.($connectPort ? ':'.$connectPort : '');
+}
+
+$projectsUrl = (string) env('PROJECTS_URL', 'http://localhost:5175');
+$projectsHost = parse_url($projectsUrl, PHP_URL_HOST);
+
+if ($projectsHost) {
+    $projectsPort = parse_url($projectsUrl, PHP_URL_PORT);
+    $statefulHosts .= ','.$projectsHost.($projectsPort ? ':'.$projectsPort : '');
 }
 
 $extraOrigins = array_values(array_filter(array_map(

@@ -124,6 +124,14 @@ class TemplateRenderer
         $shiftName = (string) ($shift?->name ?? $extra['shift_name'] ?? '');
         $instructions = (string) ($extra['instructions'] ?? $opportunity?->description ?? '');
 
+        $cancellationUrl = (string) ($extra['cancellation_url'] ?? '');
+        $cancellationLinkHtml = $cancellationUrl !== ''
+            ? '<p style="margin-top:16px;font-size:13px;color:#666;">Need to cancel your registration? <a href="' . e($cancellationUrl) . '" style="color:#640c0e;text-decoration:underline;">Cancel my ticket</a></p>'
+            : '';
+        $cancellationLinkText = $cancellationUrl !== ''
+            ? "Cancel your registration: {$cancellationUrl}"
+            : '';
+
         return [
             'attendee_name' => $volunteerName,
             'attendee_email' => $volunteerEmail,
@@ -143,7 +151,11 @@ class TemplateRenderer
             'instructions' => $instructions,
             'change_summary' => (string) ($extra['change_summary'] ?? ''),
             'promotion_deadline' => (string) ($extra['promotion_deadline'] ?? ''),
-            'cancellation_reason' => (string) ($extra['cancellation_reason'] ?? $event?->cancellation_reason ?? ''),
+            'cancellation_reason' => (string) ($extra['cancellation_reason'] ?? $registration?->cancellation_reason ?? $event?->cancellation_reason ?? ''),
+            'cancellation_url' => $cancellationUrl,
+            'cancellation_link' => $cancellationLinkHtml,
+            'cancellation_link_text' => $cancellationLinkText,
+            'my_tickets_url' => $frontendUrl . '/my-tickets',
             'ticket_type' => (string) ($registration?->ticketType?->name ?? $extra['ticket_type'] ?? ''),
             'registration_number' => (string) ($registration?->reference ?? ''),
             'ticket_number' => (string) ($firstTicket?->code ?? ''),

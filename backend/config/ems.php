@@ -87,6 +87,8 @@ return [
             'password_confirmation',
             'current_password',
             'token',
+            'cancellation_token',
+            'raw_token',
             'access_token',
             'refresh_token',
             'api_key',

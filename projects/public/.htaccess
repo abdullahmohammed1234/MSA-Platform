@@ -1,0 +1,47 @@
+# ==============================================================================
+# SFU MSA Project Management System (PMS) — Subdomain Apache Configuration
+# Canonical Host: https://projects.sfumsa.ca
+# Document Root: /home2/sfums1d5/public_html/projects
+# ==============================================================================
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # 1. Enforce HTTPS
+  RewriteCond %{HTTPS} off
+  RewriteCond %{HTTP_HOST} ^projects\.sfumsa\.ca$ [NC]
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # 2. Never serve dotfiles or build/backup leftovers (.well-known allowed for ACME SSL)
+  RewriteRule (^|/)\.(?!well-known/) - [F,L]
+  RewriteRule \.(map|sql|bak|log|zip|gz|env)$ - [F,L,NC]
+
+  # 3. SPA History Mode: Pass existing files and directories directly
+  RewriteRule ^index\.html$ - [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule . /index.html [L]
+</IfModule>
+
+# Disable directory browsing
+Options -Indexes
+
+# Security Headers
+<IfModule mod_headers.c>
+  Header set X-Content-Type-Options "nosniff"
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set X-XSS-Protection "1; mode=block"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+  Header set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+</IfModule>
+
+# Caching for static assets vs dynamic index.html
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|css|woff2|png|svg|webp|ico|jpg|jpeg)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  <FilesMatch "^(index\.html|robots\.txt)$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </FilesMatch>
+</IfModule>

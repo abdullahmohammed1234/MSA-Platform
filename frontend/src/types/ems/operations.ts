@@ -40,6 +40,42 @@ export interface EmsAttendee {
   order_uuid?: string | null;
   source_channel?: string | null;
   source_channel_label?: string | null;
+  type?: string;
+  is_free?: boolean;
+  amount_due?: number;
+  amount_paid?: number;
+  amount_refunded?: number;
+  currency?: string;
+  refund_status?: string | null;
+  refund_status_label?: string | null;
+  cancellation_reason?: string | null;
+  cancelled_at?: string | null;
+  cancellation_initiator_type?: string | null;
+  can_cancel?: boolean;
+  can_refund?: boolean;
+}
+
+export interface EmsCancellationAudit {
+  uuid: string;
+  registration_uuid?: string;
+  registration_reference?: string;
+  event_uuid?: string;
+  event_name?: string;
+  ticket_type_name?: string;
+  attendee_name?: string;
+  attendee_email?: string;
+  initiator_type: 'guest' | 'member' | 'admin';
+  initiator_name?: string | null;
+  initiator_email?: string | null;
+  reason: string;
+  refund_requested: boolean;
+  refund_amount?: number | null;
+  refund_status: string;
+  refund_status_label?: string;
+  provider_refund_id?: string | null;
+  square_refund_uuid?: string | null;
+  cancelled_at?: string | null;
+  refunded_at?: string | null;
 }
 
 export interface EmsCheckIn {

@@ -287,9 +287,13 @@ class SystemsControlPlaneService
 
         $frontendBase = rtrim((string) config('app.frontend_url', ''), '/');
         $path = (string) ($meta['url'] ?? '/');
-        $launchUrl = $path === '/'
-            ? ($frontendBase !== '' ? $frontendBase.'/' : '/')
-            : ($frontendBase !== '' ? $frontendBase.$path : $path);
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            $launchUrl = $path;
+        } else {
+            $launchUrl = $path === '/'
+                ? ($frontendBase !== '' ? $frontendBase.'/' : '/')
+                : ($frontendBase !== '' ? $frontendBase.$path : $path);
+        }
 
         $consolePath = in_array($id, ['ems', 'main-website', 'dawah-academy'], true)
             ? ($meta['admin_path'] ?? null).'/console'
@@ -404,6 +408,14 @@ class SystemsControlPlaneService
                     : (Schema::hasTable('conversations')
                         ? $this->tableReachable('conversations', \App\Models\Conversation::class, 'MSA Connect conversations store')
                         : $this->tableReachable('device_subscriptions', \App\Models\DeviceSubscription::class, 'MSA Connect device subscriptions store')),
+                'msa-connect' => Schema::hasTable('conversations')
+                    ? $this->tableReachable('conversations', \App\Models\Conversation::class, 'MSA Connect conversations store')
+                    : (Schema::hasTable('device_subscriptions')
+                        ? $this->tableReachable('device_subscriptions', \App\Models\DeviceSubscription::class, 'MSA Connect device subscriptions store')
+                        : ['status' => self::STATUS_OPERATIONAL, 'message' => 'MSA Connect member client store']),
+                'pms', 'projects' => Schema::hasTable('pm_projects')
+                    ? $this->tableReachable('pm_projects', \App\Pm\Models\PmProject::class, 'PMS projects store')
+                    : ['status' => self::STATUS_OPERATIONAL, 'message' => 'PMS operational store'],
                 default => [
                     'status' => self::STATUS_UNKNOWN,
                     'message' => 'No application-specific probe configured',

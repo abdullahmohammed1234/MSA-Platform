@@ -10,8 +10,8 @@ import {
 import type { Permission } from '@/types/auth';
 
 describe('Authoritative Platform Permission Inventory & Classification', () => {
-  it('contains exactly 149 registered platform permissions across 10 system groups', () => {
-    expect(TOTAL_PLATFORM_PERMISSIONS).toBe(149);
+  it('contains exactly 174 registered platform permissions across 11 system groups', () => {
+    expect(TOTAL_PLATFORM_PERMISSIONS).toBe(174);
 
     expect(SYSTEM_PERMISSION_SLUGS.ems.length).toBe(55);
     expect(SYSTEM_PERMISSION_SLUGS.cms.length).toBe(7);
@@ -22,11 +22,12 @@ describe('Authoritative Platform Permission Inventory & Classification', () => {
     expect(SYSTEM_PERMISSION_SLUGS.mlibms.length).toBe(9);
     expect(SYSTEM_PERMISSION_SLUGS.dams.length).toBe(15);
     expect(SYSTEM_PERMISSION_SLUGS.connect.length).toBe(2);
+    expect(SYSTEM_PERMISSION_SLUGS.pms.length).toBe(25);
     expect(SYSTEM_PERMISSION_SLUGS.general.length).toBe(23);
 
-    // Sum of all system permissions must equal 149
+    // Sum of all system permissions must equal 174
     const totalSlugs = Object.values(SYSTEM_PERMISSION_SLUGS).reduce((sum, list) => sum + list.length, 0);
-    expect(totalSlugs).toBe(149);
+    expect(totalSlugs).toBe(174);
   });
 
   it('classifies every single one of the 149 inventory permissions into its authoritative system', () => {
@@ -112,11 +113,11 @@ describe('Authoritative Platform Permission Inventory & Classification', () => {
         });
       }
     }
-    expect(fullMockPermissions.length).toBe(149);
+    expect(fullMockPermissions.length).toBe(174);
 
-    // All Systems view has all 149
+    // All Systems view has all 174
     const all = filterPermissionsByGroup(fullMockPermissions, 'all');
-    expect(all.length).toBe(149);
+    expect(all.length).toBe(174);
 
     // EMS view has exactly 55 and excludes non-EMS
     const ems = filterPermissionsByGroup(fullMockPermissions, 'ems');
@@ -156,6 +157,11 @@ describe('Authoritative Platform Permission Inventory & Classification', () => {
     // Connect view has exactly 2
     const connect = filterPermissionsByGroup(fullMockPermissions, 'connect');
     expect(connect.length).toBe(2);
+
+    // PMS view has exactly 25
+    const pms = filterPermissionsByGroup(fullMockPermissions, 'pms');
+    expect(pms.length).toBe(25);
+    expect(pms.every((p) => SYSTEM_PERMISSION_SLUGS.pms.includes(p.slug))).toBe(true);
 
     // General view has exactly 23
     const general = filterPermissionsByGroup(fullMockPermissions, 'general');
