@@ -59,14 +59,11 @@ const onQuickStatusToggle = async (task: Task) => {
 </script>
 
 <template>
-  <div class="space-y-6 animate-in fade-in duration-200">
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-extrabold text-[#640c0e] font-display tracking-tight">
-          My Assigned Deliverables
-        </h1>
-        <p class="text-xs text-[#6b7280] mt-1">
+  <div class="flex flex-col gap-[var(--spacing-section)]">
+    <header class="pm-page-header">
+      <div class="min-w-0">
+        <h1 class="pm-page-title">My Assigned Deliverables</h1>
+        <p class="pm-page-subtitle">
           Track and manage tasks assigned to you across all SFU MSA projects.
         </p>
       </div>
@@ -85,19 +82,19 @@ const onQuickStatusToggle = async (task: Task) => {
           <option value="completed">Completed</option>
         </select>
       </div>
-    </div>
+    </header>
 
     <!-- Loading -->
-    <div v-if="isLoading" class="py-24 flex items-center justify-center text-[#6b7280]">
-      <Loader2 class="w-8 h-8 animate-spin text-[#640c0e]" />
+    <div v-if="isLoading" class="py-20 flex items-center justify-center text-[#6b7280]">
+      <Loader2 class="w-7 h-7 animate-spin text-[#640c0e]" />
     </div>
 
     <!-- Tasks List -->
-    <div v-else-if="tasks.length > 0" class="bg-white rounded-2xl border border-[#ebe8de] shadow-xs divide-y divide-[#ebe8de] overflow-hidden">
+    <div v-else-if="tasks.length > 0" class="pm-panel divide-y divide-[#ebe8de]">
       <div
         v-for="task in tasks"
         :key="task.uuid"
-        class="p-4 flex items-center justify-between hover:bg-[#fbfbf9] transition-colors group cursor-pointer"
+        class="p-4 flex items-center justify-between hover:bg-[#fffbf4] transition-colors group cursor-pointer"
         @click="openTask(task)"
       >
         <div class="flex items-center gap-3 min-w-0">

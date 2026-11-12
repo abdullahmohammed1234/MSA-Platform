@@ -36,30 +36,27 @@ const onProjectCreated = (uuid: string) => {
 </script>
 
 <template>
-  <div class="space-y-6 animate-in fade-in duration-200">
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-extrabold text-[#640c0e] font-display tracking-tight">
-          Project Initiatives
-        </h1>
-        <p class="text-xs text-[#6b7280] mt-1">
+  <div class="flex flex-col gap-[var(--spacing-section)]">
+    <header class="pm-page-header">
+      <div class="min-w-0">
+        <h1 class="pm-page-title">Project Initiatives</h1>
+        <p class="pm-page-subtitle">
           Explore and manage department-private and shared MSA projects.
         </p>
       </div>
 
       <button
         type="button"
+        class="pm-btn pm-btn-primary"
         @click="showCreateModal = true"
-        class="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold bg-[#640c0e] text-white hover:bg-[#7e1012] shadow-xs hover:shadow-brand transition-all"
       >
         <Plus class="w-4 h-4" />
         <span>New Project</span>
       </button>
-    </div>
+    </header>
 
     <!-- Filters & Search Toolbar -->
-    <div class="bg-white rounded-2xl border border-[#ebe8de] p-4 shadow-xs space-y-4">
+    <div class="pm-panel p-4 space-y-4">
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <!-- Search Input -->
         <div class="relative">

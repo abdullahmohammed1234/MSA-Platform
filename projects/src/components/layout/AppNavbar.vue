@@ -42,7 +42,9 @@ const handleOutsideClick = (e: MouseEvent) => {
 
 onMounted(async () => {
   document.addEventListener('click', handleOutsideClick);
-  await notificationStore.fetchUnreadCount();
+  if (authStore.token !== 'layout-preview') {
+    await notificationStore.fetchUnreadCount();
+  }
 });
 
 onUnmounted(() => {
@@ -56,11 +58,11 @@ const onLogout = async () => {
 </script>
 
 <template>
-  <header class="h-16 border-b border-[#ebe8de] bg-white/90 backdrop-blur-md sticky top-0 z-40 px-3 sm:px-4 md:px-6 flex items-center justify-between shadow-xs safe-area-top safe-area-pad">
-    <div class="flex items-center gap-2 sm:gap-3 min-w-0">
+  <header class="h-14 sm:h-16 border-b border-[#ebe8de] bg-white/90 backdrop-blur-md sticky top-0 z-40 px-3 sm:px-5 lg:px-6 flex items-center justify-between shadow-xs safe-area-top safe-area-pad">
+    <div class="flex items-center gap-3 sm:gap-3.5 min-w-0">
       <button
         type="button"
-        class="lg:hidden touch-target p-2 rounded-xl text-[#6b7280] hover:text-[#640c0e] hover:bg-[#fffbf4] transition-colors"
+        class="lg:hidden touch-target p-2 -ml-1 rounded-xl text-[#6b7280] hover:text-[#640c0e] hover:bg-[#fffbf4] transition-colors"
         aria-label="Open navigation menu"
         @click="$emit('toggle-drawer')"
       >
@@ -71,16 +73,16 @@ const onLogout = async () => {
         to="/"
         class="flex items-center gap-2.5 group min-w-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#640c0e] rounded-xl"
       >
-        <div class="relative w-9 h-9 rounded-xl bg-white border border-[#ebe8de] shadow-xs flex items-center justify-center overflow-hidden shrink-0 group-hover:border-[#640c0e]/40 transition-colors">
-          <img src="/logo.webp" alt="SFU MSA logo" class="w-7 h-7 object-contain" />
+        <div class="relative w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-white border border-[#ebe8de] shadow-xs flex items-center justify-center overflow-hidden shrink-0 group-hover:border-[#640c0e]/40 transition-colors">
+          <img src="/logo.webp" alt="SFU MSA logo" class="w-6 h-6 sm:w-7 sm:h-7 object-contain" />
         </div>
         <div class="min-w-0">
           <div class="flex items-center gap-2">
-            <span class="font-extrabold text-[#640c0e] text-base tracking-tight font-display whitespace-nowrap">
+            <span class="font-extrabold text-[#640c0e] text-sm sm:text-base tracking-tight font-display whitespace-nowrap">
               SFU MSA <span class="font-semibold text-[#b02e32]">Projects</span>
             </span>
           </div>
-          <p class="text-[11px] text-[#6b7280] hidden sm:block font-medium truncate">
+          <p class="text-[10px] sm:text-[11px] text-[#6b7280] hidden xs:block sm:block font-medium truncate">
             Project Management System
           </p>
         </div>

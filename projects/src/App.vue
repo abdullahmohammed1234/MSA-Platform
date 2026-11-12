@@ -18,6 +18,9 @@ const drawerOpen = ref(false);
 
 const isAuthPage = computed(() => route.name === 'login');
 const showShell = computed(() => !isAuthPage.value && authStore.isAuthenticated);
+const isWideRoute = computed(() =>
+  route.name === 'project-detail' || route.name === 'resources' || route.name === 'calendar'
+);
 
 const onProjectCreated = (uuid: string) => {
   router.push(`/projects/${uuid}`);
@@ -34,10 +37,18 @@ const onProjectCreated = (uuid: string) => {
     <div v-if="showShell" class="flex-1 flex w-full min-w-0">
       <AppSidebar @open-create-modal="showGlobalCreateModal = true" />
 
-      <main class="flex-1 p-4 sm:p-6 lg:p-8 min-w-0 max-w-full overflow-x-hidden safe-area-pad">
-        <PwaUpdateBanner class="mb-4" />
-        <PwaInstallBanner class="mb-4" />
-        <router-view />
+      <main
+        class="flex-1 min-w-0 max-w-full overflow-x-hidden safe-area-pad"
+        :style="{
+          paddingInline: 'var(--spacing-page-x)',
+          paddingBlock: 'var(--spacing-page-y)',
+        }"
+      >
+        <div :class="isWideRoute ? 'pm-page pm-page--wide' : 'pm-page'">
+          <PwaUpdateBanner />
+          <PwaInstallBanner />
+          <router-view />
+        </div>
       </main>
     </div>
 

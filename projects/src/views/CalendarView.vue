@@ -194,15 +194,14 @@ const agendaEvents = computed(() => {
 </script>
 
 <template>
-  <div class="space-y-6 animate-in fade-in duration-200">
-    <!-- Header with controls -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-extrabold text-[#640c0e] font-display tracking-tight flex items-center gap-2">
-          <Calendar class="w-7 h-7 text-[#640c0e]" />
+  <div class="flex flex-col gap-[var(--spacing-section)]">
+    <header class="pm-page-header">
+      <div class="min-w-0">
+        <h1 class="pm-page-title flex items-center gap-2">
+          <Calendar class="w-6 h-6 sm:w-7 sm:h-7 text-[#640c0e] shrink-0" />
           <span>Internal Calendar</span>
         </h1>
-        <p class="text-xs text-[#6b7280] mt-1">
+        <p class="pm-page-subtitle">
           Monitor multi-day task ranges, milestone targets, and project schedules across MSA.
         </p>
       </div>
@@ -247,10 +246,10 @@ const agendaEvents = computed(() => {
           </button>
         </div>
       </div>
-    </div>
+    </header>
 
     <!-- Filters toolbar -->
-    <div class="bg-white rounded-2xl border border-[#ebe8de] p-3.5 shadow-xs flex flex-wrap items-center justify-between gap-3">
+    <div class="pm-panel p-3.5 flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-2 flex-wrap">
         <button
           type="button"

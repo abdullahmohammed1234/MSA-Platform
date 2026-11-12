@@ -83,9 +83,31 @@ let authInitialized = false;
 router.beforeEach(async (to) => {
   const authStore = useAuthStore();
 
+  // DEV visual QA: ?preview=layout seeds a local shell without calling production APIs.
+  if (import.meta.env.DEV && to.query.preview === 'layout') {
+    const previewUser = {
+      id: 0,
+      name: 'Layout Preview',
+      email: 'preview@sfumsa.ca',
+      is_admin: false,
+    };
+    localStorage.setItem('msa_pm_token', 'layout-preview');
+    localStorage.setItem('msa_pm_user', JSON.stringify(previewUser));
+    authStore.$patch({
+      token: 'layout-preview',
+      user: previewUser as any,
+      departments: [
+        { id: 1, name: 'IT', role: 'Member' } as any,
+        { id: 2, name: 'Events', role: 'Lead' } as any,
+      ],
+    });
+  }
+
   // Initialize auth once on first navigation
   if (!authInitialized) {
-    await authStore.initAuth();
+    if (!(import.meta.env.DEV && to.query.preview === 'layout')) {
+      await authStore.initAuth();
+    }
     authInitialized = true;
   }
 

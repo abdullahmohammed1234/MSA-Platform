@@ -13,9 +13,9 @@ const props = defineProps<{
   size?: number;
 }>();
 
-const chartSize = computed(() => props.size || 180);
-const strokeWidth = 22;
-const radius = computed(() => (chartSize.value - strokeWidth) / 2);
+const chartSize = computed(() => props.size || 140);
+const strokeWidth = computed(() => (chartSize.value < 130 ? 16 : 20));
+const radius = computed(() => (chartSize.value - strokeWidth.value) / 2);
 const circumference = computed(() => 2 * Math.PI * radius.value);
 
 const segments = computed(() => {
@@ -54,8 +54,12 @@ const completionRate = computed(() => {
 </script>
 
 <template>
-  <div class="flex flex-col sm:flex-row items-center gap-6">
-    <!-- Donut SVG -->
+  <div v-if="counts.total === 0" class="pm-empty rounded-xl border border-dashed border-[#ebe8de] bg-[#fffbf4] min-h-[9rem] w-full">
+    <p class="pm-empty-title">No tasks to chart</p>
+    <p>Task status distribution appears once work is underway.</p>
+  </div>
+
+  <div v-else class="flex flex-col sm:flex-row items-center gap-4 sm:gap-5 w-full">
     <div class="relative shrink-0 flex items-center justify-center" :style="{ width: `${chartSize}px`, height: `${chartSize}px` }">
       <svg
         :width="chartSize"
@@ -64,7 +68,6 @@ const completionRate = computed(() => {
         role="img"
         aria-label="Task status distribution chart"
       >
-        <!-- Background track -->
         <circle
           :cx="chartSize / 2"
           :cy="chartSize / 2"
@@ -73,20 +76,6 @@ const completionRate = computed(() => {
           stroke="#f3f4f6"
           :stroke-width="strokeWidth"
         />
-
-        <!-- Empty state circle if 0 tasks -->
-        <circle
-          v-if="counts.total === 0"
-          :cx="chartSize / 2"
-          :cy="chartSize / 2"
-          :r="radius"
-          fill="none"
-          stroke="#e5e7eb"
-          :stroke-width="strokeWidth"
-          stroke-dasharray="4 4"
-        />
-
-        <!-- Segments -->
         <circle
           v-for="seg in segments"
           :key="seg.label"
@@ -102,31 +91,29 @@ const completionRate = computed(() => {
         />
       </svg>
 
-      <!-- Center text -->
       <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span class="text-2xl font-black text-[#1e1e1e] font-display">
+        <span class="text-xl sm:text-2xl font-black text-[#1e1e1e] font-display leading-none">
           {{ completionRate }}%
         </span>
-        <span class="text-[11px] font-semibold text-[#6b7280] uppercase tracking-wider">
+        <span class="text-[10px] font-semibold text-[#6b7280] uppercase tracking-wider mt-1">
           Complete
         </span>
       </div>
     </div>
 
-    <!-- Legend -->
-    <div class="flex-1 grid grid-cols-2 gap-2.5 w-full">
+    <div class="flex-1 grid grid-cols-2 gap-2 w-full min-w-0">
       <div
-        v-for="seg in segments"
+        v-for="seg in segments.filter((s) => s.count > 0)"
         :key="seg.label"
-        class="flex items-center justify-between p-2 rounded-xl bg-[#fbfbf9] border border-[#ebe8de]/70 text-xs"
+        class="flex items-center justify-between gap-2 p-2 rounded-lg bg-[#fffbf4] border border-[#ebe8de]/80 text-[11px] sm:text-xs min-w-0"
       >
-        <div class="flex items-center gap-2 truncate">
-          <span class="w-2.5 h-2.5 rounded-full shrink-0" :style="{ backgroundColor: seg.color }"></span>
+        <div class="flex items-center gap-1.5 min-w-0">
+          <span class="w-2 h-2 rounded-full shrink-0" :style="{ backgroundColor: seg.color }" />
           <span class="font-medium text-[#4b5563] truncate">{{ seg.label }}</span>
         </div>
-        <div class="flex items-center gap-1.5 font-bold shrink-0">
+        <div class="flex items-center gap-1 font-bold shrink-0">
           <span class="text-[#1e1e1e]">{{ seg.count }}</span>
-          <span class="text-[10px] text-[#9ca3af]">({{ seg.percent }}%)</span>
+          <span class="text-[10px] text-[#9ca3af]">{{ seg.percent }}%</span>
         </div>
       </div>
     </div>

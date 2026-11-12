@@ -102,12 +102,11 @@ const getNotificationIcon = (type?: string) => {
 </script>
 
 <template>
-  <div class="max-w-5xl mx-auto py-6 sm:py-8 px-4 sm:px-6 space-y-6">
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-black text-[#1e1e1e] font-display flex items-center gap-2.5">
-          <Bell class="w-6 h-6 text-[#640c0e]" />
+  <div class="flex flex-col gap-[var(--spacing-section)]">
+    <header class="pm-page-header">
+      <div class="min-w-0">
+        <h1 class="pm-page-title flex items-center gap-2.5">
+          <Bell class="w-6 h-6 text-[#640c0e] shrink-0" />
           Notification Center
         </h1>
         <p class="text-xs text-[#6b7280] mt-1">
@@ -126,10 +125,10 @@ const getNotificationIcon = (type?: string) => {
           Mark all as read
         </button>
       </div>
-    </div>
+    </header>
 
     <!-- Filters & Search Toolbar -->
-    <div class="bg-white p-3 rounded-2xl border border-[#ebe8de] shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div class="pm-panel p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <!-- Tabs -->
       <div class="flex items-center gap-1.5 bg-[#fbfbf9] p-1 rounded-xl border border-[#ebe8de]">
         <button

@@ -40,16 +40,15 @@ const getUserRoleInDept = (deptId: number) => {
 </script>
 
 <template>
-  <div class="space-y-6 animate-in fade-in duration-200">
-    <!-- Header -->
-    <div>
-      <h1 class="text-2xl font-extrabold text-[#640c0e] font-display tracking-tight">
-        SFU MSA Canonical Departments
-      </h1>
-      <p class="text-xs text-[#6b7280] mt-1">
-        Departmental organization, appointed leadership, and privacy boundaries.
-      </p>
-    </div>
+  <div class="flex flex-col gap-[var(--spacing-section)]">
+    <header class="pm-page-header">
+      <div class="min-w-0">
+        <h1 class="pm-page-title">SFU MSA Canonical Departments</h1>
+        <p class="pm-page-subtitle">
+          Departmental organization, appointed leadership, and privacy boundaries.
+        </p>
+      </div>
+    </header>
 
     <!-- Security & Privacy Notice -->
     <div class="p-4 rounded-2xl bg-white border border-[#ebe8de] shadow-xs flex items-start gap-3.5">

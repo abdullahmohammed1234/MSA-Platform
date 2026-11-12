@@ -33,11 +33,13 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem(PM_TOKEN_KEY);
-      localStorage.removeItem(PM_USER_KEY);
-      
-      // Dispatch an event so the auth store or router can redirect cleanly
-      window.dispatchEvent(new CustomEvent('pm-auth-unauthorized'));
+      const current = localStorage.getItem(PM_TOKEN_KEY);
+      // Do not wipe DEV layout-preview sessions used for visual QA screenshots.
+      if (current !== 'layout-preview') {
+        localStorage.removeItem(PM_TOKEN_KEY);
+        localStorage.removeItem(PM_USER_KEY);
+        window.dispatchEvent(new CustomEvent('pm-auth-unauthorized'));
+      }
     }
     return Promise.reject(error);
   }
