@@ -102,6 +102,7 @@ class SchedulerCoarseIntervalTest extends TestCase
         config([
             'app.env' => 'production', 'app.debug' => false, 'app.url' => 'https://api.example.test',
             'app.frontend_url' => 'https://example.test',
+            'app.projects_url' => 'https://projects.sfumsa.ca',
             'queue.default' => 'database', 'announcements.delivery.email_hourly_cap' => '100',
             'app.scheduler_cron_interval_minutes' => $interval,
         ]);

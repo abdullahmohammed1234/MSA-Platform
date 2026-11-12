@@ -11,7 +11,7 @@ class ProductionOriginHardeningTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const ENV_KEYS = ['APP_ENV', 'FRONTEND_URL', 'CONNECT_URL', 'CORS_ALLOWED_ORIGINS'];
+    private const ENV_KEYS = ['APP_ENV', 'FRONTEND_URL', 'CONNECT_URL', 'PROJECTS_URL', 'CORS_ALLOWED_ORIGINS'];
 
     /** @var array<string, array{0: mixed, 1: mixed, 2: string|false}> */
     private array $savedEnv = [];
@@ -59,17 +59,37 @@ class ProductionOriginHardeningTest extends TestCase
             'APP_ENV' => 'production',
             'FRONTEND_URL' => 'https://sfumsa.example',
             'CONNECT_URL' => 'https://connect.sfumsa.example',
+            'PROJECTS_URL' => 'https://projects.sfumsa.example',
             'CORS_ALLOWED_ORIGINS' => 'https://portal.sfumsa.example, http://127.0.0.1:9000',
         ]);
 
-        $this->assertSame(['https://sfumsa.example', 'https://connect.sfumsa.example', 'https://portal.sfumsa.example'], $origins);
+        $this->assertSame([
+            'https://sfumsa.example',
+            'https://connect.sfumsa.example',
+            'https://projects.sfumsa.example',
+            'https://sfumsa.ca',
+            'https://www.sfumsa.ca',
+            'https://connect.sfumsa.ca',
+            'https://projects.sfumsa.ca',
+            'https://portal.sfumsa.example',
+        ], $origins);
+        $this->assertNotContains('http://127.0.0.1:9000', $origins);
     }
 
     public function test_production_cors_with_unset_urls_trusts_no_dev_server(): void
     {
         $origins = $this->corsOriginsWith(['APP_ENV' => 'production']);
 
-        $this->assertSame([], $origins);
+        $this->assertSame([
+            'https://sfumsa.ca',
+            'https://connect.sfumsa.ca',
+            'https://projects.sfumsa.ca',
+            'https://www.sfumsa.ca',
+        ], $origins);
+        foreach ($origins as $origin) {
+            $host = parse_url($origin, PHP_URL_HOST);
+            $this->assertNotContains($host, ['localhost', '127.0.0.1', '[::1]', '::1']);
+        }
     }
 
     public function test_non_production_cors_keeps_the_local_dev_origins(): void
@@ -78,6 +98,8 @@ class ProductionOriginHardeningTest extends TestCase
 
         $this->assertContains('http://localhost:5173', $origins);
         $this->assertContains('http://127.0.0.1:5174', $origins);
+        $this->assertContains('http://localhost:5175', $origins);
+        $this->assertContains('https://projects.sfumsa.ca', $origins);
     }
 
     /** @return array<string, array{string, bool}> */
@@ -98,6 +120,7 @@ class ProductionOriginHardeningTest extends TestCase
         config([
             'app.env' => 'production', 'app.debug' => false, 'app.url' => 'https://api.example.test',
             'app.frontend_url' => $frontendUrl,
+            'app.projects_url' => 'https://projects.sfumsa.ca',
             'queue.default' => 'database', 'announcements.delivery.email_hourly_cap' => '100',
         ]);
 
@@ -106,5 +129,34 @@ class ProductionOriginHardeningTest extends TestCase
 
         $this->assertSame($accepted ? 0 : 1, $exit, $output);
         $this->assertSame(! $accepted, str_contains($output, 'FAIL: FRONTEND_URL'), $output);
+    }
+
+    /** @return array<string, array{string, bool}> */
+    public static function projectsUrls(): array
+    {
+        return [
+            'public https origin' => ['https://projects.sfumsa.ca', true],
+            'custom https origin' => ['https://projects.sfumsa.example', true],
+            'plain http' => ['http://projects.sfumsa.ca', false],
+            'localhost' => ['http://localhost:5175', false],
+            'blank' => ['', false],
+        ];
+    }
+
+    #[DataProvider('projectsUrls')]
+    public function test_production_check_requires_a_public_https_projects_url(string $projectsUrl, bool $accepted): void
+    {
+        config([
+            'app.env' => 'production', 'app.debug' => false, 'app.url' => 'https://api.example.test',
+            'app.frontend_url' => 'https://sfumsa.example',
+            'app.projects_url' => $projectsUrl,
+            'queue.default' => 'database', 'announcements.delivery.email_hourly_cap' => '100',
+        ]);
+
+        $exit = Artisan::call('msa:production-check');
+        $output = Artisan::output();
+
+        $this->assertSame($accepted ? 0 : 1, $exit, $output);
+        $this->assertSame(! $accepted, str_contains($output, 'FAIL: PROJECTS_URL'), $output);
     }
 }
