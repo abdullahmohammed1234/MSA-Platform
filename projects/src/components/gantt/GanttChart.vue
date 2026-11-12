@@ -240,7 +240,7 @@ const cancelReschedule = () => {
 </script>
 
 <template>
-  <div class="flex flex-col h-[750px] bg-white border border-[#ebe8de] rounded-2xl overflow-hidden shadow-xs">
+  <div class="flex flex-col h-[min(750px,70vh)] min-h-[420px] bg-white border border-[#ebe8de] rounded-2xl overflow-hidden shadow-xs max-w-full">
     <!-- Toolbar -->
     <GanttToolbar
       v-model:zoomLevel="zoomLevel"
@@ -270,11 +270,11 @@ const cancelReschedule = () => {
 
     <div v-else class="flex-1 flex overflow-hidden">
       <!-- Left Panel: Task Hierarchy Roster (320px) -->
-      <div class="w-80 border-r border-[#ebe8de] bg-[#fbfbf9] flex flex-col shrink-0 select-none">
+      <div class="w-36 sm:w-52 md:w-72 lg:w-80 border-r border-[#ebe8de] bg-[#fffbf4] flex flex-col shrink-0 select-none sticky left-0 z-10">
         <!-- Header -->
-        <div class="h-[53px] px-3 border-b border-[#ebe8de] flex items-center justify-between text-xs font-bold text-[#640c0e] bg-[#fbfbf9]">
+        <div class="h-[53px] px-3 border-b border-[#ebe8de] flex items-center justify-between text-xs font-bold text-[#640c0e] bg-[#fffbf4]">
           <span>Task / Deliverable</span>
-          <span class="text-[10px] text-[#6b7280] font-normal">Assignee</span>
+          <span class="text-[10px] text-[#6b7280] font-normal hidden sm:inline">Assignee</span>
         </div>
 
         <!-- Task Rows Roster -->

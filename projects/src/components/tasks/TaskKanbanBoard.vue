@@ -77,11 +77,12 @@ const onDrop = (e: DragEvent, targetStatus: TaskStatus) => {
 </script>
 
 <template>
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+  <div class="kanban-scroll" role="list" aria-label="Kanban board">
     <div
       v-for="col in columns"
       :key="col.id"
-      class="kanban-col p-3 flex flex-col justify-between"
+      class="kanban-col p-3 flex flex-col justify-between min-h-[420px]"
+      role="listitem"
       @dragover="onDragOver"
       @drop="onDrop($event, col.id)"
     >

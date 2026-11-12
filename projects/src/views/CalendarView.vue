@@ -171,6 +171,26 @@ const handleEventClick = (event: CalendarEvent) => {
 const handleTaskUpdated = () => {
   loadEvents();
 };
+
+const agendaEvents = computed(() => {
+  const year = currentDate.value.getFullYear();
+  const month = currentDate.value.getMonth();
+  const start = formatDateStr(new Date(year, month, 1));
+  const end = formatDateStr(new Date(year, month + 1, 0));
+
+  return [...events.value]
+    .filter((ev) => {
+      const s = String(ev.start || ev.start_date || ev.due_date || '').substring(0, 10);
+      const e = String(ev.end || ev.due_date || s).substring(0, 10);
+      if (!s) return false;
+      return e >= start && s <= end;
+    })
+    .sort((a, b) => {
+      const as = String(a.start || a.start_date || a.due_date || '');
+      const bs = String(b.start || b.start_date || b.due_date || '');
+      return as.localeCompare(bs);
+    });
+});
 </script>
 
 <template>
@@ -284,10 +304,46 @@ const handleTaskUpdated = () => {
       <Loader2 class="w-8 h-8 animate-spin text-[#640c0e]" />
     </div>
 
-    <!-- Calendar Grid -->
-    <div v-else class="bg-white rounded-2xl border border-[#ebe8de] shadow-xs overflow-hidden">
+    <!-- Mobile / small tablet agenda -->
+    <div v-else class="md:hidden space-y-2">
+      <div
+        v-if="agendaEvents.length === 0"
+        class="bg-white rounded-2xl border border-[#ebe8de] p-8 text-center text-xs text-[#6b7280]"
+      >
+        No events in {{ currentMonthLabel }}.
+      </div>
+      <button
+        v-for="ev in agendaEvents"
+        :key="`agenda-${ev.id}`"
+        type="button"
+        class="w-full text-left bg-white rounded-2xl border border-[#ebe8de] p-4 shadow-xs hover:border-[#640c0e]/30 transition-colors"
+        @click="handleEventClick(ev)"
+      >
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0 space-y-1">
+            <p class="text-sm font-bold text-[#1e1e1e] truncate">{{ ev.title }}</p>
+            <p class="text-[11px] text-[#6b7280] capitalize">
+              {{ ev.type }}
+              <span v-if="ev.project?.name"> · {{ ev.project.name }}</span>
+            </p>
+            <p class="text-[11px] font-semibold text-[#640c0e]">
+              {{ String(ev.start || ev.start_date || ev.due_date || '').substring(0, 10) }}
+              <span v-if="ev.end && ev.end !== ev.start"> → {{ String(ev.end).substring(0, 10) }}</span>
+            </p>
+          </div>
+          <AlertTriangle
+            v-if="ev.is_conflict"
+            class="w-4 h-4 text-red-600 shrink-0"
+            title="Scheduling conflict detected"
+          />
+        </div>
+      </button>
+    </div>
+
+    <!-- Calendar Grid (tablet+) -->
+    <div v-if="!isLoading" class="hidden md:block bg-white rounded-2xl border border-[#ebe8de] shadow-xs overflow-hidden">
       <!-- Day Headers -->
-      <div class="grid grid-cols-7 border-b border-[#ebe8de] bg-[#fbfbf9] text-center text-xs font-bold text-[#6b7280] py-2.5">
+      <div class="grid grid-cols-7 border-b border-[#ebe8de] bg-[#fffbf4] text-center text-xs font-bold text-[#6b7280] py-2.5">
         <div>Sun</div>
         <div>Mon</div>
         <div>Tue</div>

@@ -12,7 +12,8 @@ export const apiClient: AxiosInstance = axios.create({
     'Content-Type': 'application/json',
     'X-Requested-With': 'XMLHttpRequest',
   },
-  withCredentials: true,
+  // Bearer-token SPA (aligned with Connect / main portal). Avoid credentialed CORS.
+  withCredentials: false,
 });
 
 // Request interceptor: Attach PM Bearer token

@@ -28,12 +28,19 @@ if ($connectHost) {
     $statefulHosts .= ','.$connectHost.($connectPort ? ':'.$connectPort : '');
 }
 
-$projectsUrl = (string) env('PROJECTS_URL', 'http://localhost:5175');
+$isProduction = strtolower((string) env('APP_ENV')) === 'production';
+$defaultProjectsUrl = $isProduction ? 'https://projects.sfumsa.ca' : 'http://localhost:5175';
+$projectsUrl = (string) env('PROJECTS_URL', $defaultProjectsUrl);
 $projectsHost = parse_url($projectsUrl, PHP_URL_HOST);
 
 if ($projectsHost) {
     $projectsPort = parse_url($projectsUrl, PHP_URL_PORT);
     $statefulHosts .= ','.$projectsHost.($projectsPort ? ':'.$projectsPort : '');
+}
+
+// Canonical production hosts
+if ($isProduction) {
+    $statefulHosts .= ',sfumsa.ca,www.sfumsa.ca,connect.sfumsa.ca,projects.sfumsa.ca';
 }
 
 $extraOrigins = array_values(array_filter(array_map(

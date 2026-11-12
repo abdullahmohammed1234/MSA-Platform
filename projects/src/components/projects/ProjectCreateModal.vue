@@ -171,10 +171,10 @@ const handleSubmit = async () => {
 <template>
   <div
     v-if="isOpen"
-    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150 overflow-y-auto"
+    class="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150 overflow-y-auto safe-area-pad"
   >
     <div
-      class="bg-white rounded-2xl shadow-elevated border border-[#ebe8de] w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
+      class="bg-white rounded-t-2xl sm:rounded-2xl shadow-elevated border border-[#ebe8de] w-full max-w-xl max-h-[96vh] sm:max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-150"
     >
       <!-- Header -->
       <div class="px-6 py-4 border-b border-[#ebe8de] flex items-center justify-between shrink-0">

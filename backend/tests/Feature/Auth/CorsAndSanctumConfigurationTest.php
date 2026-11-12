@@ -14,7 +14,7 @@ class CorsAndSanctumConfigurationTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const ENV_KEYS = ['APP_ENV', 'FRONTEND_URL', 'CONNECT_URL', 'CORS_ALLOWED_ORIGINS'];
+    private const ENV_KEYS = ['APP_ENV', 'FRONTEND_URL', 'CONNECT_URL', 'PROJECTS_URL', 'CORS_ALLOWED_ORIGINS'];
 
     /** @var array<string, array{0: mixed, 1: mixed, 2: string|false}> */
     private array $savedEnv = [];
@@ -120,6 +120,28 @@ class CorsAndSanctumConfigurationTest extends TestCase
         $stateful = config('sanctum.stateful');
         $this->assertContains('localhost:5174', $stateful);
         $this->assertContains('127.0.0.1:5174', $stateful);
+        $this->assertNotContains('*', $stateful);
+    }
+
+    public function test_projects_origin_is_read_from_projects_url_for_cors_and_sanctum(): void
+    {
+        $cors = file_get_contents(config_path('cors.php'));
+        $sanctum = file_get_contents(config_path('sanctum.php'));
+        $example = file_get_contents(base_path('.env.example'));
+
+        $this->assertIsString($cors);
+        $this->assertIsString($sanctum);
+        $this->assertIsString($example);
+
+        $this->assertStringContainsString("env('PROJECTS_URL'", $cors);
+        $this->assertStringContainsString("env('PROJECTS_URL'", $sanctum);
+        $this->assertStringContainsString('PROJECTS_URL=http://localhost:5175', $example);
+        $this->assertStringContainsString('https://projects.sfumsa.ca', $example);
+        $this->assertStringContainsString('projects.sfumsa.ca', $example);
+
+        $stateful = config('sanctum.stateful');
+        $this->assertContains('localhost:5175', $stateful);
+        $this->assertContains('127.0.0.1:5175', $stateful);
         $this->assertNotContains('*', $stateful);
     }
 
@@ -578,6 +600,65 @@ class CorsAndSanctumConfigurationTest extends TestCase
                 "Preflight for {$uri} missing Access-Control-Allow-Credentials"
             );
         }
+    }
+
+    public function test_projects_preflight_for_reported_failing_endpoints_succeeds(): void
+    {
+        config(['cors.allowed_origins' => ['https://sfumsa.ca', 'https://connect.sfumsa.ca', 'https://projects.sfumsa.ca']]);
+
+        $endpoints = [
+            ['GET', '/api/v1/pm/departments'],
+            ['POST', '/api/v1/auth/login'],
+            ['POST', '/api/v1/sso/exchange'],
+            ['GET', '/api/v1/pm/dashboard'],
+        ];
+
+        foreach ($endpoints as [$method, $uri]) {
+            $response = $this->call(
+                'OPTIONS',
+                $uri,
+                [],
+                [],
+                [],
+                [
+                    'HTTP_ORIGIN' => 'https://projects.sfumsa.ca',
+                    'HTTP_ACCESS_CONTROL_REQUEST_METHOD' => $method,
+                    'HTTP_ACCESS_CONTROL_REQUEST_HEADERS' => 'authorization,content-type,x-requested-with,x-xsrf-token',
+                ]
+            );
+
+            $this->assertTrue(
+                in_array($response->getStatusCode(), [200, 204], true),
+                "Preflight for {$uri} failed with status {$response->getStatusCode()}"
+            );
+            $this->assertSame(
+                'https://projects.sfumsa.ca',
+                $response->headers->get('Access-Control-Allow-Origin'),
+                "Preflight for {$uri} missing Access-Control-Allow-Origin"
+            );
+            $this->assertSame(
+                'true',
+                $response->headers->get('Access-Control-Allow-Credentials'),
+                "Preflight for {$uri} missing Access-Control-Allow-Credentials"
+            );
+        }
+    }
+
+    public function test_bearer_token_authenticates_from_projects_origin(): void
+    {
+        config(['cors.allowed_origins' => ['https://sfumsa.ca', 'https://connect.sfumsa.ca', 'https://projects.sfumsa.ca']]);
+        $user = $this->createMemberUser('pms_cors_user@example.com');
+        $token = $user->createToken('pms_token')->plainTextToken;
+
+        $response = $this->withHeaders([
+            'Origin' => 'https://projects.sfumsa.ca',
+            'Authorization' => 'Bearer '.$token,
+        ])->getJson('/api/v1/auth/me');
+
+        $response->assertOk()
+            ->assertJsonPath('user.email', 'pms_cors_user@example.com');
+        $this->assertSame('https://projects.sfumsa.ca', $response->headers->get('Access-Control-Allow-Origin'));
+        $this->assertSame('true', $response->headers->get('Access-Control-Allow-Credentials'));
     }
 
     public function test_csrf_cookie_bootstrap_allows_stateful_post_without_419(): void

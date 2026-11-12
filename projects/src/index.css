@@ -18,7 +18,7 @@
   --color-accent-gold-light: #fff0bd;
   --color-accent-red: #ea2128;
 
-  --color-neutral-background: #fbfbf9;
+  --color-neutral-background: #fffbf4;
   --color-neutral-ivory: #ebe8de;
   --color-neutral-ivory-dark: #ded9cb;
   --color-neutral-gray: #c2c4c7;
@@ -113,4 +113,67 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #c2c4c7;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Safe-area insets for notched devices / PWA standalone */
+.safe-area-pad {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Touch-friendly minimum target */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Horizontal snap for kanban on small screens */
+.kanban-scroll {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0.5rem;
+}
+
+.kanban-scroll > * {
+  scroll-snap-align: start;
+  flex: 0 0 min(85vw, 280px);
+}
+
+@media (min-width: 768px) {
+  .kanban-scroll {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    overflow-x: visible;
+    scroll-snap-type: none;
+  }
+
+  .kanban-scroll > * {
+    flex: unset;
+  }
+}
+
+@media (min-width: 1024px) {
+  .kanban-scroll {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }

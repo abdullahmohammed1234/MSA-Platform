@@ -52,6 +52,17 @@ class ProductionReadinessCheckCommand extends Command
             if (! str_starts_with($connectUrl, 'https://') || in_array($connectHost, ['localhost', '127.0.0.1', '[::1]', '::1'], true)) {
                 $warnings[] = 'CONNECT_URL should be the public https:// Connect origin in production (required for Connect CORS, Sanctum, and notification links)';
             }
+            $projectsUrl = (string) config('app.projects_url');
+            $projectsHost = (string) parse_url($projectsUrl, PHP_URL_HOST);
+            if (! str_starts_with($projectsUrl, 'https://') || in_array($projectsHost, ['localhost', '127.0.0.1', '[::1]', '::1'], true)) {
+                $failures[] = 'PROJECTS_URL must be the public https:// Projects origin in production (required for PMS CORS, Sanctum, and SSO redirects)';
+            } elseif ($projectsUrl !== 'https://projects.sfumsa.ca') {
+                $warnings[] = 'PROJECTS_URL is set but is not https://projects.sfumsa.ca — confirm this is intentional';
+            }
+            $corsOrigins = config('cors.allowed_origins', []);
+            if (is_array($corsOrigins) && ! in_array('https://projects.sfumsa.ca', $corsOrigins, true)) {
+                $failures[] = 'cors.allowed_origins must include https://projects.sfumsa.ca in production';
+            }
             if (! $forceHttps) {
                 $warnings[] = 'FORCE_HTTPS is false — enable when HTTPS is terminated at the reverse proxy';
             }

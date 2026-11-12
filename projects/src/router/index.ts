@@ -91,7 +91,9 @@ router.beforeEach(async (to) => {
 
   // Update page title
   const title = to.meta.title as string | undefined;
-  document.title = title ? `${title} — SFU MSA Projects` : 'SFU MSA Projects';
+  document.title = title
+    ? `${title} — SFU MSA Project Management System`
+    : 'SFU MSA Project Management System';
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     return {

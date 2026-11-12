@@ -137,6 +137,13 @@ P_ENV_COUNT=$(find "$PROJECTS_DIST" -name ".env*" 2>/dev/null | wc -l)
 grep -rq "https://api\.sfumsa\.ca/api/v1" "$PROJECTS_DIST/assets" 2>/dev/null
 assert_check "projects/dist targets production API (https://api.sfumsa.ca/api/v1)" $?
 
+[ -f "$PROJECTS_DIST/sw.js" ]; assert_check "projects/dist/sw.js exists" $?
+[ -f "$PROJECTS_DIST/manifest.webmanifest" ]; assert_check "projects/dist/manifest.webmanifest exists" $?
+[ -f "$PROJECTS_DIST/offline.html" ]; assert_check "projects/dist/offline.html exists" $?
+[ -f "$PROJECTS_DIST/icons/msa-pwa-192x192.png" ]; assert_check "projects/dist has official MSA PWA 192 icon" $?
+grep -q "projects.sfumsa.ca" "$ROOT/backend/config/cors.php"
+assert_check "backend CORS config references projects.sfumsa.ca" $?
+
 # --- 5. Backend Configuration & CORS Invariants ---
 echo ""
 echo "--- Checking Backend Configuration ---"

@@ -50,6 +50,13 @@ const onCardClick = () => {
     emit('click');
   }
 };
+
+const onStatusSelect = (e: Event) => {
+  const value = (e.target as HTMLSelectElement).value as TaskStatus;
+  if (value && value !== props.task.status) {
+    emit('status-change', value);
+  }
+};
 </script>
 
 <template>
@@ -103,6 +110,22 @@ const onCardClick = () => {
     <h4 class="text-xs font-bold text-[#1e1e1e] group-hover:text-[#640c0e] transition-colors line-clamp-2 leading-snug">
       {{ task.title }}
     </h4>
+
+    <!-- Accessible status control (keyboard / touch alternative to drag-and-drop) -->
+    <label class="sr-only" :for="`task-status-${task.uuid}`">Move {{ task.title }}</label>
+    <select
+      :id="`task-status-${task.uuid}`"
+      class="w-full text-[10px] font-semibold rounded-lg border border-[#ebe8de] bg-[#fffbf4] text-[#1e1e1e] px-2 py-1.5 focus:border-[#640c0e] focus:ring-1 focus:ring-[#640c0e] outline-none"
+      :value="task.status"
+      @click.stop
+      @change.stop="onStatusSelect"
+    >
+      <option value="todo">To Do</option>
+      <option value="in_progress">In Progress</option>
+      <option value="review">In Review</option>
+      <option value="completed">Completed</option>
+      <option value="cancelled">Cancelled</option>
+    </select>
 
     <!-- Metadata footer: Due Date, Dependencies, Attachments, Comments, Assignees -->
     <div class="flex items-center justify-between pt-2 border-t border-[#f0eee6] text-[11px] text-[#6b7280]">

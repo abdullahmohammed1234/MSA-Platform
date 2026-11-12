@@ -76,7 +76,7 @@ const onProjectCreated = (uuid: string) => {
           Assalamu Alaikum, {{ authStore.user?.name }}
         </h1>
         <p class="text-xs text-[#6b7280] mt-1">
-          Welcome to the SFU MSA Project Management System. Here is your operational overview.
+          Welcome to the official SFU MSA Project Management System. Here is your operational overview.
         </p>
       </div>
 

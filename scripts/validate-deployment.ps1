@@ -119,11 +119,16 @@ foreach ($f in $projectsJsFiles) {
     if ($content -match "https://api\.sfumsa\.ca/api/v1") { $foundProjectsApiUrl = $true }
 }
 Assert-Check "projects/dist targets production API (https://api.sfumsa.ca/api/v1)" $foundProjectsApiUrl
+Assert-Check "projects/dist/sw.js exists" (Test-Path (Join-Path $projectsDist "sw.js"))
+Assert-Check "projects/dist/manifest.webmanifest exists" (Test-Path (Join-Path $projectsDist "manifest.webmanifest"))
+Assert-Check "projects/dist/offline.html exists" (Test-Path (Join-Path $projectsDist "offline.html"))
+Assert-Check "projects/dist has official MSA PWA 192 icon" (Test-Path (Join-Path $projectsDist "icons/msa-pwa-192x192.png"))
 
 # --- 5. Backend Configuration & CORS Invariants ---
 Write-Host "`n--- Checking Backend Configuration ---" -ForegroundColor Yellow
 $corsConfig = Join-Path $root "backend/config/cors.php"
 $corsContent = Get-Content $corsConfig -Raw
+Assert-Check "backend CORS config references projects.sfumsa.ca" ($corsContent -match "projects\.sfumsa\.ca")
 Assert-Check "backend/config/cors.php sets explicit HTTP methods" ($corsContent -match "'allowed_methods'\s*=>\s*\[\s*'GET'")
 Assert-Check "backend/config/cors.php allows Authorization header" ($corsContent -match "'Authorization'")
 Assert-Check "backend/config/cors.php allows X-XSRF-TOKEN header" ($corsContent -match "'X-XSRF-TOKEN'")
