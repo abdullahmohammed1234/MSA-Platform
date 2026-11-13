@@ -236,25 +236,6 @@
               </div>
             </article>
           </div>
-
-          <!-- Fallback when no live announcements loaded -->
-          <div
-            v-else
-            class="p-8 rounded-2xl bg-white border border-[#ebe8de] text-center max-w-xl mx-auto space-y-3"
-          >
-            <div class="inline-block p-3 rounded-2xl bg-gradient-to-br from-[#640c0e] via-[#7a0f12] to-[#49080a] border border-[#ffdc83]/30 shadow-xs mb-2">
-              <img
-                :src="getPublicAssetUrl('mosque.png')"
-                alt=""
-                aria-hidden="true"
-                class="w-24 h-auto object-contain select-none pointer-events-none"
-              />
-            </div>
-            <h3 class="text-sm font-bold text-neutral-800">Weekly Community Gatherings</h3>
-            <p class="text-xs text-neutral-600 max-w-md mx-auto leading-relaxed">
-              Friday Jummah prayers and weekly halaqahs run regularly during the semester. Sign in to your member account to view current event dates and reserve passes.
-            </p>
-          </div>
         </div>
       </section>
 

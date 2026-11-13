@@ -31,6 +31,7 @@ class EventService
 
     public function __construct(
         private readonly EventUpdateNotifier $updateNotifier,
+        private readonly WaitlistService $waitlist,
     ) {
     }
 
@@ -144,6 +145,8 @@ class EventService
             ?? NotificationAudience::None;
         unset($data['notify_audience']);
 
+        $previousCapacity = $event->capacity;
+
         DB::transaction(function () use ($event, $data, $actor): void {
             $resetRequested = ! empty($data['reset_slug']) || ($data['slug_mode'] ?? null) === 'auto';
             $manualRequested = ($data['slug_mode'] ?? null) === 'manual';
@@ -194,6 +197,11 @@ class EventService
 
         if ($changed !== []) {
             $this->updateNotifier->handle($event, $changed, $audience);
+        }
+
+        // Same promotion path as cancellations: newly opened seats fill the waitlist.
+        if ($event->waitlist_enabled && $this->waitlist->inventoryOpened($previousCapacity, $event->capacity)) {
+            $this->waitlist->promoteAvailable($event);
         }
 
         return $event;

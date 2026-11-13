@@ -1,0 +1,17 @@
+/**
+ * Design-system re-export of platform typography tokens.
+ * Prefer loading /fonts/msa-typography.css from index.html for @font-face.
+ * This file documents Tailwind-facing role mapping for the main SPA.
+ */
+
+:root {
+  --font-heading: "DM Serif Display", Georgia, "Times New Roman", serif;
+  --font-body: "ITC New Baskerville", Georgia, "Times New Roman", serif;
+  --font-seasons: "The Seasons", Georgia, "Times New Roman", serif;
+  --font-script: "Above the Beyond Script", "Segoe Script", "Apple Chancery", cursive;
+  --font-display: var(--font-seasons);
+  --font-sans: var(--font-body);
+  --font-serif: var(--font-seasons);
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
+}

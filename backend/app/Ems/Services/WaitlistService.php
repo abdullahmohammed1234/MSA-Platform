@@ -240,7 +240,26 @@ class WaitlistService
     }
 
     /**
-     * Promote the next waiting attendees when capacity frees up.
+     * Whether inventory grew enough that waitlisted people may now fit.
+     *
+     * null means unlimited. Growing a finite limit, or switching from a finite
+     * limit to unlimited, opens inventory. Shrinking or capping unlimited does not.
+     */
+    public function inventoryOpened(?int $before, ?int $after): bool
+    {
+        if ($after === null) {
+            return $before !== null;
+        }
+
+        if ($before === null) {
+            return false;
+        }
+
+        return $after > $before;
+    }
+
+    /**
+     * Promote the next waiting attendees when capacity frees up or is increased.
      */
     public function promoteAvailable(Event $event): int
     {

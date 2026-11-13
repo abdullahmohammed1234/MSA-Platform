@@ -62,10 +62,18 @@ export default {
         info: '#640c0e',
       },
       fontFamily: {
-        sans: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
-        display: ['Outfit', 'Playfair Display', 'serif'],
-        serif: ['Cormorant Garamond', 'Georgia', 'serif'],
-        mono: ['Space Grotesk', 'monospace'],
+        // Body / UI — ITC New Baskerville (falls back to Georgia until licensed files are added)
+        sans: ['ITC New Baskerville', 'Georgia', 'Times New Roman', 'serif'],
+        body: ['ITC New Baskerville', 'Georgia', 'Times New Roman', 'serif'],
+        // Primary headings — DM Serif Display (font-display kept for existing class usage)
+        heading: ['DM Serif Display', 'Georgia', 'Times New Roman', 'serif'],
+        display: ['DM Serif Display', 'Georgia', 'Times New Roman', 'serif'],
+        // Secondary display — The Seasons
+        serif: ['The Seasons', 'Georgia', 'Times New Roman', 'serif'],
+        seasons: ['The Seasons', 'Georgia', 'Times New Roman', 'serif'],
+        // Decorative only — never nav/forms/buttons
+        script: ['Above the Beyond Script', 'Segoe Script', 'Apple Chancery', 'cursive'],
+        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'monospace'],
       },
       borderRadius: {
         'xs': '0.25rem',

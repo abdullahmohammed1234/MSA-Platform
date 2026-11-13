@@ -5,6 +5,7 @@ namespace App\Ems\Http\Controllers\V1;
 use App\Ems\Http\Controllers\EmsController;
 use App\Ems\Models\Event;
 use App\Ems\Models\EventSeries;
+use App\Ems\Services\WaitlistService;
 use App\Ems\Support\ApiResponse;
 use App\Ems\Enums\EventStatus;
 use Illuminate\Http\JsonResponse;
@@ -15,6 +16,11 @@ use Illuminate\Support\Str;
 
 class EventSeriesController extends EmsController
 {
+    public function __construct(
+        private readonly WaitlistService $waitlist,
+    ) {
+    }
+
     /**
      * GET /api/v1/ems/event-series
      */
@@ -155,7 +161,9 @@ class EventSeriesController extends EmsController
             'is_public' => 'boolean',
         ]);
 
-        DB::transaction(function () use ($series, $validated) {
+        $promoteEventIds = [];
+
+        DB::transaction(function () use ($series, $validated, &$promoteEventIds) {
             $series->update([
                 'name' => $validated['name'],
                 'description' => $validated['description'],
@@ -163,18 +171,37 @@ class EventSeriesController extends EmsController
 
             // Update all child events
             foreach ($series->events as $event) {
+                $previousCapacity = $event->capacity;
+                $nextCapacity = array_key_exists('capacity', $validated)
+                    ? $validated['capacity']
+                    : $event->capacity;
+                $waitlistEnabled = array_key_exists('waitlist_enabled', $validated)
+                    ? (bool) $validated['waitlist_enabled']
+                    : (bool) $event->waitlist_enabled;
+
                 $event->update([
                     'category_id' => $validated['category_id'] ?? $event->category_id,
                     'location' => $validated['location'] ?? $event->location,
                     'timezone' => $validated['timezone'] ?? $event->timezone,
-                    'capacity' => $validated['capacity'] ?? $event->capacity,
-                    'waitlist_enabled' => $validated['waitlist_enabled'] ?? $event->waitlist_enabled,
+                    'capacity' => $nextCapacity,
+                    'waitlist_enabled' => $waitlistEnabled,
                     'max_tickets_per_order' => $validated['max_tickets_per_order'] ?? $event->max_tickets_per_order,
                     'max_registrations_per_attendee' => $validated['max_registrations_per_attendee'] ?? $event->max_registrations_per_attendee,
                     'is_public' => $validated['is_public'] ?? $event->is_public,
                 ]);
+
+                if ($waitlistEnabled && $this->waitlist->inventoryOpened($previousCapacity, $nextCapacity)) {
+                    $promoteEventIds[] = $event->id;
+                }
             }
         });
+
+        foreach (array_unique($promoteEventIds) as $eventId) {
+            $event = Event::query()->find($eventId);
+            if ($event !== null) {
+                $this->waitlist->promoteAvailable($event);
+            }
+        }
 
         $series->load('events');
 
@@ -196,21 +223,42 @@ class EventSeriesController extends EmsController
             'is_public' => 'boolean',
         ]);
 
-        DB::transaction(function () use ($series, $event, $validated) {
+        $promoteEventIds = [];
+
+        DB::transaction(function () use ($series, $event, $validated, &$promoteEventIds) {
             // Find all events in this series starting on or after the target event's start_at date
             $futureEvents = $series->events()
                 ->where('start_at', '>=', $event->start_at)
                 ->get();
 
             foreach ($futureEvents as $future) {
+                $previousCapacity = $future->capacity;
+                $nextCapacity = array_key_exists('capacity', $validated)
+                    ? $validated['capacity']
+                    : $future->capacity;
+                $waitlistEnabled = array_key_exists('waitlist_enabled', $validated)
+                    ? (bool) $validated['waitlist_enabled']
+                    : (bool) $future->waitlist_enabled;
+
                 $future->update([
                     'location' => $validated['location'] ?? $future->location,
-                    'capacity' => $validated['capacity'] ?? $future->capacity,
-                    'waitlist_enabled' => $validated['waitlist_enabled'] ?? $future->waitlist_enabled,
+                    'capacity' => $nextCapacity,
+                    'waitlist_enabled' => $waitlistEnabled,
                     'is_public' => $validated['is_public'] ?? $future->is_public,
                 ]);
+
+                if ($waitlistEnabled && $this->waitlist->inventoryOpened($previousCapacity, $nextCapacity)) {
+                    $promoteEventIds[] = $future->id;
+                }
             }
         });
+
+        foreach (array_unique($promoteEventIds) as $eventId) {
+            $future = Event::query()->find($eventId);
+            if ($future !== null) {
+                $this->waitlist->promoteAvailable($future);
+            }
+        }
 
         $series->load('events');
 

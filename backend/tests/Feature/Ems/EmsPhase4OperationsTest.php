@@ -494,6 +494,80 @@ class EmsPhase4OperationsTest extends EmsTestCase
         $this->assertSame(TicketStatus::Issued, $registration->tickets()->first()->status);
     }
 
+    public function test_increasing_event_capacity_promotes_waitlist(): void
+    {
+        $event = $this->liveEvent(['capacity' => 1, 'waitlist_enabled' => true]);
+        $organizer = $this->organizerFor($event);
+        $firstUser = $this->emsUser();
+        $ticketType = $this->freeTicketType($event);
+
+        $this->confirmedAttendee($event, $ticketType, [
+            'user_id' => $firstUser->id,
+            'attendee_email' => $firstUser->email,
+        ]);
+
+        $waitlistService = app(\App\Ems\Services\WaitlistService::class);
+        $entry = $waitlistService->join($event, [
+            'first_name' => 'Waitlist',
+            'last_name' => 'Opened',
+            'email' => 'waitlistopened@example.com',
+            'ticket_type_id' => $ticketType->uuid,
+            'quantity' => 1,
+        ]);
+
+        $registration = $entry->registration;
+        $this->assertSame(\App\Ems\Enums\RegistrationStatus::Waitlisted, $registration->status);
+
+        $this->actingAsEms($organizer)
+            ->putJson($this->url("events/{$event->uuid}"), ['capacity' => 2])
+            ->assertOk();
+
+        $this->assertSame(\App\Ems\Enums\RegistrationStatus::Confirmed, $registration->fresh()->status);
+        $this->assertSame(1, $registration->tickets()->count());
+        $this->assertSame(TicketStatus::Issued, $registration->tickets()->first()->status);
+    }
+
+    public function test_increasing_ticket_quantity_promotes_waitlist(): void
+    {
+        $event = $this->liveEvent(['capacity' => 10, 'waitlist_enabled' => true]);
+        $organizer = $this->organizerFor($event);
+        $ticketType = TicketType::factory()->create([
+            'event_id' => $event->id,
+            'name' => 'Limited GA',
+            'price' => 0,
+            'quantity' => 1,
+            'quantity_sold' => 1,
+            'is_active' => true,
+        ]);
+
+        $this->confirmedAttendee($event, $ticketType, [
+            'attendee_email' => 'holder@example.com',
+        ]);
+
+        $waitlistService = app(\App\Ems\Services\WaitlistService::class);
+        $entry = $waitlistService->join($event, [
+            'first_name' => 'Waitlist',
+            'last_name' => 'TicketQty',
+            'email' => 'waitlistticketqty@example.com',
+            'ticket_type_id' => $ticketType->uuid,
+            'quantity' => 1,
+        ]);
+
+        $registration = $entry->registration;
+        $this->assertSame(\App\Ems\Enums\RegistrationStatus::Waitlisted, $registration->status);
+
+        $this->actingAsEms($organizer)
+            ->putJson($this->url("events/{$event->uuid}/tickets/{$ticketType->uuid}"), [
+                'name' => $ticketType->name,
+                'price' => 0,
+                'quantity' => 2,
+            ])
+            ->assertOk();
+
+        $this->assertSame(\App\Ems\Enums\RegistrationStatus::Confirmed, $registration->fresh()->status);
+        $this->assertSame(1, $registration->tickets()->count());
+    }
+
     public function test_paid_waitlist_promotion_sets_expiration(): void
     {
         $event = $this->liveEvent(['capacity' => 1, 'waitlist_enabled' => true]);

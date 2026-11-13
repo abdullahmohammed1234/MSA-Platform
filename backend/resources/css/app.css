@@ -6,6 +6,11 @@
 @source '../**/*.js';
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-sans: 'ITC New Baskerville', Georgia, 'Times New Roman', serif;
+    --font-body: 'ITC New Baskerville', Georgia, 'Times New Roman', serif;
+    --font-heading: 'DM Serif Display', Georgia, 'Times New Roman', serif;
+    --font-display: 'DM Serif Display', Georgia, 'Times New Roman', serif;
+    --font-serif: 'The Seasons', Georgia, 'Times New Roman', serif;
+    --font-seasons: 'The Seasons', Georgia, 'Times New Roman', serif;
+    --font-script: 'Above the Beyond Script', 'Segoe Script', 'Apple Chancery', cursive;
 }

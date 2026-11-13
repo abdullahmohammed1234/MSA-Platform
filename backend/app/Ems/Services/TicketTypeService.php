@@ -14,6 +14,11 @@ use Symfony\Component\HttpFoundation\Response;
 
 class TicketTypeService
 {
+    public function __construct(
+        private readonly WaitlistService $waitlist,
+    ) {
+    }
+
     /**
      * @return Collection<int, TicketType>
      */
@@ -119,6 +124,8 @@ class TicketTypeService
             }
         }
 
+        $previousQuantity = $ticketType->quantity !== null ? (int) $ticketType->quantity : null;
+
         $this->fill($ticketType, $data);
 
         if (array_key_exists('quantity', $data)
@@ -142,7 +149,19 @@ class TicketTypeService
                 'actor_id' => $actor?->id,
             ]);
 
-        return $ticketType->fresh();
+        $ticketType = $ticketType->fresh();
+        $event = $ticketType?->event;
+        $nextQuantity = $ticketType?->quantity !== null ? (int) $ticketType->quantity : null;
+
+        if (
+            $event !== null
+            && $event->waitlist_enabled
+            && $this->waitlist->inventoryOpened($previousQuantity, $nextQuantity)
+        ) {
+            $this->waitlist->promoteAvailable($event);
+        }
+
+        return $ticketType;
     }
 
     public function disable(TicketType $ticketType, ?User $actor = null): TicketType
