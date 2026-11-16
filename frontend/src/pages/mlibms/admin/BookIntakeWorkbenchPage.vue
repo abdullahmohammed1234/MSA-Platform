@@ -4,6 +4,7 @@ import { PackagePlus, Search, Plus, Printer } from 'lucide-vue-next';
 import CameraBarcodeScanner from '@/components/mlibms/CameraBarcodeScanner.vue';
 import mlibmsAdminService from '@/services/mlibms/mlibmsAdminService';
 import { useToastStore } from '@/components/feedback/toast';
+import { normalizeIsbn } from '@/utils/isbn';
 
 const toast = useToastStore();
 
@@ -35,17 +36,8 @@ const createdBook = ref<any>(null);
 
 const activeTab = ref<'camera' | 'isbn' | 'manual'>('camera');
 
-const sanitizeIsbn = (input: string): string => {
-  const raw = input.trim().replace(/[^0-9X]/gi, '');
-  // If 18 digits (13-digit EAN-13 + 5-digit price addon starting with 978 or 979), trim to 13 digits
-  if (raw.length === 18 && (raw.startsWith('978') || raw.startsWith('979'))) {
-    return raw.substring(0, 13);
-  }
-  return raw || input.trim();
-};
-
 const handleLookup = async () => {
-  const target = sanitizeIsbn(isbnInput.value);
+  const target = normalizeIsbn(isbnInput.value);
   if (!target || isSearching.value) return;
   isSearching.value = true;
   lookupResult.value = null;
@@ -97,7 +89,7 @@ const handleLookup = async () => {
 };
 
 const handleCameraIsbnScan = (isbn: string) => {
-  const cleaned = sanitizeIsbn(isbn);
+  const cleaned = normalizeIsbn(isbn);
   if (!cleaned || isSearching.value) return;
 
   isbnInput.value = cleaned;

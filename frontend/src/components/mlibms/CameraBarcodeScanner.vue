@@ -2,6 +2,7 @@
 import { ref, onMounted, onUnmounted, nextTick } from 'vue';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { Camera, CameraOff, RefreshCw, CheckCircle2 } from 'lucide-vue-next';
+import { buildIsbnScannerQrbox, isBookIsbn13, sanitizeScannedBarcode } from '@/utils/isbn';
 
 const props = withDefaults(defineProps<{
   cooldownMs?: number;
@@ -21,16 +22,42 @@ const errorMessage = ref('');
 const lastDetectedBarcode = ref('');
 const showDetectionFeedback = ref(false);
 const isLocked = ref(false);
+const showSearchingHint = ref(false);
 
 let html5QrcodeScanner: Html5Qrcode | null = null;
 let lastScannedText = '';
 let lastScanTime = 0;
-let feedbackTimer: any = null;
+let feedbackTimer: ReturnType<typeof setTimeout> | null = null;
+let searchingHintTimer: ReturnType<typeof setTimeout> | null = null;
 
 // Frame consensus tracking to prevent frame decode jitter
 let candidateBarcode = '';
 let candidateCount = 0;
 let lastCandidateTime = 0;
+
+// Controlled decode diagnostics (throttled; no per-frame spam)
+let decodeMissCount = 0;
+let lastDiagLogAt = 0;
+
+const clearFeedbackTimer = () => {
+  if (feedbackTimer) {
+    clearTimeout(feedbackTimer);
+    feedbackTimer = null;
+  }
+};
+
+const clearSearchingHintTimer = () => {
+  if (searchingHintTimer) {
+    clearTimeout(searchingHintTimer);
+    searchingHintTimer = null;
+  }
+};
+
+const resetDecodeDiagnostics = () => {
+  decodeMissCount = 0;
+  showSearchingHint.value = false;
+  clearSearchingHintTimer();
+};
 
 const playBeep = () => {
   try {
@@ -49,17 +76,8 @@ const playBeep = () => {
   }
 };
 
-const sanitizeBarcode = (input: string): string => {
-  const cleaned = input.trim();
-  const rawDigits = cleaned.replace(/[^0-9X]/gi, '');
-  if (rawDigits.length === 18 && (rawDigits.startsWith('978') || rawDigits.startsWith('979'))) {
-    return rawDigits.substring(0, 13);
-  }
-  return cleaned;
-};
-
 const onScanSuccessCallback = (decodedText: string) => {
-  const cleaned = sanitizeBarcode(decodedText);
+  const cleaned = sanitizeScannedBarcode(decodedText);
   if (!cleaned || cleaned.length < 4) return;
 
   const now = Date.now();
@@ -77,12 +95,14 @@ const onScanSuccessCallback = (decodedText: string) => {
     lastCandidateTime = now;
   }
 
-  const isFormedIsbn = (cleaned.length === 13 && (cleaned.startsWith('978') || cleaned.startsWith('979')));
+  const isFormedIsbn = isBookIsbn13(cleaned);
   const isFormedCopyBarcode = cleaned.toUpperCase().startsWith('MLIB-');
 
   if (candidateCount < 2 && !isFormedIsbn && !isFormedCopyBarcode) {
     return;
   }
+
+  resetDecodeDiagnostics();
 
   lastScannedText = cleaned;
   lastScanTime = now;
@@ -93,19 +113,52 @@ const onScanSuccessCallback = (decodedText: string) => {
   candidateBarcode = '';
   candidateCount = 0;
 
-  clearTimeout(feedbackTimer);
+  clearFeedbackTimer();
   feedbackTimer = setTimeout(() => {
     showDetectionFeedback.value = false;
     isLocked.value = false;
+    feedbackTimer = null;
   }, 2500);
 
   playBeep();
+  // Dual emit kept for API compatibility; intake listens only to scan-success.
   emit('scan', cleaned);
   emit('scan-success', cleaned);
 };
 
+const onScanFailureCallback = (_errorMessage: string) => {
+  decodeMissCount += 1;
+
+  if (decodeMissCount === 1 && !searchingHintTimer) {
+    searchingHintTimer = setTimeout(() => {
+      if (isScanning.value && !lastDetectedBarcode.value) {
+        showSearchingHint.value = true;
+      }
+      searchingHintTimer = null;
+    }, 8000);
+  }
+
+  const now = Date.now();
+  // Throttle console diagnostics (~every 75 misses or ≥12s)
+  if (decodeMissCount === 75 || (decodeMissCount > 0 && now - lastDiagLogAt >= 12000 && decodeMissCount % 25 === 0)) {
+    lastDiagLogAt = now;
+    console.info('[MLibMS Scanner] Still attempting barcode decode', {
+      misses: decodeMissCount,
+      hint: 'Hold the ISBN barcode steady inside the wide scan strip.',
+    });
+  }
+};
+
 const stopScanner = async () => {
-  if (!html5QrcodeScanner) return;
+  clearSearchingHintTimer();
+  showSearchingHint.value = false;
+
+  if (!html5QrcodeScanner) {
+    isScanning.value = false;
+    isLocked.value = false;
+    return;
+  }
+
   try {
     if (html5QrcodeScanner.isScanning) {
       await html5QrcodeScanner.stop();
@@ -125,6 +178,7 @@ const startScanner = async () => {
   lastScannedText = '';
   candidateBarcode = '';
   candidateCount = 0;
+  resetDecodeDiagnostics();
   await nextTick();
 
   if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
@@ -142,6 +196,9 @@ const startScanner = async () => {
   try {
     await stopScanner();
 
+    // Top-level useBarCodeDetectorIfSupported is preferred in html5-qrcode 2.3.8.
+    // experimentalFeatures kept in sync so native BarcodeDetector is primary when
+    // supported, with automatic ZXing fallback inside the library.
     html5QrcodeScanner = new Html5Qrcode(scannerContainerId, {
       formatsToSupport: [
         Html5QrcodeSupportedFormats.EAN_13,
@@ -153,8 +210,9 @@ const startScanner = async () => {
         Html5QrcodeSupportedFormats.ITF,
         Html5QrcodeSupportedFormats.QR_CODE,
       ],
+      useBarCodeDetectorIfSupported: true,
       experimentalFeatures: {
-        useBarCodeDetectorIfSupported: false,
+        useBarCodeDetectorIfSupported: true,
       },
       verbose: false,
     });
@@ -164,11 +222,8 @@ const startScanner = async () => {
     await html5QrcodeScanner.start(
       { facingMode: 'environment' },
       {
-        fps: 10,
-        qrbox: (viewfinderWidth: number, viewfinderHeight: number) => ({
-          width: Math.max(250, Math.floor(viewfinderWidth * 0.85)),
-          height: Math.max(140, Math.floor(viewfinderHeight * 0.55)),
-        }),
+        fps: 15,
+        qrbox: buildIsbnScannerQrbox,
         aspectRatio: 1.777778,
         videoConstraints: {
           facingMode: 'environment',
@@ -177,7 +232,7 @@ const startScanner = async () => {
         },
       },
       onScanSuccessCallback,
-      () => {}
+      onScanFailureCallback,
     );
   } catch (err: any) {
     isScanning.value = false;
@@ -192,6 +247,7 @@ const resetScanState = () => {
   candidateCount = 0;
   showDetectionFeedback.value = false;
   isLocked.value = false;
+  resetDecodeDiagnostics();
 };
 
 onMounted(() => {
@@ -199,6 +255,8 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  clearFeedbackTimer();
+  clearSearchingHintTimer();
   stopScanner();
 });
 </script>
@@ -246,6 +304,13 @@ onUnmounted(() => {
           <span class="truncate">Locked: <span class="font-mono underline font-bold">{{ lastDetectedBarcode }}</span></span>
         </div>
         <span class="text-[10px] bg-emerald-700/80 px-2 py-0.5 rounded-md font-mono">Confirmed</span>
+      </div>
+
+      <div
+        v-else-if="showSearchingHint && isScanning && !errorMessage"
+        class="absolute bottom-3 left-3 right-3 bg-neutral-black/80 text-white/90 px-3 py-2 rounded-xl text-[11px] font-medium z-20"
+      >
+        Still looking for an ISBN barcode. Center the horizontal bars in the scan strip, hold steady, and reduce glare.
       </div>
 
       <div v-if="!isScanning && !errorMessage" class="text-center p-6 text-white/70 space-y-2">
