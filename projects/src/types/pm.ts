@@ -103,6 +103,8 @@ export interface Task {
   id: number;
   uuid: string;
   project_id: number;
+  department_id?: number | null;
+  department?: DepartmentSummary | null;
   milestone_id?: number | null;
   task_list_id?: number | null;
   parent_task_id?: number | null;

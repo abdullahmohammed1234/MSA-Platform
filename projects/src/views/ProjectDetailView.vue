@@ -285,6 +285,20 @@ const canManageParticipating = computed(() => {
   return project.value?.can_manage_participating ?? canEdit.value;
 });
 
+/** Departments that may be assigned to tasks on this project (owning + participating). */
+const projectTaskDepartments = computed(() => {
+  if (!project.value) return [];
+  const byId = new Map<number, { id: number; name: string; code?: string; slug?: string; color?: string | null }>();
+  const owning = project.value.owning_department || project.value.department;
+  if (owning) {
+    byId.set(owning.id, owning);
+  }
+  for (const dept of project.value.participating_departments || []) {
+    byId.set(dept.id, dept);
+  }
+  return Array.from(byId.values());
+});
+
 const availableToAddDepartments = computed(() => {
   const owningId = project.value?.department_id;
   const currentIds = editableParticipatingIds.value;
@@ -1627,6 +1641,7 @@ const handleDelete = async () => {
       :milestones="milestones"
       :members="members"
       :task-lists="taskLists"
+      :project-departments="projectTaskDepartments"
       @close="showTaskCreateModal = false"
       @created="loadTasks"
     />
@@ -1636,6 +1651,7 @@ const handleDelete = async () => {
       :is-open="!!activeTaskUuid"
       :task-uuid="activeTaskUuid"
       :project-uuid="uuid"
+      :project-departments="projectTaskDepartments"
       :can-edit="canEdit"
       :is-project-manager-or-owner="canEdit"
       :all-tasks="tasks"

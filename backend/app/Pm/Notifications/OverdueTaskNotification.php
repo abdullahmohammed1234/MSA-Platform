@@ -4,6 +4,7 @@ namespace App\Pm\Notifications;
 
 use App\Pm\Models\PmProject;
 use App\Pm\Models\PmTask;
+use App\Pm\Support\PmFrontendUrl;
 use App\Services\Notifications\CustomDatabaseChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
@@ -35,7 +36,7 @@ class OverdueTaskNotification extends Notification
             'task_id' => $this->task->id,
             'task_uuid' => $this->task->uuid,
             'reminder_window' => 'overdue',
-            'action_url' => "/pm/projects/{$this->project->uuid}",
+            'action_url' => PmFrontendUrl::projectPath($this->project->uuid),
         ];
     }
 }

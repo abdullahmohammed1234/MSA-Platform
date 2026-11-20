@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Pm\Enums\TaskStatus;
 use App\Pm\Models\PmProject;
 use App\Pm\Models\PmTask;
+use App\Pm\Support\PmFrontendUrl;
 use App\Services\Notifications\CustomDatabaseChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
@@ -55,7 +56,7 @@ class TaskStatusChangedNotification extends Notification
             'new_status' => $this->newStatus->value,
             'actor_id' => $this->actor->id,
             'actor_name' => $this->actor->name,
-            'action_url' => "/pm/projects/{$this->project->uuid}",
+            'action_url' => PmFrontendUrl::projectPath($this->project->uuid),
         ];
     }
 }

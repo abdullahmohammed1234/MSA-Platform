@@ -89,6 +89,14 @@ const onStatusSelect = (e: Event) => {
 
       <div class="flex items-center gap-1">
         <span
+          v-if="task.department"
+          class="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-[#fff7f0] text-[#640c0e] border border-[#f0e0d4] truncate max-w-[100px]"
+          :title="`Department: ${task.department.name}`"
+        >
+          {{ task.department.name }}
+        </span>
+
+        <span
           v-if="task.task_list"
           class="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-[#f4f2ea] text-[#4b5563] border border-[#e5e2d6] truncate max-w-[100px]"
           :title="`List: ${task.task_list.name}`"

@@ -36,14 +36,24 @@ class PlatformNotification extends BaseNotification
 
     public function via($notifiable): array
     {
+        $suppressMail = (bool) ($this->data['suppress_mail'] ?? false);
+
         if (!$notifiable instanceof \App\Models\User) {
-            return [\App\Services\Notifications\CustomDatabaseChannel::class, 'mail'];
+            $channels = [\App\Services\Notifications\CustomDatabaseChannel::class, 'mail'];
+
+            return $suppressMail
+                ? array_values(array_filter($channels, fn ($channel) => $channel !== 'mail'))
+                : $channels;
         }
 
         $preferences = $notifiable->notificationPreferences;
 
         if (!$preferences) {
-            return [\App\Services\Notifications\CustomDatabaseChannel::class, 'mail'];
+            $channels = [\App\Services\Notifications\CustomDatabaseChannel::class, 'mail'];
+
+            return $suppressMail
+                ? array_values(array_filter($channels, fn ($channel) => $channel !== 'mail'))
+                : $channels;
         }
 
         $category = $this->getCategory();
@@ -58,7 +68,7 @@ class PlatformNotification extends BaseNotification
             $channels[] = \App\Services\Notifications\CustomDatabaseChannel::class;
         }
 
-        if ($preferences->email_enabled) {
+        if ($preferences->email_enabled && ! $suppressMail) {
             $channels[] = 'mail';
         }
 

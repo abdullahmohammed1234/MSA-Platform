@@ -207,6 +207,17 @@ class PmResourceController extends Controller
             'target_user_id' => 'required|integer',
         ]);
 
+        $taskBefore = \App\Pm\Models\PmTask::where('uuid', $validated['task_uuid'])
+            ->where('project_id', $project->id)
+            ->first();
+        $previousAssignees = $taskBefore
+            ? $taskBefore->assignees()->pluck('users.id')->map(fn ($id) => (int) $id)->all()
+            : [];
+        if ($taskBefore?->assigned_to) {
+            $previousAssignees[] = (int) $taskBefore->assigned_to;
+        }
+        $previousAssignees = array_values(array_unique($previousAssignees));
+
         $updatedTask = $this->balancingService->applyBalancingSuggestion(
             project: $project,
             taskUuid: $validated['task_uuid'],
@@ -215,12 +226,15 @@ class PmResourceController extends Controller
             actor: $user
         );
 
-        app(PmNotificationService::class)->notifyTaskAssigned(
-            $updatedTask,
-            [(int) $validated['target_user_id']],
-            $user,
-            true
-        );
+        $targetId = (int) $validated['target_user_id'];
+        if (! in_array($targetId, $previousAssignees, true)) {
+            app(PmNotificationService::class)->notifyTaskAssigned(
+                $updatedTask,
+                [$targetId],
+                $user,
+                true
+            );
+        }
 
         return response()->json([
             'status' => 'success',

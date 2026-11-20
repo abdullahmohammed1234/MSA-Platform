@@ -12,6 +12,9 @@ use App\Pm\Models\PmTask;
 use App\Pm\Notifications\MilestoneCompletedNotification;
 use App\Pm\Notifications\TaskAssignedNotification;
 use App\Pm\Notifications\TaskCommentMentionNotification;
+use App\Pm\Notifications\TaskCompletedNotification;
+use App\Pm\Notifications\TaskDeadlineChangedNotification;
+use App\Pm\Notifications\TaskReopenedNotification;
 use App\Pm\Notifications\TaskStatusChangedNotification;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -25,34 +28,29 @@ class PmNotificationService
     /**
      * Dispatch notification for newly assigned task assignees.
      *
-     * @param PmTask $task
-     * @param array<int> $newAssigneeIds IDs of assignees who were added/assigned
-     * @param User $actor The user performing the assignment
-     * @param bool $isReassignment Whether this was a reassignment operation
+     * @param  array<int>  $newAssigneeIds  IDs of assignees who were added/assigned
      */
     public function notifyTaskAssigned(PmTask $task, array $newAssigneeIds, User $actor, bool $isReassignment = false): void
     {
-        $project = $task->project ?? PmProject::find($task->project_id);
-        if (!$project) {
+        $project = $this->resolveProject($task);
+        if (! $project) {
             return;
         }
 
-        $uniqueIds = array_unique($newAssigneeIds);
+        $task->loadMissing('department');
 
-        foreach ($uniqueIds as $userId) {
-            // Avoid self-notification
+        foreach (array_unique($newAssigneeIds) as $userId) {
             if ((int) $userId === (int) $actor->id) {
                 continue;
             }
 
             /** @var User|null $recipient */
             $recipient = User::find($userId);
-            if (!$recipient) {
+            if (! $recipient) {
                 continue;
             }
 
-            // Revalidate recipient authorization under Option B
-            if (!$this->accessService->canViewProject($recipient, $project)) {
+            if (! $this->accessService->canViewProject($recipient, $project)) {
                 Log::warning("PmNotificationService: Suppressed notification to user {$userId} - unauthorized for project {$project->id}");
                 continue;
             }
@@ -65,7 +63,7 @@ class PmNotificationService
     }
 
     /**
-     * Dispatch notification for task status change to all other assignees and the creator.
+     * In-app status change notification to assignees and task creator.
      */
     public function notifyTaskStatusChanged(PmTask $task, TaskStatus $oldStatus, TaskStatus $newStatus, User $actor): void
     {
@@ -73,12 +71,11 @@ class PmNotificationService
             return;
         }
 
-        $project = $task->project ?? PmProject::find($task->project_id);
-        if (!$project) {
+        $project = $this->resolveProject($task);
+        if (! $project) {
             return;
         }
 
-        // Determine candidate recipients: assignees and task creator
         $recipientIds = $task->assignees()->pluck('users.id')->all();
         if ($task->assigned_to) {
             $recipientIds[] = $task->assigned_to;
@@ -87,27 +84,126 @@ class PmNotificationService
             $recipientIds[] = $task->created_by;
         }
 
-        $uniqueRecipientIds = array_unique($recipientIds);
-
-        foreach ($uniqueRecipientIds as $userId) {
+        foreach (array_unique($recipientIds) as $userId) {
             if ((int) $userId === (int) $actor->id) {
                 continue;
             }
 
             /** @var User|null $recipient */
             $recipient = User::find($userId);
-            if (!$recipient) {
+            if (! $recipient) {
                 continue;
             }
 
-            // Revalidate recipient access
-            if (!$this->accessService->canViewProject($recipient, $project)) {
+            if (! $this->accessService->canViewProject($recipient, $project)) {
                 continue;
             }
 
             $this->safeDispatch(
                 $recipient,
                 new TaskStatusChangedNotification($task, $project, $oldStatus, $newStatus, $actor)
+            );
+        }
+
+        // Canonical owner emails for meaningful completion / reopen transitions.
+        if ($oldStatus !== TaskStatus::Completed && $newStatus === TaskStatus::Completed) {
+            $this->notifyTaskCompleted($task, $project, $actor);
+        } elseif ($oldStatus === TaskStatus::Completed && $newStatus !== TaskStatus::Completed) {
+            $this->notifyTaskReopened($task, $project, $actor);
+        }
+    }
+
+    /**
+     * Email + in-app notification to the canonical project owner on completion.
+     */
+    public function notifyTaskCompleted(PmTask $task, ?PmProject $project, User $actor): void
+    {
+        $project = $project ?? $this->resolveProject($task);
+        if (! $project || ! $project->owner_id) {
+            return;
+        }
+
+        if ((int) $project->owner_id === (int) $actor->id) {
+            return;
+        }
+
+        $task->loadMissing('department');
+
+        /** @var User|null $owner */
+        $owner = User::find($project->owner_id);
+        if (! $owner || ! $this->accessService->canViewProject($owner, $project)) {
+            return;
+        }
+
+        $this->safeDispatch($owner, new TaskCompletedNotification($task, $project, $actor));
+    }
+
+    /**
+     * Email + in-app notification to the canonical project owner on reopen.
+     */
+    public function notifyTaskReopened(PmTask $task, ?PmProject $project, User $actor): void
+    {
+        $project = $project ?? $this->resolveProject($task);
+        if (! $project || ! $project->owner_id) {
+            return;
+        }
+
+        if ((int) $project->owner_id === (int) $actor->id) {
+            return;
+        }
+
+        $task->loadMissing('department');
+
+        /** @var User|null $owner */
+        $owner = User::find($project->owner_id);
+        if (! $owner || ! $this->accessService->canViewProject($owner, $project)) {
+            return;
+        }
+
+        $this->safeDispatch($owner, new TaskReopenedNotification($task, $project, $actor));
+    }
+
+    /**
+     * Notify current assignees when a task deadline is set, changed, or removed.
+     *
+     * @param  string|null  $previousDueDate  Y-m-d
+     * @param  string|null  $newDueDate  Y-m-d
+     */
+    public function notifyDeadlineChanged(PmTask $task, ?string $previousDueDate, ?string $newDueDate, User $actor): void
+    {
+        $previous = $this->normalizeDate($previousDueDate);
+        $next = $this->normalizeDate($newDueDate);
+
+        if ($previous === $next) {
+            return;
+        }
+
+        $project = $this->resolveProject($task);
+        if (! $project) {
+            return;
+        }
+
+        $task->loadMissing('department');
+
+        $recipientIds = $task->assignees()->pluck('users.id')->all();
+        if ($task->assigned_to) {
+            $recipientIds[] = $task->assigned_to;
+        }
+
+        foreach (array_unique($recipientIds) as $userId) {
+            if ((int) $userId === (int) $actor->id) {
+                continue;
+            }
+
+            /** @var User|null $recipient */
+            $recipient = User::find($userId);
+            if (! $recipient || ! $this->accessService->canViewProject($recipient, $project)) {
+                continue;
+            }
+
+            $this->safeDispatch(
+                $recipient,
+                new TaskDeadlineChangedNotification($task, $project, $actor, $previous, $next)
             );
         }
     }
@@ -117,26 +213,18 @@ class PmNotificationService
      */
     public function notifyCommentMentions(PmComment $comment, PmProject $project, ?PmTask $task, User $author): void
     {
-        // Extract potential usernames or emails: @username or @email
-        preg_match_all('/@([a-zA-Z0-9._-]+(?:@[a-zA-Z0-9._-]+)?)/', $comment->body, $matches);
-        if (empty($matches[1])) {
-            return;
+        $candidates = $this->resolveMentionedUsers($comment->body, $project);
+
+        if ($task) {
+            $task->loadMissing('department');
         }
-
-        $tokens = array_unique($matches[1]);
-
-        $candidates = User::where(function ($query) use ($tokens) {
-            $query->whereIn('email', $tokens)
-                ->orWhereIn('name', $tokens);
-        })->get();
 
         foreach ($candidates as $recipient) {
             if ((int) $recipient->id === (int) $author->id) {
                 continue;
             }
 
-            // Strict Option B check: Can the recipient view this project?
-            if (!$this->accessService->canViewProject($recipient, $project)) {
+            if (! $this->accessService->canViewProject($recipient, $project)) {
                 Log::warning("PmNotificationService: Mentioned user {$recipient->id} cannot access project {$project->id}. Suppressing notification.");
                 continue;
             }
@@ -153,30 +241,26 @@ class PmNotificationService
      */
     public function notifyMilestoneCompleted(PmMilestone $milestone, PmProject $project, User $actor): void
     {
-        // Eligible recipients: all active project members
         $memberUserIds = PmProjectMember::where('project_id', $project->id)
             ->pluck('user_id')
             ->all();
 
-        // Also include project creator and active department members if department-private
         if ($project->created_by) {
             $memberUserIds[] = $project->created_by;
         }
 
-        $uniqueIds = array_unique($memberUserIds);
-
-        foreach ($uniqueIds as $userId) {
+        foreach (array_unique($memberUserIds) as $userId) {
             if ((int) $userId === (int) $actor->id) {
                 continue;
             }
 
             /** @var User|null $recipient */
             $recipient = User::find($userId);
-            if (!$recipient) {
+            if (! $recipient) {
                 continue;
             }
 
-            if (!$this->accessService->canViewProject($recipient, $project)) {
+            if (! $this->accessService->canViewProject($recipient, $project)) {
                 continue;
             }
 
@@ -189,44 +273,40 @@ class PmNotificationService
 
     /**
      * Safe dispatch ensuring database in-app notification is persisted even if email transport fails.
-     * Decouples in-app notification persistence from mail delivery and enforces Option B revalidation.
      */
     protected function safeDispatch(User $recipient, $notification): void
     {
         $project = $notification->project ?? null;
-        if ($project && !$this->accessService->canViewProject($recipient, $project)) {
+        if ($project && ! $this->accessService->canViewProject($recipient, $project)) {
             Log::warning("PmNotificationService: Suppressed dispatch to user {$recipient->id} - unauthorized for project {$project->id}");
+
             return;
         }
 
-        // 1. Deliver in-app notification via CustomDatabaseChannel first
-        // Guarantees immediate UI update and ensures notification record exists regardless of email transport
         try {
             $customDbChannel = app(\App\Services\Notifications\CustomDatabaseChannel::class);
             $customDbChannel->send($recipient, $notification);
         } catch (Throwable $e) {
-            Log::error("PmNotificationService in-app notification error: " . $e->getMessage(), [
+            Log::error('PmNotificationService in-app notification error: ' . $e->getMessage(), [
                 'recipient_id' => $recipient->id,
                 'notification' => get_class($notification),
                 'exception' => $e,
             ]);
         }
 
-        // 2. Deliver email if supported by notification and allowed by recipient preferences
         $channels = method_exists($notification, 'via') ? $notification->via($recipient) : [];
         if (in_array('mail', $channels, true)) {
             try {
-                // Revalidate Option B access right before mail transmission
-                if ($project && !$this->accessService->canViewProject($recipient, $project)) {
+                if ($project && ! $this->accessService->canViewProject($recipient, $project)) {
                     Log::warning("PmNotificationService: Suppressed mail delivery - recipient {$recipient->id} lost access to project {$project->id}");
+
                     return;
                 }
 
                 $mailChannel = app(\Illuminate\Notifications\Channels\MailChannel::class);
                 $mailChannel->send($recipient, $notification);
             } catch (Throwable $e) {
-                // Catch any SMTP network errors or timeouts so HTTP requests never fail or leak exceptions
-                Log::error("PmNotificationService mail delivery exception: " . $e->getMessage(), [
+                Log::error('PmNotificationService mail delivery exception: ' . $e->getMessage(), [
                     'recipient_id' => $recipient->id,
                     'notification' => get_class($notification),
                     'exception' => $e->getMessage(),
@@ -234,5 +314,70 @@ class PmNotificationService
             }
         }
     }
-}
 
+    protected function resolveProject(PmTask $task): ?PmProject
+    {
+        return $task->project ?? PmProject::find($task->project_id);
+    }
+
+    protected function normalizeDate(?string $date): ?string
+    {
+        if ($date === null || $date === '') {
+            return null;
+        }
+
+        try {
+            return \Carbon\Carbon::parse($date)->toDateString();
+        } catch (Throwable) {
+            return $date;
+        }
+    }
+
+    /**
+     * Resolve mentioned users from comment body.
+     * Supports emails, single-token names, and exact multi-word project member names.
+     *
+     * @return \Illuminate\Support\Collection<int, User>
+     */
+    protected function resolveMentionedUsers(string $body, PmProject $project)
+    {
+        $matched = collect();
+
+        preg_match_all('/@([a-zA-Z0-9._-]+(?:@[a-zA-Z0-9._-]+)?)/', $body, $matches);
+        $tokens = array_unique($matches[1] ?? []);
+
+        if (! empty($tokens)) {
+            $byToken = User::where(function ($query) use ($tokens) {
+                $query->whereIn('email', $tokens)
+                    ->orWhereIn('name', $tokens);
+            })->get();
+            $matched = $matched->merge($byToken);
+        }
+
+        // Exact multi-word display-name mentions among project-accessible members.
+        $memberIds = PmProjectMember::where('project_id', $project->id)
+            ->where('invitation_status', 'accepted')
+            ->pluck('user_id')
+            ->all();
+
+        if ($project->owner_id) {
+            $memberIds[] = $project->owner_id;
+        }
+
+        $memberIds = array_unique($memberIds);
+        if (! empty($memberIds)) {
+            $members = User::whereIn('id', $memberIds)->get();
+            foreach ($members as $member) {
+                $name = trim((string) $member->name);
+                if ($name === '' || ! str_contains($name, ' ')) {
+                    continue;
+                }
+                if (preg_match('/@' . preg_quote($name, '/') . '(?!\w)/u', $body)) {
+                    $matched->push($member);
+                }
+            }
+        }
+
+        return $matched->unique('id')->values();
+    }
+}

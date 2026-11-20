@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue';
 import { projectsApi } from '../../api/projects';
-import type { Milestone, ProjectMember, TaskList, TaskStatus, UserSummary } from '../../types/pm';
+import type { DepartmentSummary, Milestone, ProjectMember, TaskList, TaskStatus, UserSummary } from '../../types/pm';
 import { X, Loader2, AlertCircle, Check, Users } from 'lucide-vue-next';
 
 const props = withDefaults(
@@ -13,10 +13,12 @@ const props = withDefaults(
     milestones: Milestone[];
     members: ProjectMember[];
     taskLists?: TaskList[];
+    projectDepartments?: DepartmentSummary[];
   }>(),
   {
     initialTaskListId: null,
     taskLists: () => [],
+    projectDepartments: () => [],
   }
 );
 
@@ -29,6 +31,7 @@ const title = ref('');
 const description = ref('');
 const status = ref<TaskStatus>('todo');
 const priority = ref<'low' | 'medium' | 'high' | 'urgent'>('medium');
+const departmentId = ref<number | null>(null);
 const milestoneId = ref<number | null>(null);
 const taskListId = ref<number | null>(null);
 const selectedAssigneeIds = ref<number[]>([]);
@@ -107,6 +110,7 @@ const handleSubmit = async () => {
       description: description.value.trim() || undefined,
       status: status.value,
       priority: priority.value,
+      department_id: departmentId.value,
       milestone_id: milestoneId.value || undefined,
       task_list_id: taskListId.value !== null ? taskListId.value : undefined,
       start_date: startDate.value || undefined,
@@ -119,6 +123,7 @@ const handleSubmit = async () => {
     description.value = '';
     startDate.value = '';
     dueDate.value = '';
+    departmentId.value = null;
     milestoneId.value = null;
     taskListId.value = null;
     selectedAssigneeIds.value = [];
@@ -201,6 +206,25 @@ const handleSubmit = async () => {
               <option value="urgent">Urgent</option>
             </select>
           </div>
+        </div>
+
+        <!-- Department -->
+        <div v-if="projectDepartments.length > 0">
+          <label class="block text-xs font-bold text-[#1e1e1e] mb-1">Department</label>
+          <select
+            v-model="departmentId"
+            class="w-full px-3.5 py-2.5 rounded-xl border border-[#ebe8de] text-xs focus:border-[#640c0e] focus:ring-1 focus:ring-[#640c0e] outline-none bg-white"
+          >
+            <option :value="null">No department</option>
+            <option
+              v-for="dept in projectDepartments"
+              :key="dept.id"
+              :value="dept.id"
+            >
+              {{ dept.name }}{{ dept.code ? ` (${dept.code})` : '' }}
+            </option>
+          </select>
+          <p class="mt-1 text-[10px] text-[#6b7280]">Only departments linked to this project are available.</p>
         </div>
 
         <!-- Section / List & Milestone -->

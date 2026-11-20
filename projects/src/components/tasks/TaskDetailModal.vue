@@ -6,6 +6,7 @@ import type {
   Attachment,
   CascadePreview,
   Comment,
+  DepartmentSummary,
   DependencyType,
   SchedulingInfo,
   Task,
@@ -35,12 +36,14 @@ const props = withDefaults(
     projectUuid: string;
     taskLists?: TaskList[];
     allTasks?: Task[];
+    projectDepartments?: DepartmentSummary[];
     canEdit?: boolean;
     isProjectManagerOrOwner?: boolean;
   }>(),
   {
     taskLists: () => [],
     allTasks: () => [],
+    projectDepartments: () => [],
     canEdit: false,
     isProjectManagerOrOwner: false,
   }
@@ -185,6 +188,20 @@ const onListChange = async (newListId: number | null) => {
     emit('task-updated');
   } catch (err: any) {
     alert(err.response?.data?.message || 'Failed to move task between lists.');
+  }
+};
+
+const onDepartmentChange = async (newDepartmentId: number | null) => {
+  if (!task.value) return;
+  try {
+    const res = await projectsApi.updateTask(task.value.uuid, {
+      department_id: newDepartmentId,
+    });
+    task.value.department_id = res.task.department_id;
+    task.value.department = res.task.department;
+    emit('task-updated');
+  } catch (err: any) {
+    alert(err.response?.data?.message || 'Failed to update task department.');
   }
 };
 
@@ -565,6 +582,25 @@ const handleDeleteTask = async () => {
                 {{ l.name }}
               </option>
             </select>
+          </div>
+
+          <!-- Department -->
+          <div v-if="projectDepartments.length > 0 || task.department">
+            <span class="block text-[10px] font-bold uppercase tracking-wider text-[#6b7280] mb-0.5">Department</span>
+            <select
+              v-if="canEdit && projectDepartments.length > 0"
+              :value="task.department_id"
+              @change="onDepartmentChange(($event.target as HTMLSelectElement).value ? Number(($event.target as HTMLSelectElement).value) : null)"
+              class="w-full text-xs font-semibold text-[#1e1e1e] bg-transparent border-0 p-0 focus:ring-0 cursor-pointer"
+            >
+              <option :value="null">No department</option>
+              <option v-for="d in projectDepartments" :key="d.id" :value="d.id">
+                {{ d.name }}
+              </option>
+            </select>
+            <span v-else class="font-semibold text-[#1e1e1e] text-xs">
+              {{ task.department?.name || 'No department' }}
+            </span>
           </div>
 
           <!-- Priority -->

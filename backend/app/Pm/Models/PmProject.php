@@ -156,6 +156,48 @@ class PmProject extends Model
     }
 
     /**
+     * Department IDs that may be assigned to tasks on this project
+     * (owning department + participating departments).
+     *
+     * @return array<int>
+     */
+    public function allowedTaskDepartmentIds(): array
+    {
+        $ids = [(int) $this->department_id];
+
+        $participatingIds = $this->relationLoaded('participatingDepartments')
+            ? $this->participatingDepartments->pluck('id')->all()
+            : $this->participatingDepartments()->pluck('departments.id')->all();
+
+        foreach ($participatingIds as $id) {
+            $ids[] = (int) $id;
+        }
+
+        return array_values(array_unique(array_filter($ids)));
+    }
+
+    /**
+     * Whether a department may be assigned to a task on this project.
+     * New assignments require the department to be active.
+     */
+    public function allowsTaskDepartment(?int $departmentId, bool $requireActive = true): bool
+    {
+        if ($departmentId === null) {
+            return true;
+        }
+
+        if (! in_array($departmentId, $this->allowedTaskDepartmentIds(), true)) {
+            return false;
+        }
+
+        if (! $requireActive) {
+            return true;
+        }
+
+        return Department::where('id', $departmentId)->where('is_active', true)->exists();
+    }
+
+    /**
      * Scope query to projects accessible to the user (Option B).
      * Accessible if:
      * 1. shared_msa visibility

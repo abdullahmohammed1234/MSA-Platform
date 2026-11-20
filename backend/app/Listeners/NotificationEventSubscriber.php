@@ -167,6 +167,11 @@ class NotificationEventSubscriber
         $eventTitle = $registration->event?->name ?? $registration->event?->title ?? 'MSA Event';
         $eventSlug = $registration->event?->slug;
 
+        // Suppress platform mail only when EMS confirmation (Email B / QR) is enabled.
+        // If EMS notifications are disabled, keep PlatformNotification mail as a fallback
+        // so members are not left without any registration confirmation email.
+        $emsNotificationsEnabled = (bool) config('ems.notifications.enabled', true);
+
         $user->notify(new \App\Notifications\PlatformNotification(
             "Registration Confirmed: {$eventTitle}",
             "Your registration (#{$registration->reference}) for {$eventTitle} has been confirmed.",
@@ -176,6 +181,7 @@ class NotificationEventSubscriber
                 'registration_uuid' => $registration->uuid,
                 'reference' => $registration->reference,
                 'idempotency_key' => $idempotencyKey,
+                'suppress_mail' => $emsNotificationsEnabled,
             ]
         ));
     }

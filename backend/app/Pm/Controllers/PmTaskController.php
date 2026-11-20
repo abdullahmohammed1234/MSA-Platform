@@ -50,6 +50,7 @@ class PmTaskController extends Controller
         $status = $request->query('status');
         $priority = $request->query('priority');
         $assignedTo = $request->query('assigned_to');
+        $departmentId = $request->query('department_id');
         $search = $request->query('search');
 
         $query = PmTask::query()
@@ -60,12 +61,21 @@ class PmTaskController extends Controller
                 'assignees:id,name,email,avatar',
                 'taskList:id,uuid,name,color',
                 'milestone',
+                'department:id,name,slug,color',
                 'subtasks.assignee',
             ])
             ->withCount(['comments', 'subtasks', 'dependencies', 'dependents', 'attachments']);
 
         if ($milestoneId) {
             $query->where('milestone_id', $milestoneId);
+        }
+
+        if ($departmentId !== null && $departmentId !== '') {
+            if ($departmentId === 'none' || $departmentId === '0') {
+                $query->whereNull('department_id');
+            } else {
+                $query->where('department_id', $departmentId);
+            }
         }
 
         if ($taskListId !== null && $taskListId !== '') {
@@ -158,6 +168,7 @@ class PmTaskController extends Controller
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
+            'department_id' => 'nullable|integer|exists:departments,id',
             'milestone_id' => 'nullable|exists:pm_milestones,id',
             'task_list_id' => 'nullable|exists:pm_task_lists,id',
             'parent_task_id' => 'nullable|exists:pm_tasks,id',
@@ -194,6 +205,16 @@ class PmTaskController extends Controller
             }
         }
 
+        $departmentId = array_key_exists('department_id', $validated) ? $validated['department_id'] : null;
+        if ($departmentId !== null) {
+            $project->loadMissing('participatingDepartments');
+            if (! $project->allowsTaskDepartment((int) $departmentId, true)) {
+                return response()->json([
+                    'message' => 'The selected department does not belong to this project or is inactive.',
+                ], 422);
+            }
+        }
+
         // Normalize assignee IDs
         $assigneeIds = collect($validated['assignee_ids'] ?? [])->map(fn ($id) => (int) $id)->unique()->values();
         if ($assigneeIds->isEmpty() && !empty($validated['assigned_to'])) {
@@ -218,9 +239,10 @@ class PmTaskController extends Controller
             $primaryAssigneeId = $assigneeIds->first();
         }
 
-        $task = DB::transaction(function () use ($project, $validated, $primaryAssigneeId, $assigneeIds, $user) {
+        $task = DB::transaction(function () use ($project, $validated, $primaryAssigneeId, $assigneeIds, $user, $departmentId) {
             $newTask = PmTask::create([
                 'project_id' => $project->id,
+                'department_id' => $departmentId,
                 'milestone_id' => $validated['milestone_id'] ?? null,
                 'task_list_id' => $validated['task_list_id'] ?? null,
                 'parent_task_id' => $validated['parent_task_id'] ?? null,
@@ -261,6 +283,7 @@ class PmTaskController extends Controller
                 'assigned_to' => $task->assigned_to,
                 'assignee_ids' => $assigneeIds->all(),
                 'task_list_id' => $task->task_list_id,
+                'department_id' => $task->department_id,
             ]
         );
 
@@ -270,7 +293,7 @@ class PmTaskController extends Controller
 
         return response()->json([
             'message' => 'Task created successfully.',
-            'task' => $this->formatTaskPayload($task->load(['assignee', 'assignees', 'milestone', 'taskList'])),
+            'task' => $this->formatTaskPayload($task->load(['assignee', 'assignees', 'milestone', 'taskList', 'department'])),
         ], 201);
     }
 
@@ -284,6 +307,8 @@ class PmTaskController extends Controller
 
         $task = PmTask::with([
             'project.department',
+            'project.participatingDepartments',
+            'department:id,name,slug,color',
             'milestone',
             'taskList',
             'assignee',
@@ -382,6 +407,7 @@ class PmTaskController extends Controller
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
+            'department_id' => 'nullable|integer|exists:departments,id',
             'milestone_id' => 'nullable|exists:pm_milestones,id',
             'task_list_id' => 'nullable|exists:pm_task_lists,id',
             'status' => ['sometimes', 'required', Rule::in(TaskStatus::values())],
@@ -426,8 +452,18 @@ class PmTaskController extends Controller
             }
         }
 
+        if (array_key_exists('department_id', $validated) && $validated['department_id'] !== null) {
+            $task->project->loadMissing('participatingDepartments');
+            if (! $task->project->allowsTaskDepartment((int) $validated['department_id'], true)) {
+                return response()->json([
+                    'message' => 'The selected department does not belong to this project or is inactive.',
+                ], 422);
+            }
+        }
+
         $oldStatus = $task->status;
         $oldListId = $task->task_list_id;
+        $previousDueDate = $task->due_date?->toDateString();
         $previousAssignees = $task->assignees()->pluck('users.id')->map(fn ($id) => (int) $id)->all();
 
         DB::transaction(function () use ($task, $validated, $user) {
@@ -436,6 +472,9 @@ class PmTaskController extends Controller
             }
             if (array_key_exists('description', $validated)) {
                 $task->description = $validated['description'];
+            }
+            if (array_key_exists('department_id', $validated)) {
+                $task->department_id = $validated['department_id'];
             }
             if (array_key_exists('milestone_id', $validated)) {
                 $task->milestone_id = $validated['milestone_id'];
@@ -529,17 +568,27 @@ class PmTaskController extends Controller
             $this->notificationService->notifyTaskStatusChanged($task, $oldStatus, $task->status, $user);
         }
 
+        if (array_key_exists('due_date', $validated)) {
+            $this->notificationService->notifyDeadlineChanged(
+                $task,
+                $previousDueDate,
+                $task->due_date?->toDateString(),
+                $user
+            );
+        }
+
         if (array_key_exists('assignee_ids', $validated) || array_key_exists('assigned_to', $validated)) {
             $currentAssignees = $task->assignees()->pluck('users.id')->map(fn ($id) => (int) $id)->all();
             $newAssignees = array_values(array_diff($currentAssignees, $previousAssignees));
             if (!empty($newAssignees)) {
-                $this->notificationService->notifyTaskAssigned($task, $newAssignees, $user, true);
+                $isReassignment = !empty($previousAssignees);
+                $this->notificationService->notifyTaskAssigned($task, $newAssignees, $user, $isReassignment);
             }
         }
 
         return response()->json([
             'message' => 'Task updated successfully.',
-            'task' => $this->formatTaskPayload($task->fresh(['assignee', 'assignees', 'milestone', 'taskList'])),
+            'task' => $this->formatTaskPayload($task->fresh(['assignee', 'assignees', 'milestone', 'taskList', 'department'])),
         ]);
     }
 
@@ -596,7 +645,7 @@ class PmTaskController extends Controller
 
         return response()->json([
             'message' => 'Task status updated successfully.',
-            'task' => $this->formatTaskPayload($task->fresh(['assignee', 'assignees', 'milestone', 'taskList'])),
+            'task' => $this->formatTaskPayload($task->fresh(['assignee', 'assignees', 'milestone', 'taskList', 'department'])),
         ]);
     }
 
@@ -673,7 +722,7 @@ class PmTaskController extends Controller
                             });
                     });
             })
-            ->with(['project.department', 'milestone', 'taskList', 'assignees:id,name,email,avatar']);
+            ->with(['project.department', 'department:id,name,slug,color', 'milestone', 'taskList', 'assignees:id,name,email,avatar']);
 
         if ($status) {
             $query->where('status', $status);
@@ -815,14 +864,24 @@ class PmTaskController extends Controller
         }
 
         $oldStatuses = [];
-        if ($action === 'status') {
-            foreach ($tasks as $t) {
+        $previousAssigneesByTask = [];
+        $previousDueDatesByTask = [];
+        $rebalanceChangedTaskIds = [];
+
+        foreach ($tasks as $t) {
+            if ($action === 'status') {
                 $oldStatuses[$t->id] = $t->status;
+            }
+            if ($action === 'assign' || $action === 'rebalance_assignee') {
+                $previousAssigneesByTask[$t->id] = $t->assignees()->pluck('users.id')->map(fn ($id) => (int) $id)->all();
+            }
+            if ($action === 'reschedule_shift' || $action === 'set_dates') {
+                $previousDueDatesByTask[$t->id] = $t->due_date?->toDateString();
             }
         }
 
         // Execute atomically
-        DB::transaction(function () use ($tasks, $action, $val, $user) {
+        DB::transaction(function () use ($tasks, $action, $val, $user, &$rebalanceChangedTaskIds) {
             foreach ($tasks as $task) {
                 if ($action === 'status') {
                     $task->status = TaskStatus::from($val);
@@ -878,6 +937,7 @@ class PmTaskController extends Controller
                     $sourceId = (int) $val['source_user_id'];
                     $targetId = (int) $val['target_user_id'];
                     $wasAssigned = false;
+                    $previousAssignees = $task->assignees()->pluck('users.id')->map(fn ($id) => (int) $id)->all();
 
                     if ((int) $task->assigned_to === $sourceId) {
                         $task->assigned_to = $targetId;
@@ -899,6 +959,9 @@ class PmTaskController extends Controller
 
                     if ($wasAssigned) {
                         $task->save();
+                        if (! in_array($targetId, $previousAssignees, true)) {
+                            $rebalanceChangedTaskIds[$task->id] = true;
+                        }
                     }
                 }
             }
@@ -931,16 +994,34 @@ class PmTaskController extends Controller
                 }
             }
         } elseif ($action === 'assign') {
-            $assigneeIds = is_array($val) ? collect($val)->map(fn ($id) => (int) $id)->unique() : ($val ? collect([(int) $val]) : collect());
-            if ($assigneeIds->isNotEmpty()) {
-                foreach ($tasks as $task) {
-                    $this->notificationService->notifyTaskAssigned($task, $assigneeIds->all(), $user, false);
+            $assigneeIds = is_array($val) ? collect($val)->map(fn ($id) => (int) $id)->unique()->values() : ($val ? collect([(int) $val]) : collect());
+            foreach ($tasks as $task) {
+                $previous = $previousAssigneesByTask[$task->id] ?? [];
+                $newAssignees = array_values(array_diff($assigneeIds->all(), $previous));
+                if (! empty($newAssignees)) {
+                    $this->notificationService->notifyTaskAssigned(
+                        $task,
+                        $newAssignees,
+                        $user,
+                        ! empty($previous)
+                    );
                 }
             }
         } elseif ($action === 'rebalance_assignee') {
             $targetId = (int) $val['target_user_id'];
             foreach ($tasks as $task) {
-                $this->notificationService->notifyTaskAssigned($task, [$targetId], $user, true);
+                if (! empty($rebalanceChangedTaskIds[$task->id])) {
+                    $this->notificationService->notifyTaskAssigned($task, [$targetId], $user, true);
+                }
+            }
+        } elseif ($action === 'reschedule_shift' || $action === 'set_dates') {
+            foreach ($tasks as $task) {
+                $this->notificationService->notifyDeadlineChanged(
+                    $task->fresh(),
+                    $previousDueDatesByTask[$task->id] ?? null,
+                    $task->fresh()->due_date?->toDateString(),
+                    $user
+                );
             }
         }
 
@@ -957,6 +1038,13 @@ class PmTaskController extends Controller
             'id' => $task->id,
             'uuid' => $task->uuid,
             'project_id' => $task->project_id,
+            'department_id' => $task->department_id,
+            'department' => $task->department ? [
+                'id' => $task->department->id,
+                'name' => $task->department->name,
+                'slug' => $task->department->slug ?? null,
+                'color' => $task->department->color ?? null,
+            ] : null,
             'milestone_id' => $task->milestone_id,
             'task_list_id' => $task->task_list_id,
             'parent_task_id' => $task->parent_task_id,

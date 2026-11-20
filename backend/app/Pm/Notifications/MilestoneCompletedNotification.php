@@ -5,6 +5,7 @@ namespace App\Pm\Notifications;
 use App\Models\User;
 use App\Pm\Models\PmMilestone;
 use App\Pm\Models\PmProject;
+use App\Pm\Support\PmFrontendUrl;
 use App\Services\Notifications\CustomDatabaseChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
@@ -50,7 +51,7 @@ class MilestoneCompletedNotification extends Notification
             'milestone_uuid' => $this->milestone->uuid,
             'actor_id' => $this->actor->id,
             'actor_name' => $this->actor->name,
-            'action_url' => "/pm/projects/{$this->project->uuid}",
+            'action_url' => PmFrontendUrl::projectPath($this->project->uuid),
         ];
     }
 }

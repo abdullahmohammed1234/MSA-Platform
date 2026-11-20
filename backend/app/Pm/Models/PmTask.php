@@ -2,6 +2,7 @@
 
 namespace App\Pm\Models;
 
+use App\Models\Department;
 use App\Models\User;
 use App\Pm\Enums\ProjectPriority;
 use App\Pm\Enums\TaskStatus;
@@ -22,6 +23,7 @@ class PmTask extends Model
     protected $fillable = [
         'uuid',
         'project_id',
+        'department_id',
         'milestone_id',
         'task_list_id',
         'parent_task_id',
@@ -124,6 +126,11 @@ class PmTask extends Model
     public function project(): BelongsTo
     {
         return $this->belongsTo(PmProject::class, 'project_id');
+    }
+
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class, 'department_id');
     }
 
     public function milestone(): BelongsTo

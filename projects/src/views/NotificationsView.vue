@@ -63,9 +63,17 @@ const onNavigate = (notif: PmNotification) => {
     notificationStore.markAsRead(notif.uuid || notif.id);
   }
 
-  const actionUrl = notif.data?.action_url;
+  const actionUrl = notif.data?.action_url as string | undefined;
   if (actionUrl) {
-    router.push(actionUrl);
+    // Normalize legacy /pm/projects/{uuid} links to the SPA route.
+    const legacyMatch = actionUrl.match(/^\/pm\/projects\/([^/?#]+)/);
+    if (legacyMatch) {
+      router.push(`/projects/${legacyMatch[1]}`);
+    } else if (actionUrl.startsWith('/')) {
+      router.push(actionUrl);
+    } else if (notif.data?.project_uuid) {
+      router.push(`/projects/${notif.data.project_uuid}`);
+    }
   } else if (notif.data?.project_uuid) {
     router.push(`/projects/${notif.data.project_uuid}`);
   }

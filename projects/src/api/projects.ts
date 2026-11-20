@@ -321,6 +321,7 @@ export const projectsApi = {
     status?: string;
     priority?: string;
     assigned_to?: number;
+    department_id?: number | string;
     search?: string;
   }): Promise<{ tasks: Task[]; meta: any }> {
     const res = await apiClient.get<{ tasks: Task[]; meta: any }>(`/pm/projects/${uuid}/tasks`, { params });
@@ -330,6 +331,7 @@ export const projectsApi = {
   async createTask(uuid: string, payload: {
     title: string;
     description?: string;
+    department_id?: number | null;
     milestone_id?: number;
     task_list_id?: number | null;
     priority?: string;

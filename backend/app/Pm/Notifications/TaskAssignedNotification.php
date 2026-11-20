@@ -5,6 +5,7 @@ namespace App\Pm\Notifications;
 use App\Models\User;
 use App\Pm\Models\PmProject;
 use App\Pm\Models\PmTask;
+use App\Pm\Support\PmFrontendUrl;
 use App\Services\Notifications\CustomDatabaseChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -26,10 +27,9 @@ class TaskAssignedNotification extends Notification
      */
     public function via($notifiable): array
     {
-        // Revalidate recipient authorization under Option B
         if ($notifiable instanceof User) {
             $accessService = app(\App\Pm\Services\ProjectAccessService::class);
-            if (!$accessService->canViewProject($notifiable, $this->project)) {
+            if (! $accessService->canViewProject($notifiable, $this->project)) {
                 return [];
             }
         }
@@ -41,7 +41,6 @@ class TaskAssignedNotification extends Notification
                 $channels[] = 'mail';
             }
         } else {
-            // Default to mail if preferences are not set
             $channels[] = 'mail';
         }
 
@@ -64,10 +63,12 @@ class TaskAssignedNotification extends Notification
             'project_uuid' => $this->project->uuid,
             'task_id' => $this->task->id,
             'task_uuid' => $this->task->uuid,
+            'department_id' => $this->task->department_id,
+            'department_name' => $this->task->department?->name,
             'actor_id' => $this->actor->id,
             'actor_name' => $this->actor->name,
             'is_reassignment' => $this->isReassignment,
-            'action_url' => "/pm/projects/{$this->project->uuid}",
+            'action_url' => PmFrontendUrl::projectPath($this->project->uuid),
         ];
     }
 
@@ -81,14 +82,19 @@ class TaskAssignedNotification extends Notification
 
         $dueDateStr = $this->task->due_date ? $this->task->due_date->format('M d, Y') : 'No deadline specified';
 
-        return (new MailMessage)
-            ->subject("Task {$titleVerb}: {$this->task->title}")
+        $mail = (new MailMessage)
+            ->subject("[SFU MSA Projects] Task {$titleVerb}: {$this->task->title}")
             ->greeting("Hello {$notifiable->name},")
-            ->line("You have been {$actionVerb} to task '{$this->task->title}' in project '{$this->project->name}' by {$this->actor->name}.")
+            ->line("You have been {$actionVerb} to task '{$this->task->title}' in project '{$this->project->name}' by {$this->actor->name}.");
+
+        if ($this->task->department?->name) {
+            $mail->line('Department: ' . $this->task->department->name);
+        }
+
+        return $mail
             ->line("Due Date: {$dueDateStr}")
-            ->line("Priority: " . ucfirst($this->task->priority?->value ?? 'medium'))
-            ->action('View Task in PMS', url("/pm/projects/{$this->project->uuid}"))
-            ->line('Thank you for contributing to SFU MSA!');
+            ->line('Priority: ' . ucfirst($this->task->priority?->value ?? 'medium'))
+            ->action('View Project in PMS', PmFrontendUrl::project($this->project->uuid))
+            ->line('This notification was sent by SFU MSA Projects.');
     }
 }
-

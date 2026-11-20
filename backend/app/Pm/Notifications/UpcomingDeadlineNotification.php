@@ -5,6 +5,7 @@ namespace App\Pm\Notifications;
 use App\Models\User;
 use App\Pm\Models\PmProject;
 use App\Pm\Models\PmTask;
+use App\Pm\Support\PmFrontendUrl;
 use App\Services\Notifications\CustomDatabaseChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -48,7 +49,7 @@ class UpcomingDeadlineNotification extends Notification
             'task_id' => $this->task->id,
             'task_uuid' => $this->task->uuid,
             'reminder_window' => $this->window,
-            'action_url' => "/pm/projects/{$this->project->uuid}",
+            'action_url' => PmFrontendUrl::projectPath($this->project->uuid),
         ];
     }
 
@@ -57,13 +58,13 @@ class UpcomingDeadlineNotification extends Notification
         $dueDateStr = $this->task->due_date ? $this->task->due_date->format('M d, Y') : '';
 
         return (new MailMessage)
-            ->subject("Upcoming Deadline ({$this->window}): {$this->task->title}")
+            ->subject("[SFU MSA Projects] Upcoming Deadline ({$this->window}): {$this->task->title}")
             ->greeting("Hello {$notifiable->name},")
             ->line("Task '{$this->task->title}' in project '{$this->project->name}' is due within {$this->window}.")
             ->line("Due Date: {$dueDateStr}")
-            ->line("Priority: " . ucfirst($this->task->priority?->value ?? 'medium'))
-            ->action('View Task in PMS', url("/pm/projects/{$this->project->uuid}"))
-            ->line('Thank you for contributing to SFU MSA!');
+            ->line('Priority: ' . ucfirst($this->task->priority?->value ?? 'medium'))
+            ->action('View Project in PMS', PmFrontendUrl::project($this->project->uuid))
+            ->line('This notification was sent by SFU MSA Projects.');
     }
 }
 

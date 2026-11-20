@@ -42,7 +42,7 @@ class DailyDigestNotification extends Notification
             'message' => "Today's summary: {$dueTodayCount} due today, {$upcomingCount} upcoming, {$overdueCount} overdue.",
             'type' => 'pm.daily_digest',
             'summary' => $this->summaryData,
-            'action_url' => '/pm/dashboard',
+            'action_url' => '/',
         ];
     }
 
@@ -53,9 +53,9 @@ class DailyDigestNotification extends Notification
         $overdue = $this->summaryData['overdue'] ?? [];
 
         $mail = (new MailMessage)
-            ->subject('SFU MSA PMS — Your Daily Digest')
+            ->subject('[SFU MSA Projects] Your Daily Digest')
             ->greeting("Assalamu Alaikum {$notifiable->name},")
-            ->line("Here is your daily Project Management summary:");
+            ->line('Here is your daily Project Management summary:');
 
         if (!empty($dueToday)) {
             $mail->line('**Due Today:**');
@@ -82,8 +82,8 @@ class DailyDigestNotification extends Notification
             $mail->line('You have no overdue or immediately approaching tasks. Great job!');
         }
 
-        return $mail->action('Open PMS Dashboard', url('/pm/dashboard'))
-            ->line('Thank you for your service to SFU MSA!');
+        return $mail->action('Open PMS Dashboard', rtrim((string) config('app.projects_url'), '/') . '/')
+            ->line('This notification was sent by SFU MSA Projects.');
     }
 }
 

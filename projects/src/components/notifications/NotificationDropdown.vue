@@ -48,9 +48,18 @@ const onNotificationClick = async (notif: PmNotification) => {
 
   emit('close');
 
-  const actionUrl = notif.data?.action_url;
+  const actionUrl = notif.data?.action_url as string | undefined;
   if (actionUrl) {
-    router.push(actionUrl);
+    const legacyMatch = actionUrl.match(/^\/pm\/projects\/([^/?#]+)/);
+    if (legacyMatch) {
+      router.push(`/projects/${legacyMatch[1]}`);
+    } else if (actionUrl.startsWith('/')) {
+      router.push(actionUrl);
+    } else if (notif.data?.project_uuid) {
+      router.push(`/projects/${notif.data.project_uuid}`);
+    } else {
+      router.push('/notifications');
+    }
   } else if (notif.data?.project_uuid) {
     router.push(`/projects/${notif.data.project_uuid}`);
   } else {

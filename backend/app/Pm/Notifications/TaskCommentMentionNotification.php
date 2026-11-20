@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Pm\Models\PmComment;
 use App\Pm\Models\PmProject;
 use App\Pm\Models\PmTask;
+use App\Pm\Support\PmFrontendUrl;
 use App\Services\Notifications\CustomDatabaseChannel;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -23,15 +24,11 @@ class TaskCommentMentionNotification extends Notification
         public User $actor
     ) {}
 
-    /**
-     * Determine channels based on preferences.
-     */
     public function via($notifiable): array
     {
-        // Revalidate recipient authorization under Option B
         if ($notifiable instanceof User) {
             $accessService = app(\App\Pm\Services\ProjectAccessService::class);
-            if (!$accessService->canViewProject($notifiable, $this->project)) {
+            if (! $accessService->canViewProject($notifiable, $this->project)) {
                 return [];
             }
         }
@@ -49,9 +46,6 @@ class TaskCommentMentionNotification extends Notification
         return $channels;
     }
 
-    /**
-     * Database payload.
-     */
     public function toArray($notifiable): array
     {
         $context = $this->task ? "task '{$this->task->title}'" : "project '{$this->project->name}'";
@@ -65,28 +59,32 @@ class TaskCommentMentionNotification extends Notification
             'project_uuid' => $this->project->uuid,
             'task_id' => $this->task?->id,
             'task_uuid' => $this->task?->uuid,
+            'department_id' => $this->task?->department_id,
+            'department_name' => $this->task?->department?->name,
             'comment_id' => $this->comment->id,
             'actor_id' => $this->actor->id,
             'actor_name' => $this->actor->name,
-            'action_url' => "/pm/projects/{$this->project->uuid}",
+            'action_url' => PmFrontendUrl::projectPath($this->project->uuid),
         ];
     }
 
-    /**
-     * Email message.
-     */
     public function toMail($notifiable): MailMessage
     {
         $context = $this->task ? "task '{$this->task->title}'" : "project '{$this->project->name}'";
         $preview = Str::limit($this->comment->body, 250);
 
-        return (new MailMessage)
-            ->subject("Mentioned by {$this->actor->name} in SFU MSA PMS")
+        $mail = (new MailMessage)
+            ->subject("[SFU MSA Projects] Mentioned by {$this->actor->name}")
             ->greeting("Hello {$notifiable->name},")
             ->line("{$this->actor->name} mentioned you in a comment on {$context}:")
-            ->line("\"{$preview}\"")
-            ->action('View in PMS', url("/pm/projects/{$this->project->uuid}"))
-            ->line('Thank you for contributing to SFU MSA!');
+            ->line("\"{$preview}\"");
+
+        if ($this->task?->department?->name) {
+            $mail->line('Department: ' . $this->task->department->name);
+        }
+
+        return $mail
+            ->action('View Project in PMS', PmFrontendUrl::project($this->project->uuid))
+            ->line('This notification was sent by SFU MSA Projects.');
     }
 }
-
